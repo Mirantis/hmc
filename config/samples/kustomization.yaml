@@ -1,4 +1,5 @@
 ## Append samples of your project ##
 resources:
 - hmc.mirantis.com_v1alpha1_hmctemplate.yaml
+- hmc.mirantis.com_v1alpha1_hmcdeployment.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples
