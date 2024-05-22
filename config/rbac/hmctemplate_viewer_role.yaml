@@ -1,0 +1,23 @@
+# permissions for end users to view hmctemplates.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: hmc
+    app.kubernetes.io/managed-by: kustomize
+  name: hmctemplate-viewer-role
+rules:
+- apiGroups:
+  - hmc.mirantis.com.hmc.mirantis.com
+  resources:
+  - hmctemplates
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - hmc.mirantis.com.hmc.mirantis.com
+  resources:
+  - hmctemplates/status
+  verbs:
+  - get
