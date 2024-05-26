@@ -3,7 +3,7 @@ module github.com/Mirantis/hmc
 go 1.21
 
 require (
-	github.com/onsi/ginkgo/v2 v2.18.0
+	github.com/onsi/ginkgo/v2 v2.19.0
 	github.com/onsi/gomega v1.33.1
 	k8s.io/apimachinery v0.29.2
 	k8s.io/client-go v0.29.2
