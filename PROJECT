@@ -35,4 +35,13 @@ resources:
   kind: HMCManagement
   path: github.com/Mirantis/hmc/api/v1alpha1
   version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: hmc.mirantis.com
+  group: hmc.mirantis.com
+  kind: HMCProviderAWS
+  path: github.com/Mirantis/hmc/api/v1alpha1
+  version: v1alpha1
 version: "3"

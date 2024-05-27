@@ -5,6 +5,7 @@ resources:
 - bases/hmc.mirantis.com.hmc.mirantis.com_hmctemplates.yaml
 - bases/hmc.mirantis.com.hmc.mirantis.com_hmcdeployments.yaml
 - bases/hmc.mirantis.com.hmc.mirantis.com_hmcmanagements.yaml
+- bases/hmc.mirantis.com.hmc.mirantis.com_hmcprovideraws.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 patches:
@@ -17,6 +18,7 @@ patches:
 #- path: patches/cainjection_in_hmctemplates.yaml
 #- path: patches/cainjection_in_hmcdeployments.yaml
 #- path: patches/cainjection_in_hmcmanagements.yaml
+#- path: patches/cainjection_in_hmcprovideraws.yaml
 #+kubebuilder:scaffold:crdkustomizecainjectionpatch
 
 # [WEBHOOK] To enable webhook, uncomment the following section
