@@ -2,4 +2,5 @@
 resources:
 - hmc.mirantis.com_v1alpha1_hmctemplate.yaml
 - hmc.mirantis.com_v1alpha1_hmcdeployment.yaml
+- hmc.mirantis.com_v1alpha1_hmcmanagement.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples
