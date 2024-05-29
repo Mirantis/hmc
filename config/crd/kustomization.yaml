@@ -5,7 +5,7 @@ resources:
 - bases/hmc.mirantis.com.hmc.mirantis.com_templates.yaml
 - bases/hmc.mirantis.com.hmc.mirantis.com_deployments.yaml
 - bases/hmc.mirantis.com.hmc.mirantis.com_managements.yaml
-- bases/hmc.mirantis.com.hmc.mirantis.com_awsprovider.yaml
+- bases/hmc.mirantis.com.hmc.mirantis.com_awsproviders.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 patches:
