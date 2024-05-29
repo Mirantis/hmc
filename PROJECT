@@ -14,7 +14,7 @@ resources:
   controller: true
   domain: hmc.mirantis.com
   group: hmc.mirantis.com
-  kind: HMCTemplate
+  kind: Template
   path: github.com/Mirantis/hmc/api/v1alpha1
   version: v1alpha1
 - api:
@@ -23,7 +23,7 @@ resources:
   controller: true
   domain: hmc.mirantis.com
   group: hmc.mirantis.com
-  kind: HMCDeployment
+  kind: Deployment
   path: github.com/Mirantis/hmc/api/v1alpha1
   version: v1alpha1
 - api:
@@ -32,7 +32,7 @@ resources:
   controller: true
   domain: hmc.mirantis.com
   group: hmc.mirantis.com
-  kind: HMCManagement
+  kind: Management
   path: github.com/Mirantis/hmc/api/v1alpha1
   version: v1alpha1
 - api:
@@ -41,7 +41,7 @@ resources:
   controller: true
   domain: hmc.mirantis.com
   group: hmc.mirantis.com
-  kind: HMCProviderAWS
+  kind: AWSProvider
   path: github.com/Mirantis/hmc/api/v1alpha1
   version: v1alpha1
 version: "3"

@@ -1,16 +1,16 @@
-# permissions for end users to view hmcprovideraws.
+# permissions for end users to view awsprovider.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   labels:
     app.kubernetes.io/name: hmc
     app.kubernetes.io/managed-by: kustomize
-  name: hmcprovideraws-viewer-role
+  name: awsprovider-viewer-role
 rules:
 - apiGroups:
   - hmc.mirantis.com.hmc.mirantis.com
   resources:
-  - hmcprovideraws
+  - awsprovider
   verbs:
   - get
   - list
@@ -18,6 +18,6 @@ rules:
 - apiGroups:
   - hmc.mirantis.com.hmc.mirantis.com
   resources:
-  - hmcprovideraws/status
+  - awsprovider/status
   verbs:
   - get

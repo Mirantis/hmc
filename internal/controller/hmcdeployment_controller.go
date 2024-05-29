@@ -27,26 +27,26 @@ import (
 	hmcmirantiscomv1alpha1 "github.com/Mirantis/hmc/api/v1alpha1"
 )
 
-// HMCDeploymentReconciler reconciles a HMCDeployment object
-type HMCDeploymentReconciler struct {
+// DeploymentReconciler reconciles a Deployment object
+type DeploymentReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 }
 
-//+kubebuilder:rbac:groups=hmc.mirantis.com.hmc.mirantis.com,resources=hmcdeployments,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=hmc.mirantis.com.hmc.mirantis.com,resources=hmcdeployments/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=hmc.mirantis.com.hmc.mirantis.com,resources=hmcdeployments/finalizers,verbs=update
+//+kubebuilder:rbac:groups=hmc.mirantis.com.hmc.mirantis.com,resources=deployments,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=hmc.mirantis.com.hmc.mirantis.com,resources=deployments/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=hmc.mirantis.com.hmc.mirantis.com,resources=deployments/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 // TODO(user): Modify the Reconcile function to compare the state specified by
-// the HMCDeployment object against the actual cluster state, and then
+// the Deployment object against the actual cluster state, and then
 // perform operations to make the cluster state reflect the state specified by
 // the user.
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.3/pkg/reconcile
-func (r *HMCDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *DeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = log.FromContext(ctx)
 
 	// TODO(user): your logic here
@@ -55,8 +55,8 @@ func (r *HMCDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *HMCDeploymentReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *DeploymentReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&hmcmirantiscomv1alpha1.HMCDeployment{}).
+		For(&hmcmirantiscomv1alpha1.Deployment{}).
 		Complete(r)
 }

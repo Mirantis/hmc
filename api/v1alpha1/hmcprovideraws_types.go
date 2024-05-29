@@ -23,17 +23,17 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// HMCProviderAWSSpec defines the desired state of HMCProviderAWS
-type HMCProviderAWSSpec struct {
+// AWSProviderSpec defines the desired state of AWSProvider
+type AWSProviderSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of HMCProviderAWS. Edit hmcprovideraws_types.go to remove/update
+	// Foo is an example field of AWSProvider. Edit awsprovider_types.go to remove/update
 	Foo string `json:"foo,omitempty"`
 }
 
-// HMCProviderAWSStatus defines the observed state of HMCProviderAWS
-type HMCProviderAWSStatus struct {
+// AWSProviderStatus defines the observed state of AWSProvider
+type AWSProviderStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 }
@@ -41,24 +41,24 @@ type HMCProviderAWSStatus struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
-// HMCProviderAWS is the Schema for the hmcprovideraws API
-type HMCProviderAWS struct {
+// AWSProvider is the Schema for the awsprovider API
+type AWSProvider struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   HMCProviderAWSSpec   `json:"spec,omitempty"`
-	Status HMCProviderAWSStatus `json:"status,omitempty"`
+	Spec   AWSProviderSpec   `json:"spec,omitempty"`
+	Status AWSProviderStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 
-// HMCProviderAWSList contains a list of HMCProviderAWS
-type HMCProviderAWSList struct {
+// AWSProviderList contains a list of AWSProvider
+type AWSProviderList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []HMCProviderAWS `json:"items"`
+	Items           []AWSProvider `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&HMCProviderAWS{}, &HMCProviderAWSList{})
+	SchemeBuilder.Register(&AWSProvider{}, &AWSProviderList{})
 }

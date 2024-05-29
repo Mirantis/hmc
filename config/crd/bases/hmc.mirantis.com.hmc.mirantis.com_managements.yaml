@@ -4,20 +4,20 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.14.0
-  name: hmcmanagements.hmc.mirantis.com.hmc.mirantis.com
+  name: managements.hmc.mirantis.com.hmc.mirantis.com
 spec:
   group: hmc.mirantis.com.hmc.mirantis.com
   names:
-    kind: HMCManagement
-    listKind: HMCManagementList
-    plural: hmcmanagements
-    singular: hmcmanagement
+    kind: Management
+    listKind: ManagementList
+    plural: managements
+    singular: management
   scope: Namespaced
   versions:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: HMCManagement is the Schema for the hmcmanagements API
+        description: Management is the Schema for the managements API
         properties:
           apiVersion:
             description: |-
@@ -37,15 +37,15 @@ spec:
           metadata:
             type: object
           spec:
-            description: HMCManagementSpec defines the desired state of HMCManagement
+            description: ManagementSpec defines the desired state of Management
             properties:
               foo:
-                description: Foo is an example field of HMCManagement. Edit hmcmanagement_types.go
+                description: Foo is an example field of Management. Edit management_types.go
                   to remove/update
                 type: string
             type: object
           status:
-            description: HMCManagementStatus defines the observed state of HMCManagement
+            description: ManagementStatus defines the observed state of Management
             type: object
         type: object
     served: true

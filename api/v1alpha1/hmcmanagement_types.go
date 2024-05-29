@@ -23,17 +23,17 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// HMCManagementSpec defines the desired state of HMCManagement
-type HMCManagementSpec struct {
+// ManagementSpec defines the desired state of Management
+type ManagementSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of HMCManagement. Edit hmcmanagement_types.go to remove/update
+	// Foo is an example field of Management. Edit management_types.go to remove/update
 	Foo string `json:"foo,omitempty"`
 }
 
-// HMCManagementStatus defines the observed state of HMCManagement
-type HMCManagementStatus struct {
+// ManagementStatus defines the observed state of Management
+type ManagementStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 }
@@ -41,24 +41,24 @@ type HMCManagementStatus struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
-// HMCManagement is the Schema for the hmcmanagements API
-type HMCManagement struct {
+// Management is the Schema for the managements API
+type Management struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   HMCManagementSpec   `json:"spec,omitempty"`
-	Status HMCManagementStatus `json:"status,omitempty"`
+	Spec   ManagementSpec   `json:"spec,omitempty"`
+	Status ManagementStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 
-// HMCManagementList contains a list of HMCManagement
-type HMCManagementList struct {
+// ManagementList contains a list of Management
+type ManagementList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []HMCManagement `json:"items"`
+	Items           []Management `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&HMCManagement{}, &HMCManagementList{})
+	SchemeBuilder.Register(&Management{}, &ManagementList{})
 }

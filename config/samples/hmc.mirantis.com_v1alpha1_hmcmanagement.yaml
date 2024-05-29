@@ -1,9 +1,9 @@
 apiVersion: hmc.mirantis.com.hmc.mirantis.com/v1alpha1
-kind: HMCManagement
+kind: Management
 metadata:
   labels:
     app.kubernetes.io/name: hmc
     app.kubernetes.io/managed-by: kustomize
-  name: hmcmanagement-sample
+  name: management-sample
 spec:
   # TODO(user): Add fields here

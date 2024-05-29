@@ -122,32 +122,32 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controller.HMCTemplateReconciler{
+	if err = (&controller.TemplateReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "HMCTemplate")
+		setupLog.Error(err, "unable to create controller", "controller", "Template")
 		os.Exit(1)
 	}
-	if err = (&controller.HMCDeploymentReconciler{
+	if err = (&controller.DeploymentReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "HMCDeployment")
+		setupLog.Error(err, "unable to create controller", "controller", "Deployment")
 		os.Exit(1)
 	}
-	if err = (&controller.HMCManagementReconciler{
+	if err = (&controller.ManagementReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "HMCManagement")
+		setupLog.Error(err, "unable to create controller", "controller", "Management")
 		os.Exit(1)
 	}
-	if err = (&controller.HMCProviderAWSReconciler{
+	if err = (&controller.AWSProviderReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "HMCProviderAWS")
+		setupLog.Error(err, "unable to create controller", "controller", "AWSProvider")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder

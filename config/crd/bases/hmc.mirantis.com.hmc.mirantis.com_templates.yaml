@@ -4,20 +4,20 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.14.0
-  name: hmctemplates.hmc.mirantis.com.hmc.mirantis.com
+  name: templates.hmc.mirantis.com.hmc.mirantis.com
 spec:
   group: hmc.mirantis.com.hmc.mirantis.com
   names:
-    kind: HMCTemplate
-    listKind: HMCTemplateList
-    plural: hmctemplates
-    singular: hmctemplate
+    kind: Template
+    listKind: TemplateList
+    plural: templates
+    singular: template
   scope: Namespaced
   versions:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: HMCTemplate is the Schema for the hmctemplates API
+        description: Template is the Schema for the templates API
         properties:
           apiVersion:
             description: |-
@@ -37,7 +37,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: HMCTemplateSpec defines the desired state of HMCTemplate
+            description: TemplateSpec defines the desired state of Template
             properties:
               helmChartURL:
                 description: HelmChartURL is a URL of the helm chart representing
@@ -54,7 +54,7 @@ spec:
             - provider
             type: object
           status:
-            description: HMCTemplateStatus defines the observed state of HMCTemplate
+            description: TemplateStatus defines the observed state of Template
             properties:
               description:
                 description: Descriptions contains information about the template.

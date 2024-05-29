@@ -30,7 +30,7 @@ import (
 	hmcmirantiscomv1alpha1 "github.com/Mirantis/hmc/api/v1alpha1"
 )
 
-var _ = Describe("HMCTemplate Controller", func() {
+var _ = Describe("Template Controller", func() {
 	Context("When reconciling a resource", func() {
 		const resourceName = "test-resource"
 
@@ -40,18 +40,18 @@ var _ = Describe("HMCTemplate Controller", func() {
 			Name:      resourceName,
 			Namespace: "default", // TODO(user):Modify as needed
 		}
-		hmctemplate := &hmcmirantiscomv1alpha1.HMCTemplate{}
+		template := &hmcmirantiscomv1alpha1.Template{}
 
 		BeforeEach(func() {
-			By("creating the custom resource for the Kind HMCTemplate")
-			err := k8sClient.Get(ctx, typeNamespacedName, hmctemplate)
+			By("creating the custom resource for the Kind Template")
+			err := k8sClient.Get(ctx, typeNamespacedName, template)
 			if err != nil && errors.IsNotFound(err) {
-				resource := &hmcmirantiscomv1alpha1.HMCTemplate{
+				resource := &hmcmirantiscomv1alpha1.Template{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      resourceName,
 						Namespace: "default",
 					},
-					Spec: hmcmirantiscomv1alpha1.HMCTemplateSpec{
+					Spec: hmcmirantiscomv1alpha1.TemplateSpec{
 						Provider:     "aws",
 						HelmChartURL: "oci://ghcr.io/Mirantis/hmc/charts/aws-template-example",
 					},
@@ -63,16 +63,16 @@ var _ = Describe("HMCTemplate Controller", func() {
 
 		AfterEach(func() {
 			// TODO(user): Cleanup logic after each test, like removing the resource instance.
-			resource := &hmcmirantiscomv1alpha1.HMCTemplate{}
+			resource := &hmcmirantiscomv1alpha1.Template{}
 			err := k8sClient.Get(ctx, typeNamespacedName, resource)
 			Expect(err).NotTo(HaveOccurred())
 
-			By("Cleanup the specific resource instance HMCTemplate")
+			By("Cleanup the specific resource instance Template")
 			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
 		})
 		It("should successfully reconcile the resource", func() {
 			By("Reconciling the created resource")
-			controllerReconciler := &HMCTemplateReconciler{
+			controllerReconciler := &TemplateReconciler{
 				Client: k8sClient,
 				Scheme: k8sClient.Scheme(),
 			}

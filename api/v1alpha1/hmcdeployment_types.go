@@ -21,12 +21,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// HMCDeploymentSpec defines the desired state of HMCDeployment
-type HMCDeploymentSpec struct {
+// DeploymentSpec defines the desired state of Deployment
+type DeploymentSpec struct {
 	// DryRun specifies whether the template should be applied after validation or only validated.
 	// +kubebuilder:validation:Optional
 	DryRun bool `json:"dryRun"`
-	// Template is a reference to a HMCTemplate object located in the same namespace.
+	// Template is a reference to a Template object located in the same namespace.
 	// +kubebuilder:validation:Required
 	Template string `json:"template"`
 	// Configuration allows to provide parameters for template customization.
@@ -36,32 +36,32 @@ type HMCDeploymentSpec struct {
 	Configuration apiextensionsv1.JSON `json:"configuration"`
 }
 
-// HMCDeploymentStatus defines the observed state of HMCDeployment
-type HMCDeploymentStatus struct {
+// DeploymentStatus defines the observed state of Deployment
+type DeploymentStatus struct {
 	TemplateValidationStatus `json:",inline"`
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
-// HMCDeployment is the Schema for the hmcdeployments API
-type HMCDeployment struct {
+// Deployment is the Schema for the deployments API
+type Deployment struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   HMCDeploymentSpec   `json:"spec,omitempty"`
-	Status HMCDeploymentStatus `json:"status,omitempty"`
+	Spec   DeploymentSpec   `json:"spec,omitempty"`
+	Status DeploymentStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 
-// HMCDeploymentList contains a list of HMCDeployment
-type HMCDeploymentList struct {
+// DeploymentList contains a list of Deployment
+type DeploymentList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []HMCDeployment `json:"items"`
+	Items           []Deployment `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&HMCDeployment{}, &HMCDeploymentList{})
+	SchemeBuilder.Register(&Deployment{}, &DeploymentList{})
 }

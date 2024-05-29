@@ -1,16 +1,16 @@
-# permissions for end users to edit hmcmanagements.
+# permissions for end users to edit managements.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   labels:
     app.kubernetes.io/name: hmc
     app.kubernetes.io/managed-by: kustomize
-  name: hmcmanagement-editor-role
+  name: management-editor-role
 rules:
 - apiGroups:
   - hmc.mirantis.com.hmc.mirantis.com
   resources:
-  - hmcmanagements
+  - managements
   verbs:
   - create
   - delete
@@ -22,6 +22,6 @@ rules:
 - apiGroups:
   - hmc.mirantis.com.hmc.mirantis.com
   resources:
-  - hmcmanagements/status
+  - managements/status
   verbs:
   - get

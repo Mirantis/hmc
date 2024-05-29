@@ -14,12 +14,12 @@ resources:
 # default, aiding admins in cluster management. Those roles are
 # not used by the Project itself. You can comment the following lines
 # if you do not want those helpers be installed with your Project.
-- hmcprovideraws_editor_role.yaml
-- hmcprovideraws_viewer_role.yaml
-- hmcmanagement_editor_role.yaml
-- hmcmanagement_viewer_role.yaml
-- hmcdeployment_editor_role.yaml
-- hmcdeployment_viewer_role.yaml
-- hmctemplate_editor_role.yaml
-- hmctemplate_viewer_role.yaml
+- awsprovider_editor_role.yaml
+- awsprovider_viewer_role.yaml
+- management_editor_role.yaml
+- management_viewer_role.yaml
+- deployment_editor_role.yaml
+- deployment_viewer_role.yaml
+- template_editor_role.yaml
+- template_viewer_role.yaml
 

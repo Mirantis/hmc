@@ -1,16 +1,16 @@
-# permissions for end users to view hmcdeployments.
+# permissions for end users to view deployments.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   labels:
     app.kubernetes.io/name: hmc
     app.kubernetes.io/managed-by: kustomize
-  name: hmcdeployment-viewer-role
+  name: deployment-viewer-role
 rules:
 - apiGroups:
   - hmc.mirantis.com.hmc.mirantis.com
   resources:
-  - hmcdeployments
+  - deployments
   verbs:
   - get
   - list
@@ -18,6 +18,6 @@ rules:
 - apiGroups:
   - hmc.mirantis.com.hmc.mirantis.com
   resources:
-  - hmcdeployments/status
+  - deployments/status
   verbs:
   - get

@@ -7,7 +7,7 @@ rules:
 - apiGroups:
   - hmc.mirantis.com.hmc.mirantis.com
   resources:
-  - hmcdeployments
+  - awsprovider
   verbs:
   - create
   - delete
@@ -19,13 +19,13 @@ rules:
 - apiGroups:
   - hmc.mirantis.com.hmc.mirantis.com
   resources:
-  - hmcdeployments/finalizers
+  - awsprovider/finalizers
   verbs:
   - update
 - apiGroups:
   - hmc.mirantis.com.hmc.mirantis.com
   resources:
-  - hmcdeployments/status
+  - awsprovider/status
   verbs:
   - get
   - patch
@@ -33,7 +33,7 @@ rules:
 - apiGroups:
   - hmc.mirantis.com.hmc.mirantis.com
   resources:
-  - hmcmanagements
+  - deployments
   verbs:
   - create
   - delete
@@ -45,13 +45,13 @@ rules:
 - apiGroups:
   - hmc.mirantis.com.hmc.mirantis.com
   resources:
-  - hmcmanagements/finalizers
+  - deployments/finalizers
   verbs:
   - update
 - apiGroups:
   - hmc.mirantis.com.hmc.mirantis.com
   resources:
-  - hmcmanagements/status
+  - deployments/status
   verbs:
   - get
   - patch
@@ -59,7 +59,7 @@ rules:
 - apiGroups:
   - hmc.mirantis.com.hmc.mirantis.com
   resources:
-  - hmcprovideraws
+  - managements
   verbs:
   - create
   - delete
@@ -71,13 +71,13 @@ rules:
 - apiGroups:
   - hmc.mirantis.com.hmc.mirantis.com
   resources:
-  - hmcprovideraws/finalizers
+  - managements/finalizers
   verbs:
   - update
 - apiGroups:
   - hmc.mirantis.com.hmc.mirantis.com
   resources:
-  - hmcprovideraws/status
+  - managements/status
   verbs:
   - get
   - patch
@@ -85,7 +85,7 @@ rules:
 - apiGroups:
   - hmc.mirantis.com.hmc.mirantis.com
   resources:
-  - hmctemplates
+  - templates
   verbs:
   - create
   - delete
@@ -97,13 +97,13 @@ rules:
 - apiGroups:
   - hmc.mirantis.com.hmc.mirantis.com
   resources:
-  - hmctemplates/finalizers
+  - templates/finalizers
   verbs:
   - update
 - apiGroups:
   - hmc.mirantis.com.hmc.mirantis.com
   resources:
-  - hmctemplates/status
+  - templates/status
   verbs:
   - get
   - patch

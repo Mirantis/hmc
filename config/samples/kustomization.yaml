@@ -1,7 +1,7 @@
 ## Append samples of your project ##
 resources:
-- hmc.mirantis.com_v1alpha1_hmctemplate.yaml
-- hmc.mirantis.com_v1alpha1_hmcdeployment.yaml
-- hmc.mirantis.com_v1alpha1_hmcmanagement.yaml
-- hmc.mirantis.com_v1alpha1_hmcprovideraws.yaml
+- hmc.mirantis.com_v1alpha1_template.yaml
+- hmc.mirantis.com_v1alpha1_deployment.yaml
+- hmc.mirantis.com_v1alpha1_management.yaml
+- hmc.mirantis.com_v1alpha1_awsprovider.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples

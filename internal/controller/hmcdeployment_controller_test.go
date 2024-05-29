@@ -30,7 +30,7 @@ import (
 	hmcmirantiscomv1alpha1 "github.com/Mirantis/hmc/api/v1alpha1"
 )
 
-var _ = Describe("HMCDeployment Controller", func() {
+var _ = Describe("Deployment Controller", func() {
 	Context("When reconciling a resource", func() {
 		const resourceName = "test-resource"
 
@@ -40,13 +40,13 @@ var _ = Describe("HMCDeployment Controller", func() {
 			Name:      resourceName,
 			Namespace: "default", // TODO(user):Modify as needed
 		}
-		hmcdeployment := &hmcmirantiscomv1alpha1.HMCDeployment{}
+		deployment := &hmcmirantiscomv1alpha1.Deployment{}
 
 		BeforeEach(func() {
-			By("creating the custom resource for the Kind HMCDeployment")
-			err := k8sClient.Get(ctx, typeNamespacedName, hmcdeployment)
+			By("creating the custom resource for the Kind Deployment")
+			err := k8sClient.Get(ctx, typeNamespacedName, deployment)
 			if err != nil && errors.IsNotFound(err) {
-				resource := &hmcmirantiscomv1alpha1.HMCDeployment{
+				resource := &hmcmirantiscomv1alpha1.Deployment{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      resourceName,
 						Namespace: "default",
@@ -59,16 +59,16 @@ var _ = Describe("HMCDeployment Controller", func() {
 
 		AfterEach(func() {
 			// TODO(user): Cleanup logic after each test, like removing the resource instance.
-			resource := &hmcmirantiscomv1alpha1.HMCDeployment{}
+			resource := &hmcmirantiscomv1alpha1.Deployment{}
 			err := k8sClient.Get(ctx, typeNamespacedName, resource)
 			Expect(err).NotTo(HaveOccurred())
 
-			By("Cleanup the specific resource instance HMCDeployment")
+			By("Cleanup the specific resource instance Deployment")
 			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
 		})
 		It("should successfully reconcile the resource", func() {
 			By("Reconciling the created resource")
-			controllerReconciler := &HMCDeploymentReconciler{
+			controllerReconciler := &DeploymentReconciler{
 				Client: k8sClient,
 				Scheme: k8sClient.Scheme(),
 			}

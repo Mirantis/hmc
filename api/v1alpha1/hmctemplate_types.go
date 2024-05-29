@@ -20,8 +20,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// HMCTemplateSpec defines the desired state of HMCTemplate
-type HMCTemplateSpec struct {
+// TemplateSpec defines the desired state of Template
+type TemplateSpec struct {
 	// Provider specifies a CAPI provider associated with the template.
 	// +kubebuilder:validation:Enum=aws
 	// +kubebuilder:validation:Required
@@ -31,8 +31,8 @@ type HMCTemplateSpec struct {
 	HelmChartURL string `json:"helmChartURL"`
 }
 
-// HMCTemplateStatus defines the observed state of HMCTemplate
-type HMCTemplateStatus struct {
+// TemplateStatus defines the observed state of Template
+type TemplateStatus struct {
 	TemplateValidationStatus `json:",inline"`
 	// Descriptions contains information about the template.
 	// +optional
@@ -50,24 +50,24 @@ type TemplateValidationStatus struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
-// HMCTemplate is the Schema for the hmctemplates API
-type HMCTemplate struct {
+// Template is the Schema for the templates API
+type Template struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   HMCTemplateSpec   `json:"spec,omitempty"`
-	Status HMCTemplateStatus `json:"status,omitempty"`
+	Spec   TemplateSpec   `json:"spec,omitempty"`
+	Status TemplateStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 
-// HMCTemplateList contains a list of HMCTemplate
-type HMCTemplateList struct {
+// TemplateList contains a list of Template
+type TemplateList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []HMCTemplate `json:"items"`
+	Items           []Template `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&HMCTemplate{}, &HMCTemplateList{})
+	SchemeBuilder.Register(&Template{}, &TemplateList{})
 }

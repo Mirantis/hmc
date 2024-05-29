@@ -30,7 +30,7 @@ import (
 	hmcmirantiscomv1alpha1 "github.com/Mirantis/hmc/api/v1alpha1"
 )
 
-var _ = Describe("HMCManagement Controller", func() {
+var _ = Describe("Management Controller", func() {
 	Context("When reconciling a resource", func() {
 		const resourceName = "test-resource"
 
@@ -40,13 +40,13 @@ var _ = Describe("HMCManagement Controller", func() {
 			Name:      resourceName,
 			Namespace: "default", // TODO(user):Modify as needed
 		}
-		hmcmanagement := &hmcmirantiscomv1alpha1.HMCManagement{}
+		management := &hmcmirantiscomv1alpha1.Management{}
 
 		BeforeEach(func() {
-			By("creating the custom resource for the Kind HMCManagement")
-			err := k8sClient.Get(ctx, typeNamespacedName, hmcmanagement)
+			By("creating the custom resource for the Kind Management")
+			err := k8sClient.Get(ctx, typeNamespacedName, management)
 			if err != nil && errors.IsNotFound(err) {
-				resource := &hmcmirantiscomv1alpha1.HMCManagement{
+				resource := &hmcmirantiscomv1alpha1.Management{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      resourceName,
 						Namespace: "default",
@@ -59,16 +59,16 @@ var _ = Describe("HMCManagement Controller", func() {
 
 		AfterEach(func() {
 			// TODO(user): Cleanup logic after each test, like removing the resource instance.
-			resource := &hmcmirantiscomv1alpha1.HMCManagement{}
+			resource := &hmcmirantiscomv1alpha1.Management{}
 			err := k8sClient.Get(ctx, typeNamespacedName, resource)
 			Expect(err).NotTo(HaveOccurred())
 
-			By("Cleanup the specific resource instance HMCManagement")
+			By("Cleanup the specific resource instance Management")
 			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
 		})
 		It("should successfully reconcile the resource", func() {
 			By("Reconciling the created resource")
-			controllerReconciler := &HMCManagementReconciler{
+			controllerReconciler := &ManagementReconciler{
 				Client: k8sClient,
 				Scheme: k8sClient.Scheme(),
 			}

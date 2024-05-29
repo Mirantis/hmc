@@ -1,16 +1,16 @@
-# permissions for end users to view hmcmanagements.
+# permissions for end users to view managements.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   labels:
     app.kubernetes.io/name: hmc
     app.kubernetes.io/managed-by: kustomize
-  name: hmcmanagement-viewer-role
+  name: management-viewer-role
 rules:
 - apiGroups:
   - hmc.mirantis.com.hmc.mirantis.com
   resources:
-  - hmcmanagements
+  - managements
   verbs:
   - get
   - list
@@ -18,6 +18,6 @@ rules:
 - apiGroups:
   - hmc.mirantis.com.hmc.mirantis.com
   resources:
-  - hmcmanagements/status
+  - managements/status
   verbs:
   - get

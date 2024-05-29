@@ -4,20 +4,20 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.14.0
-  name: hmcdeployments.hmc.mirantis.com.hmc.mirantis.com
+  name: deployments.hmc.mirantis.com.hmc.mirantis.com
 spec:
   group: hmc.mirantis.com.hmc.mirantis.com
   names:
-    kind: HMCDeployment
-    listKind: HMCDeploymentList
-    plural: hmcdeployments
-    singular: hmcdeployment
+    kind: Deployment
+    listKind: DeploymentList
+    plural: deployments
+    singular: deployment
   scope: Namespaced
   versions:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: HMCDeployment is the Schema for the hmcdeployments API
+        description: Deployment is the Schema for the deployments API
         properties:
           apiVersion:
             description: |-
@@ -37,7 +37,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: HMCDeploymentSpec defines the desired state of HMCDeployment
+            description: DeploymentSpec defines the desired state of Deployment
             properties:
               configuration:
                 description: |-
@@ -50,14 +50,14 @@ spec:
                   after validation or only validated.
                 type: boolean
               template:
-                description: Template is a reference to a HMCTemplate object located
+                description: Template is a reference to a Template object located
                   in the same namespace.
                 type: string
             required:
             - template
             type: object
           status:
-            description: HMCDeploymentStatus defines the observed state of HMCDeployment
+            description: DeploymentStatus defines the observed state of Deployment
             properties:
               valid:
                 description: Valid indicates whether the template passed validation

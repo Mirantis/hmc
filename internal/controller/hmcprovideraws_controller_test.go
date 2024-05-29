@@ -30,7 +30,7 @@ import (
 	hmcmirantiscomv1alpha1 "github.com/Mirantis/hmc/api/v1alpha1"
 )
 
-var _ = Describe("HMCProviderAWS Controller", func() {
+var _ = Describe("AWSProvider Controller", func() {
 	Context("When reconciling a resource", func() {
 		const resourceName = "test-resource"
 
@@ -40,13 +40,13 @@ var _ = Describe("HMCProviderAWS Controller", func() {
 			Name:      resourceName,
 			Namespace: "default", // TODO(user):Modify as needed
 		}
-		hmcprovideraws := &hmcmirantiscomv1alpha1.HMCProviderAWS{}
+		awsprovider := &hmcmirantiscomv1alpha1.AWSProvider{}
 
 		BeforeEach(func() {
-			By("creating the custom resource for the Kind HMCProviderAWS")
-			err := k8sClient.Get(ctx, typeNamespacedName, hmcprovideraws)
+			By("creating the custom resource for the Kind AWSProvider")
+			err := k8sClient.Get(ctx, typeNamespacedName, awsprovider)
 			if err != nil && errors.IsNotFound(err) {
-				resource := &hmcmirantiscomv1alpha1.HMCProviderAWS{
+				resource := &hmcmirantiscomv1alpha1.AWSProvider{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      resourceName,
 						Namespace: "default",
@@ -59,16 +59,16 @@ var _ = Describe("HMCProviderAWS Controller", func() {
 
 		AfterEach(func() {
 			// TODO(user): Cleanup logic after each test, like removing the resource instance.
-			resource := &hmcmirantiscomv1alpha1.HMCProviderAWS{}
+			resource := &hmcmirantiscomv1alpha1.AWSProvider{}
 			err := k8sClient.Get(ctx, typeNamespacedName, resource)
 			Expect(err).NotTo(HaveOccurred())
 
-			By("Cleanup the specific resource instance HMCProviderAWS")
+			By("Cleanup the specific resource instance AWSProvider")
 			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
 		})
 		It("should successfully reconcile the resource", func() {
 			By("Reconciling the created resource")
-			controllerReconciler := &HMCProviderAWSReconciler{
+			controllerReconciler := &AWSProviderReconciler{
 				Client: k8sClient,
 				Scheme: k8sClient.Scheme(),
 			}
