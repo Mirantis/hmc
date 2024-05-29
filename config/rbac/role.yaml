@@ -1,11 +1,110 @@
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  labels:
-    app.kubernetes.io/name: hmc
-    app.kubernetes.io/managed-by: kustomize
   name: manager-role
 rules:
-- apiGroups: [""]
-  resources: ["pods"]
-  verbs: ["get", "list", "watch"]
+- apiGroups:
+  - hmc.mirantis.com.hmc.mirantis.com
+  resources:
+  - hmcdeployments
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - hmc.mirantis.com.hmc.mirantis.com
+  resources:
+  - hmcdeployments/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - hmc.mirantis.com.hmc.mirantis.com
+  resources:
+  - hmcdeployments/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - hmc.mirantis.com.hmc.mirantis.com
+  resources:
+  - hmcmanagements
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - hmc.mirantis.com.hmc.mirantis.com
+  resources:
+  - hmcmanagements/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - hmc.mirantis.com.hmc.mirantis.com
+  resources:
+  - hmcmanagements/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - hmc.mirantis.com.hmc.mirantis.com
+  resources:
+  - hmcprovideraws
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - hmc.mirantis.com.hmc.mirantis.com
+  resources:
+  - hmcprovideraws/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - hmc.mirantis.com.hmc.mirantis.com
+  resources:
+  - hmcprovideraws/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - hmc.mirantis.com.hmc.mirantis.com
+  resources:
+  - hmctemplates
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - hmc.mirantis.com.hmc.mirantis.com
+  resources:
+  - hmctemplates/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - hmc.mirantis.com.hmc.mirantis.com
+  resources:
+  - hmctemplates/status
+  verbs:
+  - get
+  - patch
+  - update

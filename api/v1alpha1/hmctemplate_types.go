@@ -20,22 +20,27 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 // HMCTemplateSpec defines the desired state of HMCTemplate
 type HMCTemplateSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// Foo is an example field of HMCTemplate. Edit hmctemplate_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// Provider specifies a CAPI provider associated with the template.
+	// +kubebuilder:validation:Enum=aws
+	// +kubebuilder:validation:Required
+	Provider string `json:"provider"`
+	// HelmChartURL is a URL of the helm chart representing the template.
+	// +kubebuilder:validation:Required
+	HelmChartURL string `json:"helmChartURL"`
 }
 
 // HMCTemplateStatus defines the observed state of HMCTemplate
 type HMCTemplateStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// Descriptions contains information about the template.
+	// +optional
+	Description string `json:"description"`
+	// Valid indicates whether the template passed validation or not.
+	Valid bool `json:"valid"`
+	// ValidationError provides information regarding issues encountered during template validation.
+	// +optional
+	ValidationError string `json:"validationError"`
 }
 
 //+kubebuilder:object:root=true
