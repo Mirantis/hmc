@@ -33,9 +33,9 @@ type ManagementReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-//+kubebuilder:rbac:groups=hmc.mirantis.com.hmc.mirantis.com,resources=managements,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=hmc.mirantis.com.hmc.mirantis.com,resources=managements/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=hmc.mirantis.com.hmc.mirantis.com,resources=managements/finalizers,verbs=update
+//+kubebuilder:rbac:groups=hmc.mirantis.com,resources=managements,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=hmc.mirantis.com,resources=managements/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=hmc.mirantis.com,resources=managements/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.

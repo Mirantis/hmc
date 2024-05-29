@@ -4,9 +4,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.14.0
-  name: awsproviders.hmc.mirantis.com.hmc.mirantis.com
+  name: awsproviders.hmc.mirantis.com
 spec:
-  group: hmc.mirantis.com.hmc.mirantis.com
+  group: hmc.mirantis.com
   names:
     kind: AWSProvider
     listKind: AWSProviderList

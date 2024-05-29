@@ -4,20 +4,20 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.14.0
-  name: templates.hmc.mirantis.com.hmc.mirantis.com
+  name: deployments.hmc.mirantis.com
 spec:
-  group: hmc.mirantis.com.hmc.mirantis.com
+  group: hmc.mirantis.com
   names:
-    kind: Template
-    listKind: TemplateList
-    plural: templates
-    singular: template
+    kind: Deployment
+    listKind: DeploymentList
+    plural: deployments
+    singular: deployment
   scope: Namespaced
   versions:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: Template is the Schema for the templates API
+        description: Deployment is the Schema for the deployments API
         properties:
           apiVersion:
             description: |-
@@ -37,28 +37,28 @@ spec:
           metadata:
             type: object
           spec:
-            description: TemplateSpec defines the desired state of Template
+            description: DeploymentSpec defines the desired state of Deployment
             properties:
-              helmChartURL:
-                description: HelmChartURL is a URL of the helm chart representing
-                  the template.
-                type: string
-              provider:
-                description: Provider specifies a CAPI provider associated with the
-                  template.
-                enum:
-                - aws
+              configuration:
+                description: |-
+                  Configuration allows to provide parameters for template customization.
+                  If no Configuration provided, the field will be populated with the default values for
+                  the template and DryRun will be enabled.
+                x-kubernetes-preserve-unknown-fields: true
+              dryRun:
+                description: DryRun specifies whether the template should be applied
+                  after validation or only validated.
+                type: boolean
+              template:
+                description: Template is a reference to a Template object located
+                  in the same namespace.
                 type: string
             required:
-            - helmChartURL
-            - provider
+            - template
             type: object
           status:
-            description: TemplateStatus defines the observed state of Template
+            description: DeploymentStatus defines the observed state of Deployment
             properties:
-              description:
-                description: Descriptions contains information about the template.
-                type: string
               valid:
                 description: Valid indicates whether the template passed validation
                   or not.
