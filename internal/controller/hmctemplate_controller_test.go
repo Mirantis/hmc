@@ -51,6 +51,10 @@ var _ = Describe("HMCTemplate Controller", func() {
 						Name:      resourceName,
 						Namespace: "default",
 					},
+					Spec: hmcmirantiscomv1alpha1.HMCTemplateSpec{
+						Provider:     "aws",
+						HelmChartURL: "oci://ghcr.io/Mirantis/hmc/charts/aws-template-example",
+					},
 					// TODO(user): Specify other spec details if needed.
 				}
 				Expect(k8sClient.Create(ctx, resource)).To(Succeed())

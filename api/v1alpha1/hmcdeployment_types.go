@@ -17,25 +17,28 @@ limitations under the License.
 package v1alpha1
 
 import (
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 // HMCDeploymentSpec defines the desired state of HMCDeployment
 type HMCDeploymentSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// Foo is an example field of HMCDeployment. Edit hmcdeployment_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// DryRun specifies whether the template should be applied after validation or only validated.
+	// +kubebuilder:validation:Optional
+	DryRun bool `json:"dryRun"`
+	// Template is a reference to a HMCTemplate object located in the same namespace.
+	// +kubebuilder:validation:Required
+	Template string `json:"template"`
+	// Configuration allows to provide parameters for template customization.
+	// If no Configuration provided, the field will be populated with the default values for
+	// the template and DryRun will be enabled.
+	// +kubebuilder:validation:Optional
+	Configuration apiextensionsv1.JSON `json:"configuration"`
 }
 
 // HMCDeploymentStatus defines the observed state of HMCDeployment
 type HMCDeploymentStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	TemplateValidationStatus `json:",inline"`
 }
 
 //+kubebuilder:object:root=true

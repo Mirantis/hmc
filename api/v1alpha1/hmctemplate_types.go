@@ -33,9 +33,13 @@ type HMCTemplateSpec struct {
 
 // HMCTemplateStatus defines the observed state of HMCTemplate
 type HMCTemplateStatus struct {
+	TemplateValidationStatus `json:",inline"`
 	// Descriptions contains information about the template.
 	// +optional
 	Description string `json:"description"`
+}
+
+type TemplateValidationStatus struct {
 	// Valid indicates whether the template passed validation or not.
 	Valid bool `json:"valid"`
 	// ValidationError provides information regarding issues encountered during template validation.

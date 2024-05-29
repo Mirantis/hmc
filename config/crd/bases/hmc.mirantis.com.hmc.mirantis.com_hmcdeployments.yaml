@@ -39,13 +39,36 @@ spec:
           spec:
             description: HMCDeploymentSpec defines the desired state of HMCDeployment
             properties:
-              foo:
-                description: Foo is an example field of HMCDeployment. Edit hmcdeployment_types.go
-                  to remove/update
+              configuration:
+                description: |-
+                  Configuration allows to provide parameters for template customization.
+                  If no Configuration provided, the field will be populated with the default values for
+                  the template and DryRun will be enabled.
+                x-kubernetes-preserve-unknown-fields: true
+              dryRun:
+                description: DryRun specifies whether the template should be applied
+                  after validation or only validated.
+                type: boolean
+              template:
+                description: Template is a reference to a HMCTemplate object located
+                  in the same namespace.
                 type: string
+            required:
+            - template
             type: object
           status:
             description: HMCDeploymentStatus defines the observed state of HMCDeployment
+            properties:
+              valid:
+                description: Valid indicates whether the template passed validation
+                  or not.
+                type: boolean
+              validationError:
+                description: ValidationError provides information regarding issues
+                  encountered during template validation.
+                type: string
+            required:
+            - valid
             type: object
         type: object
     served: true
