@@ -6,6 +6,7 @@ updates:
       interval: daily
     open-pull-requests-limit: 5
     ignore:
+      - dependency-name: k8s.io/apiextensions-apiserver
       - dependency-name: k8s.io/apimachinery
       - dependency-name: k8s.io/client-go
       - dependency-name: sigs.k8s.io/controller-runtime
