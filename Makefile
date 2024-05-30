@@ -120,6 +120,11 @@ build-installer: manifests generate kustomize ## Generate a consolidated YAML wi
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default > dist/install.yaml
 
+.PHONY: hmc-chart-generate
+hmc-chart-generate: kustomize helmify ## Generate hmc helm chart
+	rm -rf charts/hmc/values.yaml charts/hmc/templates/*.yaml
+	$(KUSTOMIZE) build config/default | $(HELMIFY) charts/hmc
+
 ##@ Deployment
 
 ifndef ignore-not-found

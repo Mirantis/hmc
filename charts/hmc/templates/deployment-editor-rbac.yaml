@@ -1,0 +1,25 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "hmc.fullname" . }}-deployment-editor-role
+  labels:
+  {{- include "hmc.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+  - hmc.mirantis.com.hmc.mirantis.com
+  resources:
+  - deployments
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - hmc.mirantis.com.hmc.mirantis.com
+  resources:
+  - deployments/status
+  verbs:
+  - get
