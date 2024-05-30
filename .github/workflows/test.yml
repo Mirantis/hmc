@@ -44,6 +44,8 @@ jobs:
         uses: golangci/golangci-lint-action@v6
         with:
           args: --timeout 10m0s
+      - name: Check hmc chart
+        run: make hmc-chart-generate && git diff --exit-code
       - name: Unit tests
         run: |
           make test
