@@ -1,0 +1,126 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "hmc.fullname" . }}-manager-role
+  labels:
+  {{- include "hmc.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+  - hmc.mirantis.com
+  resources:
+  - awsprovider
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - hmc.mirantis.com
+  resources:
+  - awsprovider/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - hmc.mirantis.com
+  resources:
+  - awsprovider/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - hmc.mirantis.com
+  resources:
+  - deployments
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - hmc.mirantis.com
+  resources:
+  - deployments/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - hmc.mirantis.com
+  resources:
+  - deployments/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - hmc.mirantis.com
+  resources:
+  - managements
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - hmc.mirantis.com
+  resources:
+  - managements/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - hmc.mirantis.com
+  resources:
+  - managements/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - hmc.mirantis.com
+  resources:
+  - templates
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - hmc.mirantis.com
+  resources:
+  - templates/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - hmc.mirantis.com
+  resources:
+  - templates/status
+  verbs:
+  - get
+  - patch
+  - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "hmc.fullname" . }}-manager-rolebinding
+  labels:
+  {{- include "hmc.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: '{{ include "hmc.fullname" . }}-manager-role'
+subjects:
+- kind: ServiceAccount
+  name: '{{ include "hmc.fullname" . }}-controller-manager'
+  namespace: '{{ .Release.Namespace }}'

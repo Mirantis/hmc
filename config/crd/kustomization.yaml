@@ -2,10 +2,10 @@
 # since it depends on service name and namespace that are out of this kustomize package.
 # It should be run by config/default
 resources:
-- bases/hmc.mirantis.com.hmc.mirantis.com_templates.yaml
-- bases/hmc.mirantis.com.hmc.mirantis.com_deployments.yaml
-- bases/hmc.mirantis.com.hmc.mirantis.com_managements.yaml
-- bases/hmc.mirantis.com.hmc.mirantis.com_awsproviders.yaml
+- bases/hmc.mirantis.com_templates.yaml
+- bases/hmc.mirantis.com_deployments.yaml
+- bases/hmc.mirantis.com_managements.yaml
+- bases/hmc.mirantis.com_awsproviders.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 patches:

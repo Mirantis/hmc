@@ -1,0 +1,84 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: templates.hmc.mirantis.com
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.14.0
+  labels:
+  {{- include "hmc.labels" . | nindent 4 }}
+spec:
+  group: hmc.mirantis.com
+  names:
+    kind: Template
+    listKind: TemplateList
+    plural: templates
+    singular: template
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Template is the Schema for the templates API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: TemplateSpec defines the desired state of Template
+            properties:
+              helmChartURL:
+                description: HelmChartURL is a URL of the helm chart representing the
+                  template.
+                type: string
+              provider:
+                description: Provider specifies a CAPI provider associated with the
+                  template.
+                enum:
+                - aws
+                type: string
+            required:
+            - helmChartURL
+            - provider
+            type: object
+          status:
+            description: TemplateStatus defines the observed state of Template
+            properties:
+              description:
+                description: Descriptions contains information about the template.
+                type: string
+              valid:
+                description: Valid indicates whether the template passed validation
+                  or not.
+                type: boolean
+              validationError:
+                description: ValidationError provides information regarding issues encountered
+                  during template validation.
+                type: string
+            required:
+            - valid
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
