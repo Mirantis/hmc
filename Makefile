@@ -126,6 +126,10 @@ ifndef ignore-not-found
   ignore-not-found = false
 endif
 
+.PHONY: deploy-helm-controller
+deploy-helm-controller: helm
+	$(HELM) upgrade --install --set $(FLUX_CHART_VALUES) helm-controller $(FLUX_CHART_REPOSITORY) --version $(FLUX_CHART_VERSION) -n hmc-system
+
 .PHONY: install
 install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/crd | $(KUBECTL) apply -f -
@@ -157,6 +161,10 @@ CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen-$(CONTROLLER_TOOLS_VERSION)
 ENVTEST ?= $(LOCALBIN)/setup-envtest-$(ENVTEST_VERSION)
 GOLANGCI_LINT = $(LOCALBIN)/golangci-lint-$(GOLANGCI_LINT_VERSION)
 HELM ?= $(LOCALBIN)/helm-$(HELM_VERSION)
+
+FLUX_CHART_REPOSITORY ?= oci://ghcr.io/fluxcd-community/charts/flux2
+FLUX_CHART_VERSION ?= 2.13.0
+FLUX_CHART_VALUES ?= "imageAutomationController.create=false,imageReflectionController.create=false,kustomizeController.create=false,notificationController.create=false"
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v5.3.0
