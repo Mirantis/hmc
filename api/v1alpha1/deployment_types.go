@@ -24,16 +24,16 @@ import (
 // DeploymentSpec defines the desired state of Deployment
 type DeploymentSpec struct {
 	// DryRun specifies whether the template should be applied after validation or only validated.
-	// +kubebuilder:validation:Optional
-	DryRun bool `json:"dryRun"`
+	// +optional
+	DryRun bool `json:"dryRun,omitempty"`
 	// Template is a reference to a Template object located in the same namespace.
 	// +kubebuilder:validation:Required
 	Template string `json:"template"`
 	// Configuration allows to provide parameters for template customization.
 	// If no Configuration provided, the field will be populated with the default values for
 	// the template and DryRun will be enabled.
-	// +kubebuilder:validation:Optional
-	Configuration apiextensionsv1.JSON `json:"configuration"`
+	// +optional
+	Configuration apiextensionsv1.JSON `json:"configuration,omitempty"`
 }
 
 // DeploymentStatus defines the observed state of Deployment
