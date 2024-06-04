@@ -1,0 +1,34 @@
+# Cluster parameters
+clusterName: k0s-aws
+workersNumber: 2
+
+clusterNetwork:
+  pods:
+    cidrBlocks:
+    - "10.244.0.0/16"
+  services:
+    cidrBlocks:
+    - "10.96.0.0/12"
+
+# AWS cluster parameters
+vpcID: ""
+region: ""
+sshKeyName: ""
+subnets: []
+
+# AWS machines parameters
+amiID: ""
+iamInstanceProfile: nodes.cluster-api-provider-aws.sigs.k8s.io
+instanceType: ""
+securityGroupID: ""
+
+# K0smotron parameters
+k0smotron:
+  service:
+    type: LoadBalancer
+    apiPort: 6443
+    konnectivityPort: 8132
+
+# K0s parameters
+k0s:
+  version: v1.27.2+k0s.0
