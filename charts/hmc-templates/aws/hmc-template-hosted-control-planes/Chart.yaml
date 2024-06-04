@@ -1,0 +1,15 @@
+apiVersion: v2
+name: hmc-template-hosted-control-planes
+description: | 
+  The HMC template to deploy kubernetes cluster with control plane components
+  within the management cluster.
+type: application
+# This is the chart version. This version number should be incremented each time you make changes
+# to the chart and its templates, including the app version.
+# Versions are expected to follow Semantic Versioning (https://semver.org/)
+version: 0.1.0
+# This is the version number of the application being deployed. This version number should be
+# incremented each time you make changes to the application. Versions are not expected to
+# follow Semantic Versioning. They should reflect the version the application is using.
+# It is recommended to use it with quotes.
+appVersion: "0.1.0"
