@@ -17,7 +17,15 @@ limitations under the License.
 package v1alpha1
 
 import (
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	helmcontrollerv2 "github.com/fluxcd/helm-controller/api/v2"
+)
+
+const (
+	// TemplateKind is the string representation of a Template.
+	TemplateKind = "Template"
 )
 
 // TemplateSpec defines the desired state of Template
@@ -26,9 +34,25 @@ type TemplateSpec struct {
 	// +kubebuilder:validation:Enum=aws
 	// +kubebuilder:validation:Required
 	Provider string `json:"provider"`
-	// HelmChartURL is a URL of the helm chart representing the template.
+	// Helm holds a reference to a Helm chart representing the HMC template
 	// +kubebuilder:validation:Required
-	HelmChartURL string `json:"helmChartURL"`
+	Helm HelmSpec `json:"helm"`
+}
+
+// +kubebuilder:validation:XValidation:rule="(has(self.chartName) && !has(self.chartRef)) || (!has(self.chartName) && has(self.chartRef))", message="either chartName or chartRef must be set"
+
+// HelmSpec references a Helm chart representing the HMC template
+type HelmSpec struct {
+	// ChartName is a name of a Helm chart representing the template in the HMC repository.
+	// +optional
+	ChartName string `json:"chartName,omitempty"`
+	// ChartVersion is a version of a Helm chart representing the template in the HMC repository.
+	// +optional
+	ChartVersion string `json:"chartVersion,omitempty"`
+	// ChartRef is a reference to a source controller resource containing the
+	// Helm chart representing the template.
+	// +optional
+	ChartRef *helmcontrollerv2.CrossNamespaceSourceReference `json:"chartRef,omitempty"`
 }
 
 // TemplateStatus defines the observed state of Template
@@ -36,7 +60,11 @@ type TemplateStatus struct {
 	TemplateValidationStatus `json:",inline"`
 	// Descriptions contains information about the template.
 	// +optional
-	Description string `json:"description"`
+	Description string `json:"description,omitempty"`
+	// Configuration demonstrates available parameters for template customization,
+	// that can be used when creating Deployment objects.
+	// +optional
+	Configuration apiextensionsv1.JSON `json:"configuration,omitempty"`
 }
 
 type TemplateValidationStatus struct {
@@ -44,7 +72,7 @@ type TemplateValidationStatus struct {
 	Valid bool `json:"valid"`
 	// ValidationError provides information regarding issues encountered during template validation.
 	// +optional
-	ValidationError string `json:"validationError"`
+	ValidationError string `json:"validationError,omitempty"`
 }
 
 //+kubebuilder:object:root=true

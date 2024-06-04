@@ -60,7 +60,7 @@ vet: ## Run go vet against code.
 	go vet ./...
 
 .PHONY: test
-test: manifests generate fmt vet envtest ## Run tests.
+test: manifests generate fmt vet envtest external-crd ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test $$(go list ./... | grep -v /e2e) -coverprofile cover.out
 
 # Utilize Kind or modify the e2e tests to load the image locally, enabling compatibility with other vendors.
@@ -133,7 +133,7 @@ endif
 
 .PHONY: deploy-helm-controller
 deploy-helm-controller: helm
-	$(HELM) upgrade --install --set $(FLUX_CHART_VALUES) helm-controller $(FLUX_CHART_REPOSITORY) --version $(FLUX_CHART_VERSION) -n hmc-system
+	$(HELM) upgrade --install --create-namespace --set $(FLUX_CHART_VALUES) helm-controller $(FLUX_CHART_REPOSITORY) --version $(FLUX_CHART_VERSION) -n hmc-system
 
 .PHONY: install
 install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
@@ -158,6 +158,16 @@ undeploy: kustomize ## Undeploy controller from the K8s cluster specified in ~/.
 LOCALBIN ?= $(shell pwd)/bin
 $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
+
+EXTERNAL_CRD_DIR ?= $(LOCALBIN)/crd
+$(EXTERNAL_CRD_DIR): $(LOCALBIN)
+	mkdir -p $(EXTERNAL_CRD_DIR)
+
+FLUX_SOURCE_VERSION ?= $(shell go mod edit -json | jq -r '.Require[] | select(.Path == "github.com/fluxcd/source-controller/api") | .Version')
+FLUX_SOURCE_REPO_CRD ?= $(EXTERNAL_CRD_DIR)/source-helmrepositories-$(FLUX_SOURCE_VERSION).yaml
+FLUX_SOURCE_CHART_CRD ?= $(EXTERNAL_CRD_DIR)/source-helmchart-$(FLUX_SOURCE_VERSION).yaml
+FLUX_HELM_VERSION ?= $(shell go mod edit -json | jq -r '.Require[] | select(.Path == "github.com/fluxcd/helm-controller/api") | .Version')
+FLUX_HELM_CRD ?= $(EXTERNAL_CRD_DIR)/helm-$(FLUX_HELM_VERSION).yaml
 
 ## Tool Binaries
 KUBECTL ?= kubectl
@@ -210,6 +220,21 @@ $(HELM): $(LOCALBIN)
 helmify: $(HELMIFY) ## Download helmify locally if necessary.
 $(HELMIFY): $(LOCALBIN)
 	$(call go-install-tool,$(HELMIFY),github.com/arttor/helmify/cmd/helmify,${HELMIFY_VERSION})
+
+$(FLUX_HELM_CRD): $(EXTERNAL_CRD_DIR)
+	rm -f $(FLUX_HELM_CRD)
+	curl -s https://raw.githubusercontent.com/fluxcd/helm-controller/$(FLUX_HELM_VERSION)/config/crd/bases/helm.toolkit.fluxcd.io_helmreleases.yaml > $(FLUX_HELM_CRD)
+
+$(FLUX_SOURCE_CHART_CRD): $(EXTERNAL_CRD_DIR)
+	rm -f $(FLUX_SOURCE_CHART_CRD)
+	curl -s https://raw.githubusercontent.com/fluxcd/source-controller/$(FLUX_SOURCE_VERSION)/config/crd/bases/source.toolkit.fluxcd.io_helmcharts.yaml > $(FLUX_SOURCE_CHART_CRD)
+
+$(FLUX_SOURCE_REPO_CRD): $(EXTERNAL_CRD_DIR)
+	rm -f $(FLUX_SOURCE_REPO_CRD)
+	curl -s https://raw.githubusercontent.com/fluxcd/source-controller/$(FLUX_SOURCE_VERSION)/config/crd/bases/source.toolkit.fluxcd.io_helmrepositories.yaml > $(FLUX_SOURCE_REPO_CRD)
+
+.PHONY: external-crd
+external-crd: $(FLUX_HELM_CRD) $(FLUX_SOURCE_CHART_CRD) $(FLUX_SOURCE_REPO_CRD)
 
 # go-install-tool will 'go install' any package with custom target and name of binary, if it doesn't exist
 # $1 - target path with name of binary (ideally with version)

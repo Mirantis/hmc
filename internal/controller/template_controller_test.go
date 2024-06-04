@@ -19,13 +19,13 @@ package controller
 import (
 	"context"
 
+	v2 "github.com/fluxcd/helm-controller/api/v2"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	hmcmirantiscomv1alpha1 "github.com/Mirantis/hmc/api/v1alpha1"
 )
@@ -52,8 +52,14 @@ var _ = Describe("Template Controller", func() {
 						Namespace: "default",
 					},
 					Spec: hmcmirantiscomv1alpha1.TemplateSpec{
-						Provider:     "aws",
-						HelmChartURL: "oci://ghcr.io/Mirantis/hmc/charts/aws-template-example",
+						Provider: "aws",
+						Helm: hmcmirantiscomv1alpha1.HelmSpec{
+							ChartRef: &v2.CrossNamespaceSourceReference{
+								Kind:      "HelmChart",
+								Name:      "ref-test",
+								Namespace: "default",
+							},
+						},
 					},
 					// TODO(user): Specify other spec details if needed.
 				}

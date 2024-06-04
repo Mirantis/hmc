@@ -40,10 +40,53 @@ spec:
           spec:
             description: TemplateSpec defines the desired state of Template
             properties:
-              helmChartURL:
-                description: HelmChartURL is a URL of the helm chart representing the
-                  template.
-                type: string
+              helm:
+                description: Helm holds a reference to a Helm chart representing the
+                  HMC template
+                properties:
+                  chartName:
+                    description: ChartName is a name of a Helm chart representing the
+                      template in the HMC repository.
+                    type: string
+                  chartRef:
+                    description: |-
+                      ChartRef is a reference to a source controller resource containing the
+                      Helm chart representing the template.
+                    properties:
+                      apiVersion:
+                        description: APIVersion of the referent.
+                        type: string
+                      kind:
+                        description: Kind of the referent.
+                        enum:
+                        - OCIRepository
+                        - HelmChart
+                        type: string
+                      name:
+                        description: Name of the referent.
+                        maxLength: 253
+                        minLength: 1
+                        type: string
+                      namespace:
+                        description: |-
+                          Namespace of the referent, defaults to the namespace of the Kubernetes
+                          resource object that contains the reference.
+                        maxLength: 63
+                        minLength: 1
+                        type: string
+                    required:
+                    - kind
+                    - name
+                    type: object
+                  chartVersion:
+                    description: ChartVersion is a version of a Helm chart representing
+                      the template in the HMC repository.
+                    type: string
+                type: object
+                x-kubernetes-validations:
+                - message: either chartName or chartRef must be set
+                  rule: (has(self.chartName) && !has(self.chartRef)) || (!has(self.chartName)
+                    && has(self.chartRef))
               provider:
                 description: Provider specifies a CAPI provider associated with the
                   template.
@@ -51,12 +94,17 @@ spec:
                 - aws
                 type: string
             required:
-            - helmChartURL
+            - helm
             - provider
             type: object
           status:
             description: TemplateStatus defines the observed state of Template
             properties:
+              configuration:
+                description: |-
+                  Configuration demonstrates available parameters for template customization,
+                  that can be used when creating Deployment objects.
+                x-kubernetes-preserve-unknown-fields: true
               description:
                 description: Descriptions contains information about the template.
                 type: string
