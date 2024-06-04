@@ -8,7 +8,7 @@ rules:
 - apiGroups:
   - hmc.mirantis.com.hmc.mirantis.com
   resources:
-  - awsprovider
+  - awsproviders
   verbs:
   - get
   - list
@@ -16,6 +16,6 @@ rules:
 - apiGroups:
   - hmc.mirantis.com.hmc.mirantis.com
   resources:
-  - awsprovider/status
+  - awsproviders/status
   verbs:
   - get

@@ -7,7 +7,7 @@ rules:
 - apiGroups:
   - hmc.mirantis.com
   resources:
-  - awsprovider
+  - awsproviders
   verbs:
   - create
   - delete
@@ -19,13 +19,13 @@ rules:
 - apiGroups:
   - hmc.mirantis.com
   resources:
-  - awsprovider/finalizers
+  - awsproviders/finalizers
   verbs:
   - update
 - apiGroups:
   - hmc.mirantis.com
   resources:
-  - awsprovider/status
+  - awsproviders/status
   verbs:
   - get
   - patch

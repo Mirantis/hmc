@@ -33,9 +33,9 @@ type AWSProviderReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-//+kubebuilder:rbac:groups=hmc.mirantis.com,resources=awsprovider,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=hmc.mirantis.com,resources=awsprovider/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=hmc.mirantis.com,resources=awsprovider/finalizers,verbs=update
+//+kubebuilder:rbac:groups=hmc.mirantis.com,resources=awsproviders,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=hmc.mirantis.com,resources=awsproviders/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=hmc.mirantis.com,resources=awsproviders/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
