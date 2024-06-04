@@ -10,7 +10,7 @@ rules:
 - apiGroups:
   - hmc.mirantis.com.hmc.mirantis.com
   resources:
-  - awsprovider
+  - awsproviders
   verbs:
   - create
   - delete
@@ -22,6 +22,6 @@ rules:
 - apiGroups:
   - hmc.mirantis.com.hmc.mirantis.com
   resources:
-  - awsprovider/status
+  - awsproviders/status
   verbs:
   - get
