@@ -133,7 +133,7 @@ endif
 
 .PHONY: deploy-helm-controller
 deploy-helm-controller: helm
-	$(HELM) upgrade --install --set $(FLUX_CHART_VALUES) helm-controller $(FLUX_CHART_REPOSITORY) --version $(FLUX_CHART_VERSION) -n hmc-system
+	$(HELM) upgrade --install --create-namespace --set $(FLUX_CHART_VALUES) helm-controller $(FLUX_CHART_REPOSITORY) --version $(FLUX_CHART_VERSION) -n hmc-system
 
 .PHONY: install
 install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
