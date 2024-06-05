@@ -11,5 +11,5 @@ spec:
       - name: manager
         args:
           - "--leader-elect"
-          - "--default-oci-registry=oci://local-registry:5000/charts"
+          - "--default-oci-registry=oci://hmc-local-registry:5000/charts"
           - "--insecure-registry"
