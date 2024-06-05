@@ -127,9 +127,43 @@ hmc-chart-generate: kustomize helmify ## Generate hmc helm chart
 
 ##@ Deployment
 
+KIND_CLUSTER_NAME ?= hmc-dev
+KIND_NETWORK ?= kind
+LOCAL_REGISTRY_NAME ?= hmc-local-registry
+LOCAL_REGISTRY_PORT ?= 5001
+
 ifndef ignore-not-found
   ignore-not-found = false
 endif
+
+.PHONY: deploy-kind
+deploy-kind: kind
+	@if ! $(KIND) get clusters | grep -q "^$(KIND_CLUSTER_NAME)$$"; then \
+		kind create cluster -n $(KIND_CLUSTER_NAME); \
+	fi
+
+.PHONY: undeploy-kind
+undeploy-kind: kind
+	@if kind get clusters | grep -q "^$(KIND_CLUSTER_NAME)$$"; then \
+		kind delete cluster --name $(KIND_CLUSTER_NAME); \
+	fi
+
+.PHONY: deploy-local-registry
+deploy-local-registry:
+	@if [ ! "$$($(CONTAINER_TOOL) ps -aq -f name=$(LOCAL_REGISTRY_NAME))" ]; then \
+		echo "Starting new local registry container $(LOCAL_REGISTRY_NAME)"; \
+		$(CONTAINER_TOOL) run -d --restart=always -p "127.0.0.1:$(LOCAL_REGISTRY_PORT):5000" --network bridge --name "$(LOCAL_REGISTRY_NAME)" registry:2; \
+	fi; \
+	if [ "$$($(CONTAINER_TOOL) inspect -f='{{json .NetworkSettings.Networks.$(KIND_NETWORK)}}' $(LOCAL_REGISTRY_NAME))" = 'null' ]; then \
+		$(CONTAINER_TOOL) network connect $(KIND_NETWORK) $(LOCAL_REGISTRY_NAME); \
+	fi
+
+.PHONY: undeploy-local-registry
+undeploy-local-registry:
+	@if [ "$$($(CONTAINER_TOOL) ps -aq -f name=$(LOCAL_REGISTRY_NAME))" ]; then \
+  		echo "Removing local registry container $(LOCAL_REGISTRY_NAME)"; \
+		$(CONTAINER_TOOL) rm -f "$(LOCAL_REGISTRY_NAME)"; \
+	fi
 
 .PHONY: deploy-helm-controller
 deploy-helm-controller: helm
@@ -151,6 +185,15 @@ deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in
 .PHONY: undeploy
 undeploy: kustomize ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
 	$(KUSTOMIZE) build config/default | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
+
+.PHONY: dev-deploy
+dev-deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
+	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	$(KUSTOMIZE) build config/dev | $(KUBECTL) apply -f -
+
+.PHONY: dev-undeploy
+dev-undeploy: kustomize ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
+	$(KUSTOMIZE) build config/dev | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
 
 ##@ Dependencies
 
@@ -177,6 +220,7 @@ ENVTEST ?= $(LOCALBIN)/setup-envtest-$(ENVTEST_VERSION)
 GOLANGCI_LINT = $(LOCALBIN)/golangci-lint-$(GOLANGCI_LINT_VERSION)
 HELM ?= $(LOCALBIN)/helm-$(HELM_VERSION)
 HELMIFY ?= $(LOCALBIN)/helmify-$(HELMIFY_VERSION)
+KIND ?= $(LOCALBIN)/kind-$(KIND_VERSION)
 
 FLUX_CHART_REPOSITORY ?= oci://ghcr.io/fluxcd-community/charts/flux2
 FLUX_CHART_VERSION ?= 2.13.0
@@ -189,6 +233,7 @@ ENVTEST_VERSION ?= release-0.17
 GOLANGCI_LINT_VERSION ?= v1.57.2
 HELM_VERSION ?= v3.15.1
 HELMIFY_VERSION ?= v0.4.13
+KIND_VERSION ?= v0.23.0
 
 .PHONY: kustomize
 kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary.
@@ -220,6 +265,11 @@ $(HELM): $(LOCALBIN)
 helmify: $(HELMIFY) ## Download helmify locally if necessary.
 $(HELMIFY): $(LOCALBIN)
 	$(call go-install-tool,$(HELMIFY),github.com/arttor/helmify/cmd/helmify,${HELMIFY_VERSION})
+
+.PHONY: kind
+kind: $(KIND) ## Download kind locally if necessary.
+$(KIND): $(LOCALBIN)
+	$(call go-install-tool,$(KIND),sigs.k8s.io/kind,${KIND_VERSION})
 
 $(FLUX_HELM_CRD): $(EXTERNAL_CRD_DIR)
 	rm -f $(FLUX_HELM_CRD)
