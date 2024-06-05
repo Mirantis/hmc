@@ -211,7 +211,7 @@ func helmArtifactReady(chart *sourcev1.HelmChart) (err error, reportStatus bool)
 				return fmt.Errorf("HelmChart was not reconciled yet, retrying"), false
 			}
 			if c.Status != metav1.ConditionTrue {
-				return fmt.Errorf("failed to dowlnoad helm chart artifact: %s", c.Message), true
+				return fmt.Errorf("failed to download helm chart artifact: %s", c.Message), true
 			}
 		}
 	}
