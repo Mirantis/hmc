@@ -128,6 +128,8 @@ hmc-chart-generate: kustomize helmify ## Generate hmc helm chart
 ##@ Deployment
 
 KIND_CLUSTER_NAME ?= hmc-dev
+LOCAL_REGISTRY_NAME ?= hmc-local-registry
+LOCAL_REGISTRY_PORT ?= 5001
 
 ifndef ignore-not-found
   ignore-not-found = false
@@ -144,6 +146,18 @@ undeploy-kind: kind
 	@if kind get clusters | grep -q "^$(KIND_CLUSTER_NAME)$$"; then \
 		kind delete cluster --name $(KIND_CLUSTER_NAME); \
 	fi
+
+.PHONY: deploy-local-registry
+deploy-local-registry:
+	@if [ ! "`$(CONTAINER_TOOL) ps -aq -f name=$(LOCAL_REGISTRY_NAME)`" ]; then \
+      $(CONTAINER_TOOL) run -d --restart=always -p "127.0.0.1:$(LOCAL_REGISTRY_PORT):5000" --network bridge --name "$(LOCAL_REGISTRY_NAME)" registry:2; \
+    fi
+
+.PHONY: undeploy-local-registry
+undeploy-local-registry:
+	@if [ "`$(CONTAINER_TOOL) ps -aq -f name=$(LOCAL_REGISTRY_NAME)`" ]; then \
+      $(CONTAINER_TOOL) rm -f "$(LOCAL_REGISTRY_NAME)"; \
+    fi
 
 .PHONY: deploy-helm-controller
 deploy-helm-controller: helm
