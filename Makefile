@@ -1,3 +1,4 @@
+NAMESPACE ?= hmc-system
 # Image URL to use all building/pushing image targets
 IMG ?= hmc/controller:latest
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
@@ -155,20 +156,20 @@ ifndef ignore-not-found
   ignore-not-found = false
 endif
 
-.PHONY: deploy-kind
-deploy-kind: kind
+.PHONY: kind-deploy
+kind-deploy: kind
 	@if ! $(KIND) get clusters | grep -q "^$(KIND_CLUSTER_NAME)$$"; then \
 		kind create cluster -n $(KIND_CLUSTER_NAME); \
 	fi
 
-.PHONY: undeploy-kind
-undeploy-kind: kind
+.PHONY: kind-undeploy
+kind-undeploy: kind
 	@if kind get clusters | grep -q "^$(KIND_CLUSTER_NAME)$$"; then \
 		kind delete cluster --name $(KIND_CLUSTER_NAME); \
 	fi
 
-.PHONY: deploy-local-registry
-deploy-local-registry:
+.PHONY: registry-deploy
+registry-deploy:
 	@if [ ! "$$($(CONTAINER_TOOL) ps -aq -f name=$(LOCAL_REGISTRY_NAME))" ]; then \
 		echo "Starting new local registry container $(LOCAL_REGISTRY_NAME)"; \
 		$(CONTAINER_TOOL) run -d --restart=always -p "127.0.0.1:$(LOCAL_REGISTRY_PORT):5000" --network bridge --name "$(LOCAL_REGISTRY_NAME)" registry:2; \
@@ -177,27 +178,27 @@ deploy-local-registry:
 		$(CONTAINER_TOOL) network connect $(KIND_NETWORK) $(LOCAL_REGISTRY_NAME); \
 	fi
 
-.PHONY: undeploy-local-registry
-undeploy-local-registry:
+.PHONY: registry-undeploy
+registry-undeploy:
 	@if [ "$$($(CONTAINER_TOOL) ps -aq -f name=$(LOCAL_REGISTRY_NAME))" ]; then \
   		echo "Removing local registry container $(LOCAL_REGISTRY_NAME)"; \
 		$(CONTAINER_TOOL) rm -f "$(LOCAL_REGISTRY_NAME)"; \
 	fi
 
-.PHONY: deploy-helm-controller
-deploy-helm-controller: helm
-	$(HELM) upgrade --install --create-namespace --set $(FLUX_CHART_VALUES) helm-controller $(FLUX_CHART_REPOSITORY) --version $(FLUX_CHART_VERSION) -n hmc-system
+.PHONY: helm-controller-deploy
+helm-controller-deploy: helm
+	$(HELM) upgrade --install --create-namespace --set $(FLUX_CHART_VALUES) helm-controller $(FLUX_CHART_REPOSITORY) --version $(FLUX_CHART_VERSION) -n $(NAMESPACE)
 
-.PHONY: install
-install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
+.PHONY: crd-install
+crd-install: generate-all kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/crd | $(KUBECTL) apply -f -
 
-.PHONY: uninstall
-uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
+.PHONY: crd-uninstall
+crd-uninstall: generate-all kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
 	$(KUSTOMIZE) build config/crd | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
 
 .PHONY: deploy
-deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
+deploy: generate-all kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default | $(KUBECTL) apply -f -
 
@@ -222,6 +223,12 @@ dev-push: docker-build helm-package
 		$(HELM) push "$$chart" $(LOCAL_REGISTRY_REPO); \
 	done
 
+.PHONY: dev-apply
+dev-apply: kind-deploy crd-install registry-deploy helm-controller-deploy dev-push dev-deploy
+	kubectl rollout restart -n $(NAMESPACE) deployment/hmc-controller-manager
+
+.PHONY: dev-destroy
+dev-destroy: kind-undeploy registry-undeploy
 
 ##@ Dependencies
 

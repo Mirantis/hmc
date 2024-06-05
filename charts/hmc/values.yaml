@@ -10,7 +10,7 @@ controllerManager:
         drop:
         - ALL
     image:
-      repository: controller
+      repository: hmc/controller
       tag: latest
     resources:
       limits:
