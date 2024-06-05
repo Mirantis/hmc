@@ -1,0 +1,15 @@
+# This patch adds the args to allow exposing the metrics endpoint securely
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: controller-manager
+  namespace: system
+spec:
+  template:
+    spec:
+      containers:
+      - name: manager
+        args:
+          - "--leader-elect"
+          - "--default-oci-registry=oci://local-registry:5000/charts"
+          - "--insecure-registry"
