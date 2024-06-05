@@ -1,0 +1,42 @@
+apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+kind: K0sControlPlane
+metadata:
+  name: {{ include "k0scontrolplane.name" . }}
+spec:
+  replicas: {{ .Values.controlPlaneNumber }}
+  # dirty hack
+  version: {{ .Values.k0s.version | replace "+" "-" }}
+  k0sConfigSpec:
+    k0s:
+      apiVersion: k0s.k0sproject.io/v1beta1
+      kind: ClusterConfig
+      metadata:
+        name: {{ include "k0sconfig.name" . }}
+        namespace: {{ .Release.Namespace }}
+      spec:
+        api:
+          extraArgs:
+            anonymous-auth: "true"
+        extensions:
+          helm:
+            repositories:
+              - name: aws-cloud-controller-manager
+                url: https://kubernetes.github.io/cloud-provider-aws
+            charts:
+              - name: aws-cloud-controller-manager
+                namespace: kube-system
+                chartname: aws-cloud-controller-manager/aws-cloud-controller-manager
+                version: "0.0.8"
+                values: |
+                  args:
+                    - --v=2
+                    - --cloud-provider=aws
+                    - --cluster-cidr={{ first .Values.clusterNetwork.pods.cidrBlocks }}
+                    - --allocate-node-cidrs=true
+                    - --cluster-name={{ include "cluster.name" . }}
+  machineTemplate:
+    infrastructureRef:
+      apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+      kind: AWSMachineTemplate
+      name: {{ include "awsmachinetemplate.controlplane.name" . }}
+      namespace: {{ .Release.Namespace }}

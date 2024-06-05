@@ -1,0 +1,31 @@
+# Cluster parameters
+clusterName: k0s-aws
+controlPlaneNumber: 3
+workersNumber: 2
+
+clusterNetwork:
+  pods:
+    cidrBlocks:
+    - "10.244.0.0/16"
+  services:
+    cidrBlocks:
+    - "10.96.0.0/12"
+
+# AWS cluster parameters
+region: ""
+sshKeyName: ""
+
+# AWS machines parameters
+controlPlane:
+  amiID: ""
+  iamInstanceProfile: control-plane.cluster-api-provider-aws.sigs.k8s.io
+  instanceType: ""
+
+worker:
+  amiID: ""
+  iamInstanceProfile: nodes.cluster-api-provider-aws.sigs.k8s.io
+  instanceType: ""
+
+# K0s parameters
+k0s:
+  version: v1.27.2+k0s.0

@@ -1,0 +1,9 @@
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: AWSCluster
+metadata:
+  name: {{ include "cluster.name" . }}
+spec:
+  region: {{ .Values.region }}
+  # identityRef:
+    # kind: AWSClusterStaticIdentity
+    # name: aws-identity-name
