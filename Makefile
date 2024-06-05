@@ -128,6 +128,7 @@ hmc-chart-generate: kustomize helmify ## Generate hmc helm chart
 ##@ Deployment
 
 KIND_CLUSTER_NAME ?= hmc-dev
+KIND_NETWORK ?= kind
 LOCAL_REGISTRY_NAME ?= hmc-local-registry
 LOCAL_REGISTRY_PORT ?= 5001
 
@@ -149,15 +150,20 @@ undeploy-kind: kind
 
 .PHONY: deploy-local-registry
 deploy-local-registry:
-	@if [ ! "`$(CONTAINER_TOOL) ps -aq -f name=$(LOCAL_REGISTRY_NAME)`" ]; then \
-      $(CONTAINER_TOOL) run -d --restart=always -p "127.0.0.1:$(LOCAL_REGISTRY_PORT):5000" --network bridge --name "$(LOCAL_REGISTRY_NAME)" registry:2; \
-    fi
+	@if [ ! "$$($(CONTAINER_TOOL) ps -aq -f name=$(LOCAL_REGISTRY_NAME))" ]; then \
+		echo "Starting new local registry container $(LOCAL_REGISTRY_NAME)"; \
+		$(CONTAINER_TOOL) run -d --restart=always -p "127.0.0.1:$(LOCAL_REGISTRY_PORT):5000" --network bridge --name "$(LOCAL_REGISTRY_NAME)" registry:2; \
+	fi; \
+	if [ "$$($(CONTAINER_TOOL) inspect -f='{{json .NetworkSettings.Networks.$(KIND_NETWORK)}}' $(LOCAL_REGISTRY_NAME))" = 'null' ]; then \
+		$(CONTAINER_TOOL) network connect $(KIND_NETWORK) $(LOCAL_REGISTRY_NAME); \
+	fi
 
 .PHONY: undeploy-local-registry
 undeploy-local-registry:
-	@if [ "`$(CONTAINER_TOOL) ps -aq -f name=$(LOCAL_REGISTRY_NAME)`" ]; then \
-      $(CONTAINER_TOOL) rm -f "$(LOCAL_REGISTRY_NAME)"; \
-    fi
+	@if [ "$$($(CONTAINER_TOOL) ps -aq -f name=$(LOCAL_REGISTRY_NAME))" ]; then \
+  		echo "Removing local registry container $(LOCAL_REGISTRY_NAME)"; \
+		$(CONTAINER_TOOL) rm -f "$(LOCAL_REGISTRY_NAME)"; \
+	fi
 
 .PHONY: deploy-helm-controller
 deploy-helm-controller: helm
