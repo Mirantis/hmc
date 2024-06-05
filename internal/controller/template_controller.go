@@ -37,7 +37,6 @@ import (
 const (
 	defaultRepoName = "hmc-templates"
 	defaultRepoType = "oci"
-	defaultRepoURL  = "oci://ghcr.io/Mirantis/hmc/charts"
 
 	defaultReconcileInterval = 10 * time.Minute
 )
@@ -46,6 +45,9 @@ const (
 type TemplateReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
+
+	DefaultOCIRegistry string
+	InsecureRegistry   bool
 }
 
 // +kubebuilder:rbac:groups=hmc.mirantis.com,resources=templates,verbs=get;list;watch;create;update;patch;delete
@@ -152,8 +154,9 @@ func (r *TemplateReconciler) reconcileHelmRepo(ctx context.Context, template *hm
 	_, err := ctrl.CreateOrUpdate(ctx, r.Client, helmRepo, func() error {
 		helmRepo.Spec = sourcev1.HelmRepositorySpec{
 			Type:     defaultRepoType,
-			URL:      defaultRepoURL,
+			URL:      r.DefaultOCIRegistry,
 			Interval: metav1.Duration{Duration: defaultReconcileInterval},
+			Insecure: r.InsecureRegistry,
 		}
 		return nil
 	})
