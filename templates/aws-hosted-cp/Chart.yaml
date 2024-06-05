@@ -1,7 +1,7 @@
 apiVersion: v2
-name: hmc-template-hosted-control-planes
+name: aws-hosted-cp
 description: | 
-  The HMC template to deploy kubernetes cluster with control plane components
+  The HMC template to deploy a k8s cluster on AWS with control plane components
   within the management cluster.
 type: application
 # This is the chart version. This version number should be incremented each time you make changes
