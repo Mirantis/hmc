@@ -1,5 +1,5 @@
 # Image URL to use all building/pushing image targets
-IMG ?= controller:latest
+IMG ?= hmc/controller:latest
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.29.0
 
@@ -86,6 +86,21 @@ lint-fix: golangci-lint ## Run golangci-lint linter and perform fixes
 
 ##@ Build
 
+TEMPLATES_DIR := templates
+CHARTS_PACKAGE_DIR ?= $(LOCALBIN)/charts
+$(CHARTS_PACKAGE_DIR): $(LOCALBIN)
+	rm -rf $(CHARTS_PACKAGE_DIR)
+	mkdir -p $(CHARTS_PACKAGE_DIR)
+CHARTS = $(patsubst $(TEMPLATES_DIR)/%,%,$(wildcard $(TEMPLATES_DIR)/*))
+
+helm-package: $(patsubst %,package-chart-%,$(CHARTS))
+
+lint-chart-%:
+	$(HELM) lint --strict $(TEMPLATES_DIR)/$*
+
+package-chart-%: $(CHARTS_PACKAGE_DIR) lint-chart-%
+	$(HELM) package --destination $(CHARTS_PACKAGE_DIR) $(TEMPLATES_DIR)/$*
+
 .PHONY: build
 build: generate-all fmt vet ## Build manager binary.
 	go build -o bin/manager cmd/main.go
@@ -134,6 +149,7 @@ KIND_CLUSTER_NAME ?= hmc-dev
 KIND_NETWORK ?= kind
 LOCAL_REGISTRY_NAME ?= hmc-local-registry
 LOCAL_REGISTRY_PORT ?= 5001
+LOCAL_REGISTRY_REPO ?= oci://127.0.0.1:$(LOCAL_REGISTRY_PORT)/hmc
 
 ifndef ignore-not-found
   ignore-not-found = false
@@ -197,6 +213,15 @@ dev-deploy: manifests kustomize ## Deploy controller to the K8s cluster specifie
 .PHONY: dev-undeploy
 dev-undeploy: kustomize ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
 	$(KUSTOMIZE) build config/dev | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
+
+.PHONY: dev-push
+dev-push: docker-build helm-package
+	$(KIND) load docker-image $(IMG) -n $(KIND_CLUSTER_NAME)
+	@for chart in $(CHARTS_PACKAGE_DIR)/*.tgz; do \
+		echo "Pushing $$chart to $(LOCAL_REGISTRY_REPO)"; \
+		$(HELM) push "$$chart" $(LOCAL_REGISTRY_REPO); \
+	done
+
 
 ##@ Dependencies
 
