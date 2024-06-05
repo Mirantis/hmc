@@ -51,6 +51,14 @@ manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and Cust
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
+.PHONY: hmc-chart-generate
+hmc-chart-generate: kustomize helmify ## Generate hmc helm chart
+	rm -rf charts/hmc/values.yaml charts/hmc/templates/*.yaml
+	$(KUSTOMIZE) build config/default | $(HELMIFY) charts/hmc
+
+.PHONY: generate-all
+generate-all: generate manifests hmc-chart-generate
+
 .PHONY: fmt
 fmt: ## Run go fmt against code.
 	go fmt ./...
@@ -60,7 +68,7 @@ vet: ## Run go vet against code.
 	go vet ./...
 
 .PHONY: test
-test: manifests generate fmt vet envtest external-crd ## Run tests.
+test: generate-all fmt vet envtest external-crd ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test $$(go list ./... | grep -v /e2e) -coverprofile cover.out
 
 # Utilize Kind or modify the e2e tests to load the image locally, enabling compatibility with other vendors.
@@ -79,11 +87,11 @@ lint-fix: golangci-lint ## Run golangci-lint linter and perform fixes
 ##@ Build
 
 .PHONY: build
-build: manifests generate fmt vet ## Build manager binary.
+build: generate-all fmt vet ## Build manager binary.
 	go build -o bin/manager cmd/main.go
 
 .PHONY: run
-run: manifests generate fmt vet ## Run a controller from your host.
+run: generate-all fmt vet ## Run a controller from your host.
 	go run ./cmd/main.go
 
 # If you wish to build the manager image targeting other platforms you can use the --platform flag.
@@ -115,15 +123,10 @@ docker-buildx: ## Build and push docker image for the manager for cross-platform
 	rm Dockerfile.cross
 
 .PHONY: build-installer
-build-installer: manifests generate kustomize ## Generate a consolidated YAML with CRDs and deployment.
+build-installer: generate-all kustomize ## Generate a consolidated YAML with CRDs and deployment.
 	mkdir -p dist
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default > dist/install.yaml
-
-.PHONY: hmc-chart-generate
-hmc-chart-generate: kustomize helmify ## Generate hmc helm chart
-	rm -rf charts/hmc/values.yaml charts/hmc/templates/*.yaml
-	$(KUSTOMIZE) build config/default | $(HELMIFY) charts/hmc
 
 ##@ Deployment
 
