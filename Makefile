@@ -127,9 +127,23 @@ hmc-chart-generate: kustomize helmify ## Generate hmc helm chart
 
 ##@ Deployment
 
+KIND_CLUSTER_NAME ?= hmc-dev
+
 ifndef ignore-not-found
   ignore-not-found = false
 endif
+
+.PHONY: deploy-kind
+deploy-kind: kind
+	@if ! $(KIND) get clusters | grep -q "^$(KIND_CLUSTER_NAME)$$"; then \
+		kind create cluster -n $(KIND_CLUSTER_NAME); \
+	fi
+
+.PHONY: undeploy-kind
+undeploy-kind: kind
+	@if kind get clusters | grep -q "^$(KIND_CLUSTER_NAME)$$"; then \
+		kind delete cluster --name $(KIND_CLUSTER_NAME); \
+	fi
 
 .PHONY: deploy-helm-controller
 deploy-helm-controller: helm
@@ -186,6 +200,7 @@ ENVTEST ?= $(LOCALBIN)/setup-envtest-$(ENVTEST_VERSION)
 GOLANGCI_LINT = $(LOCALBIN)/golangci-lint-$(GOLANGCI_LINT_VERSION)
 HELM ?= $(LOCALBIN)/helm-$(HELM_VERSION)
 HELMIFY ?= $(LOCALBIN)/helmify-$(HELMIFY_VERSION)
+KIND ?= $(LOCALBIN)/kind-$(KIND_VERSION)
 
 FLUX_CHART_REPOSITORY ?= oci://ghcr.io/fluxcd-community/charts/flux2
 FLUX_CHART_VERSION ?= 2.13.0
@@ -198,6 +213,7 @@ ENVTEST_VERSION ?= release-0.17
 GOLANGCI_LINT_VERSION ?= v1.57.2
 HELM_VERSION ?= v3.15.1
 HELMIFY_VERSION ?= v0.4.13
+KIND_VERSION ?= v0.23.0
 
 .PHONY: kustomize
 kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary.
@@ -229,6 +245,11 @@ $(HELM): $(LOCALBIN)
 helmify: $(HELMIFY) ## Download helmify locally if necessary.
 $(HELMIFY): $(LOCALBIN)
 	$(call go-install-tool,$(HELMIFY),github.com/arttor/helmify/cmd/helmify,${HELMIFY_VERSION})
+
+.PHONY: kind
+kind: $(KIND) ## Download kind locally if necessary.
+$(KIND): $(LOCALBIN)
+	$(call go-install-tool,$(KIND),sigs.k8s.io/kind,${KIND_VERSION})
 
 $(FLUX_HELM_CRD): $(EXTERNAL_CRD_DIR)
 	rm -f $(FLUX_HELM_CRD)
