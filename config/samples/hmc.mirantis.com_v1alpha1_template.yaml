@@ -6,4 +6,7 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
   name: template-sample
 spec:
-  # TODO(user): Add fields here
+  provider: aws
+  helm:
+    chartName: aws-standalone-cp
+    chartVersion: 0.1.0
