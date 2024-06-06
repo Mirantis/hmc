@@ -1,5 +1,5 @@
 {{- define "cluster.name" -}}
-    {{- .Values.clusterName | trunc 63 }}
+    {{- .Release.Name | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{- define "awsmachinetemplate.controlplane.name" -}}

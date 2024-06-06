@@ -1,5 +1,4 @@
 # Cluster parameters
-clusterName: k0s-aws
 controlPlaneNumber: 3
 workersNumber: 2
 
