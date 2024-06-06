@@ -100,6 +100,36 @@ spec:
           status:
             description: TemplateStatus defines the observed state of Template
             properties:
+              chartRef:
+                description: |-
+                  ChartRef is a reference to a source controller resource containing the
+                  Helm chart representing the template.
+                properties:
+                  apiVersion:
+                    description: APIVersion of the referent.
+                    type: string
+                  kind:
+                    description: Kind of the referent.
+                    enum:
+                    - OCIRepository
+                    - HelmChart
+                    type: string
+                  name:
+                    description: Name of the referent.
+                    maxLength: 253
+                    minLength: 1
+                    type: string
+                  namespace:
+                    description: |-
+                      Namespace of the referent, defaults to the namespace of the Kubernetes
+                      resource object that contains the reference.
+                    maxLength: 63
+                    minLength: 1
+                    type: string
+                required:
+                - kind
+                - name
+                type: object
               configuration:
                 description: |-
                   Configuration demonstrates available parameters for template customization,

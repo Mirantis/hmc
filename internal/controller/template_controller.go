@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"time"
 
+	v2 "github.com/fluxcd/helm-controller/api/v2"
 	sourcev1 "github.com/fluxcd/source-controller/api/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -90,6 +91,11 @@ func (r *TemplateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, err
 	}
 
+	template.Status.ChartRef = &v2.CrossNamespaceSourceReference{
+		Kind:      hcChart.Kind,
+		Name:      hcChart.Name,
+		Namespace: hcChart.Namespace,
+	}
 	if err, reportStatus := helmArtifactReady(hcChart); err != nil {
 		l.Info("HelmChart Artifact is not ready")
 		if reportStatus {

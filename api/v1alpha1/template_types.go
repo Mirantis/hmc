@@ -65,6 +65,10 @@ type TemplateStatus struct {
 	// that can be used when creating Deployment objects.
 	// +optional
 	Configuration apiextensionsv1.JSON `json:"configuration,omitempty"`
+	// ChartRef is a reference to a source controller resource containing the
+	// Helm chart representing the template.
+	// +optional
+	ChartRef *helmcontrollerv2.CrossNamespaceSourceReference `json:"chartRef,omitempty"`
 }
 
 type TemplateValidationStatus struct {
