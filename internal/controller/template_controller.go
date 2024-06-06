@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -28,7 +29,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/yaml"
 
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
 	"github.com/Mirantis/hmc/internal/utils"
@@ -117,7 +117,7 @@ func (r *TemplateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	template.Status.Description = helmChart.Metadata.Description
-	rawValues, err := yaml.Marshal(helmChart.Values)
+	rawValues, err := json.Marshal(helmChart.Values)
 	if err != nil {
 		l.Error(err, "Failed to parse Helm chart values")
 		err = fmt.Errorf("failed to parse Helm chart values: %s", err)
