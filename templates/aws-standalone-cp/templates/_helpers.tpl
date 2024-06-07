@@ -2,11 +2,15 @@
     {{- .Release.Name | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
-{{- define "awsmachinetemplate.name" -}}
-    {{- include "cluster.name" . }}-mt
+{{- define "awsmachinetemplate.controlplane.name" -}}
+    {{- include "cluster.name" . }}-cp-mt
 {{- end }}
 
-{{- define "k0smotroncontrolplane.name" -}}
+{{- define "awsmachinetemplate.worker.name" -}}
+    {{- include "cluster.name" . }}-worker-mt
+{{- end }}
+
+{{- define "k0scontrolplane.name" -}}
     {{- include "cluster.name" . }}-cp
 {{- end }}
 
