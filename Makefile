@@ -89,12 +89,15 @@ lint-fix: golangci-lint ## Run golangci-lint linter and perform fixes
 
 TEMPLATES_DIR := templates
 CHARTS_PACKAGE_DIR ?= $(LOCALBIN)/charts
-$(CHARTS_PACKAGE_DIR): $(LOCALBIN)
+$(CHARTS_PACKAGE_DIR): | $(LOCALBIN)
 	rm -rf $(CHARTS_PACKAGE_DIR)
 	mkdir -p $(CHARTS_PACKAGE_DIR)
+
 CHARTS = $(patsubst $(TEMPLATES_DIR)/%,%,$(wildcard $(TEMPLATES_DIR)/*))
 
-helm-package: $(patsubst %,package-chart-%,$(CHARTS))
+.PHONY: helm-package
+helm-package: $(HELM)
+	@make $(patsubst %,package-chart-%,$(CHARTS))
 
 lint-chart-%:
 	$(HELM) lint --strict $(TEMPLATES_DIR)/$*
@@ -238,7 +241,7 @@ $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 
 EXTERNAL_CRD_DIR ?= $(LOCALBIN)/crd
-$(EXTERNAL_CRD_DIR): $(LOCALBIN)
+$(EXTERNAL_CRD_DIR): | $(LOCALBIN)
 	mkdir -p $(EXTERNAL_CRD_DIR)
 
 FLUX_SOURCE_VERSION ?= $(shell go mod edit -json | jq -r '.Require[] | select(.Path == "github.com/fluxcd/source-controller/api") | .Version')
@@ -272,49 +275,50 @@ KIND_VERSION ?= v0.23.0
 
 .PHONY: kustomize
 kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary.
-$(KUSTOMIZE): $(LOCALBIN)
+$(KUSTOMIZE): | $(LOCALBIN)
 	$(call go-install-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v5,$(KUSTOMIZE_VERSION))
 
 .PHONY: controller-gen
 controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary.
-$(CONTROLLER_GEN): $(LOCALBIN)
+$(CONTROLLER_GEN): | $(LOCALBIN)
 	$(call go-install-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen,$(CONTROLLER_TOOLS_VERSION))
 
 .PHONY: envtest
 envtest: $(ENVTEST) ## Download setup-envtest locally if necessary.
-$(ENVTEST): $(LOCALBIN)
+$(ENVTEST): | $(LOCALBIN)
 	$(call go-install-tool,$(ENVTEST),sigs.k8s.io/controller-runtime/tools/setup-envtest,$(ENVTEST_VERSION))
 
 .PHONY: golangci-lint
 golangci-lint: $(GOLANGCI_LINT) ## Download golangci-lint locally if necessary.
-$(GOLANGCI_LINT): $(LOCALBIN)
+$(GOLANGCI_LINT): | $(LOCALBIN)
 	$(call go-install-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/cmd/golangci-lint,${GOLANGCI_LINT_VERSION})
 
+.PHONY: helm
 helm: $(HELM) ## Download helm locally if necessary.
 HELM_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3"
-$(HELM): $(LOCALBIN)
+$(HELM): | $(LOCALBIN)
 	rm -f $(LOCALBIN)/helm-*
 	curl -s $(HELM_INSTALL_SCRIPT) | USE_SUDO=false HELM_INSTALL_DIR=$(LOCALBIN) DESIRED_VERSION=$(HELM_VERSION) BINARY_NAME=helm-$(HELM_VERSION) PATH="$(LOCALBIN):$(PATH)" bash
 
 .PHONY: helmify
 helmify: $(HELMIFY) ## Download helmify locally if necessary.
-$(HELMIFY): $(LOCALBIN)
+$(HELMIFY): | $(LOCALBIN)
 	$(call go-install-tool,$(HELMIFY),github.com/arttor/helmify/cmd/helmify,${HELMIFY_VERSION})
 
 .PHONY: kind
 kind: $(KIND) ## Download kind locally if necessary.
-$(KIND): $(LOCALBIN)
+$(KIND): | $(LOCALBIN)
 	$(call go-install-tool,$(KIND),sigs.k8s.io/kind,${KIND_VERSION})
 
-$(FLUX_HELM_CRD): $(EXTERNAL_CRD_DIR)
+$(FLUX_HELM_CRD): | $(EXTERNAL_CRD_DIR)
 	rm -f $(FLUX_HELM_CRD)
 	curl -s https://raw.githubusercontent.com/fluxcd/helm-controller/$(FLUX_HELM_VERSION)/config/crd/bases/helm.toolkit.fluxcd.io_helmreleases.yaml > $(FLUX_HELM_CRD)
 
-$(FLUX_SOURCE_CHART_CRD): $(EXTERNAL_CRD_DIR)
+$(FLUX_SOURCE_CHART_CRD): | $(EXTERNAL_CRD_DIR)
 	rm -f $(FLUX_SOURCE_CHART_CRD)
 	curl -s https://raw.githubusercontent.com/fluxcd/source-controller/$(FLUX_SOURCE_VERSION)/config/crd/bases/source.toolkit.fluxcd.io_helmcharts.yaml > $(FLUX_SOURCE_CHART_CRD)
 
-$(FLUX_SOURCE_REPO_CRD): $(EXTERNAL_CRD_DIR)
+$(FLUX_SOURCE_REPO_CRD): | $(EXTERNAL_CRD_DIR)
 	rm -f $(FLUX_SOURCE_REPO_CRD)
 	curl -s https://raw.githubusercontent.com/fluxcd/source-controller/$(FLUX_SOURCE_VERSION)/config/crd/bases/source.toolkit.fluxcd.io_helmrepositories.yaml > $(FLUX_SOURCE_REPO_CRD)
 
