@@ -22,7 +22,9 @@ import (
 	"fmt"
 	"time"
 
+	v2 "github.com/fluxcd/helm-controller/api/v2"
 	sourcev1 "github.com/fluxcd/source-controller/api/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -31,7 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
-	"github.com/Mirantis/hmc/internal/utils"
+	"github.com/Mirantis/hmc/internal/helm"
 )
 
 const (
@@ -90,6 +92,11 @@ func (r *TemplateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, err
 	}
 
+	template.Status.ChartRef = &v2.CrossNamespaceSourceReference{
+		Kind:      hcChart.Kind,
+		Name:      hcChart.Name,
+		Namespace: hcChart.Namespace,
+	}
 	if err, reportStatus := helmArtifactReady(hcChart); err != nil {
 		l.Info("HelmChart Artifact is not ready")
 		if reportStatus {
@@ -100,7 +107,7 @@ func (r *TemplateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	l.Info("Downloading Helm chart")
-	helmChart, err := utils.DownloadChartFromArtifact(ctx, hcChart.Status.Artifact)
+	helmChart, err := helm.DownloadChartFromArtifact(ctx, hcChart.Status.Artifact)
 	if err != nil {
 		l.Error(err, "Failed to download Helm chart")
 		err = fmt.Errorf("failed to download chart: %s", err)
@@ -125,7 +132,7 @@ func (r *TemplateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		_ = r.updateStatus(ctx, template)
 		return ctrl.Result{}, err
 	}
-	template.Status.Configuration.Raw = rawValues
+	template.Status.Config = &apiextensionsv1.JSON{Raw: rawValues}
 	l.Info("Chart validation completed successfully")
 	template.Status.Valid = true
 	template.Status.ValidationError = ""
