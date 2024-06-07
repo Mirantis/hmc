@@ -5,6 +5,18 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
+  - helm.toolkit.fluxcd.io
+  resources:
+  - helmrelease
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
   - hmc.mirantis.com
   resources:
   - awsproviders

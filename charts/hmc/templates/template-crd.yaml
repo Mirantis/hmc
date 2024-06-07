@@ -130,9 +130,9 @@ spec:
                 - kind
                 - name
                 type: object
-              configuration:
+              config:
                 description: |-
-                  Configuration demonstrates available parameters for template customization,
+                  Config demonstrates available parameters for template customization,
                   that can be used when creating Deployment objects.
                 x-kubernetes-preserve-unknown-fields: true
               description:

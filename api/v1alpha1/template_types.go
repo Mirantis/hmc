@@ -25,7 +25,8 @@ import (
 
 const (
 	// TemplateKind is the string representation of a Template.
-	TemplateKind = "Template"
+	TemplateKind   = "Template"
+	DeploymentKind = "Deployment"
 )
 
 // TemplateSpec defines the desired state of Template
@@ -61,10 +62,10 @@ type TemplateStatus struct {
 	// Descriptions contains information about the template.
 	// +optional
 	Description string `json:"description,omitempty"`
-	// Configuration demonstrates available parameters for template customization,
+	// Config demonstrates available parameters for template customization,
 	// that can be used when creating Deployment objects.
 	// +optional
-	Configuration apiextensionsv1.JSON `json:"configuration,omitempty"`
+	Config *apiextensionsv1.JSON `json:"config,omitempty"`
 	// ChartRef is a reference to a source controller resource containing the
 	// Helm chart representing the template.
 	// +optional

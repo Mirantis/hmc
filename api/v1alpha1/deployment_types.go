@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/yaml"
 )
 
 // DeploymentSpec defines the desired state of Deployment
@@ -29,16 +30,19 @@ type DeploymentSpec struct {
 	// Template is a reference to a Template object located in the same namespace.
 	// +kubebuilder:validation:Required
 	Template string `json:"template"`
-	// Configuration allows to provide parameters for template customization.
-	// If no Configuration provided, the field will be populated with the default values for
+	// Config allows to provide parameters for template customization.
+	// If no Config provided, the field will be populated with the default values for
 	// the template and DryRun will be enabled.
 	// +optional
-	Configuration apiextensionsv1.JSON `json:"configuration,omitempty"`
+	Config *apiextensionsv1.JSON `json:"config,omitempty"`
 }
 
 // DeploymentStatus defines the observed state of Deployment
 type DeploymentStatus struct {
 	TemplateValidationStatus `json:",inline"`
+	// ObservedGeneration is the last observed generation.
+	// +optional
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -51,6 +55,13 @@ type Deployment struct {
 
 	Spec   DeploymentSpec   `json:"spec,omitempty"`
 	Status DeploymentStatus `json:"status,omitempty"`
+}
+
+func (in *Deployment) HelmValues() (values map[string]interface{}, err error) {
+	if in.Spec.Config != nil {
+		err = yaml.Unmarshal(in.Spec.Config.Raw, &values)
+	}
+	return values, err
 }
 
 //+kubebuilder:object:root=true

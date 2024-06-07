@@ -18,45 +18,194 @@ package controller
 
 import (
 	"context"
+	"fmt"
 
+	hcv2 "github.com/fluxcd/helm-controller/api/v2"
+	sourcev1 "github.com/fluxcd/source-controller/api/v1"
+	"helm.sh/helm/v3/pkg/action"
+	"helm.sh/helm/v3/pkg/chart"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	hmcmirantiscomv1alpha1 "github.com/Mirantis/hmc/api/v1alpha1"
+	hmc "github.com/Mirantis/hmc/api/v1alpha1"
+	"github.com/Mirantis/hmc/internal/helm"
 )
 
 // DeploymentReconciler reconciles a Deployment object
 type DeploymentReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
+	Config *rest.Config
 }
 
 //+kubebuilder:rbac:groups=hmc.mirantis.com,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=hmc.mirantis.com,resources=deployments/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=hmc.mirantis.com,resources=deployments/finalizers,verbs=update
+//+kubebuilder:rbac:groups=helm.toolkit.fluxcd.io,resources=helmrelease,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the Deployment object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
-//
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.3/pkg/reconcile
 func (r *DeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+	l := log.FromContext(ctx).WithValues("DeploymentController", req.NamespacedName)
+	l.Info("Reconciling Deployment")
 
-	// TODO(user): your logic here
+	deployment := &hmc.Deployment{}
+	if err := r.Get(ctx, req.NamespacedName, deployment); err != nil {
+		if errors.IsNotFound(err) {
+			l.Info("Deployment not found, ignoring since object must be deleted")
+			return ctrl.Result{}, nil
+		}
+		l.Error(err, "Failed to get Deployment")
+		return ctrl.Result{}, err
+	}
+	template := &hmc.Template{}
+	templateRef := types.NamespacedName{Name: deployment.Spec.Template, Namespace: deployment.Namespace}
+	if err := r.Get(ctx, templateRef, template); err != nil {
+		l.Error(err, "Failed to get Template")
+		errMsg := fmt.Sprintf("failed to get provided template: %s", err)
+		if errors.IsNotFound(err) {
+			errMsg = "provided template is not found"
+		}
+		_ = r.updateStatus(ctx, deployment, errMsg)
+		return ctrl.Result{}, err
+	}
+	if !template.Status.Valid {
+		errMsg := "provided template is not marked as valid"
+		_ = r.updateStatus(ctx, deployment, errMsg)
+		return ctrl.Result{}, fmt.Errorf(errMsg)
+	}
 
-	return ctrl.Result{}, nil
+	// TODO: this should be implemented in admission controller instead
+	if changed := applyDefaultConfiguration(deployment, template); changed {
+		l.Info("Applying default configuration")
+		return ctrl.Result{}, r.Client.Update(ctx, deployment)
+	}
+	source, err := r.getSource(ctx, template.Status.ChartRef)
+	if err != nil {
+		_ = r.updateStatus(ctx, deployment, fmt.Sprintf("failed to get helm chart source: %s", err))
+		return ctrl.Result{}, err
+	}
+	l.Info("Downloading Helm chart")
+	hcChart, err := helm.DownloadChartFromArtifact(ctx, source.GetArtifact())
+	if err != nil {
+		_ = r.updateStatus(ctx, deployment, fmt.Sprintf("failed to download helm chart: %s", err))
+		return ctrl.Result{}, err
+	}
+
+	l.Info("Initializing Helm client")
+	getter := helm.NewMemoryRESTClientGetter(r.Config, r.RESTMapper())
+	actionConfig := new(action.Configuration)
+	err = actionConfig.Init(getter, deployment.Namespace, "secret", l.Info)
+	if err != nil {
+		_ = r.updateStatus(ctx, deployment, fmt.Sprintf("failed to initialize helm client: %s", err))
+		return ctrl.Result{}, err
+	}
+
+	l.Info("Validating Helm chart with provided values")
+	if err := r.validateReleaseWithValues(ctx, actionConfig, deployment, hcChart); err != nil {
+		_ = r.updateStatus(ctx, deployment, fmt.Sprintf("failed to validate template with provided configuration: %s", err))
+		return ctrl.Result{}, err
+	}
+	if !deployment.Spec.DryRun {
+		_, err := r.reconcileHelmRelease(ctx, deployment, template.Status.ChartRef)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+	return ctrl.Result{}, r.updateStatus(ctx, deployment, "")
+}
+
+func (r *DeploymentReconciler) reconcileHelmRelease(ctx context.Context, deployment *hmc.Deployment, chartRef *hcv2.CrossNamespaceSourceReference) (*hcv2.HelmRelease, error) {
+	helmRelease := &hcv2.HelmRelease{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      deployment.Name,
+			Namespace: deployment.Namespace,
+		},
+	}
+
+	_, err := ctrl.CreateOrUpdate(ctx, r.Client, helmRelease, func() error {
+		helmRelease.OwnerReferences = []metav1.OwnerReference{
+			{
+				APIVersion: hmc.GroupVersion.String(),
+				Kind:       hmc.DeploymentKind,
+				Name:       deployment.Name,
+				UID:        deployment.UID,
+			},
+		}
+		helmRelease.Spec = hcv2.HelmReleaseSpec{
+			ChartRef:    chartRef,
+			Interval:    metav1.Duration{Duration: defaultReconcileInterval},
+			ReleaseName: deployment.Name,
+			Values:      deployment.Spec.Config,
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return helmRelease, nil
+}
+
+func (r *DeploymentReconciler) validateReleaseWithValues(ctx context.Context, actionConfig *action.Configuration, deployment *hmc.Deployment, hcChart *chart.Chart) error {
+	install := action.NewInstall(actionConfig)
+	install.DryRun = true
+	install.ReleaseName = deployment.Name
+	install.Namespace = deployment.Namespace
+	install.ClientOnly = false
+
+	vals, err := deployment.HelmValues()
+	if err != nil {
+		return err
+	}
+	_, err = install.RunWithContext(ctx, hcChart, vals)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *DeploymentReconciler) updateStatus(ctx context.Context, deployment *hmc.Deployment, validationError string) error {
+	deployment.Status.ObservedGeneration = deployment.Generation
+	deployment.Status.ValidationError = validationError
+	deployment.Status.Valid = validationError == ""
+	if err := r.Status().Update(ctx, deployment); err != nil {
+		return fmt.Errorf("failed to update status for deployment %s/%s: %w", deployment.Namespace, deployment.Name, err)
+	}
+	return nil
+}
+
+func (r *DeploymentReconciler) getSource(ctx context.Context, ref *hcv2.CrossNamespaceSourceReference) (sourcev1.Source, error) {
+	if ref == nil {
+		return nil, fmt.Errorf("helm chart source is not provided")
+	}
+	chartRef := types.NamespacedName{Namespace: ref.Namespace, Name: ref.Name}
+	hc := sourcev1.HelmChart{}
+	if err := r.Client.Get(ctx, chartRef, &hc); err != nil {
+		return nil, err
+	}
+	return &hc, nil
+}
+
+func applyDefaultConfiguration(deployment *hmc.Deployment, template *hmc.Template) (changed bool) {
+	if deployment.Spec.Config != nil || template.Status.Config == nil {
+		// Only apply defaults when there's no configuration provided
+		return false
+	}
+	deployment.Spec.DryRun = true
+	deployment.Spec.Config = &apiextensionsv1.JSON{Raw: template.Status.Config.Raw}
+	return true
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *DeploymentReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&hmcmirantiscomv1alpha1.Deployment{}).
+		For(&hmc.Deployment{}).
 		Complete(r)
 }

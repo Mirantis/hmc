@@ -40,10 +40,10 @@ spec:
           spec:
             description: DeploymentSpec defines the desired state of Deployment
             properties:
-              configuration:
+              config:
                 description: |-
-                  Configuration allows to provide parameters for template customization.
-                  If no Configuration provided, the field will be populated with the default values for
+                  Config allows to provide parameters for template customization.
+                  If no Config provided, the field will be populated with the default values for
                   the template and DryRun will be enabled.
                 x-kubernetes-preserve-unknown-fields: true
               dryRun:
@@ -60,6 +60,10 @@ spec:
           status:
             description: DeploymentStatus defines the observed state of Deployment
             properties:
+              observedGeneration:
+                description: ObservedGeneration is the last observed generation.
+                format: int64
+                type: integer
               valid:
                 description: Valid indicates whether the template passed validation
                   or not.
