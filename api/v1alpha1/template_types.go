@@ -48,6 +48,8 @@ const (
 	TemplateTypeInfraProvider TemplateType = "infrastructure-provider"
 	// TemplateTypeBootstrapProvider is the type used for adding CAPI bootstrap providers in the HMC Management object
 	TemplateTypeBootstrapProvider TemplateType = "bootstrap-provider"
+	// TemplateTypeManagement is the type used for HMC management components
+	TemplateTypeManagement TemplateType = "management"
 )
 
 // TemplateSpec defines the desired state of Template
@@ -88,7 +90,7 @@ type TemplateStatus struct {
 	// +optional
 	ChartRef *helmcontrollerv2.CrossNamespaceSourceReference `json:"chartRef,omitempty"`
 	// Type specifies the type of the provided template, as discovered from the Helm chart metadata.
-	// +kubebuilder:validation:Enum=deployment;infrastructure-provider;bootstrap-provider
+	// +kubebuilder:validation:Enum=deployment;infrastructure-provider;bootstrap-provider;management
 	Type string `json:"type,omitempty"`
 	// InfrastructureProvider specifies a CAPI infrastructure provider associated with the template.
 	// +optional

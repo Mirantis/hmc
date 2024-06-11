@@ -171,6 +171,7 @@ func (r *TemplateReconciler) parseChartMetadata(template *hmc.Template, chart *c
 		if bootstrapProvider == "" {
 			return errNoBootstrapProvider
 		}
+	case hmc.TemplateTypeManagement:
 	default:
 		return errNoProviderType
 	}

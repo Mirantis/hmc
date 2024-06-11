@@ -149,6 +149,7 @@ spec:
                 - deployment
                 - infrastructure-provider
                 - bootstrap-provider
+                - management
                 type: string
               valid:
                 description: Valid indicates whether the template passed validation
