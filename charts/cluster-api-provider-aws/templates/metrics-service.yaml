@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "cluster-api-provider-aws.fullname" . }}-metrics-service
+  labels:
+    cluster.x-k8s.io/provider: infrastructure-aws
+    clusterctl.cluster.x-k8s.io: ""
+  {{- include "cluster-api-provider-aws.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    cluster.x-k8s.io/provider: infrastructure-aws
+  {{- include "cluster-api-provider-aws.selectorLabels" . | nindent 4 }}
+  ports:
+    - port: 8080
+      protocol: TCP
+      targetPort: metrics
