@@ -24,8 +24,9 @@ import (
 
 	v2 "github.com/fluxcd/helm-controller/api/v2"
 	sourcev1 "github.com/fluxcd/source-controller/api/v1"
+	"helm.sh/helm/v3/pkg/chart"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -41,6 +42,13 @@ const (
 	defaultRepoType = "oci"
 
 	defaultReconcileInterval = 10 * time.Minute
+)
+
+var (
+	errNoInfraProvider     = fmt.Errorf("no infra provider specified: %s chart annotation must not be empty", hmc.ChartAnnotationInfraProvider)
+	errNoBootstrapProvider = fmt.Errorf("no bootstrap provider specified: %s chart annotation must not be empty", hmc.ChartAnnotationBootstrapProvider)
+	errNoProviderType      = fmt.Errorf("template type is not supported: %s chart annotation must be one of [%s/%s/%s]",
+		hmc.ChartAnnotationType, hmc.TemplateTypeDeployment, hmc.ChartAnnotationInfraProvider, hmc.ChartAnnotationBootstrapProvider)
 )
 
 // TemplateReconciler reconciles a Template object
@@ -63,7 +71,7 @@ func (r *TemplateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	template := &hmc.Template{}
 	if err := r.Get(ctx, req.NamespacedName, template); err != nil {
-		if errors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			l.Info("Template not found, ignoring since object must be deleted")
 			return ctrl.Result{}, nil
 		}
@@ -100,8 +108,7 @@ func (r *TemplateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	if err, reportStatus := helmArtifactReady(hcChart); err != nil {
 		l.Info("HelmChart Artifact is not ready")
 		if reportStatus {
-			template.Status.ValidationError = err.Error()
-			_ = r.updateStatus(ctx, template)
+			_ = r.updateStatus(ctx, template, err.Error())
 		}
 		return ctrl.Result{}, err
 	}
@@ -111,15 +118,18 @@ func (r *TemplateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	if err != nil {
 		l.Error(err, "Failed to download Helm chart")
 		err = fmt.Errorf("failed to download chart: %s", err)
-		template.Status.ValidationError = err.Error()
-		_ = r.updateStatus(ctx, template)
+		_ = r.updateStatus(ctx, template, err.Error())
 		return ctrl.Result{}, err
 	}
 	l.Info("Validating Helm chart")
+	if err := r.parseChartMetadata(template, helmChart); err != nil {
+		l.Error(err, "Failed to parse Helm chart metadata")
+		_ = r.updateStatus(ctx, template, err.Error())
+		return ctrl.Result{}, err
+	}
 	if err = helmChart.Validate(); err != nil {
 		l.Error(err, "Helm chart validation failed")
-		template.Status.ValidationError = err.Error()
-		_ = r.updateStatus(ctx, template)
+		_ = r.updateStatus(ctx, template, err.Error())
 		return ctrl.Result{}, err
 	}
 
@@ -128,19 +138,52 @@ func (r *TemplateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	if err != nil {
 		l.Error(err, "Failed to parse Helm chart values")
 		err = fmt.Errorf("failed to parse Helm chart values: %s", err)
-		template.Status.ValidationError = err.Error()
-		_ = r.updateStatus(ctx, template)
+		_ = r.updateStatus(ctx, template, err.Error())
 		return ctrl.Result{}, err
 	}
 	template.Status.Config = &apiextensionsv1.JSON{Raw: rawValues}
 	l.Info("Chart validation completed successfully")
-	template.Status.Valid = true
-	template.Status.ValidationError = ""
 
-	return ctrl.Result{}, r.updateStatus(ctx, template)
+	return ctrl.Result{}, r.updateStatus(ctx, template, "")
 }
 
-func (r *TemplateReconciler) updateStatus(ctx context.Context, template *hmc.Template) error {
+func (r *TemplateReconciler) parseChartMetadata(template *hmc.Template, chart *chart.Chart) error {
+	if chart.Metadata == nil {
+		return fmt.Errorf("chart metadata is empty")
+	}
+	templateType := chart.Metadata.Annotations[hmc.ChartAnnotationType]
+	infraProvider := chart.Metadata.Annotations[hmc.ChartAnnotationInfraProvider]
+	bootstrapProvider := chart.Metadata.Annotations[hmc.ChartAnnotationBootstrapProvider]
+
+	switch hmc.TemplateType(templateType) {
+	case hmc.TemplateTypeDeployment:
+		if infraProvider == "" {
+			return errNoInfraProvider
+		}
+		if bootstrapProvider == "" {
+			return errNoBootstrapProvider
+		}
+	case hmc.TemplateTypeInfraProvider:
+		if infraProvider == "" {
+			return errNoInfraProvider
+		}
+	case hmc.TemplateTypeBootstrapProvider:
+		if bootstrapProvider == "" {
+			return errNoBootstrapProvider
+		}
+	default:
+		return errNoProviderType
+	}
+	template.Status.Type = templateType
+	template.Status.InfrastructureProvider = infraProvider
+	template.Status.BootstrapProvider = bootstrapProvider
+	return nil
+}
+
+func (r *TemplateReconciler) updateStatus(ctx context.Context, template *hmc.Template, validationError string) error {
+	template.Status.ObservedGeneration = template.Generation
+	template.Status.ValidationError = validationError
+	template.Status.Valid = validationError == ""
 	if err := r.Status().Update(ctx, template); err != nil {
 		return fmt.Errorf("failed to update status for template %s/%s: %w", template.Namespace, template.Name, err)
 	}

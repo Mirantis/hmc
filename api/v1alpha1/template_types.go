@@ -25,8 +25,29 @@ import (
 
 const (
 	// TemplateKind is the string representation of a Template.
-	TemplateKind   = "Template"
+	TemplateKind = "Template"
+	// DeploymentKind is the string representation of a Deployment.
 	DeploymentKind = "Deployment"
+
+	// ChartAnnotationType is an annotation containing the type of Template.
+	ChartAnnotationType = "hmc.mirantis.com/type"
+	// ChartAnnotationInfraProvider is an annotation containing the CAPI provider associated with Template.
+	ChartAnnotationInfraProvider = "hmc.mirantis.com/infrastructure-provider"
+	// ChartAnnotationBootstrapProvider is an annotation containing the k8s distribution associated with Template.
+	ChartAnnotationBootstrapProvider = "hmc.mirantis.com/bootstrap-provider"
+)
+
+// TemplateType specifies the type of template packaged as a helm chart.
+// Should be provided in the chart Annotations.
+type TemplateType string
+
+const (
+	// TemplateTypeDeployment is the type used for creating HMC Deployment objects
+	TemplateTypeDeployment TemplateType = "deployment"
+	// TemplateTypeInfraProvider is the type used for adding CAPI infrastructure providers in the HMC Management object
+	TemplateTypeInfraProvider TemplateType = "infrastructure-provider"
+	// TemplateTypeBootstrapProvider is the type used for adding CAPI bootstrap providers in the HMC Management object
+	TemplateTypeBootstrapProvider TemplateType = "bootstrap-provider"
 )
 
 // TemplateSpec defines the desired state of Template
