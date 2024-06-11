@@ -87,19 +87,16 @@ spec:
                 - message: either chartName or chartRef must be set
                   rule: (has(self.chartName) && !has(self.chartRef)) || (!has(self.chartName)
                     && has(self.chartRef))
-              provider:
-                description: Provider specifies a CAPI provider associated with the
-                  template.
-                enum:
-                - aws
-                type: string
             required:
             - helm
-            - provider
             type: object
           status:
             description: TemplateStatus defines the observed state of Template
             properties:
+              bootstrapProvider:
+                description: BootstrapProvider specifies a CAPI bootstrap provider associated
+                  with the template.
+                type: string
               chartRef:
                 description: |-
                   ChartRef is a reference to a source controller resource containing the
@@ -137,6 +134,23 @@ spec:
                 x-kubernetes-preserve-unknown-fields: true
               description:
                 description: Descriptions contains information about the template.
+                type: string
+              infrastructureProvider:
+                description: InfrastructureProvider specifies a CAPI infrastructure
+                  provider associated with the template.
+                type: string
+              observedGeneration:
+                description: ObservedGeneration is the last observed generation.
+                format: int64
+                type: integer
+              type:
+                description: Type specifies the type of the provided template, as discovered
+                  from the Helm chart metadata.
+                enum:
+                - deployment
+                - infrastructure-provider
+                - bootstrap-provider
+                - management
                 type: string
               valid:
                 description: Valid indicates whether the template passed validation

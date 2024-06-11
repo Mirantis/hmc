@@ -25,16 +25,35 @@ import (
 
 const (
 	// TemplateKind is the string representation of a Template.
-	TemplateKind   = "Template"
+	TemplateKind = "Template"
+	// DeploymentKind is the string representation of a Deployment.
 	DeploymentKind = "Deployment"
+
+	// ChartAnnotationType is an annotation containing the type of Template.
+	ChartAnnotationType = "hmc.mirantis.com/type"
+	// ChartAnnotationInfraProvider is an annotation containing the CAPI provider associated with Template.
+	ChartAnnotationInfraProvider = "hmc.mirantis.com/infrastructure-provider"
+	// ChartAnnotationBootstrapProvider is an annotation containing the k8s distribution associated with Template.
+	ChartAnnotationBootstrapProvider = "hmc.mirantis.com/bootstrap-provider"
+)
+
+// TemplateType specifies the type of template packaged as a helm chart.
+// Should be provided in the chart Annotations.
+type TemplateType string
+
+const (
+	// TemplateTypeDeployment is the type used for creating HMC Deployment objects
+	TemplateTypeDeployment TemplateType = "deployment"
+	// TemplateTypeInfraProvider is the type used for adding CAPI infrastructure providers in the HMC Management object
+	TemplateTypeInfraProvider TemplateType = "infrastructure-provider"
+	// TemplateTypeBootstrapProvider is the type used for adding CAPI bootstrap providers in the HMC Management object
+	TemplateTypeBootstrapProvider TemplateType = "bootstrap-provider"
+	// TemplateTypeManagement is the type used for HMC management components
+	TemplateTypeManagement TemplateType = "management"
 )
 
 // TemplateSpec defines the desired state of Template
 type TemplateSpec struct {
-	// Provider specifies a CAPI provider associated with the template.
-	// +kubebuilder:validation:Enum=aws
-	// +kubebuilder:validation:Required
-	Provider string `json:"provider"`
 	// Helm holds a reference to a Helm chart representing the HMC template
 	// +kubebuilder:validation:Required
 	Helm HelmSpec `json:"helm"`
@@ -70,6 +89,18 @@ type TemplateStatus struct {
 	// Helm chart representing the template.
 	// +optional
 	ChartRef *helmcontrollerv2.CrossNamespaceSourceReference `json:"chartRef,omitempty"`
+	// Type specifies the type of the provided template, as discovered from the Helm chart metadata.
+	// +kubebuilder:validation:Enum=deployment;infrastructure-provider;bootstrap-provider;management
+	Type string `json:"type,omitempty"`
+	// InfrastructureProvider specifies a CAPI infrastructure provider associated with the template.
+	// +optional
+	InfrastructureProvider string `json:"infrastructureProvider,omitempty"`
+	// BootstrapProvider specifies a CAPI bootstrap provider associated with the template.
+	// +optional
+	BootstrapProvider string `json:"bootstrapProvider,omitempty"`
+	// ObservedGeneration is the last observed generation.
+	// +optional
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 }
 
 type TemplateValidationStatus struct {

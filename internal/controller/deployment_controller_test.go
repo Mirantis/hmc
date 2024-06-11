@@ -55,7 +55,6 @@ var _ = Describe("Deployment Controller", func() {
 						Namespace: "default",
 					},
 					Spec: hmc.TemplateSpec{
-						Provider: "aws",
 						Helm: hmc.HelmSpec{
 							ChartRef: &hcv2.CrossNamespaceSourceReference{
 								Kind:      "HelmChart",
