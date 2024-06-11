@@ -31,10 +31,6 @@ const (
 
 // TemplateSpec defines the desired state of Template
 type TemplateSpec struct {
-	// Provider specifies a CAPI provider associated with the template.
-	// +kubebuilder:validation:Enum=aws
-	// +kubebuilder:validation:Required
-	Provider string `json:"provider"`
 	// Helm holds a reference to a Helm chart representing the HMC template
 	// +kubebuilder:validation:Required
 	Helm HelmSpec `json:"helm"`
@@ -70,6 +66,18 @@ type TemplateStatus struct {
 	// Helm chart representing the template.
 	// +optional
 	ChartRef *helmcontrollerv2.CrossNamespaceSourceReference `json:"chartRef,omitempty"`
+	// Type specifies the type of the provided template, as discovered from the Helm chart metadata.
+	// +kubebuilder:validation:Enum=deployment;infrastructure-provider;bootstrap-provider
+	Type string `json:"type,omitempty"`
+	// InfrastructureProvider specifies a CAPI infrastructure provider associated with the template.
+	// +optional
+	InfrastructureProvider string `json:"infrastructureProvider,omitempty"`
+	// BootstrapProvider specifies a CAPI bootstrap provider associated with the template.
+	// +optional
+	BootstrapProvider string `json:"bootstrapProvider,omitempty"`
+	// ObservedGeneration is the last observed generation.
+	// +optional
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 }
 
 type TemplateValidationStatus struct {

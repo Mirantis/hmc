@@ -52,7 +52,6 @@ var _ = Describe("Template Controller", func() {
 						Namespace: "default",
 					},
 					Spec: hmcmirantiscomv1alpha1.TemplateSpec{
-						Provider: "aws",
 						Helm: hmcmirantiscomv1alpha1.HelmSpec{
 							ChartRef: &v2.CrossNamespaceSourceReference{
 								Kind:      "HelmChart",
