@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "cluster-api.fullname" . }}-webhook-service
+  labels:
+    cluster.x-k8s.io/provider: cluster-api
+    clusterctl.cluster.x-k8s.io: ""
+  {{- include "cluster-api.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    cluster.x-k8s.io/provider: cluster-api
+  {{- include "cluster-api.selectorLabels" . | nindent 4 }}
+  ports:
+    - port: 443
+      targetPort: webhook-server
