@@ -1,0 +1,28 @@
+kubeRbacProxy:
+  image:
+    repository: gcr.io/kubebuilder
+    name: kube-rbac-proxy
+    tag: v0.13.1
+  resources:
+    limits:
+      cpu: 500m
+      memory: 128Mi
+    requests:
+      cpu: 5m
+      memory: 64Mi
+
+manager:
+  env:
+    sshKnownHosts: ""
+  image:
+    repository: quay.io/k0sproject
+    name: k0smotron
+    tag: v1.0.0
+  imagePullPolicy: IfNotPresent
+  resources:
+    limits:
+      cpu: 500m
+      memory: 128Mi
+    requests:
+      cpu: 10m
+      memory: 64Mi

@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "k0smotron.fullname" . }}-controller-manager-metrics-service
+  labels:
+    app.kubernetes.io/component: kube-rbac-proxy
+    app.kubernetes.io/created-by: k0smotron
+    app.kubernetes.io/part-of: k0smotron
+    control-plane: controller-manager
+  {{- include "k0smotron.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    control-plane: controller-manager
+  {{- include "k0smotron.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: https
+      port: 8443
+      protocol: TCP
+      targetPort: https
