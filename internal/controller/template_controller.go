@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	v2 "github.com/fluxcd/helm-controller/api/v2"
@@ -45,10 +46,8 @@ const (
 )
 
 var (
-	errNoInfraProvider     = fmt.Errorf("no infra provider specified: %s chart annotation must not be empty", hmc.ChartAnnotationInfraProvider)
-	errNoBootstrapProvider = fmt.Errorf("no bootstrap provider specified: %s chart annotation must not be empty", hmc.ChartAnnotationBootstrapProvider)
-	errNoProviderType      = fmt.Errorf("template type is not supported: %s chart annotation must be one of [%s/%s/%s]",
-		hmc.ChartAnnotationType, hmc.TemplateTypeDeployment, hmc.ChartAnnotationInfraProvider, hmc.ChartAnnotationBootstrapProvider)
+	errNoProviderType = fmt.Errorf("template type is not supported: %s chart annotation must be one of [%s/%s]",
+		hmc.ChartAnnotationType, hmc.TemplateTypeDeployment, hmc.TemplateTypeProvider)
 )
 
 // TemplateReconciler reconciles a Template object
@@ -152,32 +151,25 @@ func (r *TemplateReconciler) parseChartMetadata(template *hmc.Template, chart *c
 		return fmt.Errorf("chart metadata is empty")
 	}
 	templateType := chart.Metadata.Annotations[hmc.ChartAnnotationType]
-	infraProvider := chart.Metadata.Annotations[hmc.ChartAnnotationInfraProvider]
-	bootstrapProvider := chart.Metadata.Annotations[hmc.ChartAnnotationBootstrapProvider]
-
 	switch hmc.TemplateType(templateType) {
-	case hmc.TemplateTypeDeployment:
-		if infraProvider == "" {
-			return errNoInfraProvider
-		}
-		if bootstrapProvider == "" {
-			return errNoBootstrapProvider
-		}
-	case hmc.TemplateTypeInfraProvider:
-		if infraProvider == "" {
-			return errNoInfraProvider
-		}
-	case hmc.TemplateTypeBootstrapProvider:
-		if bootstrapProvider == "" {
-			return errNoBootstrapProvider
-		}
-	case hmc.TemplateTypeManagement:
+	case hmc.TemplateTypeDeployment, hmc.TemplateTypeProvider, hmc.TemplateTypeManagement:
 	default:
 		return errNoProviderType
 	}
+	infraProviders := chart.Metadata.Annotations[hmc.ChartAnnotationInfraProviders]
+	bootstrapProviders := chart.Metadata.Annotations[hmc.ChartAnnotationBootstrapProviders]
+	cpProviders := chart.Metadata.Annotations[hmc.ChartAnnotationControlPlaneProviders]
+
 	template.Status.Type = templateType
-	template.Status.InfrastructureProvider = infraProvider
-	template.Status.BootstrapProvider = bootstrapProvider
+	if infraProviders != "" {
+		template.Status.InfrastructureProviders = strings.Split(infraProviders, ",")
+	}
+	if bootstrapProviders != "" {
+		template.Status.BootstrapProviders = strings.Split(bootstrapProviders, ",")
+	}
+	if cpProviders != "" {
+		template.Status.ControlPlaneProviders = strings.Split(cpProviders, ",")
+	}
 	return nil
 }
 

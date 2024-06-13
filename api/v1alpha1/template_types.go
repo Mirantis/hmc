@@ -31,10 +31,12 @@ const (
 
 	// ChartAnnotationType is an annotation containing the type of Template.
 	ChartAnnotationType = "hmc.mirantis.com/type"
-	// ChartAnnotationInfraProvider is an annotation containing the CAPI provider associated with Template.
-	ChartAnnotationInfraProvider = "hmc.mirantis.com/infrastructure-provider"
-	// ChartAnnotationBootstrapProvider is an annotation containing the k8s distribution associated with Template.
-	ChartAnnotationBootstrapProvider = "hmc.mirantis.com/bootstrap-provider"
+	// ChartAnnotationInfraProviders is an annotation containing the CAPI infrastructure providers associated with Template.
+	ChartAnnotationInfraProviders = "hmc.mirantis.com/infrastructure-providers"
+	// ChartAnnotationBootstrapProviders is an annotation containing the CAPI bootstrap providers associated with Template.
+	ChartAnnotationBootstrapProviders = "hmc.mirantis.com/bootstrap-providers"
+	// ChartAnnotationControlPlaneProviders is an annotation containing the CAPI control plane providers associated with Template.
+	ChartAnnotationControlPlaneProviders = "hmc.mirantis.com/control-plane-providers"
 )
 
 // TemplateType specifies the type of template packaged as a helm chart.
@@ -44,10 +46,8 @@ type TemplateType string
 const (
 	// TemplateTypeDeployment is the type used for creating HMC Deployment objects
 	TemplateTypeDeployment TemplateType = "deployment"
-	// TemplateTypeInfraProvider is the type used for adding CAPI infrastructure providers in the HMC Management object
-	TemplateTypeInfraProvider TemplateType = "infrastructure-provider"
-	// TemplateTypeBootstrapProvider is the type used for adding CAPI bootstrap providers in the HMC Management object
-	TemplateTypeBootstrapProvider TemplateType = "bootstrap-provider"
+	// TemplateTypeProvider is the type used for adding CAPI providers in the HMC Management object.
+	TemplateTypeProvider TemplateType = "provider"
 	// TemplateTypeManagement is the type used for HMC management components
 	TemplateTypeManagement TemplateType = "management"
 )
@@ -78,7 +78,7 @@ type HelmSpec struct {
 // TemplateStatus defines the observed state of Template
 type TemplateStatus struct {
 	TemplateValidationStatus `json:",inline"`
-	// Descriptions contains information about the template.
+	// Description contains information about the template.
 	// +optional
 	Description string `json:"description,omitempty"`
 	// Config demonstrates available parameters for template customization,
@@ -90,14 +90,17 @@ type TemplateStatus struct {
 	// +optional
 	ChartRef *helmcontrollerv2.CrossNamespaceSourceReference `json:"chartRef,omitempty"`
 	// Type specifies the type of the provided template, as discovered from the Helm chart metadata.
-	// +kubebuilder:validation:Enum=deployment;infrastructure-provider;bootstrap-provider;management
+	// +kubebuilder:validation:Enum=deployment;provider;management
 	Type string `json:"type,omitempty"`
-	// InfrastructureProvider specifies a CAPI infrastructure provider associated with the template.
+	// InfrastructureProviders specifies CAPI infrastructure providers associated with the template.
 	// +optional
-	InfrastructureProvider string `json:"infrastructureProvider,omitempty"`
-	// BootstrapProvider specifies a CAPI bootstrap provider associated with the template.
+	InfrastructureProviders []string `json:"infrastructureProviders,omitempty"`
+	// BootstrapProviders specifies CAPI bootstrap providers associated with the template.
 	// +optional
-	BootstrapProvider string `json:"bootstrapProvider,omitempty"`
+	BootstrapProviders []string `json:"bootstrapProviders,omitempty"`
+	// ControlPlaneProviders specifies CAPI control plane providers associated with the template.
+	// +optional
+	ControlPlaneProviders []string `json:"controlPlaneProviders,omitempty"`
 	// ObservedGeneration is the last observed generation.
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
