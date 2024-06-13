@@ -92,10 +92,12 @@ spec:
           status:
             description: TemplateStatus defines the observed state of Template
             properties:
-              bootstrapProvider:
-                description: BootstrapProvider specifies a CAPI bootstrap provider
+              bootstrapProviders:
+                description: BootstrapProviders specifies CAPI bootstrap providers
                   associated with the template.
-                type: string
+                items:
+                  type: string
+                type: array
               chartRef:
                 description: |-
                   ChartRef is a reference to a source controller resource containing the
@@ -131,13 +133,21 @@ spec:
                   Config demonstrates available parameters for template customization,
                   that can be used when creating Deployment objects.
                 x-kubernetes-preserve-unknown-fields: true
+              controlPlaneProviders:
+                description: ControlPlaneProviders specifies CAPI control plane providers
+                  associated with the template.
+                items:
+                  type: string
+                type: array
               description:
-                description: Descriptions contains information about the template.
+                description: Description contains information about the template.
                 type: string
-              infrastructureProvider:
-                description: InfrastructureProvider specifies a CAPI infrastructure
-                  provider associated with the template.
-                type: string
+              infrastructureProviders:
+                description: InfrastructureProviders specifies CAPI infrastructure
+                  providers associated with the template.
+                items:
+                  type: string
+                type: array
               observedGeneration:
                 description: ObservedGeneration is the last observed generation.
                 format: int64
@@ -147,8 +157,7 @@ spec:
                   discovered from the Helm chart metadata.
                 enum:
                 - deployment
-                - infrastructure-provider
-                - bootstrap-provider
+                - provider
                 - management
                 type: string
               valid:
