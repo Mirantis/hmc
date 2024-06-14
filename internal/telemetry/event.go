@@ -18,14 +18,31 @@ package telemetry
 
 import (
 	"github.com/segmentio/analytics-go"
+
+	"github.com/Mirantis/hmc/internal/build"
 )
 
-var segmentToken = ""
-var client = newClient()
+const (
+	deploymentCreateEvent = "deployment-create"
+)
 
-func newClient() analytics.Client {
-	if segmentToken == "" {
+func TrackDeploymentCreate(id, template string, dryRun bool) error {
+	props := map[string]interface{}{
+		"hmcVersion":   build.Version,
+		"deploymentID": id,
+		"template":     template,
+		"dryRun":       dryRun,
+	}
+
+	return TrackEvent(deploymentCreateEvent, props)
+}
+
+func TrackEvent(name string, properties map[string]interface{}) error {
+	if client == nil {
 		return nil
 	}
-	return analytics.New(segmentToken)
+	return client.Enqueue(analytics.Track{
+		Event:      name,
+		Properties: properties,
+	})
 }
