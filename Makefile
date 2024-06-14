@@ -105,9 +105,12 @@ lint-chart-%:
 package-chart-%: $(CHARTS_PACKAGE_DIR) lint-chart-%
 	$(HELM) package --destination $(CHARTS_PACKAGE_DIR) $(TEMPLATES_DIR)/$*
 
+LD_FLAGS?= -s -w
+LD_FLAGS += -X github.com/Mirantis/hmc/internal/telemetry.segmentToken=$(SEGMENT_TOKEN)
+
 .PHONY: build
 build: generate-all fmt vet ## Build manager binary.
-	go build -o bin/manager cmd/main.go
+	go build -ldflags="${LD_FLAGS}" -o bin/manager cmd/main.go
 
 .PHONY: run
 run: generate-all fmt vet ## Run a controller from your host.
@@ -118,7 +121,10 @@ run: generate-all fmt vet ## Run a controller from your host.
 # More info: https://docs.docker.com/develop/develop-images/build_enhancements/
 .PHONY: docker-build
 docker-build: ## Build docker image with the manager.
-	$(CONTAINER_TOOL) build -t ${IMG} .
+	$(CONTAINER_TOOL) build \
+	-t ${IMG} \
+	--build-arg LD_FLAGS="${LD_FLAGS}" \
+	.
 
 .PHONY: docker-push
 docker-push: ## Push docker image with the manager.
