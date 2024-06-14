@@ -36,6 +36,7 @@ import (
 
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
 	"github.com/Mirantis/hmc/internal/helm"
+	"github.com/Mirantis/hmc/internal/telemetry"
 )
 
 // DeploymentReconciler reconciles a Deployment object
@@ -64,6 +65,12 @@ func (r *DeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 		l.Error(err, "Failed to get Deployment")
 		return ctrl.Result{}, err
+	}
+
+	if deployment.Status.ObservedGeneration == 0 {
+		if err := telemetry.TrackDeploymentCreate(string(deployment.UID), deployment.Spec.Template, deployment.Spec.DryRun); err != nil {
+			l.Error(err, "Failed to track Deployment creation")
+		}
 	}
 	template := &hmc.Template{}
 	templateRef := types.NamespacedName{Name: deployment.Spec.Template, Namespace: deployment.Namespace}
