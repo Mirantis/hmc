@@ -55,8 +55,8 @@ generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and
 
 .PHONY: hmc-chart-generate
 hmc-chart-generate: kustomize helmify ## Generate hmc helm chart
-	rm -rf charts/hmc/values.yaml charts/hmc/templates/*.yaml
-	$(KUSTOMIZE) build config/default | $(HELMIFY) charts/hmc
+	rm -rf templates/hmc/values.yaml templates/hmc/templates/*.yaml
+	$(KUSTOMIZE) build config/default | $(HELMIFY) templates/hmc
 
 .PHONY: generate-all
 generate-all: generate manifests hmc-chart-generate

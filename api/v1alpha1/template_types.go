@@ -48,8 +48,8 @@ const (
 	TemplateTypeDeployment TemplateType = "deployment"
 	// TemplateTypeProvider is the type used for adding CAPI providers in the HMC Management object.
 	TemplateTypeProvider TemplateType = "provider"
-	// TemplateTypeManagement is the type used for HMC management components
-	TemplateTypeManagement TemplateType = "management"
+	// TemplateTypeCore is the type used for HMC and CAPI core components
+	TemplateTypeCore TemplateType = "core"
 )
 
 // TemplateSpec defines the desired state of Template

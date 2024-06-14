@@ -152,7 +152,7 @@ func (r *TemplateReconciler) parseChartMetadata(template *hmc.Template, chart *c
 	}
 	templateType := chart.Metadata.Annotations[hmc.ChartAnnotationType]
 	switch hmc.TemplateType(templateType) {
-	case hmc.TemplateTypeDeployment, hmc.TemplateTypeProvider, hmc.TemplateTypeManagement:
+	case hmc.TemplateTypeDeployment, hmc.TemplateTypeProvider, hmc.TemplateTypeCore:
 	default:
 		return errNoProviderType
 	}
