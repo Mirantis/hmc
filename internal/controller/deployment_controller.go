@@ -121,43 +121,19 @@ func (r *DeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, err
 	}
 	if !deployment.Spec.DryRun {
-		_, err := r.reconcileHelmRelease(ctx, deployment, template.Status.ChartRef)
+		ownerRef := metav1.OwnerReference{
+			APIVersion: hmc.GroupVersion.String(),
+			Kind:       hmc.DeploymentKind,
+			Name:       deployment.Name,
+			UID:        deployment.UID,
+		}
+		_, err := helm.ReconcileHelmRelease(ctx, r.Client, deployment.Name, deployment.Namespace, deployment.Spec.Config,
+			ownerRef, template.Status.ChartRef, defaultReconcileInterval)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 	}
 	return ctrl.Result{}, r.updateStatus(ctx, deployment, "")
-}
-
-func (r *DeploymentReconciler) reconcileHelmRelease(ctx context.Context, deployment *hmc.Deployment, chartRef *hcv2.CrossNamespaceSourceReference) (*hcv2.HelmRelease, error) {
-	helmRelease := &hcv2.HelmRelease{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      deployment.Name,
-			Namespace: deployment.Namespace,
-		},
-	}
-
-	_, err := ctrl.CreateOrUpdate(ctx, r.Client, helmRelease, func() error {
-		helmRelease.OwnerReferences = []metav1.OwnerReference{
-			{
-				APIVersion: hmc.GroupVersion.String(),
-				Kind:       hmc.DeploymentKind,
-				Name:       deployment.Name,
-				UID:        deployment.UID,
-			},
-		}
-		helmRelease.Spec = hcv2.HelmReleaseSpec{
-			ChartRef:    chartRef,
-			Interval:    metav1.Duration{Duration: defaultReconcileInterval},
-			ReleaseName: deployment.Name,
-			Values:      deployment.Spec.Config,
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	return helmRelease, nil
 }
 
 func (r *DeploymentReconciler) validateReleaseWithValues(ctx context.Context, actionConfig *action.Configuration, deployment *hmc.Deployment, hcChart *chart.Chart) error {

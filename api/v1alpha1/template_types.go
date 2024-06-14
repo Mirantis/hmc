@@ -24,6 +24,11 @@ import (
 )
 
 const (
+	// TemplatesNamespace is the namespace where all Templates are located
+	TemplatesNamespace = "hmc-system"
+
+	// ManagementKind is the string representation of a Management.
+	ManagementKind = "Management"
 	// TemplateKind is the string representation of a Template.
 	TemplateKind = "Template"
 	// DeploymentKind is the string representation of a Deployment.
