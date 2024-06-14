@@ -1,0 +1,29 @@
+manager:
+  image:
+    repository: registry.k8s.io/cluster-api-aws
+    name: cluster-api-aws-controller
+    tag: v2.5.0
+  imagePullPolicy: IfNotPresent
+
+autoControllerIdentityCreator: true
+awsControllerIamRole: ""
+
+capaDiagnosticsAddress: :8443
+capaEks: true
+capaEksAddRoles: false
+capaEksIam: false
+capaInsecureDiagnostics: false
+capaLoglevel: 0
+
+eventBridgeInstanceState: false
+
+expAlternativeGcStrategy: false
+expBootstrapFormatIgnition: false
+expEksFargate: false
+expExternalResourceGc: false
+expMachinePool: false
+expRosa: false
+
+k8sCpLabel: node-role.kubernetes.io/control-plane
+
+tagUnmanagedNetworkResources: true

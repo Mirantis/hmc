@@ -1,0 +1,11 @@
+manager:
+  image:
+    repository: registry.k8s.io/cluster-api
+    name: cluster-api-controller
+    tag: v1.7.2
+  imagePullPolicy: IfNotPresent
+
+clusterTopology: false
+
+expClusterResourceSet: false
+expMachinePool: false
