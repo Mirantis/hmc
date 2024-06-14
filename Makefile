@@ -1,4 +1,5 @@
 NAMESPACE ?= hmc-system
+VERSION ?= $(shell git describe --tags --always)
 # Image URL to use all building/pushing image targets
 IMG ?= hmc/controller:latest
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
@@ -106,6 +107,7 @@ package-chart-%: $(CHARTS_PACKAGE_DIR) lint-chart-%
 	$(HELM) package --destination $(CHARTS_PACKAGE_DIR) $(TEMPLATES_DIR)/$*
 
 LD_FLAGS?= -s -w
+LD_FLAGS += -X github.com/Mirantis/hmc/internal/build.Version=$(VERSION)
 LD_FLAGS += -X github.com/Mirantis/hmc/internal/telemetry.segmentToken=$(SEGMENT_TOKEN)
 
 .PHONY: build
