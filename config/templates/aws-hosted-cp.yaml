@@ -1,0 +1,8 @@
+apiVersion: hmc.mirantis.com/v1alpha1
+kind: Template
+metadata:
+  name: aws-hosted-cp
+spec:
+  helm:
+    chartName: aws-hosted-cp
+    chartVersion: "0.1.0"

@@ -58,8 +58,12 @@ hmc-chart-generate: kustomize helmify ## Generate hmc helm chart
 	rm -rf templates/hmc/values.yaml templates/hmc/templates/*.yaml
 	$(KUSTOMIZE) build config/default | $(HELMIFY) templates/hmc
 
+.PHONY: templates-generate
+templates-generate:
+	@hack/templates.sh
+
 .PHONY: generate-all
-generate-all: generate manifests hmc-chart-generate
+generate-all: generate manifests hmc-chart-generate templates-generate
 
 .PHONY: fmt
 fmt: ## Run go fmt against code.

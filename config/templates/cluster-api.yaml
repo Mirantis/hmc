@@ -1,0 +1,8 @@
+apiVersion: hmc.mirantis.com/v1alpha1
+kind: Template
+metadata:
+  name: cluster-api
+spec:
+  helm:
+    chartName: cluster-api
+    chartVersion: "0.1.0"
