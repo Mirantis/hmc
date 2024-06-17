@@ -225,6 +225,7 @@ undeploy: kustomize ## Undeploy controller from the K8s cluster specified in ~/.
 dev-deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/dev | $(KUBECTL) apply -f -
+	$(KUBECTL) rollout restart -n $(NAMESPACE) deployment/hmc-controller-manager
 
 .PHONY: dev-undeploy
 dev-undeploy: kustomize ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
@@ -238,9 +239,12 @@ dev-push: docker-build helm-package
 		$(HELM) push "$$chart" $(LOCAL_REGISTRY_REPO); \
 	done
 
+.PHONY: dev-templates
+dev-templates: templates-generate
+	$(KUBECTL) -n $(NAMESPACE) apply -f config/templates
+
 .PHONY: dev-apply
-dev-apply: kind-deploy crd-install registry-deploy helm-controller-deploy dev-push dev-deploy
-	kubectl rollout restart -n $(NAMESPACE) deployment/hmc-controller-manager
+dev-apply: kind-deploy crd-install registry-deploy helm-controller-deploy dev-push dev-deploy dev-templates
 
 .PHONY: dev-destroy
 dev-destroy: kind-undeploy registry-undeploy
