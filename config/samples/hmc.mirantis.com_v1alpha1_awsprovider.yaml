@@ -1,4 +1,4 @@
-apiVersion: hmc.mirantis.com.hmc.mirantis.com/v1alpha1
+apiVersion: hmc.mirantis.com/v1alpha1
 kind: AWSProvider
 metadata:
   labels:
