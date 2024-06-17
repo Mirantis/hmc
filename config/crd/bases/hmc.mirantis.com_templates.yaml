@@ -158,7 +158,7 @@ spec:
                 enum:
                 - deployment
                 - provider
-                - management
+                - core
                 type: string
               valid:
                 description: Valid indicates whether the template passed validation
