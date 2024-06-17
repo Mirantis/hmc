@@ -165,7 +165,7 @@ KIND_CLUSTER_NAME ?= hmc-dev
 KIND_NETWORK ?= kind
 LOCAL_REGISTRY_NAME ?= hmc-local-registry
 LOCAL_REGISTRY_PORT ?= 5001
-LOCAL_REGISTRY_REPO ?= oci://127.0.0.1:$(LOCAL_REGISTRY_PORT)/chart
+LOCAL_REGISTRY_REPO ?= oci://127.0.0.1:$(LOCAL_REGISTRY_PORT)/charts
 
 ifndef ignore-not-found
   ignore-not-found = false
