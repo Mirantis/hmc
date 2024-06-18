@@ -7,7 +7,7 @@ rules:
 - apiGroups:
   - helm.toolkit.fluxcd.io
   resources:
-  - helmrelease
+  - helmreleases
   verbs:
   - create
   - delete
