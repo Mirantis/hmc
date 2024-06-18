@@ -165,7 +165,7 @@ func (r *DeploymentReconciler) validateReleaseWithValues(ctx context.Context, ac
 	install.DryRun = true
 	install.ReleaseName = deployment.Name
 	install.Namespace = deployment.Namespace
-	install.ClientOnly = false
+	install.ClientOnly = true
 
 	vals, err := deployment.HelmValues()
 	if err != nil {
