@@ -17,7 +17,26 @@ spec:
     singular: template
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - description: Type
+      jsonPath: .status.type
+      name: type
+      type: string
+    - description: Valid
+      jsonPath: .status.valid
+      name: valid
+      type: boolean
+    - description: Validation Error
+      jsonPath: .status.validationError
+      name: validationError
+      priority: 1
+      type: string
+    - description: Description
+      jsonPath: .status.description
+      name: description
+      priority: 1
+      type: string
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: Template is the Schema for the templates API

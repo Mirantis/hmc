@@ -115,6 +115,10 @@ type TemplateValidationStatus struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=hmc-tmpl;tmpl
+// +kubebuilder:printcolumn:name="type",type="string",JSONPath=".status.type",description="Type",priority=0
+// +kubebuilder:printcolumn:name="valid",type="boolean",JSONPath=".status.valid",description="Valid",priority=0
+// +kubebuilder:printcolumn:name="validationError",type="string",JSONPath=".status.validationError",description="Validation Error",priority=1
+// +kubebuilder:printcolumn:name="description",type="string",JSONPath=".status.description",description="Description",priority=1
 
 // Template is the Schema for the templates API
 type Template struct {
