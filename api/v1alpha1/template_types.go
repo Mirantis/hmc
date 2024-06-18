@@ -121,6 +121,7 @@ type TemplateValidationStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+// +kubebuilder:resource:shortName=hmc-tmpl;tmpl
 
 // Template is the Schema for the templates API
 type Template struct {

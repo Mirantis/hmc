@@ -47,6 +47,7 @@ type DeploymentStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+// +kubebuilder:resource:shortName=hmc-deploy;deploy
 
 // Deployment is the Schema for the deployments API
 type Deployment struct {

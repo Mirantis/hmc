@@ -12,6 +12,9 @@ spec:
     kind: Template
     listKind: TemplateList
     plural: templates
+    shortNames:
+    - hmc-tmpl
+    - tmpl
     singular: template
   scope: Namespaced
   versions:

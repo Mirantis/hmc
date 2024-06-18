@@ -11,6 +11,9 @@ spec:
     kind: Management
     listKind: ManagementList
     plural: managements
+    shortNames:
+    - hmc-mgmt
+    - mgmt
     singular: management
   scope: Namespaced
   versions:

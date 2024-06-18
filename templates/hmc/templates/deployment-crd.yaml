@@ -12,6 +12,9 @@ spec:
     kind: Deployment
     listKind: DeploymentList
     plural: deployments
+    shortNames:
+    - hmc-deploy
+    - deploy
     singular: deployment
   scope: Namespaced
   versions:

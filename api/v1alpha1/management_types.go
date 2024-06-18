@@ -105,6 +105,7 @@ type ProvidersStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+// +kubebuilder:resource:shortName=hmc-mgmt;mgmt
 
 // Management is the Schema for the managements API
 type Management struct {
