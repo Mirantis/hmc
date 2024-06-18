@@ -80,7 +80,7 @@ type ManagementStatus struct {
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 	// Providers is the list of discovered supported providers
-	Providers ProvidersStatus `json:"providers,omitempty"`
+	Providers Providers `json:"providers,omitempty"`
 	// Components contains the map with the status of Management components installation
 	Components map[string]ComponentStatus `json:"components,omitempty"`
 }
@@ -93,18 +93,9 @@ type ComponentStatus struct {
 	Error string `json:"error,omitempty"`
 }
 
-// ProvidersStatus is the list of discovered supported providers
-type ProvidersStatus struct {
-	// InfrastructureProviders is the list of discovered infrastructure providers
-	InfrastructureProviders []string `json:"infrastructure,omitempty"`
-	// BootstrapProviders is the list of discovered bootstrap providers
-	BootstrapProviders []string `json:"bootstrap,omitempty"`
-	// ControlPlaneProviders is the list of discovered control plane providers
-	ControlPlaneProviders []string `json:"controlPlane,omitempty"`
-}
-
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+// +kubebuilder:resource:shortName=hmc-mgmt;mgmt
 
 // Management is the Schema for the managements API
 type Management struct {

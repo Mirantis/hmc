@@ -97,15 +97,8 @@ type TemplateStatus struct {
 	// Type specifies the type of the provided template, as discovered from the Helm chart metadata.
 	// +kubebuilder:validation:Enum=deployment;provider;core
 	Type string `json:"type,omitempty"`
-	// InfrastructureProviders specifies CAPI infrastructure providers associated with the template.
-	// +optional
-	InfrastructureProviders []string `json:"infrastructureProviders,omitempty"`
-	// BootstrapProviders specifies CAPI bootstrap providers associated with the template.
-	// +optional
-	BootstrapProviders []string `json:"bootstrapProviders,omitempty"`
-	// ControlPlaneProviders specifies CAPI control plane providers associated with the template.
-	// +optional
-	ControlPlaneProviders []string `json:"controlPlaneProviders,omitempty"`
+	// Providers represent required/exposed CAPI providers depending on the template type.
+	Providers Providers `json:"providers,omitempty"`
 	// ObservedGeneration is the last observed generation.
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
@@ -121,6 +114,11 @@ type TemplateValidationStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+// +kubebuilder:resource:shortName=hmc-tmpl;tmpl
+// +kubebuilder:printcolumn:name="type",type="string",JSONPath=".status.type",description="Type",priority=0
+// +kubebuilder:printcolumn:name="valid",type="boolean",JSONPath=".status.valid",description="Valid",priority=0
+// +kubebuilder:printcolumn:name="validationError",type="string",JSONPath=".status.validationError",description="Validation Error",priority=1
+// +kubebuilder:printcolumn:name="description",type="string",JSONPath=".status.description",description="Description",priority=1
 
 // Template is the Schema for the templates API
 type Template struct {

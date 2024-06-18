@@ -61,7 +61,7 @@ func (r *ManagementReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	var errs error
-	detectedProviders := hmc.ProvidersStatus{}
+	detectedProviders := hmc.Providers{}
 	detectedComponents := make(map[string]hmc.ComponentStatus)
 
 	for _, component := range management.Spec.Components {
@@ -119,7 +119,7 @@ func (r *ManagementReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 func updateComponentsStatus(
 	components map[string]hmc.ComponentStatus,
-	providers *hmc.ProvidersStatus,
+	providers *hmc.Providers,
 	componentName string,
 	templateStatus hmc.TemplateStatus,
 	err string) {
@@ -130,9 +130,9 @@ func updateComponentsStatus(
 	}
 
 	if err == "" {
-		providers.InfrastructureProviders = append(providers.InfrastructureProviders, templateStatus.InfrastructureProviders...)
-		providers.BootstrapProviders = append(providers.BootstrapProviders, templateStatus.BootstrapProviders...)
-		providers.ControlPlaneProviders = append(providers.ControlPlaneProviders, templateStatus.ControlPlaneProviders...)
+		providers.InfrastructureProviders = append(providers.InfrastructureProviders, templateStatus.Providers.InfrastructureProviders...)
+		providers.BootstrapProviders = append(providers.BootstrapProviders, templateStatus.Providers.BootstrapProviders...)
+		providers.ControlPlaneProviders = append(providers.ControlPlaneProviders, templateStatus.Providers.ControlPlaneProviders...)
 	}
 }
 

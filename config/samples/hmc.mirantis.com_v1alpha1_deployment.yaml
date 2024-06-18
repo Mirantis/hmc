@@ -6,4 +6,4 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
   name: deployment-sample
 spec:
-  # TODO(user): Add fields here
+  template: aws-standalone-cp
