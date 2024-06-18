@@ -65,6 +65,29 @@ spec:
           status:
             description: ManagementStatus defines the observed state of Management
             properties:
+              availableProviders:
+                description: AvailableProviders is the list of discovered supported
+                  providers
+                properties:
+                  bootstrap:
+                    description: BootstrapProviders is the list of CAPI bootstrap
+                      providers
+                    items:
+                      type: string
+                    type: array
+                  controlPlane:
+                    description: ControlPlaneProviders is the list of CAPI control
+                      plane providers
+                    items:
+                      type: string
+                    type: array
+                  infrastructure:
+                    description: InfrastructureProviders is the list of CAPI infrastructure
+                      providers
+                    items:
+                      type: string
+                    type: array
+                type: object
               components:
                 additionalProperties:
                   description: ComponentStatus is the status of Management component
@@ -86,28 +109,6 @@ spec:
                 description: ObservedGeneration is the last observed generation.
                 format: int64
                 type: integer
-              providers:
-                description: Providers is the list of discovered supported providers
-                properties:
-                  bootstrap:
-                    description: BootstrapProviders is the list of CAPI bootstrap
-                      providers
-                    items:
-                      type: string
-                    type: array
-                  controlPlane:
-                    description: ControlPlaneProviders is the list of CAPI control
-                      plane providers
-                    items:
-                      type: string
-                    type: array
-                  infrastructure:
-                    description: InfrastructureProviders is the list of CAPI infrastructure
-                      providers
-                    items:
-                      type: string
-                    type: array
-                type: object
             type: object
         type: object
     served: true
