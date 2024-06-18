@@ -8,7 +8,7 @@ metadata:
   name: template-viewer-role
 rules:
 - apiGroups:
-  - hmc.mirantis.com.hmc.mirantis.com
+  - hmc.mirantis.com
   resources:
   - templates
   verbs:
@@ -16,7 +16,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - hmc.mirantis.com.hmc.mirantis.com
+  - hmc.mirantis.com
   resources:
   - templates/status
   verbs:

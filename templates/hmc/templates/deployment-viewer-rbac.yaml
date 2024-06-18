@@ -6,7 +6,7 @@ metadata:
   {{- include "hmc.labels" . | nindent 4 }}
 rules:
 - apiGroups:
-  - hmc.mirantis.com.hmc.mirantis.com
+  - hmc.mirantis.com
   resources:
   - deployments
   verbs:
@@ -14,7 +14,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - hmc.mirantis.com.hmc.mirantis.com
+  - hmc.mirantis.com
   resources:
   - deployments/status
   verbs:

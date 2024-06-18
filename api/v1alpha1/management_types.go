@@ -17,7 +17,14 @@ limitations under the License.
 package v1alpha1
 
 import (
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/yaml"
+)
+
+const (
+	ManagementName      = "hmc"
+	ManagementNamespace = "hmc-system"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -28,14 +35,72 @@ type ManagementSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of Management. Edit management_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// Components is the list of supported management components
+	Components []Component `json:"components,omitempty"`
+}
+
+// Component represents HMC management component
+type Component struct {
+	// Template is the name of the Template associated with this component
+	Template string `json:"template"`
+	// Config allows to provide parameters for management component customization.
+	// If no Config provided, the field will be populated with the default
+	// values for the template.
+	// +optional
+	Config *apiextensionsv1.JSON `json:"config,omitempty"`
+}
+
+func (in *Component) HelmValues() (values map[string]interface{}, err error) {
+	if in.Config != nil {
+		err = yaml.Unmarshal(in.Config.Raw, &values)
+	}
+	return values, err
+}
+
+func (m ManagementSpec) SetDefaults() {
+	// TODO: Uncomment when Templates will be ready
+	/*
+		m.Components = []Component{
+			{
+				Template: "cluster-api",
+			},
+			{
+				Template: "k0smotron",
+			},
+			{
+				Template: "cluster-api-provider-aws",
+			},
+		}
+	*/
 }
 
 // ManagementStatus defines the observed state of Management
 type ManagementStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// ObservedGeneration is the last observed generation.
+	// +optional
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+	// Providers is the list of discovered supported providers
+	Providers ProvidersStatus `json:"providers,omitempty"`
+	// Components contains the map with the status of Management components installation
+	Components map[string]ComponentStatus `json:"components,omitempty"`
+}
+
+// ComponentStatus is the status of Management component installation
+type ComponentStatus struct {
+	// Success represents if a component installation was successful
+	Success bool `json:"success,omitempty"`
+	// Error stores as error message in case of failed installation
+	Error string `json:"error,omitempty"`
+}
+
+// ProvidersStatus is the list of discovered supported providers
+type ProvidersStatus struct {
+	// InfrastructureProviders is the list of discovered infrastructure providers
+	InfrastructureProviders []string `json:"infrastructure,omitempty"`
+	// BootstrapProviders is the list of discovered bootstrap providers
+	BootstrapProviders []string `json:"bootstrap,omitempty"`
+	// ControlPlaneProviders is the list of discovered control plane providers
+	ControlPlaneProviders []string `json:"controlPlane,omitempty"`
 }
 
 //+kubebuilder:object:root=true

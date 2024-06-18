@@ -8,7 +8,7 @@ metadata:
   name: management-viewer-role
 rules:
 - apiGroups:
-  - hmc.mirantis.com.hmc.mirantis.com
+  - hmc.mirantis.com
   resources:
   - managements
   verbs:
@@ -16,7 +16,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - hmc.mirantis.com.hmc.mirantis.com
+  - hmc.mirantis.com
   resources:
   - managements/status
   verbs:

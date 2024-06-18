@@ -8,7 +8,7 @@ metadata:
   name: awsprovider-viewer-role
 rules:
 - apiGroups:
-  - hmc.mirantis.com.hmc.mirantis.com
+  - hmc.mirantis.com
   resources:
   - awsproviders
   verbs:
@@ -16,7 +16,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - hmc.mirantis.com.hmc.mirantis.com
+  - hmc.mirantis.com
   resources:
   - awsproviders/status
   verbs:

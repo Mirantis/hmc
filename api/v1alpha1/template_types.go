@@ -24,6 +24,11 @@ import (
 )
 
 const (
+	// TemplatesNamespace is the namespace where all Templates are located
+	TemplatesNamespace = "hmc-system"
+
+	// ManagementKind is the string representation of a Management.
+	ManagementKind = "Management"
 	// TemplateKind is the string representation of a Template.
 	TemplateKind = "Template"
 	// DeploymentKind is the string representation of a Deployment.
@@ -90,7 +95,7 @@ type TemplateStatus struct {
 	// +optional
 	ChartRef *helmcontrollerv2.CrossNamespaceSourceReference `json:"chartRef,omitempty"`
 	// Type specifies the type of the provided template, as discovered from the Helm chart metadata.
-	// +kubebuilder:validation:Enum=deployment;provider;management
+	// +kubebuilder:validation:Enum=deployment;provider;core
 	Type string `json:"type,omitempty"`
 	// InfrastructureProviders specifies CAPI infrastructure providers associated with the template.
 	// +optional
