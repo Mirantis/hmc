@@ -18,7 +18,22 @@ spec:
     singular: deployment
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - description: Valid
+      jsonPath: .status.valid
+      name: valid
+      type: boolean
+    - description: Validation Error
+      jsonPath: .status.validationError
+      name: validationError
+      priority: 1
+      type: string
+    - description: Dry Run
+      jsonPath: .spec.dryRun
+      name: dryRun
+      priority: 1
+      type: string
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: Deployment is the Schema for the deployments API
