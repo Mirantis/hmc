@@ -97,15 +97,8 @@ type TemplateStatus struct {
 	// Type specifies the type of the provided template, as discovered from the Helm chart metadata.
 	// +kubebuilder:validation:Enum=deployment;provider;core
 	Type string `json:"type,omitempty"`
-	// InfrastructureProviders specifies CAPI infrastructure providers associated with the template.
-	// +optional
-	InfrastructureProviders []string `json:"infrastructureProviders,omitempty"`
-	// BootstrapProviders specifies CAPI bootstrap providers associated with the template.
-	// +optional
-	BootstrapProviders []string `json:"bootstrapProviders,omitempty"`
-	// ControlPlaneProviders specifies CAPI control plane providers associated with the template.
-	// +optional
-	ControlPlaneProviders []string `json:"controlPlaneProviders,omitempty"`
+	// Providers represent required/exposed CAPI providers depending on the template type.
+	Providers Providers `json:"providers,omitempty"`
 	// ObservedGeneration is the last observed generation.
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`

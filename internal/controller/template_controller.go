@@ -162,13 +162,13 @@ func (r *TemplateReconciler) parseChartMetadata(template *hmc.Template, chart *c
 
 	template.Status.Type = templateType
 	if infraProviders != "" {
-		template.Status.InfrastructureProviders = strings.Split(infraProviders, ",")
+		template.Status.Providers.InfrastructureProviders = strings.Split(infraProviders, ",")
 	}
 	if bootstrapProviders != "" {
-		template.Status.BootstrapProviders = strings.Split(bootstrapProviders, ",")
+		template.Status.Providers.BootstrapProviders = strings.Split(bootstrapProviders, ",")
 	}
 	if cpProviders != "" {
-		template.Status.ControlPlaneProviders = strings.Split(cpProviders, ",")
+		template.Status.Providers.ControlPlaneProviders = strings.Split(cpProviders, ",")
 	}
 	return nil
 }
