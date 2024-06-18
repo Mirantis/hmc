@@ -46,6 +46,10 @@ spec:
         env:
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: "cluster.local"
+        {{- if .Values.credentialsSecretName }}
+        - name: AWS_SHARED_CREDENTIALS_FILE
+          value: /home/.aws/credentials
+        {{- end }}
         image: {{ .Values.manager.image.repository }}/{{ .Values.manager.image.name }}:{{ .Values.manager.image.tag }}
         imagePullPolicy: {{ .Values.manager.imagePullPolicy }}
         livenessProbe:
@@ -81,6 +85,10 @@ spec:
         - mountPath: /tmp/k8s-webhook-server/serving-certs
           name: cert
           readOnly: true
+        {{- if .Values.credentialsSecretName }}
+        - mountPath: /home/.aws
+          name: credentials
+        {{- end }}
       securityContext:
         fsGroup: 1000
         runAsNonRoot: true
@@ -98,3 +106,8 @@ spec:
         secret:
           defaultMode: 420
           secretName: capa-webhook-service-cert
+      {{- if .Values.credentialsSecretName }}
+      - name: credentials
+        secret:
+          secretName: {{ .Values.credentialsSecretName }}
+      {{- end }}

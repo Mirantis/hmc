@@ -7,4 +7,6 @@ spec:
   components:
     - template: cluster-api
     - template: cluster-api-provider-aws
+      config:
+        credentialsSecretName: aws-credentials
     - template: k0smotron

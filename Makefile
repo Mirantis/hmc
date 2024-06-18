@@ -167,6 +167,8 @@ LOCAL_REGISTRY_NAME ?= hmc-local-registry
 LOCAL_REGISTRY_PORT ?= 5001
 LOCAL_REGISTRY_REPO ?= oci://127.0.0.1:$(LOCAL_REGISTRY_PORT)/charts
 
+AWS_CREDENTIALS=${AWS_B64ENCODED_CREDENTIALS}
+
 ifndef ignore-not-found
   ignore-not-found = false
 endif
@@ -247,8 +249,12 @@ dev-templates: templates-generate
 dev-management:
 	$(KUBECTL) -n $(NAMESPACE) apply -f config/dev/management.yaml
 
+.PHONY: dev-aws
+dev-aws: yq
+	$(YQ) e ".data.credentials = \"${AWS_CREDENTIALS}\"" config/dev/awscredentials.yaml | $(KUBECTL) -n $(NAMESPACE) apply -f -
+
 .PHONY: dev-apply
-dev-apply: kind-deploy crd-install registry-deploy helm-controller-deploy dev-push dev-deploy dev-templates dev-management
+dev-apply: kind-deploy crd-install registry-deploy helm-controller-deploy dev-push dev-deploy dev-templates dev-management dev-aws
 
 .PHONY: dev-destroy
 dev-destroy: kind-undeploy registry-undeploy
@@ -279,6 +285,7 @@ GOLANGCI_LINT = $(LOCALBIN)/golangci-lint-$(GOLANGCI_LINT_VERSION)
 HELM ?= $(LOCALBIN)/helm-$(HELM_VERSION)
 HELMIFY ?= $(LOCALBIN)/helmify-$(HELMIFY_VERSION)
 KIND ?= $(LOCALBIN)/kind-$(KIND_VERSION)
+YQ ?= $(LOCALBIN)/yq-$(YQ_VERSION)
 
 FLUX_CHART_REPOSITORY ?= oci://ghcr.io/fluxcd-community/charts/flux2
 FLUX_CHART_VERSION ?= 2.13.0
@@ -292,6 +299,7 @@ GOLANGCI_LINT_VERSION ?= v1.57.2
 HELM_VERSION ?= v3.15.1
 HELMIFY_VERSION ?= v0.4.13
 KIND_VERSION ?= v0.23.0
+YQ_VERSION ?= v4.44.2
 
 .PHONY: kustomize
 kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary.
@@ -329,6 +337,11 @@ $(HELMIFY): | $(LOCALBIN)
 kind: $(KIND) ## Download kind locally if necessary.
 $(KIND): | $(LOCALBIN)
 	$(call go-install-tool,$(KIND),sigs.k8s.io/kind,${KIND_VERSION})
+
+.PHONY: yq
+yq: $(YQ) ## Download yq locally if necessary.
+$(YQ): | $(LOCALBIN)
+	$(call go-install-tool,$(YQ),github.com/mikefarah/yq/v4,${YQ_VERSION})
 
 $(FLUX_HELM_CRD): | $(EXTERNAL_CRD_DIR)
 	rm -f $(FLUX_HELM_CRD)
