@@ -45,7 +45,7 @@ jobs:
         with:
           args: --timeout 10m0s
       - name: Verify all generated pieces are up-to-date
-        run: make generate-all && git diff --exit-code
+        run: make generate-all && git add -N . && git diff --exit-code
       - name: Unit tests
         run: |
           make test
