@@ -1,0 +1,10 @@
+apiVersion: hmc.mirantis.com/v1alpha1
+kind: Management
+metadata:
+  name: hmc
+  namespace: hmc-system
+spec:
+  components:
+    - template: cluster-api
+    - template: cluster-api-provider-aws
+    - template: k0smotron

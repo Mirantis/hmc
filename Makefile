@@ -243,8 +243,12 @@ dev-push: docker-build helm-package
 dev-templates: templates-generate
 	$(KUBECTL) -n $(NAMESPACE) apply -f config/templates
 
+.PHONY: dev-management
+dev-management:
+	$(KUBECTL) -n $(NAMESPACE) apply -f config/dev/management.yaml
+
 .PHONY: dev-apply
-dev-apply: kind-deploy crd-install registry-deploy helm-controller-deploy dev-push dev-deploy dev-templates
+dev-apply: kind-deploy crd-install registry-deploy helm-controller-deploy dev-push dev-deploy dev-templates dev-management
 
 .PHONY: dev-destroy
 dev-destroy: kind-undeploy registry-undeploy
