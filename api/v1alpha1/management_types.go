@@ -79,8 +79,8 @@ type ManagementStatus struct {
 	// ObservedGeneration is the last observed generation.
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
-	// Providers is the list of discovered supported providers
-	Providers Providers `json:"providers,omitempty"`
+	// AvailableProviders is the list of discovered supported providers
+	AvailableProviders Providers `json:"availableProviders,omitempty"`
 	// Components contains the map with the status of Management components installation
 	Components map[string]ComponentStatus `json:"components,omitempty"`
 }
