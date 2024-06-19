@@ -13,7 +13,9 @@ clusterNetwork:
 vpcID: ""
 region: ""
 sshKeyName: ""
-subnets: []
+subnets:
+  - id: ""
+    availabilityZone: ""
 
 # AWS machines parameters
 amiID: ""

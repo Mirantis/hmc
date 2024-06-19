@@ -14,7 +14,9 @@ clusterNetwork:
 vpcID: ""
 region: ""
 sshKeyName: ""
-subnets: []
+subnets:
+  - id: ""
+    availabilityZone: ""
 
 controlPlaneLoadBalancer:
   additionalSecurityGroups: []
