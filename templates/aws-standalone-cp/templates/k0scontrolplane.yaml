@@ -31,6 +31,8 @@ spec:
                 chartname: aws-cloud-controller-manager/aws-cloud-controller-manager
                 version: "0.0.8"
                 values: |
+                  nodeSelector:
+                    node-role.kubernetes.io/control-plane: "true"
                   args:
                     - --v=2
                     - --cloud-provider=aws
