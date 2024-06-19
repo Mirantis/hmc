@@ -104,15 +104,16 @@ func (r *ManagementReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 		updateComponentsStatus(detectedComponents, &detectedProviders, component.Template, template.Status, "")
 	}
-	if errs != nil {
-		l.Error(errs, "Multiple errors during Management reconciliation")
-	}
 
 	management.Status.ObservedGeneration = management.Generation
 	management.Status.AvailableProviders = detectedProviders
 	management.Status.Components = detectedComponents
 	if err := r.Status().Update(ctx, management); err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to update status for Management %s/%s: %w", management.Namespace, management.Name, err)
+		errs = errors.Join(fmt.Errorf("failed to update status for Management %s/%s: %w", management.Namespace, management.Name, err))
+	}
+	if errs != nil {
+		l.Error(errs, "Multiple errors during Management reconciliation")
+		return ctrl.Result{}, errs
 	}
 	return ctrl.Result{}, nil
 }
