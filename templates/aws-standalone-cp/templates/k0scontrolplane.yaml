@@ -6,6 +6,10 @@ spec:
   replicas: {{ .Values.controlPlaneNumber }}
   version: {{ .Values.k0s.version }}
   k0sConfigSpec:
+    args:
+      - --enable-worker
+      - --enable-cloud-provider
+      - --kubelet-extra-args="--cloud-provider=external --hostname-override=$(hostname --fqdn)"
     k0s:
       apiVersion: k0s.k0sproject.io/v1beta1
       kind: ClusterConfig
