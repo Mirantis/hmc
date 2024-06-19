@@ -13,6 +13,7 @@ clusterNetwork:
 vpcID: ""
 region: ""
 sshKeyName: ""
+publicIP: false
 subnets:
   - id: ""
     availabilityZone: ""
