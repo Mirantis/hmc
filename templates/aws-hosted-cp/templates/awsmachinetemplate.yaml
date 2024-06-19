@@ -19,3 +19,4 @@ spec:
       {{- if .Values.sshKeyName }}
       sshKeyName: {{ .Values.sshKeyName }}
       {{- end }}
+      publicIP: {{ .Values.publicIP }}
