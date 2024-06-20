@@ -90,7 +90,7 @@ func (r *DeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	// TODO: this should be implemented in admission controller instead
-	if changed := applyDefaultConfiguration(deployment, template); changed {
+	if changed := applyDefaultDeploymentConfiguration(deployment, template); changed {
 		l.Info("Applying default configuration")
 		return ctrl.Result{}, r.Client.Update(ctx, deployment)
 	}
@@ -176,7 +176,7 @@ func (r *DeploymentReconciler) getSource(ctx context.Context, ref *hcv2.CrossNam
 	return &hc, nil
 }
 
-func applyDefaultConfiguration(deployment *hmc.Deployment, template *hmc.Template) (changed bool) {
+func applyDefaultDeploymentConfiguration(deployment *hmc.Deployment, template *hmc.Template) (changed bool) {
 	if deployment.Spec.Config != nil || template.Status.Config == nil {
 		// Only apply defaults when there's no configuration provided
 		return false

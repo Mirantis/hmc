@@ -22,11 +22,17 @@ import (
 	"k8s.io/apimachinery/pkg/util/yaml"
 )
 
+const (
+	DefaultCoreHMCTemplate         = "hmc"
+	DefaultCoreCAPITemplate        = "cluster-api"
+	DefaultCoreCertManagerTemplate = "cert-manager"
+)
+
 // ManagementSpec defines the desired state of Management
 type ManagementSpec struct {
 	// Core holds the core Management components that are mandatory.
 	// If not specified, will be populated with the default values.
-	Core Core `json:"core,omitempty"`
+	Core *Core `json:"core,omitempty"`
 
 	// Providers is the list of supported CAPI providers.
 	Providers []Component `json:"providers,omitempty"`
@@ -35,13 +41,10 @@ type ManagementSpec struct {
 // Core represents a structure describing core Management components.
 type Core struct {
 	// HMC represents the core HMC component and references the HMC template.
-	// +kubebuilder:validation:Required
-	HMC Component `json:"HMC"`
+	HMC Component `json:"hmc"`
 	// CAPI represents the core Cluster API component and references the Cluster API template.
-	// +kubebuilder:validation:Required
-	CAPI Component `json:"CAPI"`
+	CAPI Component `json:"capi"`
 	// CertManager represents the Cert Manager component and references the Cert Manager template.
-	// +kubebuilder:validation:Required
 	CertManager Component `json:"certManager"`
 }
 

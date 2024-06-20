@@ -48,26 +48,9 @@ spec:
                   Core holds the core Management components that are mandatory.
                   If not specified, will be populated with the default values.
                 properties:
-                  CAPI:
+                  capi:
                     description: CAPI represents the core Cluster API component and
                       references the Cluster API template.
-                    properties:
-                      config:
-                        description: |-
-                          Config allows to provide parameters for management component customization.
-                          If no Config provided, the field will be populated with the default
-                          values for the template.
-                        x-kubernetes-preserve-unknown-fields: true
-                      template:
-                        description: Template is the name of the Template associated
-                          with this component.
-                        type: string
-                    required:
-                    - template
-                    type: object
-                  HMC:
-                    description: HMC represents the core HMC component and references
-                      the HMC template.
                     properties:
                       config:
                         description: |-
@@ -99,10 +82,27 @@ spec:
                     required:
                     - template
                     type: object
+                  hmc:
+                    description: HMC represents the core HMC component and references
+                      the HMC template.
+                    properties:
+                      config:
+                        description: |-
+                          Config allows to provide parameters for management component customization.
+                          If no Config provided, the field will be populated with the default
+                          values for the template.
+                        x-kubernetes-preserve-unknown-fields: true
+                      template:
+                        description: Template is the name of the Template associated
+                          with this component.
+                        type: string
+                    required:
+                    - template
+                    type: object
                 required:
-                - CAPI
-                - HMC
+                - capi
                 - certManager
+                - hmc
                 type: object
               providers:
                 description: Providers is the list of supported CAPI providers.

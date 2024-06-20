@@ -60,6 +60,12 @@ func (r *ManagementReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, err
 	}
 
+	// TODO: this should be implemented in admission controller instead
+	if changed := applyDefaultCoreConfiguration(management); changed {
+		l.Info("Applying default core configuration")
+		return ctrl.Result{}, r.Client.Update(ctx, management)
+	}
+
 	var errs error
 	detectedProviders := hmc.Providers{}
 	detectedComponents := make(map[string]hmc.ComponentStatus)
@@ -116,6 +122,26 @@ func (r *ManagementReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, errs
 	}
 	return ctrl.Result{}, nil
+}
+
+func applyDefaultCoreConfiguration(mgmt *hmc.Management) (changed bool) {
+	if mgmt.Spec.Core != nil {
+		// Only apply defaults when there's no configuration provided
+		return false
+	}
+	mgmt.Spec.Core = &hmc.Core{
+		HMC: hmc.Component{
+			Template: hmc.DefaultCoreHMCTemplate,
+		},
+		CAPI: hmc.Component{
+			Template: hmc.DefaultCoreCAPITemplate,
+		},
+		CertManager: hmc.Component{
+			Template: hmc.DefaultCoreCertManagerTemplate,
+		},
+	}
+
+	return true
 }
 
 func updateComponentsStatus(
