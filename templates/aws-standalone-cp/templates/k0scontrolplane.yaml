@@ -6,6 +6,10 @@ spec:
   replicas: {{ .Values.controlPlaneNumber }}
   version: {{ .Values.k0s.version }}
   k0sConfigSpec:
+    args:
+      - --enable-worker
+      - --enable-cloud-provider
+      - --kubelet-extra-args="--cloud-provider=external --hostname-override=$(hostname --fqdn)"
     k0s:
       apiVersion: k0s.k0sproject.io/v1beta1
       kind: ClusterConfig
@@ -27,6 +31,8 @@ spec:
                 chartname: aws-cloud-controller-manager/aws-cloud-controller-manager
                 version: "0.0.8"
                 values: |
+                  nodeSelector:
+                    node-role.kubernetes.io/control-plane: "true"
                   args:
                     - --v=2
                     - --cloud-provider=aws
