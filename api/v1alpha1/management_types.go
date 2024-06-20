@@ -22,21 +22,32 @@ import (
 	"k8s.io/apimachinery/pkg/util/yaml"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 // ManagementSpec defines the desired state of Management
 type ManagementSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// Core holds the core Management components that are mandatory.
+	// If not specified, will be populated with the default values.
+	Core Core `json:"core,omitempty"`
 
-	// Components is the list of supported management components
-	Components []Component `json:"components,omitempty"`
+	// Providers is the list of supported CAPI providers.
+	Providers []Component `json:"providers,omitempty"`
+}
+
+// Core represents a structure describing core Management components.
+type Core struct {
+	// HMC represents the core HMC component and references the HMC template.
+	// +kubebuilder:validation:Required
+	HMC Component `json:"HMC"`
+	// CAPI represents the core Cluster API component and references the Cluster API template.
+	// +kubebuilder:validation:Required
+	CAPI Component `json:"CAPI"`
+	// CertManager represents the Cert Manager component and references the Cert Manager template.
+	// +kubebuilder:validation:Required
+	CertManager Component `json:"certManager"`
 }
 
 // Component represents HMC management component
 type Component struct {
-	// Template is the name of the Template associated with this component
+	// Template is the name of the Template associated with this component.
 	Template string `json:"template"`
 	// Config allows to provide parameters for management component customization.
 	// If no Config provided, the field will be populated with the default
@@ -55,7 +66,7 @@ func (in *Component) HelmValues() (values map[string]interface{}, err error) {
 func (m ManagementSpec) SetDefaults() {
 	// TODO: Uncomment when Templates will be ready
 	/*
-		m.Components = []Component{
+		m.Providers = []Component{
 			{
 				Template: "cluster-api",
 			},
@@ -74,10 +85,12 @@ type ManagementStatus struct {
 	// ObservedGeneration is the last observed generation.
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
-	// AvailableProviders is the list of discovered supported providers
+	// AvailableProviders holds all CAPI providers available on the Management cluster.
 	AvailableProviders Providers `json:"availableProviders,omitempty"`
-	// Components contains the map with the status of Management components installation
-	Components map[string]ComponentStatus `json:"components,omitempty"`
+	// Core indicates the status of installed core components.
+	Core CoreStatus `json:"core,omitempty"`
+	// Providers indicates the status of installed CAPI providers.
+	Providers map[string]ComponentStatus `json:"providers,omitempty"`
 }
 
 // ComponentStatus is the status of Management component installation
@@ -86,6 +99,15 @@ type ComponentStatus struct {
 	Success bool `json:"success,omitempty"`
 	// Error stores as error message in case of failed installation
 	Error string `json:"error,omitempty"`
+}
+
+type CoreStatus struct {
+	// HMC indicates the status of the installed HMC component.
+	HMC ComponentStatus `json:"HMC,omitempty"`
+	// CAPI indicates the status of the installed CAPI component.
+	CAPI ComponentStatus `json:"CAPI,omitempty"`
+	// CertManager indicates the status of the installed CertManager component.
+	CertManager ComponentStatus `json:"certManager,omitempty"`
 }
 
 //+kubebuilder:object:root=true

@@ -64,7 +64,7 @@ func (r *ManagementReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	detectedProviders := hmc.Providers{}
 	detectedComponents := make(map[string]hmc.ComponentStatus)
 
-	for _, component := range management.Spec.Components {
+	for _, component := range management.Spec.Providers {
 		template := &hmc.Template{}
 		err := r.Get(ctx, types.NamespacedName{
 			Namespace: hmc.TemplatesNamespace,
@@ -107,7 +107,7 @@ func (r *ManagementReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	management.Status.ObservedGeneration = management.Generation
 	management.Status.AvailableProviders = detectedProviders
-	management.Status.Components = detectedComponents
+	management.Status.Providers = detectedComponents
 	if err := r.Status().Update(ctx, management); err != nil {
 		errs = errors.Join(fmt.Errorf("failed to update status for Management %s/%s: %w", management.Namespace, management.Name, err))
 	}
