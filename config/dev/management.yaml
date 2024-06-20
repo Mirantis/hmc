@@ -4,8 +4,7 @@ metadata:
   name: hmc
   namespace: hmc-system
 spec:
-  components:
-    - template: cluster-api
+  providers:
     - template: cluster-api-provider-aws
       config:
         credentialsSecretName: aws-credentials
