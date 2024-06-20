@@ -77,12 +77,6 @@ func (r *TemplateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		l.Error(err, "Failed to get Template")
 		return ctrl.Result{}, err
 	}
-	if template.Status.Valid {
-		// We consider Template objects immutable, so we validate only once.
-		// The chart will be validated later, when reconciling Deployment objects.
-		l.Info("Template has already been validated, skipping validation")
-		return ctrl.Result{}, nil
-	}
 	l.Info("Reconciling helm-controller objects ")
 	err := r.reconcileHelmRepo(ctx, template)
 	if err != nil {
