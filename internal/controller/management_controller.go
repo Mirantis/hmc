@@ -21,7 +21,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/Mirantis/hmc/internal/helm"
+	"github.com/fluxcd/pkg/apis/meta"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,6 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
+	"github.com/Mirantis/hmc/internal/helm"
 )
 
 // ManagementReconciler reconciles a Management object
@@ -66,11 +67,19 @@ func (r *ManagementReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, r.Client.Update(ctx, management)
 	}
 
+	ownerRef := metav1.OwnerReference{
+		APIVersion: hmc.GroupVersion.String(),
+		Kind:       hmc.ManagementKind,
+		Name:       management.Name,
+		UID:        management.UID,
+	}
+
 	var errs error
 	detectedProviders := hmc.Providers{}
 	detectedComponents := make(map[string]hmc.ComponentStatus)
 
-	for _, component := range management.Spec.Providers {
+	components := wrappedComponents(management)
+	for _, component := range components {
 		template := &hmc.Template{}
 		err := r.Get(ctx, types.NamespacedName{
 			Namespace: hmc.TemplatesNamespace,
@@ -94,14 +103,8 @@ func (r *ManagementReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			component.Config = &apiextensionsv1.JSON{Raw: template.Status.Config.Raw}
 		}
 
-		ownerRef := metav1.OwnerReference{
-			APIVersion: hmc.GroupVersion.String(),
-			Kind:       hmc.ManagementKind,
-			Name:       management.Name,
-			UID:        management.UID,
-		}
 		_, err = helm.ReconcileHelmRelease(ctx, r.Client, component.Template, management.Namespace, component.Config,
-			ownerRef, template.Status.ChartRef, defaultReconcileInterval)
+			ownerRef, template.Status.ChartRef, defaultReconcileInterval, component.dependsOn)
 		if err != nil {
 			errMsg := fmt.Sprintf("error reconciling HelmRelease %s/%s: %s", management.Namespace, component.Template, err)
 			updateComponentsStatus(detectedComponents, &detectedProviders, component.Template, template.Status, errMsg)
@@ -122,6 +125,25 @@ func (r *ManagementReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, errs
 	}
 	return ctrl.Result{}, nil
+}
+
+type component struct {
+	hmc.Component
+	// helm release dependencies
+	dependsOn []meta.NamespacedObjectReference
+}
+
+func wrappedComponents(mgmt *hmc.Management) (components []component) {
+	if mgmt.Spec.Core == nil {
+		return
+	}
+	components = append(components, component{Component: mgmt.Spec.Core.CertManager})
+	components = append(components, component{Component: mgmt.Spec.Core.HMC, dependsOn: []meta.NamespacedObjectReference{{Name: mgmt.Spec.Core.CertManager.Template}}})
+	components = append(components, component{Component: mgmt.Spec.Core.CAPI, dependsOn: []meta.NamespacedObjectReference{{Name: mgmt.Spec.Core.CertManager.Template}}})
+	for provider := range mgmt.Spec.Providers {
+		components = append(components, component{Component: mgmt.Spec.Providers[provider]})
+	}
+	return
 }
 
 func applyDefaultCoreConfiguration(mgmt *hmc.Management) (changed bool) {

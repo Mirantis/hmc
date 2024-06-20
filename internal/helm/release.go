@@ -5,6 +5,7 @@ import (
 	"time"
 
 	hcv2 "github.com/fluxcd/helm-controller/api/v2"
+	"github.com/fluxcd/pkg/apis/meta"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -20,6 +21,7 @@ func ReconcileHelmRelease(
 	ownerReference metav1.OwnerReference,
 	chartRef *hcv2.CrossNamespaceSourceReference,
 	reconcileInterval time.Duration,
+	dependsOn []meta.NamespacedObjectReference,
 ) (*hcv2.HelmRelease, error) {
 	helmRelease := &hcv2.HelmRelease{
 		ObjectMeta: metav1.ObjectMeta{
@@ -35,6 +37,7 @@ func ReconcileHelmRelease(
 			Interval:    metav1.Duration{Duration: reconcileInterval},
 			ReleaseName: name,
 			Values:      values,
+			DependsOn:   dependsOn,
 		}
 		return nil
 	})

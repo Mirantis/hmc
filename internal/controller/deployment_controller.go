@@ -128,7 +128,7 @@ func (r *DeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			UID:        deployment.UID,
 		}
 		_, err := helm.ReconcileHelmRelease(ctx, r.Client, deployment.Name, deployment.Namespace, deployment.Spec.Config,
-			ownerRef, template.Status.ChartRef, defaultReconcileInterval)
+			ownerRef, template.Status.ChartRef, defaultReconcileInterval, nil)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
