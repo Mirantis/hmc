@@ -59,7 +59,7 @@ hmc-chart-generate: kustomize helmify ## Generate hmc helm chart
 	$(KUSTOMIZE) build config/default | $(HELMIFY) templates/hmc
 
 .PHONY: templates-generate
-templates-generate:
+templates-generate: cert-manager
 	@hack/templates.sh
 
 .PHONY: generate-all
@@ -173,6 +173,10 @@ LOCAL_REGISTRY_REPO ?= oci://127.0.0.1:$(LOCAL_REGISTRY_PORT)/charts
 
 AWS_CREDENTIALS=${AWS_B64ENCODED_CREDENTIALS}
 
+CERT_MANAGER_VERSION ?= v1.15.0
+CERT_MANAGER_TEMPLATE_FOLDER ?= templates/cert-manager
+CERT_MANAGER_URL ?= https://github.com/cert-manager/cert-manager/releases/download/$(CERT_MANAGER_VERSION)/cert-manager.yaml
+
 ifndef ignore-not-found
   ignore-not-found = false
 endif
@@ -209,6 +213,10 @@ registry-undeploy:
 .PHONY: helm-controller-deploy
 helm-controller-deploy: helm
 	$(HELM) upgrade --install --create-namespace --set $(FLUX_CHART_VALUES) helm-controller $(FLUX_CHART_REPOSITORY) --version $(FLUX_CHART_VERSION) -n $(NAMESPACE)
+
+.PHONY: cert-manager
+cert-manager: yq
+	curl -Ls $(CERT_MANAGER_URL) -o $(CERT_MANAGER_TEMPLATE_FOLDER)/templates/cert-manager.yaml; \
 
 .PHONY: crd-install
 crd-install: generate-all kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
