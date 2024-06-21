@@ -69,7 +69,7 @@ func (in *Component) HelmValues() (values map[string]interface{}, err error) {
 func (m ManagementSpec) SetDefaults() {
 	// TODO: Uncomment when Templates will be ready
 	/*
-		m.Providers = []Component{
+		m.Components = []Component{
 			{
 				Template: "cluster-api",
 			},
@@ -90,10 +90,8 @@ type ManagementStatus struct {
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 	// AvailableProviders holds all CAPI providers available on the Management cluster.
 	AvailableProviders Providers `json:"availableProviders,omitempty"`
-	// Core indicates the status of installed core components.
-	Core CoreStatus `json:"core,omitempty"`
-	// Providers indicates the status of installed CAPI providers.
-	Providers map[string]ComponentStatus `json:"providers,omitempty"`
+	// Components indicates the status of installed HMC components and CAPI providers.
+	Components map[string]ComponentStatus `json:"components,omitempty"`
 }
 
 // ComponentStatus is the status of Management component installation
@@ -102,15 +100,6 @@ type ComponentStatus struct {
 	Success bool `json:"success,omitempty"`
 	// Error stores as error message in case of failed installation
 	Error string `json:"error,omitempty"`
-}
-
-type CoreStatus struct {
-	// HMC indicates the status of the installed HMC component.
-	HMC ComponentStatus `json:"HMC,omitempty"`
-	// CAPI indicates the status of the installed CAPI component.
-	CAPI ComponentStatus `json:"CAPI,omitempty"`
-	// CertManager indicates the status of the installed CertManager component.
-	CertManager ComponentStatus `json:"certManager,omitempty"`
 }
 
 //+kubebuilder:object:root=true

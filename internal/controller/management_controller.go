@@ -116,7 +116,7 @@ func (r *ManagementReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	management.Status.ObservedGeneration = management.Generation
 	management.Status.AvailableProviders = detectedProviders
-	management.Status.Providers = detectedComponents
+	management.Status.Components = detectedComponents
 	if err := r.Status().Update(ctx, management); err != nil {
 		errs = errors.Join(fmt.Errorf("failed to update status for Management %s/%s: %w", management.Namespace, management.Name, err))
 	}
