@@ -150,19 +150,32 @@ func (r *TemplateReconciler) parseChartMetadata(template *hmc.Template, chart *c
 	default:
 		return errNoProviderType
 	}
-	infraProviders := chart.Metadata.Annotations[hmc.ChartAnnotationInfraProviders]
-	bootstrapProviders := chart.Metadata.Annotations[hmc.ChartAnnotationBootstrapProviders]
-	cpProviders := chart.Metadata.Annotations[hmc.ChartAnnotationControlPlaneProviders]
+	template.Status.Type = hmc.TemplateType(templateType)
 
-	template.Status.Type = templateType
-	if infraProviders != "" {
-		template.Status.Providers.InfrastructureProviders = strings.Split(infraProviders, ",")
+	// the value in spec has higher priority
+	if len(template.Spec.Providers.InfrastructureProviders) > 0 {
+		template.Status.Providers.InfrastructureProviders = template.Spec.Providers.InfrastructureProviders
+	} else {
+		infraProviders := chart.Metadata.Annotations[hmc.ChartAnnotationInfraProviders]
+		if infraProviders != "" {
+			template.Status.Providers.InfrastructureProviders = strings.Split(infraProviders, ",")
+		}
 	}
-	if bootstrapProviders != "" {
-		template.Status.Providers.BootstrapProviders = strings.Split(bootstrapProviders, ",")
+	if len(template.Spec.Providers.BootstrapProviders) > 0 {
+		template.Status.Providers.BootstrapProviders = template.Spec.Providers.BootstrapProviders
+	} else {
+		bootstrapProviders := chart.Metadata.Annotations[hmc.ChartAnnotationBootstrapProviders]
+		if bootstrapProviders != "" {
+			template.Status.Providers.BootstrapProviders = strings.Split(bootstrapProviders, ",")
+		}
 	}
-	if cpProviders != "" {
-		template.Status.Providers.ControlPlaneProviders = strings.Split(cpProviders, ",")
+	if len(template.Spec.Providers.ControlPlaneProviders) > 0 {
+		template.Status.Providers.ControlPlaneProviders = template.Spec.Providers.ControlPlaneProviders
+	} else {
+		cpProviders := chart.Metadata.Annotations[hmc.ChartAnnotationControlPlaneProviders]
+		if cpProviders != "" {
+			template.Status.Providers.InfrastructureProviders = strings.Split(cpProviders, ",")
+		}
 	}
 	return nil
 }
