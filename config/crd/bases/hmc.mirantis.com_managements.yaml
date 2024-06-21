@@ -149,52 +149,7 @@ spec:
                       type: string
                     type: array
                 type: object
-              core:
-                description: Core indicates the status of installed core components.
-                properties:
-                  CAPI:
-                    description: CAPI indicates the status of the installed CAPI component.
-                    properties:
-                      error:
-                        description: Error stores as error message in case of failed
-                          installation
-                        type: string
-                      success:
-                        description: Success represents if a component installation
-                          was successful
-                        type: boolean
-                    type: object
-                  HMC:
-                    description: HMC indicates the status of the installed HMC component.
-                    properties:
-                      error:
-                        description: Error stores as error message in case of failed
-                          installation
-                        type: string
-                      success:
-                        description: Success represents if a component installation
-                          was successful
-                        type: boolean
-                    type: object
-                  certManager:
-                    description: CertManager indicates the status of the installed
-                      CertManager component.
-                    properties:
-                      error:
-                        description: Error stores as error message in case of failed
-                          installation
-                        type: string
-                      success:
-                        description: Success represents if a component installation
-                          was successful
-                        type: boolean
-                    type: object
-                type: object
-              observedGeneration:
-                description: ObservedGeneration is the last observed generation.
-                format: int64
-                type: integer
-              providers:
+              components:
                 additionalProperties:
                   description: ComponentStatus is the status of Management component
                     installation
@@ -208,8 +163,13 @@ spec:
                         was successful
                       type: boolean
                   type: object
-                description: Providers indicates the status of installed CAPI providers.
+                description: Components indicates the status of installed HMC components
+                  and CAPI providers.
                 type: object
+              observedGeneration:
+                description: ObservedGeneration is the last observed generation.
+                format: int64
+                type: integer
             type: object
         type: object
     served: true
