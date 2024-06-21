@@ -141,7 +141,7 @@ func wrappedComponents(mgmt *hmc.Management) (components []component) {
 	components = append(components, component{Component: mgmt.Spec.Core.HMC, dependsOn: []meta.NamespacedObjectReference{{Name: mgmt.Spec.Core.CertManager.Template}}})
 	components = append(components, component{Component: mgmt.Spec.Core.CAPI, dependsOn: []meta.NamespacedObjectReference{{Name: mgmt.Spec.Core.CertManager.Template}}})
 	for provider := range mgmt.Spec.Providers {
-		components = append(components, component{Component: mgmt.Spec.Providers[provider]})
+		components = append(components, component{Component: mgmt.Spec.Providers[provider], dependsOn: []meta.NamespacedObjectReference{{Name: mgmt.Spec.Core.CAPI.Template}}})
 	}
 	return
 }
