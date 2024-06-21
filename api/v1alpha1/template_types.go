@@ -62,6 +62,13 @@ type TemplateSpec struct {
 	// Helm holds a reference to a Helm chart representing the HMC template
 	// +kubebuilder:validation:Required
 	Helm HelmSpec `json:"helm"`
+	// Type specifies the type of the provided template.
+	// Should be set if not present in the Helm chart metadata.
+	// +kubebuilder:validation:Enum=deployment;provider;core
+	Type TemplateType `json:"type,omitempty"`
+	// Providers represent required/exposed CAPI providers depending on the template type.
+	// Should be set if not present in the Helm chart metadata.
+	Providers Providers `json:"providers,omitempty"`
 }
 
 // +kubebuilder:validation:XValidation:rule="(has(self.chartName) && !has(self.chartRef)) || (!has(self.chartName) && has(self.chartRef))", message="either chartName or chartRef must be set"
@@ -96,7 +103,7 @@ type TemplateStatus struct {
 	ChartRef *helmcontrollerv2.CrossNamespaceSourceReference `json:"chartRef,omitempty"`
 	// Type specifies the type of the provided template, as discovered from the Helm chart metadata.
 	// +kubebuilder:validation:Enum=deployment;provider;core
-	Type string `json:"type,omitempty"`
+	Type TemplateType `json:"type,omitempty"`
 	// Providers represent required/exposed CAPI providers depending on the template type.
 	Providers Providers `json:"providers,omitempty"`
 	// ObservedGeneration is the last observed generation.

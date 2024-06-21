@@ -108,6 +108,39 @@ spec:
                 - message: either chartName or chartRef must be set
                   rule: (has(self.chartName) && !has(self.chartRef)) || (!has(self.chartName)
                     && has(self.chartRef))
+              providers:
+                description: |-
+                  Providers represent required/exposed CAPI providers depending on the template type.
+                  Should be set if not present in the Helm chart metadata.
+                properties:
+                  bootstrap:
+                    description: BootstrapProviders is the list of CAPI bootstrap
+                      providers
+                    items:
+                      type: string
+                    type: array
+                  controlPlane:
+                    description: ControlPlaneProviders is the list of CAPI control
+                      plane providers
+                    items:
+                      type: string
+                    type: array
+                  infrastructure:
+                    description: InfrastructureProviders is the list of CAPI infrastructure
+                      providers
+                    items:
+                      type: string
+                    type: array
+                type: object
+              type:
+                description: |-
+                  Type specifies the type of the provided template.
+                  Should be set if not present in the Helm chart metadata.
+                enum:
+                - deployment
+                - provider
+                - core
+                type: string
             required:
             - helm
             type: object
