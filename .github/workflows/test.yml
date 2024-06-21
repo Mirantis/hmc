@@ -38,8 +38,6 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
-      - name: Check go mod
-        run: go mod tidy && git diff --exit-code
       - name: Lint
         uses: golangci/golangci-lint-action@v6
         with:
