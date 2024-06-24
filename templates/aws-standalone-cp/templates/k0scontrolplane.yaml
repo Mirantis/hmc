@@ -10,6 +10,7 @@ spec:
       - --enable-worker
       - --enable-cloud-provider
       - --kubelet-extra-args="--cloud-provider=external --hostname-override=$(hostname --fqdn)"
+      - --disable-components=konnectivity-server
     k0s:
       apiVersion: k0s.k0sproject.io/v1beta1
       kind: ClusterConfig

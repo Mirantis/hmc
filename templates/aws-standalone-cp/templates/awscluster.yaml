@@ -7,20 +7,6 @@ spec:
   # identityRef:
     # kind: AWSClusterStaticIdentity
     # name: aws-identity-name
-  network:
-    vpc:
-      id: {{ .Values.vpcID }}
-    {{- with .Values.subnets }}
-    subnets:
-      {{- toYaml . | nindent 6 }}
-    {{- end }}
   controlPlaneLoadBalancer:
     healthCheckProtocol: TCP
     loadBalancerType: nlb
-    additionalListeners:
-    - port: 8132
-      protocol: TCP
-    {{- range $id := .Values.controlPlaneLoadBalancer.additionalSecurityGroups }}
-    additionalSecurityGroups:
-    - {{ $id }}
-    {{- end }}
