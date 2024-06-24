@@ -271,6 +271,14 @@ dev-apply: kind-deploy crd-install registry-deploy helm-controller-deploy dev-pu
 .PHONY: dev-destroy
 dev-destroy: kind-undeploy registry-undeploy
 
+.PHONY: dev-aws-apply
+dev-aws-apply:
+	$(KUBECTL) -n $(NAMESPACE) apply -f config/dev/deployment.yaml
+
+.PHONY: dev-aws-destroy
+dev-aws-destroy:
+	$(KUBECTL) -n $(NAMESPACE) delete -f config/dev/deployment.yaml
+
 ##@ Dependencies
 
 ## Location to install dependencies to
