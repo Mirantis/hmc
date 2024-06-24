@@ -2,7 +2,6 @@ apiVersion: hmc.mirantis.com/v1alpha1
 kind: Management
 metadata:
   name: hmc
-  namespace: hmc-system
 spec:
   providers:
     - template: cluster-api-provider-aws
