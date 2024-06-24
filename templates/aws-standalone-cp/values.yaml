@@ -11,16 +11,9 @@ clusterNetwork:
     - "10.96.0.0/12"
 
 # AWS cluster parameters
-vpcID: ""
 region: ""
 sshKeyName: ""
 publicIP: false
-subnets:
-  - id: ""
-    availabilityZone: ""
-
-controlPlaneLoadBalancer:
-  additionalSecurityGroups: []
 
 # AWS machines parameters
 controlPlane:
