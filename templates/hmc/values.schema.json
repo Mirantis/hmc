@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "type": "object",
+  "properties": {
+    "controllerManager": {
+      "type": "object",
+      "properties": {
+        "manager": {
+          "type": "object",
+          "properties": {
+            "args": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "uniqueItems": true
+            },
+            "containerSecurityContext": {
+              "type": "object",
+              "properties": {
+                "allowPrivilegeEscalation": {
+                  "type": "boolean"
+                },
+                "capabilities": {
+                  "type": "object",
+                  "properties": {
+                    "drop": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "uniqueItems": true
+                    }
+                  }
+                }
+              }
+            },
+            "image": {
+              "type": "object",
+              "properties": {
+                "repository": {
+                  "type": "string"
+                },
+                "tag": {
+                  "type": "string"
+                }
+              }
+            },
+            "imagePullPolicy": {
+              "type": "string"
+            },
+            "resources": {
+              "type": "object",
+              "properties": {
+                "limits": {
+                  "type": "object",
+                  "properties": {
+                    "cpu": {
+                      "type": "string"
+                    },
+                    "memory": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "requests": {
+                  "type": "object",
+                  "properties": {
+                    "cpu": {
+                      "type": "string"
+                    },
+                    "memory": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "replicas": {
+          "type": "integer"
+        },
+        "serviceAccount": {
+          "type": "object",
+          "properties": {
+            "annotations": {
+              "type": "object",
+              "properties": {}
+            }
+          }
+        }
+      }
+    },
+    "kubernetesClusterDomain": {
+      "type": "string"
+    },
+    "metricsService": {
+      "type": "object",
+      "properties": {
+        "ports": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "port": {
+                "type": "number",
+                "minimum": 1,
+                "maximum": 65535
+              },
+              "protocol": {
+                "type": "string"
+              },
+              "targetPort": {
+                "type": "number",
+                "minimum": 1,
+                "maximum": 65535
+              }
+            }
+          },
+          "uniqueItems": true
+        },
+        "type": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
