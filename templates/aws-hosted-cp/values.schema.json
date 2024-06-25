@@ -9,7 +9,7 @@
     "amiID",
     "iamInstanceProfile",
     "instanceType",
-    "securityGroupID"
+    "securityGroupIDs"
   ],
   "properties": {
     "workersNumber": {
@@ -95,9 +95,14 @@
       "description": "The type of instance to create",
       "type": "string"
     },
-    "securityGroupID": {
+    "securityGroupIDs": {
       "description": "The ID of security group that should be applied to the instance",
-      "type": "string"
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minItems": 1,
+        "uniqueItems": true
+      }
     },
     "k0smotron": {
       "description": "K0smotron parameters",
