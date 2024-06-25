@@ -1,7 +1,7 @@
 apiVersion: v2
 name: aws-standalone-cp
 description: |
-  The HMC template to deploy a k0s cluster on AWS with bootstrapped control plane nodes.
+  An HMC template to deploy a k0s cluster on AWS with bootstrapped control plane nodes.
 type: application
 # This is the chart version. This version number should be incremented each time you make changes
 # to the chart and its templates, including the app version.
