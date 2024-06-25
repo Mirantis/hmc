@@ -263,7 +263,7 @@ dev-management:
 
 .PHONY: dev-aws
 dev-aws: yq
-	$(YQ) e ".data.credentials = \"${AWS_CREDENTIALS}\"" config/dev/awscredentials.yaml | $(KUBECTL) -n $(NAMESPACE) apply -f -
+	@$(YQ) e ".data.credentials = \"${AWS_CREDENTIALS}\"" config/dev/awscredentials.yaml | $(KUBECTL) -n $(NAMESPACE) apply -f -
 
 .PHONY: dev-apply
 dev-apply: kind-deploy crd-install registry-deploy helm-controller-deploy dev-push dev-deploy dev-templates dev-management dev-aws
