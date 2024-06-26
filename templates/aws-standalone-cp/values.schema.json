@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "An HMC template to deploy a k0s cluster on AWS with bootstrapped control plane nodes.",
+  "type": "object",
+  "required": [
+    "controlPlaneNumber",
+    "workersNumber",
+    "region"
+  ],
+  "properties": {
+    "controlPlaneNumber": {
+      "description": "The number of the control plane machines",
+      "type": "number",
+      "minimum": 1
+    },
+    "workersNumber": {
+      "description": "The number of the worker machines",
+      "type": "number",
+      "minimum": 1
+    },
+    "clusterNetwork": {
+      "type": "object",
+      "properties": {
+        "pods": {
+          "type": "object",
+          "properties": {
+            "cidrBlocks": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "uniqueItems": true
+            }
+          }
+        },
+        "services": {
+          "type": "object",
+          "properties": {
+            "cidrBlocks": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "uniqueItems": true
+            }
+          }
+        }
+      }
+    },
+    "region": {
+      "description": "AWS region to deploy the cluster in",
+      "type": "string"
+    },
+    "sshKeyName": {
+      "description": "The name of the key pair to securely connect to your instances",
+      "type": "string"
+    },
+    "publicIP": {
+      "description": "Specifies whether the instance should get a public IP",
+      "type": "boolean"
+    },
+    "controlPlane": {
+      "description": "The configuration of the control plane machines",
+      "type": "object",
+      "required": [
+        "amiID",
+        "iamInstanceProfile",
+        "instanceType"
+      ],
+      "properties": {
+        "amiID": {
+          "description": "The ID of Amazon Machine Image",
+          "type": "string"
+        },
+        "iamInstanceProfile": {
+          "description": "The name of an IAM instance profile to assign to the instance",
+          "type": "string"
+        },
+        "instanceType": {
+          "description": "The type of instance to create",
+          "type": "string"
+        },
+        "additionalSecurityGroupIDs": {
+          "description": "An array of references to security groups that should be applied to the instance",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "worker": {
+      "description": "The configuration of the worker machines",
+      "type": "object",
+      "required": [
+        "amiID",
+        "iamInstanceProfile",
+        "instanceType"
+      ],
+      "properties": {
+        "amiID": {
+          "description": "The ID of Amazon Machine Image",
+          "type": "string"
+        },
+        "iamInstanceProfile": {
+          "description": "The name of an IAM instance profile to assign to the instance",
+          "type": "string"
+        },
+        "instanceType": {
+          "description": "The type of instance to create",
+          "type": "string"
+        },
+        "additionalSecurityGroupIDs": {
+          "description": "An array of references to security groups that should be applied to the instance",
+          "type": "array"
+        }
+      }
+    },
+    "k0s": {
+      "description": "K0s parameters",
+      "type": "object",
+      "required": [
+        "version"
+      ],
+      "properties": {
+        "version":{
+          "description": "K0s version to use",
+          "type": "string"
+        }
+      }
+    }
+  }
+}

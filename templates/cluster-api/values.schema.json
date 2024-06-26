@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "type": "object",
+  "properties": {
+    "manager": {
+      "type": "object",
+      "properties": {
+        "image": {
+          "type": "object",
+          "properties": {
+            "repository": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "tag": {
+              "type": "string"
+            }
+          }
+        },
+        "imagePullPolicy": {
+          "type": "string"
+        }
+      }
+    },
+    "clusterTopology": {
+      "type": "boolean"
+    },
+    "expClusterResourceSet": {
+      "type": "boolean"
+    },
+    "expMachinePool": {
+      "type": "boolean"
+    }
+  }
+}

@@ -22,7 +22,7 @@ subnets:
 amiID: ""
 iamInstanceProfile: nodes.cluster-api-provider-aws.sigs.k8s.io
 instanceType: ""
-securityGroupID: ""
+securityGroupIDs: []
 
 # K0smotron parameters
 k0smotron:
