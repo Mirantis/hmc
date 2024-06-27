@@ -167,9 +167,9 @@ build-installer: generate-all kustomize ## Generate a consolidated YAML with CRD
 
 KIND_CLUSTER_NAME ?= hmc-dev
 KIND_NETWORK ?= kind
-LOCAL_REGISTRY_NAME ?= hmc-local-registry
-LOCAL_REGISTRY_PORT ?= 5001
-LOCAL_REGISTRY_REPO ?= oci://127.0.0.1:$(LOCAL_REGISTRY_PORT)/charts
+REGISTRY_NAME ?= hmc-local-registry
+REGISTRY_PORT ?= 5001
+REGISTRY_REPO ?= oci://127.0.0.1:$(REGISTRY_PORT)/charts
 
 AWS_CREDENTIALS=${AWS_B64ENCODED_CREDENTIALS}
 
@@ -195,19 +195,19 @@ kind-undeploy: kind
 
 .PHONY: registry-deploy
 registry-deploy:
-	@if [ ! "$$($(CONTAINER_TOOL) ps -aq -f name=$(LOCAL_REGISTRY_NAME))" ]; then \
-		echo "Starting new local registry container $(LOCAL_REGISTRY_NAME)"; \
-		$(CONTAINER_TOOL) run -d --restart=always -p "127.0.0.1:$(LOCAL_REGISTRY_PORT):5000" --network bridge --name "$(LOCAL_REGISTRY_NAME)" registry:2; \
+	@if [ ! "$$($(CONTAINER_TOOL) ps -aq -f name=$(REGISTRY_NAME))" ]; then \
+		echo "Starting new local registry container $(REGISTRY_NAME)"; \
+		$(CONTAINER_TOOL) run -d --restart=always -p "127.0.0.1:$(REGISTRY_PORT):5000" --network bridge --name "$(REGISTRY_NAME)" registry:2; \
 	fi; \
-	if [ "$$($(CONTAINER_TOOL) inspect -f='{{json .NetworkSettings.Networks.$(KIND_NETWORK)}}' $(LOCAL_REGISTRY_NAME))" = 'null' ]; then \
-		$(CONTAINER_TOOL) network connect $(KIND_NETWORK) $(LOCAL_REGISTRY_NAME); \
+	if [ "$$($(CONTAINER_TOOL) inspect -f='{{json .NetworkSettings.Networks.$(KIND_NETWORK)}}' $(REGISTRY_NAME))" = 'null' ]; then \
+		$(CONTAINER_TOOL) network connect $(KIND_NETWORK) $(REGISTRY_NAME); \
 	fi
 
 .PHONY: registry-undeploy
 registry-undeploy:
-	@if [ "$$($(CONTAINER_TOOL) ps -aq -f name=$(LOCAL_REGISTRY_NAME))" ]; then \
-  		echo "Removing local registry container $(LOCAL_REGISTRY_NAME)"; \
-		$(CONTAINER_TOOL) rm -f "$(LOCAL_REGISTRY_NAME)"; \
+	@if [ "$$($(CONTAINER_TOOL) ps -aq -f name=$(REGISTRY_NAME))" ]; then \
+  		echo "Removing local registry container $(REGISTRY_NAME)"; \
+		$(CONTAINER_TOOL) rm -f "$(REGISTRY_NAME)"; \
 	fi
 
 .PHONY: helm-controller-deploy
@@ -245,13 +245,16 @@ dev-deploy: manifests kustomize ## Deploy controller to the K8s cluster specifie
 dev-undeploy: kustomize ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
 	$(KUSTOMIZE) build config/dev | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
 
-.PHONY: dev-push
-dev-push: docker-build helm-package
-	$(KIND) load docker-image $(IMG) -n $(KIND_CLUSTER_NAME)
+.PHONY: helm-push
+helm-push: helm-package
 	@for chart in $(CHARTS_PACKAGE_DIR)/*.tgz; do \
-		echo "Pushing $$chart to $(LOCAL_REGISTRY_REPO)"; \
-		$(HELM) push "$$chart" $(LOCAL_REGISTRY_REPO); \
+		echo "Pushing $$chart to $(REGISTRY_REPO)"; \
+    	$(HELM) push "$$chart" $(REGISTRY_REPO); \
 	done
+
+.PHONY: dev-push
+dev-push: docker-build helm-push
+	$(KIND) load docker-image $(IMG) -n $(KIND_CLUSTER_NAME)
 
 .PHONY: dev-templates
 dev-templates: templates-generate
