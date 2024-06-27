@@ -46,8 +46,8 @@ const (
 )
 
 var (
-	errNoProviderType = fmt.Errorf("template type is not supported: %s chart annotation must be one of [%s/%s]",
-		hmc.ChartAnnotationType, hmc.TemplateTypeDeployment, hmc.TemplateTypeProvider)
+	errNoProviderType = fmt.Errorf("template type is not supported: %s chart annotation must be one of [%s/%s/%s]",
+		hmc.ChartAnnotationType, hmc.TemplateTypeDeployment, hmc.TemplateTypeProvider, hmc.TemplateTypeCore)
 )
 
 // TemplateReconciler reconciles a Template object

@@ -46,3 +46,16 @@ func ReconcileHelmRelease(
 	}
 	return helmRelease, nil
 }
+
+func DeleteHelmRelease(ctx context.Context, cl client.Client, name string, namespace string) error {
+	err := cl.Delete(ctx, &hcv2.HelmRelease{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+	})
+	if client.IgnoreNotFound(err) != nil {
+		return err
+	}
+	return nil
+}
