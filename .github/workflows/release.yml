@@ -32,5 +32,7 @@ jobs:
             ghcr.io/Mirantis/hmc/controller:${{ github.ref_name }}"
           push: true
 
+      - name: Prepare HMC chart
+        run: IMG=ghcr.io/Mirantis/hmc/controller:${{ github.ref_name }}" make hmc-chart-release
       - name: Push charts to GHCR
         run: REGISTRY_REPO="oci://ghcr.io/Mirantis/hmc/charts" make helm-push
