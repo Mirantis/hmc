@@ -1,7 +1,7 @@
 NAMESPACE ?= hmc-system
 VERSION ?= $(shell git describe --tags --always)
 # Image URL to use all building/pushing image targets
-IMG ?= hmc/controller:$(VERSION)
+IMG ?= hmc/controller:latest
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.29.0
 
@@ -57,6 +57,13 @@ generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and
 hmc-chart-generate: kustomize helmify ## Generate hmc helm chart
 	rm -rf templates/hmc/values.yaml templates/hmc/templates/*.yaml
 	$(KUSTOMIZE) build config/default | $(HELMIFY) templates/hmc
+
+.PHONY: hmc-chart-release
+hmc-chart-release: kustomize helmify yq ## Generate hmc helm chart
+	rm -rf templates/hmc/values.yaml templates/hmc/templates/*.yaml
+	cd config/default && $(KUSTOMIZE) edit set image controller=${IMG}
+	$(KUSTOMIZE) build config/default | $(HELMIFY) templates/hmc
+	$(YQ) eval '.version = "$(VERSION)"' -i templates/hmc/Chart.yaml
 
 .PHONY: templates-generate
 templates-generate: cert-manager
