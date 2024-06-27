@@ -61,6 +61,7 @@ clusterawsadm bootstrap iam create-cloudformation-stack
 1. Ensure AWS user has enough permissions to deploy cluster. Ensure that these policies were attached to the AWS user:
 
 * `control-plane.cluster-api-provider-aws.sigs.k8s.io`
+* `controllers.cluster-api-provider-aws.sigs.k8s.io`
 * `nodes.cluster-api-provider-aws.sigs.k8s.io`
 
 2. Retrieve access key and export it as environment variable:
