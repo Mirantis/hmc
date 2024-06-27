@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"time"
 
 	hcv2 "github.com/fluxcd/helm-controller/api/v2"
 	sourcev1 "github.com/fluxcd/source-controller/api/v1"
@@ -33,6 +34,7 @@ import (
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
@@ -70,12 +72,7 @@ func (r *DeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	if !deployment.DeletionTimestamp.IsZero() {
 		l.Info("Deleting Deployment")
-		err := r.Delete(ctx, deployment)
-		if err != nil {
-			l.Error(err, "Failed to delete Deployment")
-			return ctrl.Result{}, err
-		}
-		return ctrl.Result{}, nil
+		return r.Delete(ctx, l, deployment)
 	}
 
 	if deployment.Status.ObservedGeneration == 0 {
@@ -83,10 +80,18 @@ func (r *DeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			l.Error(err, "Failed to track Deployment creation")
 		}
 	}
-	return ctrl.Result{}, r.Update(ctx, l, deployment)
+	return r.Update(ctx, l, deployment)
 }
 
-func (r *DeploymentReconciler) Update(ctx context.Context, l logr.Logger, deployment *hmc.Deployment) error {
+func (r *DeploymentReconciler) Update(ctx context.Context, l logr.Logger, deployment *hmc.Deployment) (ctrl.Result, error) {
+	finalizersUpdated := controllerutil.AddFinalizer(deployment, hmc.DeploymentFinalizer)
+	if finalizersUpdated {
+		if err := r.Client.Update(ctx, deployment); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to update deployment %s/%s: %w", deployment.Namespace, deployment.Name, err)
+		}
+		return ctrl.Result{}, nil
+	}
+
 	template := &hmc.Template{}
 	templateRef := types.NamespacedName{Name: deployment.Spec.Template, Namespace: deployment.Namespace}
 	if err := r.Get(ctx, templateRef, template); err != nil {
@@ -96,29 +101,29 @@ func (r *DeploymentReconciler) Update(ctx context.Context, l logr.Logger, deploy
 			errMsg = "provided template is not found"
 		}
 		_ = r.updateStatus(ctx, deployment, errMsg)
-		return err
+		return ctrl.Result{}, err
 	}
 	if !template.Status.Valid {
 		errMsg := "provided template is not marked as valid"
 		_ = r.updateStatus(ctx, deployment, errMsg)
-		return fmt.Errorf(errMsg)
+		return ctrl.Result{}, fmt.Errorf(errMsg)
 	}
 
 	// TODO: this should be implemented in admission controller instead
 	if changed := applyDefaultDeploymentConfiguration(deployment, template); changed {
 		l.Info("Applying default configuration")
-		return r.Client.Update(ctx, deployment)
+		return ctrl.Result{}, r.Client.Update(ctx, deployment)
 	}
 	source, err := r.getSource(ctx, template.Status.ChartRef)
 	if err != nil {
 		_ = r.updateStatus(ctx, deployment, fmt.Sprintf("failed to get helm chart source: %s", err))
-		return err
+		return ctrl.Result{}, err
 	}
 	l.Info("Downloading Helm chart")
 	hcChart, err := helm.DownloadChartFromArtifact(ctx, source.GetArtifact())
 	if err != nil {
 		_ = r.updateStatus(ctx, deployment, fmt.Sprintf("failed to download helm chart: %s", err))
-		return err
+		return ctrl.Result{}, err
 	}
 
 	l.Info("Initializing Helm client")
@@ -127,13 +132,13 @@ func (r *DeploymentReconciler) Update(ctx context.Context, l logr.Logger, deploy
 	err = actionConfig.Init(getter, deployment.Namespace, "secret", l.Info)
 	if err != nil {
 		_ = r.updateStatus(ctx, deployment, fmt.Sprintf("failed to initialize helm client: %s", err))
-		return err
+		return ctrl.Result{}, err
 	}
 
 	l.Info("Validating Helm chart with provided values")
 	if err := r.validateReleaseWithValues(ctx, actionConfig, deployment, hcChart); err != nil {
 		_ = r.updateStatus(ctx, deployment, fmt.Sprintf("failed to validate template with provided configuration: %s", err))
-		return err
+		return ctrl.Result{}, err
 	}
 	if !deployment.Spec.DryRun {
 		ownerRef := metav1.OwnerReference{
@@ -145,10 +150,10 @@ func (r *DeploymentReconciler) Update(ctx context.Context, l logr.Logger, deploy
 		_, err := helm.ReconcileHelmRelease(ctx, r.Client, deployment.Name, deployment.Namespace, deployment.Spec.Config,
 			ownerRef, template.Status.ChartRef, defaultReconcileInterval, nil)
 		if err != nil {
-			return err
+			return ctrl.Result{}, err
 		}
 	}
-	return r.updateStatus(ctx, deployment, "")
+	return ctrl.Result{}, r.updateStatus(ctx, deployment, "")
 }
 
 func (r *DeploymentReconciler) validateReleaseWithValues(ctx context.Context, actionConfig *action.Configuration, deployment *hmc.Deployment, hcChart *chart.Chart) error {
@@ -201,8 +206,32 @@ func applyDefaultDeploymentConfiguration(deployment *hmc.Deployment, template *h
 	return true
 }
 
-func (r *DeploymentReconciler) Delete(ctx context.Context, deployment *hmc.Deployment) error {
-	return helm.DeleteHelmRelease(ctx, r.Client, deployment.Name, deployment.Namespace)
+func (r *DeploymentReconciler) Delete(ctx context.Context, l logr.Logger, deployment *hmc.Deployment) (ctrl.Result, error) {
+	hr := &hcv2.HelmRelease{}
+	err := r.Get(ctx, types.NamespacedName{
+		Name:      deployment.Name,
+		Namespace: deployment.Namespace,
+	}, hr)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			l.Info("Removing Finalizer", "finalizer", hmc.DeploymentFinalizer)
+			finalizersUpdated := controllerutil.RemoveFinalizer(deployment, hmc.DeploymentFinalizer)
+			if finalizersUpdated {
+				if err := r.Client.Update(ctx, deployment); err != nil {
+					return ctrl.Result{}, fmt.Errorf("failed to update deployment %s/%s: %w", deployment.Namespace, deployment.Name, err)
+				}
+			}
+			l.Info("Deployment deleted")
+			return ctrl.Result{}, nil
+		}
+		return ctrl.Result{}, err
+	}
+	err = helm.DeleteHelmRelease(ctx, r.Client, deployment.Name, deployment.Namespace)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	l.Info("HelmRelease still exists, retrying")
+	return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
