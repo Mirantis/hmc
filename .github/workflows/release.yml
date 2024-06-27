@@ -22,7 +22,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push HMC controller image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           build-args: |
             LD_FLAGS="-s -w -X github.com/Mirantis/hmc/internal/build.Version=${{ github.ref_name }}" -X github.com/Mirantis/hmc/internal/telemetry.segmentToken=${{ secrets.SEGMENT_TOKEN }}"
