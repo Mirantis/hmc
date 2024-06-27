@@ -18,7 +18,7 @@ spec:
       additionalSecurityGroups:
         - id: {{ $id }}
       {{- end }}
-      {{- if .Values.sshKeyName }}
+      {{- if not (quote .Values.sshKeyName | empty) }}
       sshKeyName: {{ .Values.sshKeyName }}
       {{- end }}
       publicIP: {{ .Values.publicIP }}

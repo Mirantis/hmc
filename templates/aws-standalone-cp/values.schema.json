@@ -54,8 +54,8 @@
       "type": "string"
     },
     "sshKeyName": {
-      "description": "The name of the key pair to securely connect to your instances",
-      "type": "string"
+      "description": "The name of the key pair to securely connect to your instances. Valid values are empty string (do not use SSH keys), a valid SSH key name, or omitted (use the default SSH key name)",
+      "type": ["string", "null"]
     },
     "publicIP": {
       "description": "Specifies whether the instance should get a public IP",
