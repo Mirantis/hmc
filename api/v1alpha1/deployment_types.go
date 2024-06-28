@@ -22,6 +22,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/yaml"
 )
 
+const DeploymentFinalizer = "hmc.mirantis.com/deployment"
+
 // DeploymentSpec defines the desired state of Deployment
 type DeploymentSpec struct {
 	// DryRun specifies whether the template should be applied after validation or only validated.
