@@ -24,6 +24,31 @@ import (
 
 const DeploymentFinalizer = "hmc.mirantis.com/deployment"
 
+const (
+	// TemplateReadyCondition indicates the referenced Template exists and valid.
+	TemplateReadyCondition = "TemplateReady"
+	// HelmChartReadyCondition indicates the corresponding HelmChart is valid and ready.
+	HelmChartReadyCondition = "HelmChartReady"
+	// HelmReleaseReadyCondition indicates the corresponding HelmRelease is ready and fully reconciled.
+	HelmReleaseReadyCondition = "HelmReleaseReady"
+	// ReadyCondition indicates the Deployment is ready and fully reconciled.
+	ReadyCondition string = "Ready"
+)
+
+const (
+	// SucceededReason indicates a condition or event observed a success, for example when declared desired state
+	// matches actual state, or a performed action succeeded.
+	SucceededReason string = "Succeeded"
+
+	// FailedReason indicates a condition or event observed a failure, for example when declared state does not match
+	// actual state, or a performed action failed.
+	FailedReason string = "Failed"
+
+	// ProgressingReason indicates a condition or event observed progression, for example when the reconciliation of a
+	// resource or an action has started.
+	ProgressingReason string = "Progressing"
+)
+
 // DeploymentSpec defines the desired state of Deployment
 type DeploymentSpec struct {
 	// DryRun specifies whether the template should be applied after validation or only validated.
@@ -45,13 +70,15 @@ type DeploymentStatus struct {
 	// ObservedGeneration is the last observed generation.
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+	// Conditions contains details for the current state of the Deployment
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=hmc-deploy;deploy
-// +kubebuilder:printcolumn:name="valid",type="boolean",JSONPath=".status.valid",description="Valid",priority=0
-// +kubebuilder:printcolumn:name="validationError",type="string",JSONPath=".status.validationError",description="Validation Error",priority=1
+// +kubebuilder:printcolumn:name="ready",type="string",JSONPath=".status.conditions[?(@.type==\"Ready\")].status",description="Ready",priority=0
+// +kubebuilder:printcolumn:name="status",type="string",JSONPath=".status.conditions[?(@.type==\"Ready\")].message",description="Status",priority=0
 // +kubebuilder:printcolumn:name="dryRun",type="string",JSONPath=".spec.dryRun",description="Dry Run",priority=1
 
 // Deployment is the Schema for the deployments API
@@ -68,6 +95,10 @@ func (in *Deployment) HelmValues() (values map[string]interface{}, err error) {
 		err = yaml.Unmarshal(in.Spec.Config.Raw, &values)
 	}
 	return values, err
+}
+
+func (in *Deployment) GetConditions() *[]metav1.Condition {
+	return &in.Status.Conditions
 }
 
 //+kubebuilder:object:root=true
