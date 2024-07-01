@@ -151,16 +151,6 @@ spec:
                 description: ObservedGeneration is the last observed generation.
                 format: int64
                 type: integer
-              valid:
-                description: Valid indicates whether the template passed validation
-                  or not.
-                type: boolean
-              validationError:
-                description: ValidationError provides information regarding issues
-                  encountered during template validation.
-                type: string
-            required:
-            - valid
             type: object
         type: object
     served: true

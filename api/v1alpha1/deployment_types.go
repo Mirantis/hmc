@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/yaml"
 )
@@ -66,7 +67,6 @@ type DeploymentSpec struct {
 
 // DeploymentStatus defines the observed state of Deployment
 type DeploymentStatus struct {
-	TemplateValidationStatus `json:",inline"`
 	// ObservedGeneration is the last observed generation.
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
@@ -99,6 +99,35 @@ func (in *Deployment) HelmValues() (values map[string]interface{}, err error) {
 
 func (in *Deployment) GetConditions() *[]metav1.Condition {
 	return &in.Status.Conditions
+}
+
+func (in *Deployment) InitConditions() {
+	apimeta.SetStatusCondition(in.GetConditions(), metav1.Condition{
+		Type:    TemplateReadyCondition,
+		Status:  metav1.ConditionUnknown,
+		Reason:  ProgressingReason,
+		Message: "Template is not yet ready",
+	})
+	apimeta.SetStatusCondition(in.GetConditions(), metav1.Condition{
+		Type:    HelmChartReadyCondition,
+		Status:  metav1.ConditionUnknown,
+		Reason:  ProgressingReason,
+		Message: "HelmChart is not yet ready",
+	})
+	if !in.Spec.DryRun {
+		apimeta.SetStatusCondition(in.GetConditions(), metav1.Condition{
+			Type:    HelmReleaseReadyCondition,
+			Status:  metav1.ConditionUnknown,
+			Reason:  ProgressingReason,
+			Message: "HelmRelease is not yet ready",
+		})
+	}
+	apimeta.SetStatusCondition(in.GetConditions(), metav1.Condition{
+		Type:    ReadyCondition,
+		Status:  metav1.ConditionUnknown,
+		Reason:  ProgressingReason,
+		Message: "Deployment is not yet ready",
+	})
 }
 
 //+kubebuilder:object:root=true
