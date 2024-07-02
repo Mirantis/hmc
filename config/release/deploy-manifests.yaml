@@ -6,7 +6,7 @@ metadata:
 spec:
   interval: 10m0s
   type: oci
-  url: oci://ghcr.io/Mirantis/hmc/charts
+  url: oci://ghcr.io/mirantis/hmc/charts
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmChart
