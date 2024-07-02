@@ -65,8 +65,8 @@ hmc-chart-release: kustomize helmify yq ## Generate hmc helm chart
 	$(KUSTOMIZE) build config/default | $(HELMIFY) templates/hmc
 	$(YQ) eval '.version = "$(VERSION)"' -i templates/hmc/Chart.yaml
 
-.PHONY: hmc-manifest-release
-hmc-manifest-release:
+.PHONY: hmc-dist-release
+hmc-dist-release:
 	@mkdir -p dist
 	@sed -e 's/VERSION/$(VERSION)/g' config/release/deploy-manifests.yaml > dist/install.yaml
 
