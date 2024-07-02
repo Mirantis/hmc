@@ -65,6 +65,11 @@ hmc-chart-release: kustomize helmify yq ## Generate hmc helm chart
 	$(KUSTOMIZE) build config/default | $(HELMIFY) templates/hmc
 	$(YQ) eval '.version = "$(VERSION)"' -i templates/hmc/Chart.yaml
 
+.PHONY: hmc-manifest-release
+hmc-manifest-release:
+	@mkdir -p dist
+	@sed -e 's/VERSION/$(VERSION)/g' config/release/deploy-manifests.yaml > dist/install.yaml
+
 .PHONY: templates-generate
 templates-generate: cert-manager
 	@hack/templates.sh
