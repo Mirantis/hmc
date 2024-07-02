@@ -36,3 +36,14 @@ jobs:
         run: IMG=ghcr.io/Mirantis/hmc/controller:${{ github.ref_name }}" make hmc-chart-release
       - name: Push charts to GHCR
         run: REGISTRY_REPO="oci://ghcr.io/Mirantis/hmc/charts" make helm-push
+
+      - name: Prepare manifests
+        run: make hmc-dist-release
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          files: dist/install.yaml
+          draft: true
