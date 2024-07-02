@@ -260,8 +260,17 @@ dev-undeploy: kustomize ## Undeploy controller from the K8s cluster specified in
 .PHONY: helm-push
 helm-push: helm-package
 	@for chart in $(CHARTS_PACKAGE_DIR)/*.tgz; do \
-		echo "Pushing $$chart to $(REGISTRY_REPO)"; \
-    	$(HELM) push "$$chart" $(REGISTRY_REPO); \
+		echo "Verifying if $$chart already exists in $(REGISTRY_REPO)"; \
+		base=$$(basename $$chart .tgz); \
+		chart_name="$${base%-*}"; \
+		chart_version="$${base##*-}"; \
+		chart_exists=$$($(HELM) pull $(REGISTRY_REPO)/$$chart_name --version $$chart_version --destination /tmp 2>&1 | grep "not found"); \
+		if [ -z "$$chart_exists" ]; then \
+			echo "Chart $$chart_name version $$chart_version already exists in the repository."; \
+		else \
+			echo "Pushing $$chart to $(REGISTRY_REPO)"; \
+			$(HELM) push "$$chart" $(REGISTRY_REPO); \
+		fi; \
 	done
 
 .PHONY: dev-push
