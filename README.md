@@ -7,31 +7,18 @@ The kind cluster acts as management in this example.
 
 ### Prerequisites
 
-#### Install `clusterawsadm`
-
-1. Download the latest release of `clusterawsadm` binary:
-
-Linux:
-```
-curl -L https://github.com/kubernetes-sigs/cluster-api-provider-aws/releases/download/v0.0.0/clusterawsadm-linux-amd64 -o clusterawsadm
-```
-
-macOS:
-```
-curl -L https://github.com/kubernetes-sigs/cluster-api-provider-aws/releases/download/v0.0.0/clusterawsadm-darwin-amd64 -o clusterawsadm
+#### Clone HMC repository
 
 ```
-or if your Mac has an M1 CPU (”Apple Silicon”):
-```
-curl -L https://github.com/kubernetes-sigs/cluster-api-provider-aws/releases/download/v0.0.0/clusterawsadm-darwin-arm64 -o clusterawsadm
+git clone https://github.com/Mirantis/hmc.git && cd hmc
 ```
 
-2. Make it executable, move to a directory present in your PATH and check version:
+#### Install required CLIs
+
+Run:
 
 ```
-chmod +x clusterawsadm
-sudo mv clusterawsadm /usr/local/bin
-clusterawsadm version
+make cli-install
 ```
 
 #### AWS IAM setup
@@ -53,7 +40,7 @@ export AWS_SESSION_TOKEN=<session-token> # Optional. If you are using Multi-Fact
 2. After these are set run this command to create IAM cloud formation stack:
 
 ```
-clusterawsadm bootstrap iam create-cloudformation-stack
+./bin/clusterawsadm bootstrap iam create-cloudformation-stack
 ```
 
 #### Configure AWS credentials for the bootstrap
@@ -77,37 +64,30 @@ export AWS_SESSION_TOKEN=<session-token> # Optional. If you are using Multi-Fact
 encodes them in a value to be stored in a Kubernetes Secret.
 
 ```
-export AWS_B64ENCODED_CREDENTIALS=$(clusterawsadm bootstrap credentials encode-as-profile)
+export AWS_B64ENCODED_CREDENTIALS=$(./bin/clusterawsadm bootstrap credentials encode-as-profile)
 ```
 
-#### Deploy HMC
+### Deploy HMC
 
-1. Clone `Mirantis/hmc` repository
-
-Example:
-```
-git clone https://github.com/Mirantis/hmc.git && cd hmc
-```
-
-2. Configure your cluster parameters in `config/dev/deployment.yaml`:
+1. Configure your cluster parameters in `config/dev/deployment.yaml`:
 
    * Configure the `name` of the deployment
    * Change `amiID` and `instanceType` for control plane and worker machines
    * Specify the number of control plane and worker machines, etc
 
-4. Run `make dev-apply` to deploy and configure management cluster
+2. Run `make dev-apply` to deploy and configure management cluster
 
-5. Wait a couple of minutes for management components to be up and running
+3. Wait a couple of minutes for management components to be up and running
 
-6. Run `make dev-aws-apply` to deploy managed cluster on AWS with default configuration
+4. Run `make dev-aws-apply` to deploy managed cluster on AWS with default configuration
 
-7. Wait for infrastructure to be provisioned and the cluster to be deployed. You may watch the process with the
-`clusterctl describe` command. Example:
+5. Wait for infrastructure to be provisioned and the cluster to be deployed. You may watch the process with the
+`./bin/clusterctl describe` command. Example:
 
 ```
 export KUBECONFIG=~/.kube/config
 
-clusterctl describe cluster <deployment-name> -n hmc-system --show-conditions all
+./bin/clusterctl describe cluster <deployment-name> -n hmc-system --show-conditions all
 ```
 
 8. Retrieve the `kubeconfig` of your managed cluster:

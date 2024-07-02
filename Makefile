@@ -5,6 +5,11 @@ IMG ?= hmc/controller:latest
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.29.0
 
+os = $(shell uname|tr DL dl)
+OS := $(strip ${os})
+
+ARCH := $(shell uname -m)
+
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
 GOBIN=$(shell go env GOPATH)/bin
@@ -303,6 +308,9 @@ dev-aws-apply:
 dev-aws-destroy:
 	$(KUBECTL) -n $(NAMESPACE) delete -f config/dev/deployment.yaml
 
+.PHONY: cli-install
+cli-install: clusterawsadm clusterctl
+
 ##@ Dependencies
 
 ## Location to install dependencies to
@@ -330,6 +338,8 @@ HELM ?= $(LOCALBIN)/helm-$(HELM_VERSION)
 HELMIFY ?= $(LOCALBIN)/helmify-$(HELMIFY_VERSION)
 KIND ?= $(LOCALBIN)/kind-$(KIND_VERSION)
 YQ ?= $(LOCALBIN)/yq-$(YQ_VERSION)
+CLUSTERAWSADM ?= $(LOCALBIN)/clusterawsadm
+CLUSTERCTL ?= $(LOCALBIN)/clusterctl
 
 FLUX_CHART_REPOSITORY ?= oci://ghcr.io/fluxcd-community/charts/flux2
 FLUX_CHART_VERSION ?= 2.13.0
@@ -344,6 +354,8 @@ HELM_VERSION ?= v3.15.1
 HELMIFY_VERSION ?= v0.4.13
 KIND_VERSION ?= v0.23.0
 YQ_VERSION ?= v4.44.2
+CLUSTERAWSADM_VERSION ?= v2.5.2
+CLUSTERCTL_VERSION ?= v1.7.3
 
 .PHONY: kustomize
 kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary.
@@ -386,6 +398,17 @@ $(KIND): | $(LOCALBIN)
 yq: $(YQ) ## Download yq locally if necessary.
 $(YQ): | $(LOCALBIN)
 	$(call go-install-tool,$(YQ),github.com/mikefarah/yq/v4,${YQ_VERSION})
+
+.PHONY: clusterawsadm
+clusterawsadm: $(CLUSTERAWSADM) ## Download clusterawsadm locally if necessary.
+$(CLUSTERAWSADM): | $(LOCALBIN)
+	curl -sL https://github.com/kubernetes-sigs/cluster-api-provider-aws/releases/download/$(CLUSTERAWSADM_VERSION)/clusterawsadm_$(CLUSTERAWSADM_VERSION)_$(OS)_$(ARCH) -o $(CLUSTERAWSADM)
+	chmod +x $(CLUSTERAWSADM)
+
+.PHONY: clusterctl
+clusterctl: $(CLUSTERCTL) ## Download clusterctl locally if necessary.
+$(CLUSTERCTL): | $(LOCALBIN)
+	$(call go-install-tool,$(CLUSTERCTL),sigs.k8s.io/cluster-api/cmd/clusterctl,${CLUSTERCTL_VERSION})
 
 $(FLUX_HELM_CRD): | $(EXTERNAL_CRD_DIR)
 	rm -f $(FLUX_HELM_CRD)
