@@ -117,7 +117,7 @@ $(CHARTS_PACKAGE_DIR): | $(LOCALBIN)
 CHARTS = $(patsubst $(TEMPLATES_DIR)/%,%,$(wildcard $(TEMPLATES_DIR)/*))
 
 .PHONY: helm-package
-helm-package: $(HELM)
+helm-package: helm
 	@make $(patsubst %,package-chart-%,$(CHARTS))
 
 lint-chart-%:
