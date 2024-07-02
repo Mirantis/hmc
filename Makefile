@@ -69,6 +69,7 @@ hmc-chart-release: kustomize helmify yq ## Generate hmc helm chart
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default | $(HELMIFY) templates/hmc
 	$(YQ) eval '.version = "$(VERSION)"' -i templates/hmc/Chart.yaml
+	$(YQ) eval '.version = "$(VERSION)"' -i templates/hmc-templates/Chart.yaml
 
 .PHONY: hmc-dist-release
 hmc-dist-release:
@@ -284,11 +285,11 @@ dev-push: docker-build helm-push
 
 .PHONY: dev-templates
 dev-templates: templates-generate
-	$(KUBECTL) -n $(NAMESPACE) apply -f config/templates
+	$(KUBECTL) -n $(NAMESPACE) apply -f templates/hmc-templates/files/templates
 
 .PHONY: dev-management
 dev-management:
-	$(KUBECTL) -n $(NAMESPACE) apply -f config/dev/management.yaml
+	$(KUBECTL) -n $(NAMESPACE) apply -f templates/hmc-templates/files/management.yaml
 
 .PHONY: dev-aws
 dev-aws: yq

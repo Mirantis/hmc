@@ -5,7 +5,7 @@ set -eu
 # Directory containing HMC templates
 TEMPLATES_DIR=${TEMPLATES_DIR:-templates}
 # Output directory for the generated Template manifests
-TEMPLATES_OUTPUT_DIR=${TEMPLATES_OUTPUT_DIR:-config/templates}
+TEMPLATES_OUTPUT_DIR=${TEMPLATES_OUTPUT_DIR:-templates/hmc-templates/files/templates}
 
 mkdir -p $TEMPLATES_OUTPUT_DIR
 rm $TEMPLATES_OUTPUT_DIR/*.yaml
