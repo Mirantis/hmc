@@ -1,0 +1,8 @@
+apiVersion: hmc.mirantis.com/v1alpha1
+kind: Template
+metadata:
+  name: hmc-templates
+spec:
+  helm:
+    chartName: hmc-templates
+    chartVersion: "0.1.0"
