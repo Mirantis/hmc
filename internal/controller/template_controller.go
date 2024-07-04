@@ -174,7 +174,7 @@ func (r *TemplateReconciler) parseChartMetadata(template *hmc.Template, chart *c
 	} else {
 		cpProviders := chart.Metadata.Annotations[hmc.ChartAnnotationControlPlaneProviders]
 		if cpProviders != "" {
-			template.Status.Providers.InfrastructureProviders = strings.Split(cpProviders, ",")
+			template.Status.Providers.ControlPlaneProviders = strings.Split(cpProviders, ",")
 		}
 	}
 	return nil
