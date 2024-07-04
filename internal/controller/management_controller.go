@@ -22,7 +22,6 @@ import (
 	"fmt"
 
 	"github.com/fluxcd/pkg/apis/meta"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -96,11 +95,6 @@ func (r *ManagementReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			updateComponentsStatus(detectedComponents, &detectedProviders, component.Template, template.Status, errMsg)
 			errs = errors.Join(fmt.Errorf(errMsg))
 			continue
-		}
-
-		// Applying defaults
-		if component.Config == nil && template.Status.Config != nil {
-			component.Config = &apiextensionsv1.JSON{Raw: template.Status.Config.Raw}
 		}
 
 		_, err = helm.ReconcileHelmRelease(ctx, r.Client, component.Template, management.Namespace, component.Config,
