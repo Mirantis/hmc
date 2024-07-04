@@ -2,6 +2,46 @@
   "$schema": "https://json-schema.org/draft/2019-09/schema",
   "type": "object",
   "properties": {
+    "flux2": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "imageAutomationController": {
+          "type": "object",
+          "properties": {
+            "create": {
+              "type": "boolean"
+            }
+          }
+        },
+        "imageReflectionController": {
+          "type": "object",
+          "properties": {
+            "create": {
+              "type": "boolean"
+            }
+          }
+        },
+        "kustomizeController": {
+          "type": "object",
+          "properties": {
+            "create": {
+              "type": "boolean"
+            }
+          }
+        },
+        "notificationController": {
+          "type": "object",
+          "properties": {
+            "create": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    },
     "controllerManager": {
       "type": "object",
       "properties": {

@@ -1,14 +1,14 @@
 controllerManager:
   manager:
     args:
-    - --leader-elect
-    - --health-probe-bind-address=:8081
-    - --metrics-bind-address=0
+      - --leader-elect
+      - --health-probe-bind-address=:8081
+      - --metrics-bind-address=0
     containerSecurityContext:
       allowPrivilegeEscalation: false
       capabilities:
         drop:
-        - ALL
+          - ALL
     image:
       repository: hmc/controller
       tag: latest
@@ -26,8 +26,19 @@ controllerManager:
 kubernetesClusterDomain: cluster.local
 metricsService:
   ports:
-  - name: http
-    port: 8080
-    protocol: TCP
-    targetPort: 8080
+    - name: http
+      port: 8080
+      protocol: TCP
+      targetPort: 8080
   type: ClusterIP
+
+flux2:
+  enabled: true
+  imageAutomationController:
+    create: false
+  imageReflectionController:
+    create: false
+  kustomizeController:
+    create: false
+  notificationController:
+    create: false

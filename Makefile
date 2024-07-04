@@ -59,15 +59,17 @@ generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
 .PHONY: hmc-chart-generate
-hmc-chart-generate: kustomize helmify ## Generate hmc helm chart
+hmc-chart-generate: kustomize helmify yq ## Generate hmc helm chart
 	rm -rf templates/hmc/values.yaml templates/hmc/templates/*.yaml
 	$(KUSTOMIZE) build config/default | $(HELMIFY) templates/hmc
+	$(YQ) eval -iN '' templates/hmc/values.yaml config/default/flux_values.yaml
 
 .PHONY: hmc-chart-release
 hmc-chart-release: kustomize helmify yq ## Generate hmc helm chart
 	rm -rf templates/hmc/values.yaml templates/hmc/templates/*.yaml
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default | $(HELMIFY) templates/hmc
+	$(YQ) eval -iN '' templates/hmc/values.yaml config/default/flux_values.yaml
 	$(YQ) eval '.version = "$(VERSION)"' -i templates/hmc/Chart.yaml
 	$(YQ) eval '.version = "$(VERSION)"' -i templates/hmc-templates/Chart.yaml
 
@@ -231,6 +233,11 @@ registry-undeploy:
 .PHONY: helm-controller-deploy
 helm-controller-deploy: helm
 	$(HELM) upgrade --install --create-namespace --set $(FLUX_CHART_VALUES) helm-controller $(FLUX_CHART_REPOSITORY) --version $(FLUX_CHART_VERSION) -n $(NAMESPACE)
+
+.PHONY: hmc-deploy
+hmc-deploy: helm
+	$(HELM) dependency update templates/hmc
+	$(HELM) upgrade --install --create-namespace hmc templates/hmc -n $(NAMESPACE)
 
 .PHONY: cert-manager
 cert-manager: yq
