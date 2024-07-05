@@ -21,3 +21,9 @@ version: 0.1.0
 appVersion: "0.1.0"
 annotations:
   hmc.mirantis.com/type: core
+
+dependencies:
+  - name: flux2
+    version: 2.13.0
+    repository: https://fluxcd-community.github.io/helm-charts
+    condition: flux2.enabled
