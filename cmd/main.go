@@ -63,6 +63,7 @@ func main() {
 	var enableHTTP2 bool
 	var defaultOCIRegistry string
 	var insecureRegistry bool
+	var createManagement bool
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
@@ -76,6 +77,7 @@ func main() {
 	flag.StringVar(&defaultOCIRegistry, "default-oci-registry", "oci://ghcr.io/mirantis/hmc/charts",
 		"The default OCI registry to download Helm charts from.")
 	flag.BoolVar(&insecureRegistry, "insecure-registry", false, "Allow connecting to an HTTP registry.")
+	flag.BoolVar(&createManagement, "create-management", true, "Create Management object with default configuration.")
 	opts := zap.Options{
 		Development: true,
 	}
@@ -164,6 +166,14 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "AWSProvider")
 		os.Exit(1)
 	}
+	if err = mgr.Add(&controller.Poller{
+		Client:           mgr.GetClient(),
+		CreateManagement: createManagement,
+	}); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "ReleaseController")
+		os.Exit(1)
+	}
+
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {

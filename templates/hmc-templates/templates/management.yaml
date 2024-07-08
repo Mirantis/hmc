@@ -1,3 +1,0 @@
-{{- if .Values.createManagement }}
-{{ .Files.Get "files/management.yaml" }}
-{{- end }}

@@ -4,6 +4,7 @@ controllerManager:
       - --leader-elect
       - --health-probe-bind-address=:8081
       - --metrics-bind-address=0
+      - --create-management=true
     containerSecurityContext:
       allowPrivilegeEscalation: false
       capabilities:

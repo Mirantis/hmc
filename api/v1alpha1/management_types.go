@@ -26,6 +26,13 @@ const (
 	DefaultCoreHMCTemplate         = "hmc"
 	DefaultCoreCAPITemplate        = "cluster-api"
 	DefaultCoreCertManagerTemplate = "cert-manager"
+
+	DefaultCAPAConfig = `{
+		"credentialsSecretName": "aws-credentials"
+	}`
+
+	ManagementName      = "hmc"
+	ManagementNamespace = "hmc-system"
 )
 
 // ManagementSpec defines the desired state of Management
@@ -66,21 +73,18 @@ func (in *Component) HelmValues() (values map[string]interface{}, err error) {
 	return values, err
 }
 
-func (m ManagementSpec) SetDefaults() {
-	// TODO: Uncomment when Templates will be ready
-	/*
-		m.Components = []Component{
-			{
-				Template: "cluster-api",
+func (m *ManagementSpec) SetDefaults() {
+	m.Providers = []Component{
+		{
+			Template: "k0smotron",
+		},
+		{
+			Template: "cluster-api-provider-aws",
+			Config: &apiextensionsv1.JSON{
+				Raw: []byte(DefaultCAPAConfig),
 			},
-			{
-				Template: "k0smotron",
-			},
-			{
-				Template: "cluster-api-provider-aws",
-			},
-		}
-	*/
+		},
+	}
 }
 
 // ManagementStatus defines the observed state of Management
