@@ -25,6 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 func ReconcileHelmRelease(
@@ -37,7 +38,7 @@ func ReconcileHelmRelease(
 	chartRef *hcv2.CrossNamespaceSourceReference,
 	reconcileInterval time.Duration,
 	dependsOn []meta.NamespacedObjectReference,
-) (*hcv2.HelmRelease, error) {
+) (*hcv2.HelmRelease, controllerutil.OperationResult, error) {
 	helmRelease := &hcv2.HelmRelease{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -45,7 +46,7 @@ func ReconcileHelmRelease(
 		},
 	}
 
-	_, err := ctrl.CreateOrUpdate(ctx, cl, helmRelease, func() error {
+	operation, err := ctrl.CreateOrUpdate(ctx, cl, helmRelease, func() error {
 		if helmRelease.Labels == nil {
 			helmRelease.Labels = make(map[string]string)
 		}
@@ -61,9 +62,9 @@ func ReconcileHelmRelease(
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, operation, err
 	}
-	return helmRelease, nil
+	return helmRelease, operation, nil
 }
 
 func DeleteHelmRelease(ctx context.Context, cl client.Client, name string, namespace string) error {
