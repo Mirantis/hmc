@@ -24,6 +24,7 @@ import (
 	"time"
 
 	v2 "github.com/fluxcd/helm-controller/api/v2"
+	"github.com/fluxcd/pkg/apis/meta"
 	sourcev1 "github.com/fluxcd/source-controller/api/v1"
 	"helm.sh/helm/v3/pkg/chart"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -55,8 +56,9 @@ type TemplateReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 
-	DefaultOCIRegistry string
-	InsecureRegistry   bool
+	DefaultOCIRegistry        string
+	RegistryCredentialsSecret string
+	InsecureRegistry          bool
 }
 
 // +kubebuilder:rbac:groups=hmc.mirantis.com,resources=templates,verbs=get;list;watch;create;update;patch;delete
@@ -207,6 +209,11 @@ func (r *TemplateReconciler) reconcileHelmRepo(ctx context.Context, template *hm
 			URL:      r.DefaultOCIRegistry,
 			Interval: metav1.Duration{Duration: defaultReconcileInterval},
 			Insecure: r.InsecureRegistry,
+		}
+		if r.RegistryCredentialsSecret != "" {
+			helmRepo.Spec.SecretRef = &meta.LocalObjectReference{
+				Name: r.RegistryCredentialsSecret,
+			}
 		}
 		return nil
 	})
