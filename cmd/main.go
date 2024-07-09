@@ -63,6 +63,7 @@ func main() {
 	var enableHTTP2 bool
 	var defaultOCIRegistry string
 	var insecureRegistry bool
+	var registryCredentialsSecret string
 	var createManagement bool
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
@@ -76,6 +77,8 @@ func main() {
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
 	flag.StringVar(&defaultOCIRegistry, "default-oci-registry", "oci://ghcr.io/mirantis/hmc/charts",
 		"The default OCI registry to download Helm charts from.")
+	flag.StringVar(&registryCredentialsSecret, "registry-creds-secret", "",
+		"Secret containing authentication credentials for the registry.")
 	flag.BoolVar(&insecureRegistry, "insecure-registry", false, "Allow connecting to an HTTP registry.")
 	flag.BoolVar(&createManagement, "create-management", true, "Create Management object with default configuration.")
 	opts := zap.Options{
@@ -135,10 +138,11 @@ func main() {
 	}
 
 	if err = (&controller.TemplateReconciler{
-		Client:             mgr.GetClient(),
-		Scheme:             mgr.GetScheme(),
-		DefaultOCIRegistry: defaultOCIRegistry,
-		InsecureRegistry:   insecureRegistry,
+		Client:                    mgr.GetClient(),
+		Scheme:                    mgr.GetScheme(),
+		DefaultOCIRegistry:        defaultOCIRegistry,
+		RegistryCredentialsSecret: registryCredentialsSecret,
+		InsecureRegistry:          insecureRegistry,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Template")
 		os.Exit(1)
