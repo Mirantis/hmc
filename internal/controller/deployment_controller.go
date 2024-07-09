@@ -203,7 +203,7 @@ func (r *DeploymentReconciler) Update(ctx context.Context, l logr.Logger, deploy
 			UID:        deployment.UID,
 		}
 
-		hr, err := helm.ReconcileHelmRelease(ctx, r.Client, deployment.Name, deployment.Namespace, deployment.Spec.Config,
+		hr, _, err := helm.ReconcileHelmRelease(ctx, r.Client, deployment.Name, deployment.Namespace, deployment.Spec.Config,
 			ownerRef, template.Status.ChartRef, defaultReconcileInterval, nil)
 		if err != nil {
 			apimeta.SetStatusCondition(deployment.GetConditions(), metav1.Condition{

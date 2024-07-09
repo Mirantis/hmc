@@ -13,3 +13,4 @@ spec:
           - "--leader-elect"
           - "--default-oci-registry=oci://hmc-local-registry:5000/charts"
           - "--insecure-registry"
+          - "--create-templates=false"

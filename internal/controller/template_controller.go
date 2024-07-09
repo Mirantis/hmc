@@ -22,7 +22,6 @@ import (
 	"time"
 
 	v2 "github.com/fluxcd/helm-controller/api/v2"
-	"github.com/fluxcd/pkg/apis/meta"
 	sourcev1 "github.com/fluxcd/source-controller/api/v1"
 	"helm.sh/helm/v3/pkg/chart"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -53,10 +52,6 @@ var (
 type TemplateReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
-
-	DefaultOCIRegistry        string
-	RegistryCredentialsSecret string
-	InsecureRegistry          bool
 }
 
 // +kubebuilder:rbac:groups=hmc.mirantis.com,resources=templates,verbs=get;list;watch;create;update;patch;delete
@@ -78,11 +73,6 @@ func (r *TemplateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, err
 	}
 	l.Info("Reconciling helm-controller objects ")
-	err := r.reconcileHelmRepo(ctx, template)
-	if err != nil {
-		l.Error(err, "Failed to reconcile HelmRepo")
-		return ctrl.Result{}, err
-	}
 	hcChart, err := r.reconcileHelmChart(ctx, template)
 	if err != nil {
 		l.Error(err, "Failed to reconcile HelmChart")
@@ -98,7 +88,7 @@ func (r *TemplateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		Name:      hcChart.Name,
 		Namespace: hcChart.Namespace,
 	}
-	if err, reportStatus := helmArtifactReady(hcChart); err != nil {
+	if err, reportStatus := helm.ArtifactReady(hcChart); err != nil {
 		l.Info("HelmChart Artifact is not ready")
 		if reportStatus {
 			_ = r.updateStatus(ctx, template, err.Error())
@@ -190,41 +180,6 @@ func (r *TemplateReconciler) updateStatus(ctx context.Context, template *hmc.Tem
 	return nil
 }
 
-func (r *TemplateReconciler) reconcileHelmRepo(ctx context.Context, template *hmc.Template) error {
-	if template.Spec.Helm.ChartRef != nil {
-		// HelmRepository is not managed by the controller
-		return nil
-	}
-	helmRepo := &sourcev1.HelmRepository{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      defaultRepoName,
-			Namespace: template.Namespace,
-		},
-	}
-	_, err := ctrl.CreateOrUpdate(ctx, r.Client, helmRepo, func() error {
-		if helmRepo.Labels == nil {
-			helmRepo.Labels = make(map[string]string)
-		}
-		helmRepo.Labels[hmc.HMCManagedLabelKey] = "true"
-		helmRepo.Spec = sourcev1.HelmRepositorySpec{
-			Type:     defaultRepoType,
-			URL:      r.DefaultOCIRegistry,
-			Interval: metav1.Duration{Duration: defaultReconcileInterval},
-			Insecure: r.InsecureRegistry,
-		}
-		if r.RegistryCredentialsSecret != "" {
-			helmRepo.Spec.SecretRef = &meta.LocalObjectReference{
-				Name: r.RegistryCredentialsSecret,
-			}
-		}
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func (r *TemplateReconciler) reconcileHelmChart(ctx context.Context, template *hmc.Template) (*sourcev1.HelmChart, error) {
 	if template.Spec.Helm.ChartRef != nil {
 		// HelmChart is not managed by the controller
@@ -265,23 +220,6 @@ func (r *TemplateReconciler) reconcileHelmChart(ctx context.Context, template *h
 		return nil, err
 	}
 	return helmChart, nil
-}
-
-func helmArtifactReady(chart *sourcev1.HelmChart) (err error, reportStatus bool) {
-	for _, c := range chart.Status.Conditions {
-		if c.Type == "Ready" {
-			if chart.Generation != c.ObservedGeneration {
-				return fmt.Errorf("HelmChart was not reconciled yet, retrying"), false
-			}
-			if c.Status != metav1.ConditionTrue {
-				return fmt.Errorf("failed to download helm chart artifact: %s", c.Message), true
-			}
-		}
-	}
-	if chart.Status.Artifact == nil || chart.Status.URL == "" {
-		return fmt.Errorf("helm chart artifact is not ready yet"), false
-	}
-	return nil, false
 }
 
 // SetupWithManager sets up the controller with the Manager.

@@ -27,5 +27,5 @@ resources:
 #- ../prometheus
 
 patches:
-- path: local_registry_patch.yaml
+- path: dev_patch.yaml
 

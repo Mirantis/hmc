@@ -95,7 +95,7 @@ func (r *ManagementReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			continue
 		}
 
-		_, err = helm.ReconcileHelmRelease(ctx, r.Client, component.Template, management.Namespace, component.Config,
+		_, _, err = helm.ReconcileHelmRelease(ctx, r.Client, component.Template, management.Namespace, component.Config,
 			ownerRef, template.Status.ChartRef, defaultReconcileInterval, component.dependsOn)
 		if err != nil {
 			errMsg := fmt.Sprintf("error reconciling HelmRelease %s/%s: %s", management.Namespace, component.Template, err)
