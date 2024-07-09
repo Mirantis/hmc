@@ -107,7 +107,7 @@ func (r *DeploymentReconciler) Update(ctx context.Context, l logr.Logger, deploy
 	}()
 
 	template := &hmc.Template{}
-	templateRef := types.NamespacedName{Name: deployment.Spec.Template, Namespace: deployment.Namespace}
+	templateRef := types.NamespacedName{Name: deployment.Spec.Template, Namespace: hmc.TemplatesNamespace}
 	if err := r.Get(ctx, templateRef, template); err != nil {
 		l.Error(err, "Failed to get Template")
 		errMsg := fmt.Sprintf("failed to get provided template: %s", err)
