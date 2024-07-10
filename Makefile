@@ -129,6 +129,7 @@ helm-package: helm
 	@make $(patsubst %,package-chart-%,$(CHARTS))
 
 lint-chart-%:
+	$(HELM) dependency update $(TEMPLATES_DIR)/$*
 	$(HELM) lint --strict $(TEMPLATES_DIR)/$*
 
 package-chart-%: $(CHARTS_PACKAGE_DIR) lint-chart-%
