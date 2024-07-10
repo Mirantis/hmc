@@ -82,7 +82,13 @@ func (r *DeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	if deployment.Status.ObservedGeneration == 0 {
-		if err := telemetry.TrackDeploymentCreate(string(deployment.UID), deployment.Spec.Template, deployment.Spec.DryRun); err != nil {
+		mgmt := &hmc.Management{}
+		mgmtRef := types.NamespacedName{Namespace: hmc.ManagementNamespace, Name: hmc.ManagementName}
+		if err := r.Get(ctx, mgmtRef, mgmt); err != nil {
+			l.Error(err, "Failed to get Management object")
+			return ctrl.Result{}, err
+		}
+		if err := telemetry.TrackDeploymentCreate(string(mgmt.UID), string(deployment.UID), deployment.Spec.Template, deployment.Spec.DryRun); err != nil {
 			l.Error(err, "Failed to track Deployment creation")
 		}
 	}

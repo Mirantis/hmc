@@ -26,10 +26,11 @@ const (
 	deploymentCreateEvent = "deployment-create"
 )
 
-func TrackDeploymentCreate(id, template string, dryRun bool) error {
+func TrackDeploymentCreate(hmcID, deploymentID, template string, dryRun bool) error {
 	props := map[string]interface{}{
 		"hmcVersion":   build.Version,
-		"deploymentID": id,
+		"hmcID":        hmcID,
+		"deploymentID": deploymentID,
 		"template":     template,
 		"dryRun":       dryRun,
 	}
