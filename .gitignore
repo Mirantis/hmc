@@ -1,4 +1,5 @@
 kubeconfig
+charts/
 # Binaries for programs and plugins
 bin
 dist
