@@ -18,6 +18,7 @@ import (
 	"context"
 	"time"
 
+	hmc "github.com/Mirantis/hmc/api/v1alpha1"
 	hcv2 "github.com/fluxcd/helm-controller/api/v2"
 	"github.com/fluxcd/pkg/apis/meta"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -45,6 +46,10 @@ func ReconcileHelmRelease(
 	}
 
 	_, err := ctrl.CreateOrUpdate(ctx, cl, helmRelease, func() error {
+		if helmRelease.Labels == nil {
+			helmRelease.Labels = make(map[string]string)
+		}
+		helmRelease.Labels[hmc.HMCManagedLabelKey] = "true"
 		helmRelease.OwnerReferences = []metav1.OwnerReference{ownerReference}
 		helmRelease.Spec = hcv2.HelmReleaseSpec{
 			ChartRef:    chartRef,

@@ -43,3 +43,7 @@ flux2:
     create: false
   notificationController:
     create: false
+  helmController:
+    container:
+      additionalArgs:
+        - --watch-label-selector=hmc.mirantis.com/managed=true
