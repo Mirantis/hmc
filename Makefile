@@ -83,7 +83,7 @@ templates-generate: cert-manager
 	@hack/templates.sh
 
 .PHONY: generate-all
-generate-all: generate manifests hmc-chart-generate templates-generate
+generate-all: generate manifests hmc-chart-generate templates-generate add-license
 
 .PHONY: fmt
 fmt: ## Run go fmt against code.
@@ -113,6 +113,10 @@ lint: golangci-lint ## Run golangci-lint linter & yamllint
 .PHONY: lint-fix
 lint-fix: golangci-lint ## Run golangci-lint linter and perform fixes
 	$(GOLANGCI_LINT) run --fix
+
+.PHONY: add-license
+add-license: addlicense
+	$(ADDLICENSE) -c "" -ignore ".github/**" -ignore "config/**" -ignore "templates/**" -ignore ".*" -y 2024 .
 
 ##@ Build
 
