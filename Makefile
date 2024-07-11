@@ -83,7 +83,7 @@ templates-generate: cert-manager
 	@hack/templates.sh
 
 .PHONY: generate-all
-generate-all: generate manifests hmc-chart-generate templates-generate
+generate-all: generate manifests hmc-chart-generate templates-generate add-license
 
 .PHONY: fmt
 fmt: ## Run go fmt against code.
@@ -113,6 +113,10 @@ lint: golangci-lint ## Run golangci-lint linter & yamllint
 .PHONY: lint-fix
 lint-fix: golangci-lint ## Run golangci-lint linter and perform fixes
 	$(GOLANGCI_LINT) run --fix
+
+.PHONY: add-license
+add-license: addlicense
+	$(ADDLICENSE) -c "" -ignore ".github/**" -ignore "config/**" -ignore "templates/**" -ignore ".*" -y 2024 .
 
 ##@ Build
 
@@ -345,6 +349,7 @@ KIND ?= $(LOCALBIN)/kind-$(KIND_VERSION)
 YQ ?= $(LOCALBIN)/yq-$(YQ_VERSION)
 CLUSTERAWSADM ?= $(LOCALBIN)/clusterawsadm
 CLUSTERCTL ?= $(LOCALBIN)/clusterctl
+ADDLICENSE ?= $(LOCALBIN)/addlicense-$(ADDLICENSE_VERSION)
 
 FLUX_CHART_REPOSITORY ?= oci://ghcr.io/fluxcd-community/charts/flux2
 FLUX_CHART_VERSION ?= 2.13.0
@@ -361,6 +366,7 @@ KIND_VERSION ?= v0.23.0
 YQ_VERSION ?= v4.44.2
 CLUSTERAWSADM_VERSION ?= v2.5.2
 CLUSTERCTL_VERSION ?= v1.7.3
+ADDLICENSE_VERSION ?= v1.1.1
 
 .PHONY: kustomize
 kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary.
@@ -414,6 +420,11 @@ $(CLUSTERAWSADM): | $(LOCALBIN)
 clusterctl: $(CLUSTERCTL) ## Download clusterctl locally if necessary.
 $(CLUSTERCTL): | $(LOCALBIN)
 	$(call go-install-tool,$(CLUSTERCTL),sigs.k8s.io/cluster-api/cmd/clusterctl,${CLUSTERCTL_VERSION})
+
+.PHONY: addlicense
+addlicense: $(ADDLICENSE) ## Download addlicense locally if necessary.
+$(ADDLICENSE): | $(LOCALBIN)
+	$(call go-install-tool,$(ADDLICENSE),github.com/google/addlicense,${ADDLICENSE_VERSION})
 
 $(FLUX_HELM_CRD): | $(EXTERNAL_CRD_DIR)
 	rm -f $(FLUX_HELM_CRD)
