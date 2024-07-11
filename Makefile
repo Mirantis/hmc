@@ -353,7 +353,7 @@ ADDLICENSE ?= $(LOCALBIN)/addlicense-$(ADDLICENSE_VERSION)
 
 FLUX_CHART_REPOSITORY ?= oci://ghcr.io/fluxcd-community/charts/flux2
 FLUX_CHART_VERSION ?= 2.13.0
-FLUX_CHART_VALUES ?= "imageAutomationController.create=false,imageReflectionController.create=false,kustomizeController.create=false,notificationController.create=false"
+FLUX_CHART_VALUES ?= "imageAutomationController.create=false,imageReflectionController.create=false,kustomizeController.create=false,notificationController.create=false,helmController.container.additionalArgs={--watch-label-selector=hmc.mirantis.com/managed=true}"
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v5.3.0

@@ -202,6 +202,10 @@ func (r *TemplateReconciler) reconcileHelmRepo(ctx context.Context, template *hm
 		},
 	}
 	_, err := ctrl.CreateOrUpdate(ctx, r.Client, helmRepo, func() error {
+		if helmRepo.Labels == nil {
+			helmRepo.Labels = make(map[string]string)
+		}
+		helmRepo.Labels[hmc.HMCManagedLabelKey] = "true"
 		helmRepo.Spec = sourcev1.HelmRepositorySpec{
 			Type:     defaultRepoType,
 			URL:      r.DefaultOCIRegistry,
@@ -234,6 +238,10 @@ func (r *TemplateReconciler) reconcileHelmChart(ctx context.Context, template *h
 	}
 
 	_, err := ctrl.CreateOrUpdate(ctx, r.Client, helmChart, func() error {
+		if helmChart.Labels == nil {
+			helmChart.Labels = make(map[string]string)
+		}
+		helmChart.Labels[hmc.HMCManagedLabelKey] = "true"
 		helmChart.OwnerReferences = []metav1.OwnerReference{
 			{
 				APIVersion: hmc.GroupVersion.String(),
