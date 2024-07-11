@@ -21,7 +21,11 @@ import (
 	"k8s.io/apimachinery/pkg/util/yaml"
 )
 
-const DeploymentFinalizer = "hmc.mirantis.com/deployment"
+const (
+	DeploymentFinalizer = "hmc.mirantis.com/deployment"
+
+	HMCManagedLabelKey = "hmc.mirantis.com/managed"
+)
 
 const (
 	// TemplateReadyCondition indicates the referenced Template exists and valid.
