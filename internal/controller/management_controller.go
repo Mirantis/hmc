@@ -129,9 +129,8 @@ func wrappedComponents(mgmt *hmc.Management) (components []component) {
 	if mgmt.Spec.Core == nil {
 		return
 	}
-	components = append(components, component{Component: mgmt.Spec.Core.CertManager})
-	components = append(components, component{Component: mgmt.Spec.Core.HMC, dependsOn: []meta.NamespacedObjectReference{{Name: mgmt.Spec.Core.CertManager.Template}}})
-	components = append(components, component{Component: mgmt.Spec.Core.CAPI, dependsOn: []meta.NamespacedObjectReference{{Name: mgmt.Spec.Core.CertManager.Template}}})
+	components = append(components, component{Component: mgmt.Spec.Core.HMC})
+	components = append(components, component{Component: mgmt.Spec.Core.CAPI, dependsOn: []meta.NamespacedObjectReference{{Name: mgmt.Spec.Core.HMC.Template}}})
 	for provider := range mgmt.Spec.Providers {
 		components = append(components, component{Component: mgmt.Spec.Providers[provider], dependsOn: []meta.NamespacedObjectReference{{Name: mgmt.Spec.Core.CAPI.Template}}})
 	}
@@ -149,9 +148,6 @@ func applyDefaultCoreConfiguration(mgmt *hmc.Management) (changed bool) {
 		},
 		CAPI: hmc.Component{
 			Template: hmc.DefaultCoreCAPITemplate,
-		},
-		CertManager: hmc.Component{
-			Template: hmc.DefaultCoreCertManagerTemplate,
 		},
 	}
 

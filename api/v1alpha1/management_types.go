@@ -21,9 +21,8 @@ import (
 )
 
 const (
-	DefaultCoreHMCTemplate         = "hmc"
-	DefaultCoreCAPITemplate        = "cluster-api"
-	DefaultCoreCertManagerTemplate = "cert-manager"
+	DefaultCoreHMCTemplate  = "hmc"
+	DefaultCoreCAPITemplate = "cluster-api"
 
 	DefaultCAPAConfig = `{
 		"credentialsSecretName": "aws-credentials"
@@ -49,8 +48,6 @@ type Core struct {
 	HMC Component `json:"hmc"`
 	// CAPI represents the core Cluster API component and references the Cluster API template.
 	CAPI Component `json:"capi"`
-	// CertManager represents the Cert Manager component and references the Cert Manager template.
-	CertManager Component `json:"certManager"`
 }
 
 // Component represents HMC management component

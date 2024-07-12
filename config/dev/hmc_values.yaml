@@ -1,0 +1,7 @@
+controllerManager:
+  manager:
+    args:
+    - --default-oci-registry=oci://hmc-local-registry:5000/charts
+    - --insecure-registry=true
+    - --create-management=false
+    - --create-templates=false

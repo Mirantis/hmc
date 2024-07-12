@@ -33,6 +33,8 @@ metricsService:
       targetPort: 8080
   type: ClusterIP
 
+cert-manager:
+  installCRDs: true
 flux2:
   enabled: true
   imageAutomationController:
