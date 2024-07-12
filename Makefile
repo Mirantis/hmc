@@ -62,7 +62,7 @@ generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and
 hmc-chart-generate: kustomize helmify yq ## Generate hmc helm chart
 	rm -rf templates/hmc/values.yaml templates/hmc/templates/*.yaml
 	$(KUSTOMIZE) build config/default | $(HELMIFY) templates/hmc
-	$(YQ) eval -iN '' templates/hmc/values.yaml config/default/flux_values.yaml
+	$(YQ) eval -iN '' templates/hmc/values.yaml config/default/hmc_values.yaml
 
 .PHONY: hmc-chart-release
 hmc-chart-release: kustomize helmify yq ## Generate hmc helm chart
@@ -79,7 +79,7 @@ hmc-dist-release:
 	$(HELM) template -n $(NAMESPACE) hmc templates/hmc > dist/install.yaml
 
 .PHONY: templates-generate
-templates-generate: cert-manager
+templates-generate:
 	@hack/templates.sh
 
 .PHONY: generate-all
@@ -98,7 +98,7 @@ tidy:
 	go mod tidy
 
 .PHONY: test
-test: generate-all fmt vet envtest external-crd tidy ## Run tests.
+test: generate-all fmt vet envtest tidy ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test $$(go list ./... | grep -v /e2e) -coverprofile cover.out
 
 # Utilize Kind or modify the e2e tests to load the image locally, enabling compatibility with other vendors.
@@ -198,10 +198,6 @@ REGISTRY_REPO ?= oci://127.0.0.1:$(REGISTRY_PORT)/charts
 
 AWS_CREDENTIALS=${AWS_B64ENCODED_CREDENTIALS}
 
-CERT_MANAGER_VERSION ?= v1.15.0
-CERT_MANAGER_TEMPLATE_FOLDER ?= templates/cert-manager
-CERT_MANAGER_URL ?= https://github.com/cert-manager/cert-manager/releases/download/$(CERT_MANAGER_VERSION)/cert-manager.yaml
-
 ifndef ignore-not-found
   ignore-not-found = false
 endif
@@ -235,26 +231,10 @@ registry-undeploy:
 		$(CONTAINER_TOOL) rm -f "$(REGISTRY_NAME)"; \
 	fi
 
-.PHONY: helm-controller-deploy
-helm-controller-deploy: helm
-	$(HELM) upgrade --install --create-namespace --set $(FLUX_CHART_VALUES) helm-controller $(FLUX_CHART_REPOSITORY) --version $(FLUX_CHART_VERSION) -n $(NAMESPACE)
-
 .PHONY: hmc-deploy
 hmc-deploy: helm
 	$(HELM) dependency update templates/hmc
-	$(HELM) upgrade --install --create-namespace hmc templates/hmc -n $(NAMESPACE)
-
-.PHONY: cert-manager
-cert-manager: yq
-	curl -Ls $(CERT_MANAGER_URL) -o $(CERT_MANAGER_TEMPLATE_FOLDER)/templates/cert-manager.yaml; \
-
-.PHONY: crd-install
-crd-install: generate-all kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
-	$(KUSTOMIZE) build config/crd | $(KUBECTL) apply -f -
-
-.PHONY: crd-uninstall
-crd-uninstall: generate-all kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
-	$(KUSTOMIZE) build config/crd | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
+	$(HELM) upgrade --values $(HMC_VALUES) --install --create-namespace hmc templates/hmc -n $(NAMESPACE)
 
 .PHONY: deploy
 deploy: generate-all kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
@@ -266,10 +246,8 @@ undeploy: kustomize ## Undeploy controller from the K8s cluster specified in ~/.
 	$(KUSTOMIZE) build config/default | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
 
 .PHONY: dev-deploy
-dev-deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
-	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
-	$(KUSTOMIZE) build config/dev | $(KUBECTL) apply -f -
-	$(KUBECTL) rollout restart -n $(NAMESPACE) deployment/hmc-controller-manager
+dev-deploy: hmc-chart-generate ## Deploy HMC helm chart to the K8s cluster specified in ~/.kube/config.
+	make hmc-deploy HMC_VALUES=config/dev/hmc_values.yaml
 
 .PHONY: dev-undeploy
 dev-undeploy: kustomize ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
@@ -299,12 +277,16 @@ dev-push: docker-build helm-push
 dev-templates: templates-generate
 	$(KUBECTL) -n $(NAMESPACE) apply -f templates/hmc-templates/files/templates
 
+.PHONY: dev-management
+dev-management: yq
+	yq '.spec.core.hmc.config += (load("config/dev/hmc_values.yaml"))' config/dev/management.yaml | $(KUBECTL) -n $(NAMESPACE) apply -f -
+
 .PHONY: dev-aws
 dev-aws: yq
 	@$(YQ) e ".data.credentials = \"${AWS_CREDENTIALS}\"" config/dev/awscredentials.yaml | $(KUBECTL) -n $(NAMESPACE) apply -f -
 
 .PHONY: dev-apply
-dev-apply: kind-deploy crd-install registry-deploy helm-controller-deploy dev-push dev-deploy dev-templates dev-aws
+dev-apply: kind-deploy registry-deploy dev-push dev-deploy dev-templates dev-management dev-aws
 
 .PHONY: dev-destroy
 dev-destroy: kind-undeploy registry-undeploy
@@ -327,16 +309,6 @@ LOCALBIN ?= $(shell pwd)/bin
 $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 
-EXTERNAL_CRD_DIR ?= $(LOCALBIN)/crd
-$(EXTERNAL_CRD_DIR): | $(LOCALBIN)
-	mkdir -p $(EXTERNAL_CRD_DIR)
-
-FLUX_SOURCE_VERSION ?= $(shell go mod edit -json | jq -r '.Require[] | select(.Path == "github.com/fluxcd/source-controller/api") | .Version')
-FLUX_SOURCE_REPO_CRD ?= $(EXTERNAL_CRD_DIR)/source-helmrepositories-$(FLUX_SOURCE_VERSION).yaml
-FLUX_SOURCE_CHART_CRD ?= $(EXTERNAL_CRD_DIR)/source-helmchart-$(FLUX_SOURCE_VERSION).yaml
-FLUX_HELM_VERSION ?= $(shell go mod edit -json | jq -r '.Require[] | select(.Path == "github.com/fluxcd/helm-controller/api") | .Version')
-FLUX_HELM_CRD ?= $(EXTERNAL_CRD_DIR)/helm-$(FLUX_HELM_VERSION).yaml
-
 ## Tool Binaries
 KUBECTL ?= kubectl
 KUSTOMIZE ?= $(LOCALBIN)/kustomize-$(KUSTOMIZE_VERSION)
@@ -350,10 +322,6 @@ YQ ?= $(LOCALBIN)/yq-$(YQ_VERSION)
 CLUSTERAWSADM ?= $(LOCALBIN)/clusterawsadm
 CLUSTERCTL ?= $(LOCALBIN)/clusterctl
 ADDLICENSE ?= $(LOCALBIN)/addlicense-$(ADDLICENSE_VERSION)
-
-FLUX_CHART_REPOSITORY ?= oci://ghcr.io/fluxcd-community/charts/flux2
-FLUX_CHART_VERSION ?= 2.13.0
-FLUX_CHART_VALUES ?= "imageAutomationController.create=false,imageReflectionController.create=false,kustomizeController.create=false,notificationController.create=false,helmController.container.additionalArgs={--watch-label-selector=hmc.mirantis.com/managed=true}"
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v5.3.0
@@ -425,21 +393,6 @@ $(CLUSTERCTL): | $(LOCALBIN)
 addlicense: $(ADDLICENSE) ## Download addlicense locally if necessary.
 $(ADDLICENSE): | $(LOCALBIN)
 	$(call go-install-tool,$(ADDLICENSE),github.com/google/addlicense,${ADDLICENSE_VERSION})
-
-$(FLUX_HELM_CRD): | $(EXTERNAL_CRD_DIR)
-	rm -f $(FLUX_HELM_CRD)
-	curl -s https://raw.githubusercontent.com/fluxcd/helm-controller/$(FLUX_HELM_VERSION)/config/crd/bases/helm.toolkit.fluxcd.io_helmreleases.yaml > $(FLUX_HELM_CRD)
-
-$(FLUX_SOURCE_CHART_CRD): | $(EXTERNAL_CRD_DIR)
-	rm -f $(FLUX_SOURCE_CHART_CRD)
-	curl -s https://raw.githubusercontent.com/fluxcd/source-controller/$(FLUX_SOURCE_VERSION)/config/crd/bases/source.toolkit.fluxcd.io_helmcharts.yaml > $(FLUX_SOURCE_CHART_CRD)
-
-$(FLUX_SOURCE_REPO_CRD): | $(EXTERNAL_CRD_DIR)
-	rm -f $(FLUX_SOURCE_REPO_CRD)
-	curl -s https://raw.githubusercontent.com/fluxcd/source-controller/$(FLUX_SOURCE_VERSION)/config/crd/bases/source.toolkit.fluxcd.io_helmrepositories.yaml > $(FLUX_SOURCE_REPO_CRD)
-
-.PHONY: external-crd
-external-crd: $(FLUX_HELM_CRD) $(FLUX_SOURCE_CHART_CRD) $(FLUX_SOURCE_REPO_CRD)
 
 # go-install-tool will 'go install' any package with custom target and name of binary, if it doesn't exist
 # $1 - target path with name of binary (ideally with version)

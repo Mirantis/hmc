@@ -1,4 +1,7 @@
 
+cert-manager:
+  installCRDs: true
+
 flux2:
   enabled: true
   imageAutomationController:
