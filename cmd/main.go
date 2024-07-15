@@ -63,6 +63,8 @@ func main() {
 	var insecureRegistry bool
 	var registryCredentialsSecret string
 	var createManagement bool
+	var createTemplates bool
+	var hmcTemplatesChartName string
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
@@ -79,6 +81,9 @@ func main() {
 		"Secret containing authentication credentials for the registry.")
 	flag.BoolVar(&insecureRegistry, "insecure-registry", false, "Allow connecting to an HTTP registry.")
 	flag.BoolVar(&createManagement, "create-management", true, "Create Management object with default configuration.")
+	flag.BoolVar(&createTemplates, "create-templates", true, "Create HMC Templates.")
+	flag.StringVar(&hmcTemplatesChartName, "hmc-templates-chart-name", "hmc-templates",
+		"The name of the helm chart with HMC Templates.")
 	opts := zap.Options{
 		Development: true,
 	}
@@ -136,11 +141,8 @@ func main() {
 	}
 
 	if err = (&controller.TemplateReconciler{
-		Client:                    mgr.GetClient(),
-		Scheme:                    mgr.GetScheme(),
-		DefaultOCIRegistry:        defaultOCIRegistry,
-		RegistryCredentialsSecret: registryCredentialsSecret,
-		InsecureRegistry:          insecureRegistry,
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Template")
 		os.Exit(1)
@@ -169,8 +171,13 @@ func main() {
 		os.Exit(1)
 	}
 	if err = mgr.Add(&controller.Poller{
-		Client:           mgr.GetClient(),
-		CreateManagement: createManagement,
+		Client:                    mgr.GetClient(),
+		CreateManagement:          createManagement,
+		CreateTemplates:           createTemplates,
+		DefaultOCIRegistry:        defaultOCIRegistry,
+		RegistryCredentialsSecret: registryCredentialsSecret,
+		InsecureRegistry:          insecureRegistry,
+		HMCTemplatesChartName:     hmcTemplatesChartName,
 	}); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ReleaseController")
 		os.Exit(1)
