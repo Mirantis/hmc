@@ -9,4 +9,3 @@ spec:
     # name: aws-identity-name
   controlPlaneLoadBalancer:
     healthCheckProtocol: TCP
-    loadBalancerType: nlb
