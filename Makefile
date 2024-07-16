@@ -69,7 +69,7 @@ hmc-chart-release: kustomize helmify yq ## Generate hmc helm chart
 	rm -rf templates/hmc/values.yaml templates/hmc/templates/*.yaml
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default | $(HELMIFY) templates/hmc
-	$(YQ) eval -iN '' templates/hmc/values.yaml config/default/flux_values.yaml
+	$(YQ) eval -iN '' templates/hmc/values.yaml config/default/hmc_values.yaml
 	$(YQ) eval '.version = "$(VERSION)"' -i templates/hmc/Chart.yaml
 	$(YQ) eval '.version = "$(VERSION)"' -i templates/hmc-templates/Chart.yaml
 
