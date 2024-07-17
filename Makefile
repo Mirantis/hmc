@@ -256,11 +256,11 @@ dev-undeploy: kustomize ## Undeploy controller from the K8s cluster specified in
 .PHONY: helm-push
 helm-push: helm-package
 	@for chart in $(CHARTS_PACKAGE_DIR)/*.tgz; do \
-		echo "Verifying if $$chart already exists in $(REGISTRY_REPO)"; \
 		base=$$(basename $$chart .tgz); \
 		chart_version=$$(echo $$base | grep -o "v\{0,1\}[0-9]\+\.[0-9]\+\.[0-9].*"); \
 		chart_name="$${base%-"$$chart_version"}"; \
-		chart_exists=$$($(HELM) pull $(REGISTRY_REPO)/$$chart_name --version $$chart_version --destination /tmp 2>&1 | grep "not found"); \
+		echo "Verifying if chart $$chart_name, version $$chart_version already exists in $(REGISTRY_REPO)"; \
+		chart_exists=$$($(HELM) pull $(REGISTRY_REPO)/$$chart_name --version $$chart_version --destination /tmp 2>&1 | grep "not found" || true); \
 		if [ -z "$$chart_exists" ]; then \
 			echo "Chart $$chart_name version $$chart_version already exists in the repository."; \
 		else \
