@@ -200,7 +200,7 @@ func (p *Poller) reconcileHMCTemplates(ctx context.Context) error {
 		Name:      helmChart.Name,
 		Namespace: helmChart.Namespace,
 	}
-	_, operation, err = helm.ReconcileHelmRelease(ctx, p.Client, hmcTemplatesReleaseName, hmc.TemplatesNamespace, nil, metav1.OwnerReference{}, chartRef, defaultReconcileInterval, nil)
+	_, operation, err = helm.ReconcileHelmRelease(ctx, p.Client, hmcTemplatesReleaseName, hmc.TemplatesNamespace, nil, nil, chartRef, defaultReconcileInterval, nil)
 	if err != nil {
 		return err
 	}
