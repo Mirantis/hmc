@@ -34,7 +34,7 @@ func ReconcileHelmRelease(
 	name string,
 	namespace string,
 	values *apiextensionsv1.JSON,
-	ownerReference metav1.OwnerReference,
+	ownerReference *metav1.OwnerReference,
 	chartRef *hcv2.CrossNamespaceSourceReference,
 	reconcileInterval time.Duration,
 	dependsOn []meta.NamespacedObjectReference,
@@ -51,7 +51,9 @@ func ReconcileHelmRelease(
 			helmRelease.Labels = make(map[string]string)
 		}
 		helmRelease.Labels[hmc.HMCManagedLabelKey] = "true"
-		helmRelease.OwnerReferences = []metav1.OwnerReference{ownerReference}
+		if ownerReference != nil {
+			helmRelease.OwnerReferences = []metav1.OwnerReference{*ownerReference}
+		}
 		helmRelease.Spec = hcv2.HelmReleaseSpec{
 			ChartRef:    chartRef,
 			Interval:    metav1.Duration{Duration: reconcileInterval},

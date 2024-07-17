@@ -196,7 +196,7 @@ func (r *DeploymentReconciler) Update(ctx context.Context, l logr.Logger, deploy
 	})
 
 	if !deployment.Spec.DryRun {
-		ownerRef := metav1.OwnerReference{
+		ownerRef := &metav1.OwnerReference{
 			APIVersion: hmc.GroupVersion.String(),
 			Kind:       hmc.DeploymentKind,
 			Name:       deployment.Name,

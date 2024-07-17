@@ -64,7 +64,7 @@ func (r *ManagementReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, r.Client.Update(ctx, management)
 	}
 
-	ownerRef := metav1.OwnerReference{
+	ownerRef := &metav1.OwnerReference{
 		APIVersion: hmc.GroupVersion.String(),
 		Kind:       hmc.ManagementKind,
 		Name:       management.Name,
