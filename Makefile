@@ -252,6 +252,7 @@ undeploy: kustomize ## Undeploy controller from the K8s cluster specified in ~/.
 .PHONY: dev-deploy
 dev-deploy: hmc-chart-generate ## Deploy HMC helm chart to the K8s cluster specified in ~/.kube/config.
 	make hmc-deploy HMC_VALUES=config/dev/hmc_values.yaml
+	$(KUBECTL) rollout restart -n $(NAMESPACE) deployment/hmc-controller-manager
 
 .PHONY: dev-undeploy
 dev-undeploy: kustomize ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
