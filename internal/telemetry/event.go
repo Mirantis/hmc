@@ -24,24 +24,23 @@ const (
 	deploymentCreateEvent = "deployment-create"
 )
 
-func TrackDeploymentCreate(hmcID, deploymentID, template string, dryRun bool) error {
+func TrackDeploymentCreate(id, deploymentID, template string, dryRun bool) error {
 	props := map[string]interface{}{
 		"hmcVersion":   build.Version,
-		"hmcID":        hmcID,
 		"deploymentID": deploymentID,
 		"template":     template,
 		"dryRun":       dryRun,
 	}
-
-	return TrackEvent(deploymentCreateEvent, props)
+	return TrackEvent(deploymentCreateEvent, id, props)
 }
 
-func TrackEvent(name string, properties map[string]interface{}) error {
+func TrackEvent(name, id string, properties map[string]interface{}) error {
 	if client == nil {
 		return nil
 	}
 	return client.Enqueue(analytics.Track{
-		Event:      name,
-		Properties: properties,
+		AnonymousId: id,
+		Event:       name,
+		Properties:  properties,
 	})
 }
