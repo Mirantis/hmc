@@ -79,7 +79,8 @@ hmc-chart-release: kustomize helmify yq set-hmc-version templates-generate ## Ge
 .PHONY: hmc-dist-release
 hmc-dist-release:
 	@mkdir -p dist
-	$(HELM) template -n $(NAMESPACE) hmc templates/hmc > dist/install.yaml
+	@printf "apiVersion: v1\nkind: Namespace\nmetadata:\n  name: $(NAMESPACE)\n" > dist/install.yaml
+	$(HELM) template -n $(NAMESPACE) hmc templates/hmc >> dist/install.yaml
 
 .PHONY: templates-generate
 templates-generate:
