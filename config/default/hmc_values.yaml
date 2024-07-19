@@ -2,6 +2,9 @@
 cert-manager:
   enabled: true
   installCRDs: true
+  global:
+    leaderElection:
+      namespace: hmc-system
 
 flux2:
   enabled: true
