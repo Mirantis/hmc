@@ -77,10 +77,14 @@ hmc-chart-release: kustomize helmify yq set-hmc-version templates-generate ## Ge
 	$(YQ) eval -iN '' templates/hmc/values.yaml config/default/hmc_values.yaml
 
 .PHONY: hmc-dist-release
-hmc-dist-release:
+hmc-dist-release: $(HELM) $(YQ)
 	@mkdir -p dist
 	@printf "apiVersion: v1\nkind: Namespace\nmetadata:\n  name: $(NAMESPACE)\n" > dist/install.yaml
 	$(HELM) template -n $(NAMESPACE) hmc templates/hmc >> dist/install.yaml
+	$(YQ) eval -i '.metadata.namespace = "hmc-system"' dist/install.yaml
+	$(YQ) eval -i '.metadata.annotations."meta.helm.sh/release-name" = "hmc"' dist/install.yaml
+	$(YQ) eval -i '.metadata.annotations."meta.helm.sh/release-namespace" = "hmc-system"' dist/install.yaml
+	$(YQ) eval -i '.metadata.labels."app.kubernetes.io/managed-by" = "Helm"' dist/install.yaml
 
 .PHONY: templates-generate
 templates-generate:
