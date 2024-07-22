@@ -1,97 +1,232 @@
 # Mirantis Hybrid Cloud Platform
 
-## Getting Started
+## Installation
 
-Below is the example on how to deploy an HMC managed cluster on AWS with k0s. 
-The kind cluster acts as management in this example.
+### TLDR
 
-### Prerequisites
+> kubectl apply -f https://github.com/Mirantis/hmc/releases/download/v0.0.1/install.yaml
 
-#### Clone HMC repository
+or install using `helm`
 
-```
-git clone https://github.com/Mirantis/hmc.git && cd hmc
-```
+> helm install hmc oci://ghcr.io/mirantis/hmc/charts/hmc --version v0.0.1 -n hmc-system --create-namespace
 
-#### Install required CLIs
+Then follow the [Deploy a managed cluster](#deploy-a-managed-cluster) guide to create a managed cluster.
 
-Run:
+### Development guide
 
-```
-make cli-install
-```
+See [Install HMC for development purposes](docs/dev.md#hmc-installation-for-development).
 
-#### AWS IAM setup
+### Software Prerequisites
 
-Before launching a cluster, it's crucial to set up your AWS infrastructure provider:
+Mirantis Hybrid Container Cloud requires the following:
 
-> Note. Skip steps below if you've already configured IAM policy for your account
+1. Existing management cluster (minimum required kubernetes version 1.28.0).
+2. `kubectl` CLI installed locally.
 
-1. In order to use clusterawsadm you must have an administrative user in an AWS account. Once you have that 
-administrator user you need to set your environment variables:
+Optionally, the following CLIs may be helpful:
 
-```
-export AWS_REGION=us-east-1
-export AWS_ACCESS_KEY_ID=<admin-user-access-key>
-export AWS_SECRET_ACCESS_KEY=<admin-user-secret-access-key>
-export AWS_SESSION_TOKEN=<session-token> # Optional. If you are using Multi-Factor Auth.
-```
+1. `helm` (required only when installing HMC using `helm`).
+2. `clusterctl` (to handle the lifecycle of the managed clusters). 
 
-2. After these are set run this command to create IAM cloud formation stack:
+### Providers configuration
+
+Follow the instruction to configure providers. Currently supported providers:
+* [AWS](docs/aws/main.md#prepare-the-aws-infra-provider)
+
+### Installation
 
 ```
-./bin/clusterawsadm bootstrap iam create-cloudformation-stack
+export KUBECONFIG=<path-to-management-kubeconfig>
+
+helm install hmc oci://ghcr.io/mirantis/hmc/charts/hmc --version <hmc-version> -n hmc-system --create-namespace
 ```
 
-#### Configure AWS credentials for the bootstrap
+See [HMC configuration options](templates/hmc/values.yaml).
 
-1. Ensure AWS user has enough permissions to deploy cluster. Ensure that these policies were attached to the AWS user:
+#### Extended Management configuration
 
-* `control-plane.cluster-api-provider-aws.sigs.k8s.io`
-* `controllers.cluster-api-provider-aws.sigs.k8s.io`
-* `nodes.cluster-api-provider-aws.sigs.k8s.io`
+By default, the Hybrid Container Cloud is being deployed with the following configuration:
 
-2. Retrieve access key and export it as environment variable:
-
-```
-export AWS_REGION=us-east-1
-export AWS_ACCESS_KEY_ID=<your-access-key>
-export AWS_SECRET_ACCESS_KEY=<your-secret-access-key>
-export AWS_SESSION_TOKEN=<session-token> # Optional. If you are using Multi-Factor Auth.
-```
-
-3. Create the base64 encoded credentials using `clusterawsadm`. This command uses your environment variables and
-encodes them in a value to be stored in a Kubernetes Secret.
-
-```
-export AWS_B64ENCODED_CREDENTIALS=$(./bin/clusterawsadm bootstrap credentials encode-as-profile)
-```
-
-### Deploy HMC
-
-1. Configure your cluster parameters in `config/dev/deployment.yaml`:
-
-   * Configure the `name` of the deployment
-   * Change `amiID` and `instanceType` for control plane and worker machines
-   * Specify the number of control plane and worker machines, etc
-
-2. Run `make dev-apply` to deploy and configure management cluster
-
-3. Wait a couple of minutes for management components to be up and running
-
-4. Run `make dev-aws-apply` to deploy managed cluster on AWS with default configuration
-
-5. Wait for infrastructure to be provisioned and the cluster to be deployed. You may watch the process with the
-`./bin/clusterctl describe` command. Example:
-
-```
-export KUBECONFIG=~/.kube/config
-
-./bin/clusterctl describe cluster <deployment-name> -n hmc-system --show-conditions all
+```yaml
+apiVersion: hmc.mirantis.com/v1alpha1
+kind: Management
+metadata:
+  name: hmc
+  namespace: hmc-system
+spec:
+  core:
+    capi:
+      template: cluster-api
+    hmc:
+      template: hmc
+  providers:
+  - template: k0smotron
+  - config:
+      credentialsSecretName: aws-credentials
+    template: cluster-api-provider-aws
 ```
 
-8. Retrieve the `kubeconfig` of your managed cluster:
+There are two options to override the default management configuration of HMC:
+
+1. Update the `Management` object after the HMC installation using `kubectl`:
+
+    `kubectl --kubeconfig <path-to-management-kubeconfig> -n hmc-system edit management`
+
+2. Deploy HMC skipping the default `Management` object creation and provide your own `Management`
+configuration:
+
+   * Create `management.yaml` file and configure core components and providers.
+   See [Management API](api/v1alpha1/management_types.go).
+
+   * Specify `--create-management=false` controllerManager argument and install HMC:
+
+    If installing using `helm` add the following parameter to the `helm install` command:
+
+    `--set="controllerManager.manager.args={--create-management=false}"`
+
+   * Create `hmc-system/hmc` `Management` object after HMC installation:
+
+    `kubectl --kubeconfig <path-to-management-kubeconfig> -n hmc-system create -f management.yaml`
+
+## Deploy a managed cluster
+
+To deploy a managed cluster:
+
+1. Select the `Template` you want to use for the deployment. To list all available templates, run:
+
+```bash
+export KUBECONFIG=<path-to-management-kubeconfig>
+
+kubectl get template -n hmc-system -o go-template='{{ range .items }}{{ if eq .status.type "deployment" }}{{ .metadata.name }}{{ printf "\n" }}{{ end }}{{ end }}'
+```
+
+2. Create the file with the `Deployment` configuration:
+
+> Substitute the parameters enclosed in angle brackets with the corresponding values.\
+> Enable the `dryRun` flag if required. For details, see [Dry run](#dry-run).
+
+```yaml
+apiVersion: hmc.mirantis.com/v1alpha1
+kind: Deployment
+metadata:
+  name: <cluster-name>
+  namespace: <cluster-namespace>
+spec:
+  template: <template-name>
+  dryRun: <true/false>
+  config:
+    <cluster-configuration>
+```
+
+3. Create the `Deployment` object:
+
+`kubectl create -f deployment.yaml`
+
+4. Check the status of the newly created `Deployment` object:
+
+`kubectl -n <deployment-namespace> get deployment.hmc <deployment-name> -o=yaml`
+
+5. Wait for infrastructure to be provisioned and the cluster to be deployed (the provisioning starts only when
+`spec.dryRun` is disabled):
+
+   `kubectl -n <deployment-namespace> get cluster <deployment-name> -o=yaml`
+
+> You may also watch the process with the `clusterctl describe` command (requires the `clusterctl` CLI to be installed):
+> ```
+> clusterctl describe cluster <deployment-name> -n <deployment-namespace> --show-conditions all
+> ```
+
+6. Retrieve the `kubeconfig` of your managed cluster:
 
 ```
-kubectl --kubeconfig ~/.kube/config get secret -n hmc-system <deployment-name>-kubeconfig -o=jsonpath={.data.value} | base64 -d > kubeconfig
+kubectl get secret -n hmc-system <deployment-name>-kubeconfig -o=jsonpath={.data.value} | base64 -d > kubeconfig
+```
+
+### Dry run
+
+HMC `Deployment` supports two modes: with and without (default) `dryRun`.
+
+If no configuration (`spec.config`) provided, the `Deployment` object will be populated with defaults
+(default configuration can be found in the corresponding `Template` status) and automatically marked as `dryRun`.
+
+Here is an example of the `Deployment` object with default configuration:
+
+```yaml
+apiVersion: hmc.mirantis.com/v1alpha1
+kind: Deployment
+metadata:
+  name: <cluster-name>
+  namespace: <cluster-namespace>
+spec:
+  config:
+    clusterNetwork:
+      pods:
+        cidrBlocks:
+        - 10.244.0.0/16
+      services:
+        cidrBlocks:
+        - 10.96.0.0/12
+    controlPlane:
+      additionalSecurityGroupIDs: []
+      amiID: ""
+      iamInstanceProfile: control-plane.cluster-api-provider-aws.sigs.k8s.io
+      instanceType: ""
+    controlPlaneNumber: 3
+    k0s:
+      version: v1.27.2+k0s.0
+    publicIP: false
+    region: ""
+    sshKeyName: ""
+    worker:
+      additionalSecurityGroupIDs: []
+      amiID: ""
+      iamInstanceProfile: nodes.cluster-api-provider-aws.sigs.k8s.io
+      instanceType: ""
+    workersNumber: 2
+  template: aws-standalone-cp
+  dryRun: true
+```
+
+After you adjust your configuration and ensure that it passes validation (`TemplateReady` condition
+from `status.conditions`), remove the `spec.dryRun` flag to proceed with the deployment.
+
+Here is an example of a `Deployment` object that passed the validation:
+
+```yaml
+apiVersion: hmc.mirantis.com/v1alpha1
+kind: Deployment
+metadata:
+  name: aws-standalone
+  namespace: aws
+spec:
+  template: aws-standalone-cp
+  config:
+    region: us-east-2
+    publicIP: true
+    controlPlaneNumber: 1
+    workersNumber: 1
+    controlPlane:
+      amiID: ami-02f3416038bdb17fb
+      instanceType: t3.small
+    worker:
+      amiID: ami-02f3416038bdb17fb
+      instanceType: t3.small
+  status:
+    conditions:
+    - lastTransitionTime: "2024-07-22T09:25:49Z"
+      message: Template is valid
+      reason: Succeeded
+      status: "True"
+      type: TemplateReady
+    - lastTransitionTime: "2024-07-22T09:25:49Z"
+      message: Helm chart is valid
+      reason: Succeeded
+      status: "True"
+      type: HelmChartReady
+    - lastTransitionTime: "2024-07-22T09:25:49Z"
+      message: Deployment is ready
+      reason: Succeeded
+      status: "True"
+      type: Ready
+    observedGeneration: 1
 ```
