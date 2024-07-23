@@ -126,6 +126,17 @@ func (r *DeploymentReconciler) Update(ctx context.Context, l logr.Logger, deploy
 		})
 		return ctrl.Result{}, err
 	}
+	templateType := template.Status.Type
+	if templateType != hmc.TemplateTypeDeployment {
+		errMsg := "only templates of 'deployment' type are supported"
+		apimeta.SetStatusCondition(deployment.GetConditions(), metav1.Condition{
+			Type:    hmc.TemplateReadyCondition,
+			Status:  metav1.ConditionFalse,
+			Reason:  hmc.FailedReason,
+			Message: errMsg,
+		})
+		return ctrl.Result{}, fmt.Errorf(errMsg)
+	}
 	if !template.Status.Valid {
 		errMsg := "provided template is not marked as valid"
 		apimeta.SetStatusCondition(deployment.GetConditions(), metav1.Condition{
