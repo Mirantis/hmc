@@ -21,6 +21,10 @@ spec:
         api:
           extraArgs:
             anonymous-auth: "true"
+        network:
+          provider: calico
+          calico:
+            mode: ipip
         extensions:
           helm:
             repositories:

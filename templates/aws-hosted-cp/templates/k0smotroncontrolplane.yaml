@@ -20,6 +20,10 @@ spec:
       name: {{ include "k0sconfig.name" . }}
       namespace: {{ .Release.Namespace }}
     spec:
+      network:
+        provider: calico
+        calico:
+          mode: ipip
       extensions:
         helm:
           repositories:
