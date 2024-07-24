@@ -288,7 +288,7 @@ dev-templates: templates-generate
 
 .PHONY: dev-management
 dev-management: yq
-	yq '.spec.core.hmc.config += (load("config/dev/hmc_values.yaml"))' config/dev/management.yaml | $(KUBECTL) -n $(NAMESPACE) apply -f -
+	$(YQ) '.spec.core.hmc.config += (load("config/dev/hmc_values.yaml"))' config/dev/management.yaml | $(KUBECTL) -n $(NAMESPACE) apply -f -
 
 .PHONY: dev-aws
 dev-aws: yq
