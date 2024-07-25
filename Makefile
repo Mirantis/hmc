@@ -106,7 +106,7 @@ tidy:
 	go mod tidy
 
 .PHONY: test
-test: generate-all fmt vet envtest tidy ## Run tests.
+test: generate-all fmt vet envtest tidy external-crd ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test $$(go list ./... | grep -v /e2e) -coverprofile cover.out
 
 # Utilize Kind or modify the e2e tests to load the image locally, enabling compatibility with other vendors.
@@ -318,6 +318,16 @@ LOCALBIN ?= $(shell pwd)/bin
 $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 
+EXTERNAL_CRD_DIR ?= $(LOCALBIN)/crd
+$(EXTERNAL_CRD_DIR): $(LOCALBIN)
+	mkdir -p $(EXTERNAL_CRD_DIR)
+
+FLUX_SOURCE_VERSION ?= $(shell go mod edit -json | jq -r '.Require[] | select(.Path == "github.com/fluxcd/source-controller/api") | .Version')
+FLUX_SOURCE_REPO_CRD ?= $(EXTERNAL_CRD_DIR)/source-helmrepositories-$(FLUX_SOURCE_VERSION).yaml
+FLUX_SOURCE_CHART_CRD ?= $(EXTERNAL_CRD_DIR)/source-helmchart-$(FLUX_SOURCE_VERSION).yaml
+FLUX_HELM_VERSION ?= $(shell go mod edit -json | jq -r '.Require[] | select(.Path == "github.com/fluxcd/helm-controller/api") | .Version')
+FLUX_HELM_CRD ?= $(EXTERNAL_CRD_DIR)/helm-$(FLUX_HELM_VERSION).yaml
+
 ## Tool Binaries
 KUBECTL ?= kubectl
 KUSTOMIZE ?= $(LOCALBIN)/kustomize-$(KUSTOMIZE_VERSION)
@@ -376,6 +386,21 @@ $(HELM): | $(LOCALBIN)
 helmify: $(HELMIFY) ## Download helmify locally if necessary.
 $(HELMIFY): | $(LOCALBIN)
 	$(call go-install-tool,$(HELMIFY),github.com/arttor/helmify/cmd/helmify,${HELMIFY_VERSION})
+
+$(FLUX_HELM_CRD): $(EXTERNAL_CRD_DIR)
+	rm -f $(FLUX_HELM_CRD)
+	curl -s https://raw.githubusercontent.com/fluxcd/helm-controller/$(FLUX_HELM_VERSION)/config/crd/bases/helm.toolkit.fluxcd.io_helmreleases.yaml > $(FLUX_HELM_CRD)
+
+$(FLUX_SOURCE_CHART_CRD): $(EXTERNAL_CRD_DIR)
+	rm -f $(FLUX_SOURCE_CHART_CRD)
+	curl -s https://raw.githubusercontent.com/fluxcd/source-controller/$(FLUX_SOURCE_VERSION)/config/crd/bases/source.toolkit.fluxcd.io_helmcharts.yaml > $(FLUX_SOURCE_CHART_CRD)
+
+$(FLUX_SOURCE_REPO_CRD): $(EXTERNAL_CRD_DIR)
+	rm -f $(FLUX_SOURCE_REPO_CRD)
+	curl -s https://raw.githubusercontent.com/fluxcd/source-controller/$(FLUX_SOURCE_VERSION)/config/crd/bases/source.toolkit.fluxcd.io_helmrepositories.yaml > $(FLUX_SOURCE_REPO_CRD)
+
+.PHONY: external-crd
+external-crd: $(FLUX_HELM_CRD) $(FLUX_SOURCE_CHART_CRD) $(FLUX_SOURCE_REPO_CRD)
 
 .PHONY: kind
 kind: $(KIND) ## Download kind locally if necessary.

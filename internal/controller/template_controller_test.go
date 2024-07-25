@@ -18,8 +18,10 @@ import (
 	"context"
 
 	v2 "github.com/fluxcd/helm-controller/api/v2"
+	sourcev1 "github.com/fluxcd/source-controller/api/v1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"helm.sh/helm/v3/pkg/chart"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -31,6 +33,20 @@ import (
 var _ = Describe("Template Controller", func() {
 	Context("When reconciling a resource", func() {
 		const resourceName = "test-resource"
+		const helmRepoNamespace = "default"
+		const helmRepoName = "test-helmrepo"
+		const helmChartName = "test-helmchart"
+		const helmChartURL = "http://source-controller.hmc-system.svc.cluster.local./helmchart/hmc-system/test-chart/0.1.0.tar.gz"
+
+		var fakeDownloadHelmChartFunc = func(context.Context, *sourcev1.Artifact) (*chart.Chart, error) {
+			return &chart.Chart{
+				Metadata: &chart.Metadata{
+					APIVersion: "v2",
+					Version:    "0.1.0",
+					Name:       "test-chart",
+				},
+			}, nil
+		}
 
 		ctx := context.Background()
 
@@ -39,10 +55,53 @@ var _ = Describe("Template Controller", func() {
 			Namespace: "default", // TODO(user):Modify as needed
 		}
 		template := &hmcmirantiscomv1alpha1.Template{}
+		helmRepo := &sourcev1.HelmRepository{}
+		helmChart := &sourcev1.HelmChart{}
 
 		BeforeEach(func() {
+			By("creating helm repository")
+			err := k8sClient.Get(ctx, types.NamespacedName{Name: helmRepoName, Namespace: helmRepoNamespace}, helmRepo)
+			if err != nil && errors.IsNotFound(err) {
+				helmRepo = &sourcev1.HelmRepository{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      helmRepoName,
+						Namespace: helmRepoNamespace,
+					},
+					Spec: sourcev1.HelmRepositorySpec{
+						URL: "oci://test/helmrepo",
+					},
+				}
+				Expect(k8sClient.Create(ctx, helmRepo)).To(Succeed())
+			}
+
+			By("creating helm chart")
+			err = k8sClient.Get(ctx, types.NamespacedName{Name: helmChartName, Namespace: helmRepoNamespace}, helmChart)
+			if err != nil && errors.IsNotFound(err) {
+				helmChart = &sourcev1.HelmChart{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      helmChartName,
+						Namespace: helmRepoNamespace,
+					},
+					Spec: sourcev1.HelmChartSpec{
+						SourceRef: sourcev1.LocalHelmChartSourceReference{
+							Kind: sourcev1.HelmRepositoryKind,
+							Name: helmRepoName,
+						},
+					},
+				}
+				Expect(k8sClient.Create(ctx, helmChart)).To(Succeed())
+			}
+
+			By("updating HelmChart status with artifact URL")
+			helmChart.Status.URL = helmChartURL
+			helmChart.Status.Artifact = &sourcev1.Artifact{
+				URL:            helmChartURL,
+				LastUpdateTime: metav1.Now(),
+			}
+			Expect(k8sClient.Status().Update(ctx, helmChart)).Should(Succeed())
+
 			By("creating the custom resource for the Kind Template")
-			err := k8sClient.Get(ctx, typeNamespacedName, template)
+			err = k8sClient.Get(ctx, typeNamespacedName, template)
 			if err != nil && errors.IsNotFound(err) {
 				resource := &hmcmirantiscomv1alpha1.Template{
 					ObjectMeta: metav1.ObjectMeta{
@@ -53,10 +112,11 @@ var _ = Describe("Template Controller", func() {
 						Helm: hmcmirantiscomv1alpha1.HelmSpec{
 							ChartRef: &v2.CrossNamespaceSourceReference{
 								Kind:      "HelmChart",
-								Name:      "ref-test",
-								Namespace: "default",
+								Name:      helmChartName,
+								Namespace: helmRepoNamespace,
 							},
 						},
+						Type: hmcmirantiscomv1alpha1.TemplateTypeDeployment,
 					},
 					// TODO(user): Specify other spec details if needed.
 				}
@@ -76,8 +136,9 @@ var _ = Describe("Template Controller", func() {
 		It("should successfully reconcile the resource", func() {
 			By("Reconciling the created resource")
 			controllerReconciler := &TemplateReconciler{
-				Client: k8sClient,
-				Scheme: k8sClient.Scheme(),
+				Client:                k8sClient,
+				Scheme:                k8sClient.Scheme(),
+				downloadHelmChartFunc: fakeDownloadHelmChartFunc,
 			}
 
 			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{

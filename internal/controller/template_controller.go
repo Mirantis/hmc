@@ -21,6 +21,7 @@ import (
 	"strings"
 	"time"
 
+	helmcontrollerv2 "github.com/fluxcd/helm-controller/api/v2"
 	v2 "github.com/fluxcd/helm-controller/api/v2"
 	sourcev1 "github.com/fluxcd/source-controller/api/v1"
 	"helm.sh/helm/v3/pkg/chart"
@@ -28,6 +29,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -51,7 +53,8 @@ var (
 // TemplateReconciler reconciles a Template object
 type TemplateReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	Scheme                *runtime.Scheme
+	downloadHelmChartFunc func(context.Context, *sourcev1.Artifact) (*chart.Chart, error)
 }
 
 // +kubebuilder:rbac:groups=hmc.mirantis.com,resources=templates,verbs=get;list;watch;create;update;patch;delete
@@ -72,19 +75,35 @@ func (r *TemplateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		l.Error(err, "Failed to get Template")
 		return ctrl.Result{}, err
 	}
-	l.Info("Reconciling helm-controller objects ")
-	hcChart, err := r.reconcileHelmChart(ctx, template)
-	if err != nil {
-		l.Error(err, "Failed to reconcile HelmChart")
-		return ctrl.Result{}, err
+
+	var hcChart *sourcev1.HelmChart
+	var err error
+	if template.Spec.Helm.ChartRef != nil {
+		hcChart, err = r.getHelmChartFromChartRef(ctx, template.Spec.Helm.ChartRef)
+		if err != nil {
+			l.Error(err, "failed to get artifact from chartRef", "kind", template.Spec.Helm.ChartRef.Kind, "namespace", template.Spec.Helm.ChartRef.Namespace, "name", template.Spec.Helm.ChartRef.Name)
+			return ctrl.Result{}, err
+		}
+	} else {
+		if template.Spec.Helm.ChartName == "" {
+			err = fmt.Errorf("neither chartName nor chartRef is set")
+			l.Error(err, "invalid helm chart reference")
+			return ctrl.Result{}, err
+		}
+		l.Info("Reconciling helm-controller objects ")
+		hcChart, err = r.reconcileHelmChart(ctx, template)
+		if err != nil {
+			l.Error(err, "Failed to reconcile HelmChart")
+			return ctrl.Result{}, err
+		}
 	}
 	if hcChart == nil {
-		// TODO: add externally referenced source verification
+		err := fmt.Errorf("HelmChart is nil")
+		l.Error(err, "could not get the helm chart")
 		return ctrl.Result{}, err
 	}
-
 	template.Status.ChartRef = &v2.CrossNamespaceSourceReference{
-		Kind:      hcChart.Kind,
+		Kind:      sourcev1.HelmChartKind,
 		Name:      hcChart.Name,
 		Namespace: hcChart.Namespace,
 	}
@@ -96,8 +115,14 @@ func (r *TemplateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, err
 	}
 
+	artifact := hcChart.Status.Artifact
+
+	if r.downloadHelmChartFunc == nil {
+		r.downloadHelmChartFunc = helm.DownloadChartFromArtifact
+	}
+
 	l.Info("Downloading Helm chart")
-	helmChart, err := helm.DownloadChartFromArtifact(ctx, hcChart.Status.Artifact)
+	helmChart, err := r.downloadHelmChartFunc(ctx, artifact)
 	if err != nil {
 		l.Error(err, "Failed to download Helm chart")
 		err = fmt.Errorf("failed to download chart: %s", err)
@@ -134,13 +159,17 @@ func (r *TemplateReconciler) parseChartMetadata(template *hmc.Template, chart *c
 	if chart.Metadata == nil {
 		return fmt.Errorf("chart metadata is empty")
 	}
-	templateType := chart.Metadata.Annotations[hmc.ChartAnnotationType]
-	switch hmc.TemplateType(templateType) {
-	case hmc.TemplateTypeDeployment, hmc.TemplateTypeProvider, hmc.TemplateTypeCore:
-	default:
-		return errNoProviderType
+	// the value in spec has higher priority
+	templateType := template.Spec.Type
+	if templateType == "" {
+		templateType = hmc.TemplateType(chart.Metadata.Annotations[hmc.ChartAnnotationType])
+		switch templateType {
+		case hmc.TemplateTypeDeployment, hmc.TemplateTypeProvider, hmc.TemplateTypeCore:
+		default:
+			return errNoProviderType
+		}
 	}
-	template.Status.Type = hmc.TemplateType(templateType)
+	template.Status.Type = templateType
 
 	// the value in spec has higher priority
 	if len(template.Spec.Providers.InfrastructureProviders) > 0 {
@@ -216,6 +245,21 @@ func (r *TemplateReconciler) reconcileHelmChart(ctx context.Context, template *h
 		}
 		return nil
 	})
+	if err != nil {
+		return nil, err
+	}
+	return helmChart, nil
+}
+
+func (r *TemplateReconciler) getHelmChartFromChartRef(ctx context.Context, chartRef *helmcontrollerv2.CrossNamespaceSourceReference) (*sourcev1.HelmChart, error) {
+	if chartRef.Kind != sourcev1.HelmChartKind {
+		return nil, fmt.Errorf("invalid chartRef.Kind: %s. Only HelmChart kind is supported", chartRef.Kind)
+	}
+	helmChart := &sourcev1.HelmChart{}
+	err := r.Get(ctx, types.NamespacedName{
+		Namespace: chartRef.Namespace,
+		Name:      chartRef.Name,
+	}, helmChart)
 	if err != nil {
 		return nil, err
 	}
