@@ -100,6 +100,8 @@ export KUBECONFIG=<path-to-management-kubeconfig>
 kubectl get template -n hmc-system -o go-template='{{ range .items }}{{ if eq .status.type "deployment" }}{{ .metadata.name }}{{ printf "\n" }}{{ end }}{{ end }}'
 ```
 
+For details about the `Template system` in HMC, see [Templates system](docs/templates/main.md#templates-system).
+
 2. Create the file with the `Deployment` configuration:
 
 > Substitute the parameters enclosed in angle brackets with the corresponding values.\
