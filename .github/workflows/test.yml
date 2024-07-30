@@ -12,7 +12,6 @@ on:
     tags:
       - "*"
     paths-ignore:
-      - 'config/**'
       - '**.md'
   pull_request:
     branches:
