@@ -30,4 +30,4 @@ worker:
 
 # K0s parameters
 k0s:
-  version: v1.27.2+k0s.0
+  version: v1.30.2+k0s.0
