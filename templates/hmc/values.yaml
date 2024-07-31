@@ -41,6 +41,8 @@ cert-manager:
       namespace: hmc-system
 flux2:
   enabled: true
+  policies:
+    create: false
   imageAutomationController:
     create: false
   imageReflectionController:
