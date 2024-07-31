@@ -29,6 +29,8 @@ spec:
           repositories:
           - name: aws-cloud-controller-manager
             url: https://kubernetes.github.io/cloud-provider-aws
+          - name: aws-ebs-csi-driver
+            url: https://kubernetes-sigs.github.io/aws-ebs-csi-driver
           charts:
           - name: aws-cloud-controller-manager
             namespace: kube-system
@@ -44,3 +46,12 @@ spec:
               # Removing the default `node-role.kubernetes.io/control-plane` node selector
               # TODO: it does not work
               # nodeSelector: ""
+          - name: aws-ebs-csi-driver
+            namespace: kube-system
+            chartname: aws-ebs-csi-driver/aws-ebs-csi-driver
+            version: 2.33.0
+            values: |
+              defaultStorageClass:
+                enabled: true
+              node:
+                kubeletPath: /var/lib/k0s/kubelet
