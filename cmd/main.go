@@ -36,6 +36,7 @@ import (
 
 	hmcmirantiscomv1alpha1 "github.com/Mirantis/hmc/api/v1alpha1"
 	"github.com/Mirantis/hmc/internal/controller"
+	hmcwebhook "github.com/Mirantis/hmc/internal/webhook"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -65,6 +66,9 @@ func main() {
 	var createManagement bool
 	var createTemplates bool
 	var hmcTemplatesChartName string
+	var enableWebhook bool
+	var webhookPort int
+	var webhookCertDir string
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
@@ -84,6 +88,10 @@ func main() {
 	flag.BoolVar(&createTemplates, "create-templates", true, "Create HMC Templates.")
 	flag.StringVar(&hmcTemplatesChartName, "hmc-templates-chart-name", "hmc-templates",
 		"The name of the helm chart with HMC Templates.")
+	flag.BoolVar(&enableWebhook, "enable-webhook", true, "Enable admission webhook.")
+	flag.IntVar(&webhookPort, "webhook-port", 9443, "Admission webhook port.")
+	flag.StringVar(&webhookCertDir, "webhook-cert-dir", "/tmp/k8s-webhook-server/serving-certs/",
+		"Webhook cert dir, only used when webhook-port is specified.")
 	opts := zap.Options{
 		Development: true,
 	}
@@ -108,18 +116,13 @@ func main() {
 		tlsOpts = append(tlsOpts, disableHTTP2)
 	}
 
-	webhookServer := webhook.NewServer(webhook.Options{
-		TLSOpts: tlsOpts,
-	})
-
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+	managerOpts := ctrl.Options{
 		Scheme: scheme,
 		Metrics: metricsserver.Options{
 			BindAddress:   metricsAddr,
 			SecureServing: secureMetrics,
 			TLSOpts:       tlsOpts,
 		},
-		WebhookServer:          webhookServer,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "31c555b4.hmc.mirantis.com",
@@ -134,7 +137,17 @@ func main() {
 		// if you are doing or is intended to do any operation such as perform cleanups
 		// after the manager stops then its usage might be unsafe.
 		// LeaderElectionReleaseOnCancel: true,
-	})
+	}
+
+	if enableWebhook {
+		managerOpts.WebhookServer = webhook.NewServer(webhook.Options{
+			Port:    webhookPort,
+			TLSOpts: tlsOpts,
+			CertDir: webhookCertDir,
+		})
+	}
+
+	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), managerOpts)
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
@@ -192,6 +205,21 @@ func main() {
 	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up ready check")
 		os.Exit(1)
+	}
+
+	if enableWebhook {
+		if err := (&hmcwebhook.DeploymentValidator{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Deployment")
+			os.Exit(1)
+		}
+		if err := (&hmcwebhook.ManagementValidator{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Management")
+			os.Exit(1)
+		}
+		if err := (&hmcwebhook.TemplateValidator{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Template")
+			os.Exit(1)
+		}
 	}
 
 	setupLog.Info("starting manager")

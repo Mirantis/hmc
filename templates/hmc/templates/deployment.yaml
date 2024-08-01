@@ -20,7 +20,10 @@ spec:
         kubectl.kubernetes.io/default-container: manager
     spec:
       containers:
-      - args: {{- toYaml .Values.controllerManager.manager.args | nindent 8 }}
+      - args: {{ toYaml .Values.controllerManager.manager.args | nindent 8 }}
+        - --enable-webhook={{ .Values.admissionWebhook.enabled }}
+        - --webhook-port={{ .Values.admissionWebhook.port }}
+        - --webhook-cert-dir={{ .Values.admissionWebhook.certDir }}
         command:
         - /manager
         env:
@@ -29,6 +32,12 @@ spec:
         image: {{ .Values.controllerManager.manager.image.repository }}:{{ .Values.controllerManager.manager.image.tag
           | default .Chart.AppVersion }}
         imagePullPolicy: {{ .Values.controllerManager.manager.imagePullPolicy }}
+        {{- if .Values.admissionWebhook.enabled }}
+        ports:
+        - containerPort: {{ .Values.admissionWebhook.port }}
+          name: {{ include "hmc.webhook.portName" . }}
+          protocol: TCP
+        {{- end }}
         livenessProbe:
           httpGet:
             path: /healthz
@@ -46,7 +55,20 @@ spec:
           }}
         securityContext: {{- toYaml .Values.controllerManager.manager.containerSecurityContext
           | nindent 10 }}
+        {{- if .Values.admissionWebhook.enabled }}
+        volumeMounts:
+        - mountPath: {{ .Values.admissionWebhook.certDir }}
+          name: cert
+          readOnly: true
+        {{- end }}
       securityContext:
         runAsNonRoot: true
       serviceAccountName: {{ include "hmc.fullname" . }}-controller-manager
       terminationGracePeriodSeconds: 10
+      {{- if .Values.admissionWebhook.enabled }}
+      volumes:
+      - name: cert
+        secret:
+          defaultMode: 420
+          secretName: {{ include "hmc.webhook.certName" . }}
+      {{- end }}

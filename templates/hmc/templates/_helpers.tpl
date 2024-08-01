@@ -49,3 +49,46 @@ Selector labels
 app.kubernetes.io/name: {{ include "hmc.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
+
+{{/*
+The name of the webhook service
+*/}}
+{{- define "hmc.webhook.serviceName" -}}
+{{ include "hmc.fullname" . }}-webhook-service
+{{- end }}
+
+{{/*
+The namespace of the webhook service
+*/}}
+{{- define "hmc.webhook.serviceNamespace" -}}
+{{ .Release.Namespace }}
+{{- end }}
+
+{{/*
+The name of the webhook certificate
+*/}}
+{{- define "hmc.webhook.certName" -}}
+{{ include "hmc.fullname" . }}-webhook-serving-cert
+{{- end }}
+
+{{/*
+The namespace of the webhook certificate
+*/}}
+{{- define "hmc.webhook.certNamespace" -}}
+{{ .Release.Namespace }}
+{{- end }}
+
+{{/*
+The name of the secret with webhook certificate
+*/}}
+{{- define "hmc.webhook.certSecretName" -}}
+{{ include "hmc.fullname" . }}-webhook-serving-cert
+{{- end }}
+
+
+{{/*
+The name of the webhook port. Must be no more than 15 characters
+*/}}
+{{- define "hmc.webhook.portName" -}}
+hmc-webhook
+{{- end }}

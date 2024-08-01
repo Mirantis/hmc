@@ -1,6 +1,11 @@
 nameOverride: ""
 fullnameOverride: ""
 
+admissionWebhook:
+  enabled: false
+  port: 9443
+  certDir: "/tmp/k8s-webhook-server/serving-certs/"
+
 controllerManager:
   manager:
     args:

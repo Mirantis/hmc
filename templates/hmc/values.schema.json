@@ -85,6 +85,22 @@
         }
       }
     },
+    "admissionWebhook": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "port": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 49151
+        },
+        "certDir": {
+          "type": "string"
+        }
+      }
+    },
     "controllerManager": {
       "type": "object",
       "properties": {
