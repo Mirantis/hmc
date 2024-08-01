@@ -40,10 +40,6 @@ type ManagementReconciler struct {
 	Config *rest.Config
 }
 
-//+kubebuilder:rbac:groups=hmc.mirantis.com,resources=managements,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=hmc.mirantis.com,resources=managements/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=hmc.mirantis.com,resources=managements/finalizers,verbs=update
-
 func (r *ManagementReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	l := log.FromContext(ctx).WithValues("ManagementController", req.NamespacedName)
 	l.Info("Reconciling Management")
