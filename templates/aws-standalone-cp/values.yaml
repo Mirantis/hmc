@@ -20,13 +20,11 @@ controlPlane:
   amiID: ""
   iamInstanceProfile: control-plane.cluster-api-provider-aws.sigs.k8s.io
   instanceType: ""
-  additionalSecurityGroupIDs: []
 
 worker:
   amiID: ""
   iamInstanceProfile: nodes.cluster-api-provider-aws.sigs.k8s.io
   instanceType: ""
-  additionalSecurityGroupIDs: []
 
 # K0s parameters
 k0s:

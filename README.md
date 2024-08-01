@@ -169,7 +169,6 @@ spec:
         cidrBlocks:
         - 10.96.0.0/12
     controlPlane:
-      additionalSecurityGroupIDs: []
       amiID: ""
       iamInstanceProfile: control-plane.cluster-api-provider-aws.sigs.k8s.io
       instanceType: ""
@@ -180,7 +179,6 @@ spec:
     region: ""
     sshKeyName: ""
     worker:
-      additionalSecurityGroupIDs: []
       amiID: ""
       iamInstanceProfile: nodes.cluster-api-provider-aws.sigs.k8s.io
       instanceType: ""
