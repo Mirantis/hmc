@@ -11,7 +11,7 @@ controllerManager:
         drop:
           - ALL
     image:
-      repository: hmc/controller
+      repository: ghcr.io/mirantis/hmc/controller
       tag: latest
     imagePullPolicy: IfNotPresent
     resources:
@@ -39,6 +39,7 @@ cert-manager:
   global:
     leaderElection:
       namespace: hmc-system
+
 flux2:
   enabled: true
   policies:

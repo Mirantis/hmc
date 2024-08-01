@@ -51,30 +51,21 @@ help: ## Display this help.
 ##@ Development
 
 .PHONY: manifests
-manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+manifests: controller-gen ## Generate CustomResourceDefinition objects.
+	$(CONTROLLER_GEN) crd paths="./..." output:crd:artifacts:config=templates/hmc/templates/crds
 
 .PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
-.PHONY: hmc-chart-generate
-hmc-chart-generate: kustomize helmify yq ## Generate hmc helm chart
-	rm -rf templates/hmc/values.yaml templates/hmc/templates/*.yaml
-	$(KUSTOMIZE) build config/default | $(HELMIFY) templates/hmc
-	$(YQ) eval -iN '' templates/hmc/values.yaml config/default/hmc_values.yaml
-
 .PHONY: set-hmc-version
-set-hmc-version:
+set-hmc-version: yq
 	$(YQ) eval '.version = "$(VERSION)"' -i templates/hmc/Chart.yaml
 	$(YQ) eval '.version = "$(VERSION)"' -i templates/hmc-templates/Chart.yaml
+	$(YQ) eval '.controllerManager.manager.image.tag = "$(VERSION)"' -i templates/hmc/values.yaml
 
 .PHONY: hmc-chart-release
-hmc-chart-release: kustomize helmify yq set-hmc-version templates-generate ## Generate hmc helm chart
-	rm -rf templates/hmc/values.yaml templates/hmc/templates/*.yaml
-	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
-	$(KUSTOMIZE) build config/default | $(HELMIFY) templates/hmc
-	$(YQ) eval -iN '' templates/hmc/values.yaml config/default/hmc_values.yaml
+hmc-chart-release: set-hmc-version templates-generate ## Generate hmc helm chart
 
 .PHONY: hmc-dist-release
 hmc-dist-release: $(HELM) $(YQ)
@@ -91,7 +82,7 @@ templates-generate:
 	@hack/templates.sh
 
 .PHONY: generate-all
-generate-all: generate manifests hmc-chart-generate templates-generate add-license
+generate-all: generate manifests templates-generate add-license
 
 .PHONY: fmt
 fmt: ## Run go fmt against code.
@@ -190,12 +181,6 @@ docker-buildx: ## Build and push docker image for the manager for cross-platform
 	- $(CONTAINER_TOOL) buildx rm project-v3-builder
 	rm Dockerfile.cross
 
-.PHONY: build-installer
-build-installer: generate-all kustomize ## Generate a consolidated YAML with CRDs and deployment.
-	mkdir -p dist
-	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
-	$(KUSTOMIZE) build config/default > dist/install.yaml
-
 ##@ Deployment
 
 KIND_CLUSTER_NAME ?= hmc-dev
@@ -244,23 +229,14 @@ hmc-deploy: helm
 	$(HELM) dependency update templates/hmc
 	$(HELM) upgrade --values $(HMC_VALUES) --install --create-namespace hmc templates/hmc -n $(NAMESPACE)
 
-.PHONY: deploy
-deploy: generate-all kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
-	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
-	$(KUSTOMIZE) build config/default | $(KUBECTL) apply -f -
-
-.PHONY: undeploy
-undeploy: kustomize ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
-	$(KUSTOMIZE) build config/default | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
-
 .PHONY: dev-deploy
-dev-deploy: hmc-chart-generate ## Deploy HMC helm chart to the K8s cluster specified in ~/.kube/config.
+dev-deploy: ## Deploy HMC helm chart to the K8s cluster specified in ~/.kube/config.
 	make hmc-deploy HMC_VALUES=config/dev/hmc_values.yaml
 	$(KUBECTL) rollout restart -n $(NAMESPACE) deployment/hmc-controller-manager
 
 .PHONY: dev-undeploy
-dev-undeploy: kustomize ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
-	$(KUSTOMIZE) build config/dev | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
+dev-undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config.
+	$(HELM) delete -n $(NAMESPACE) hmc
 
 .PHONY: helm-push
 helm-push: helm-package
@@ -330,12 +306,10 @@ FLUX_HELM_CRD ?= $(EXTERNAL_CRD_DIR)/helm-$(FLUX_HELM_VERSION).yaml
 
 ## Tool Binaries
 KUBECTL ?= kubectl
-KUSTOMIZE ?= $(LOCALBIN)/kustomize-$(KUSTOMIZE_VERSION)
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen-$(CONTROLLER_TOOLS_VERSION)
 ENVTEST ?= $(LOCALBIN)/setup-envtest-$(ENVTEST_VERSION)
 GOLANGCI_LINT = $(LOCALBIN)/golangci-lint-$(GOLANGCI_LINT_VERSION)
 HELM ?= $(LOCALBIN)/helm-$(HELM_VERSION)
-HELMIFY ?= $(LOCALBIN)/helmify-$(HELMIFY_VERSION)
 KIND ?= $(LOCALBIN)/kind-$(KIND_VERSION)
 YQ ?= $(LOCALBIN)/yq-$(YQ_VERSION)
 CLUSTERAWSADM ?= $(LOCALBIN)/clusterawsadm
@@ -343,22 +317,15 @@ CLUSTERCTL ?= $(LOCALBIN)/clusterctl
 ADDLICENSE ?= $(LOCALBIN)/addlicense-$(ADDLICENSE_VERSION)
 
 ## Tool Versions
-KUSTOMIZE_VERSION ?= v5.3.0
 CONTROLLER_TOOLS_VERSION ?= v0.14.0
 ENVTEST_VERSION ?= release-0.17
 GOLANGCI_LINT_VERSION ?= v1.57.2
 HELM_VERSION ?= v3.15.1
-HELMIFY_VERSION ?= v0.4.13
 KIND_VERSION ?= v0.23.0
 YQ_VERSION ?= v4.44.2
 CLUSTERAWSADM_VERSION ?= v2.5.2
 CLUSTERCTL_VERSION ?= v1.7.3
 ADDLICENSE_VERSION ?= v1.1.1
-
-.PHONY: kustomize
-kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary.
-$(KUSTOMIZE): | $(LOCALBIN)
-	$(call go-install-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v5,$(KUSTOMIZE_VERSION))
 
 .PHONY: controller-gen
 controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary.
@@ -381,11 +348,6 @@ HELM_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/helm/helm/master/scrip
 $(HELM): | $(LOCALBIN)
 	rm -f $(LOCALBIN)/helm-*
 	curl -s $(HELM_INSTALL_SCRIPT) | USE_SUDO=false HELM_INSTALL_DIR=$(LOCALBIN) DESIRED_VERSION=$(HELM_VERSION) BINARY_NAME=helm-$(HELM_VERSION) PATH="$(LOCALBIN):$(PATH)" bash
-
-.PHONY: helmify
-helmify: $(HELMIFY) ## Download helmify locally if necessary.
-$(HELMIFY): | $(LOCALBIN)
-	$(call go-install-tool,$(HELMIFY),github.com/arttor/helmify/cmd/helmify,${HELMIFY_VERSION})
 
 $(FLUX_HELM_CRD): $(EXTERNAL_CRD_DIR)
 	rm -f $(FLUX_HELM_CRD)

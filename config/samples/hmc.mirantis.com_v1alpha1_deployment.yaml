@@ -1,9 +1,0 @@
-apiVersion: hmc.mirantis.com/v1alpha1
-kind: Deployment
-metadata:
-  labels:
-    app.kubernetes.io/name: hmc
-    app.kubernetes.io/managed-by: kustomize
-  name: deployment-sample
-spec:
-  template: aws-standalone-cp
