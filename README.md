@@ -102,6 +102,8 @@ kubectl get template -n hmc-system -o go-template='{{ range .items }}{{ if eq .s
 
 For details about the `Template system` in HMC, see [Templates system](docs/templates/main.md#templates-system).
 
+If you want to deploy hostded control plate template, make sure to check additional notes on [Hosted control plane](docs/aws/hosted-control-plane.md).
+
 2. Create the file with the `Deployment` configuration:
 
 > Substitute the parameters enclosed in angle brackets with the corresponding values.\
