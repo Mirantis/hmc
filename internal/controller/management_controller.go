@@ -16,6 +16,7 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -30,6 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
+	certmanager "github.com/Mirantis/hmc/internal/certmanager"
 	"github.com/Mirantis/hmc/internal/helm"
 )
 
@@ -70,6 +72,12 @@ func (r *ManagementReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	var errs error
 	detectedProviders := hmc.Providers{}
 	detectedComponents := make(map[string]hmc.ComponentStatus)
+
+	err := r.enableAdmissionWebhook(ctx, management)
+	if err != nil {
+		l.Error(err, "failed to enable admission webhook")
+		return ctrl.Result{}, err
+	}
 
 	components := wrappedComponents(management)
 	for _, component := range components {
@@ -131,6 +139,36 @@ func wrappedComponents(mgmt *hmc.Management) (components []component) {
 		components = append(components, component{Component: mgmt.Spec.Providers[provider], dependsOn: []meta.NamespacedObjectReference{{Name: mgmt.Spec.Core.CAPI.Template}}})
 	}
 	return
+}
+
+func (r *ManagementReconciler) enableAdmissionWebhook(ctx context.Context, mgmt *hmc.Management) error {
+	l := log.FromContext(ctx)
+
+	mgmtComponent := mgmt.Spec.Core.HMC
+	config := map[string]interface{}{}
+	err := json.Unmarshal(mgmtComponent.Config.Raw, &config)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal HMC config into map[string]interface{}: %v", err)
+	}
+	admissionWebhookValues := make(map[string]interface{})
+	if config["admissionWebhook"] != nil {
+		admissionWebhookValues = config["admissionWebhook"].(map[string]interface{})
+	}
+
+	err = certmanager.VerifyAPI(ctx, r.Config, r.Scheme, hmc.ManagementNamespace)
+	if err != nil {
+		return fmt.Errorf("failed to check in the cert-manager API is installed: %v", err)
+	}
+	l.Info("Cert manager is installed, enabling the HMC admission webhook")
+
+	admissionWebhookValues["enabled"] = true
+	config["admissionWebhook"] = admissionWebhookValues
+	updatedConfig, err := json.Marshal(config)
+	if err != nil {
+		return fmt.Errorf("failed to marshal HMC config: %v", err)
+	}
+	mgmtComponent.Config.Raw = updatedConfig
+	return nil
 }
 
 func applyDefaultCoreConfiguration(mgmt *hmc.Management) (changed bool) {
