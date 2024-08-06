@@ -2,7 +2,7 @@ manager:
   image:
     repository: registry.k8s.io/cluster-api-aws
     name: cluster-api-aws-controller
-    tag: v2.5.0
+    tag: v2.6.1
   imagePullPolicy: IfNotPresent
 
 credentialsSecretName: ""
