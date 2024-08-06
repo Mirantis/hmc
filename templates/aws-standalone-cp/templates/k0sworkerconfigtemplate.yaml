@@ -8,4 +8,4 @@ spec:
       version: {{ .Values.k0s.version }}
       args:
       - --enable-cloud-provider
-      - --kubelet-extra-args="--cloud-provider=external --hostname-override=$(hostname --fqdn)"
+      - --kubelet-extra-args="--cloud-provider=external"
