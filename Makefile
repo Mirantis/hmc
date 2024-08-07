@@ -9,6 +9,9 @@ os = $(shell uname|tr DL dl)
 OS := $(strip ${os})
 
 ARCH := $(shell uname -m)
+ifeq ($(ARCH),x86_64)
+	ARCH := amd64
+endif
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
