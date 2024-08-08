@@ -142,16 +142,17 @@ rules:
   - create
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
+kind: Role
 metadata:
-  name: {{ include "hmc.fullname" . }}-manager-rolebinding
+  name: {{ include "hmc.fullname" . }}-manager-secrets-reader-role
+  namespace: {{ .Release.Namespace }}
   labels:
   {{- include "hmc.labels" . | nindent 4 }}
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: '{{ include "hmc.fullname" . }}-manager-role'
-subjects:
-- kind: ServiceAccount
-  name: '{{ include "hmc.fullname" . }}-controller-manager'
-  namespace: '{{ .Release.Namespace }}'
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list

@@ -144,9 +144,9 @@ func wrappedComponents(mgmt *hmc.Management) (components []component) {
 func (r *ManagementReconciler) enableAdmissionWebhook(ctx context.Context, mgmt *hmc.Management) error {
 	l := log.FromContext(ctx)
 
-	mgmtComponent := mgmt.Spec.Core.HMC
+	hmcComponent := mgmt.Spec.Core.HMC
 	config := map[string]interface{}{}
-	err := json.Unmarshal(mgmtComponent.Config.Raw, &config)
+	err := json.Unmarshal(hmcComponent.Config.Raw, &config)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal HMC config into map[string]interface{}: %v", err)
 	}
@@ -167,7 +167,7 @@ func (r *ManagementReconciler) enableAdmissionWebhook(ctx context.Context, mgmt 
 	if err != nil {
 		return fmt.Errorf("failed to marshal HMC config: %v", err)
 	}
-	mgmtComponent.Config.Raw = updatedConfig
+	hmcComponent.Config.Raw = updatedConfig
 	return nil
 }
 
@@ -176,15 +176,7 @@ func applyDefaultCoreConfiguration(mgmt *hmc.Management) (changed bool) {
 		// Only apply defaults when there's no configuration provided
 		return false
 	}
-	mgmt.Spec.Core = &hmc.Core{
-		HMC: hmc.Component{
-			Template: hmc.DefaultCoreHMCTemplate,
-		},
-		CAPI: hmc.Component{
-			Template: hmc.DefaultCoreCAPITemplate,
-		},
-	}
-
+	mgmt.Spec.Core = &hmc.DefaultCoreConfiguration
 	return true
 }
 

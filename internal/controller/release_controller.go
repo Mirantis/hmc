@@ -16,6 +16,7 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -25,8 +26,13 @@ import (
 	hcv2 "github.com/fluxcd/helm-controller/api/v2"
 	"github.com/fluxcd/pkg/apis/meta"
 	sourcev1 "github.com/fluxcd/source-controller/api/v1"
+	"github.com/pkg/errors"
+	"helm.sh/helm/v3/pkg/action"
+	"helm.sh/helm/v3/pkg/storage/driver"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -43,6 +49,8 @@ const (
 // Poller reconciles a Template object
 type Poller struct {
 	client.Client
+
+	Config *rest.Config
 
 	CreateManagement bool
 	CreateTemplates  bool
@@ -113,8 +121,34 @@ func (p *Poller) ensureManagement(ctx context.Context) error {
 		if !apierrors.IsNotFound(err) {
 			return fmt.Errorf("failed to get %s/%s Management object", hmc.ManagementNamespace, hmc.ManagementName)
 		}
-		mgmtObj.Spec.SetDefaults()
-		err := p.Create(ctx, mgmtObj)
+		mgmtObj.Spec.SetProvidersDefaults()
+
+		getter := helm.NewMemoryRESTClientGetter(p.Config, p.RESTMapper())
+		actionConfig := new(action.Configuration)
+		err = actionConfig.Init(getter, hmc.TemplatesNamespace, "secret", l.Info)
+		if err != nil {
+			return err
+		}
+		release, err := actionConfig.Releases.Last("hmc")
+		if err != nil {
+			if !errors.Is(err, driver.ErrReleaseNotFound) {
+				return err
+			}
+		} else {
+			if len(release.Config) > 0 {
+				values, err := json.Marshal(release.Config)
+				if err != nil {
+					return err
+				}
+				_ = applyDefaultCoreConfiguration(mgmtObj)
+				mgmtObj.Spec.Core = &hmc.DefaultCoreConfiguration
+				mgmtObj.Spec.Core.HMC.Config = &apiextensionsv1.JSON{
+					Raw: values,
+				}
+			}
+		}
+
+		err = p.Create(ctx, mgmtObj)
 		if err != nil {
 			return fmt.Errorf("failed to create %s/%s Management object", hmc.ManagementNamespace, hmc.ManagementName)
 		}

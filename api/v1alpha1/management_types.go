@@ -32,6 +32,15 @@ const (
 	ManagementNamespace = "hmc-system"
 )
 
+var DefaultCoreConfiguration = Core{
+	HMC: Component{
+		Template: DefaultCoreHMCTemplate,
+	},
+	CAPI: Component{
+		Template: DefaultCoreCAPITemplate,
+	},
+}
+
 // ManagementSpec defines the desired state of Management
 type ManagementSpec struct {
 	// Core holds the core Management components that are mandatory.
@@ -68,7 +77,7 @@ func (in *Component) HelmValues() (values map[string]interface{}, err error) {
 	return values, err
 }
 
-func (m *ManagementSpec) SetDefaults() {
+func (m *ManagementSpec) SetProvidersDefaults() {
 	m.Providers = []Component{
 		{
 			Template: "k0smotron",
