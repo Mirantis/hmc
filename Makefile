@@ -9,6 +9,9 @@ os = $(shell uname|tr DL dl)
 OS := $(strip ${os})
 
 ARCH := $(shell uname -m)
+ifeq ($(ARCH),x86_64)
+	ARCH := amd64
+endif
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -213,13 +216,13 @@ endif
 .PHONY: kind-deploy
 kind-deploy: kind
 	@if ! $(KIND) get clusters | grep -q "^$(KIND_CLUSTER_NAME)$$"; then \
-		kind create cluster -n $(KIND_CLUSTER_NAME); \
+		$(KIND) create cluster -n $(KIND_CLUSTER_NAME); \
 	fi
 
 .PHONY: kind-undeploy
 kind-undeploy: kind
-	@if kind get clusters | grep -q "^$(KIND_CLUSTER_NAME)$$"; then \
-		kind delete cluster --name $(KIND_CLUSTER_NAME); \
+	@if $(KIND) get clusters | grep -q "^$(KIND_CLUSTER_NAME)$$"; then \
+		$(KIND) delete cluster --name $(KIND_CLUSTER_NAME); \
 	fi
 
 .PHONY: registry-deploy
