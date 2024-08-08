@@ -46,6 +46,14 @@ export KUBECONFIG=~/.kube/config
 ./bin/clusterctl describe cluster <deployment-name> -n hmc-system --show-conditions all
 ```
 
+> [!NOTE]
+> If you encounter any errors in the output of `clusterctl describe cluster` inspect the logs of the
+> `cluster-api-provider-aws-controller-manager` with:
+> ```
+> kubectl logs -n hmc-system deploy/cluster-api-provider-aws-controller-manager
+> ```
+> This may help identify any potential issues with deployment of the AWS infrastructure.
+
 6. Retrieve the `kubeconfig` of your managed cluster:
 
 ```
