@@ -1,0 +1,152 @@
+{{- if .Values.admissionWebhook.enabled }}
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: {{ include "hmc.fullname" . }}-mutating-webhook-configuration
+  annotations:
+    cert-manager.io/inject-ca-from: {{ include "hmc.webhook.certNamespace" . }}/{{ include "hmc.webhook.certName" . }}
+webhooks:
+  - admissionReviewVersions:
+      - v1
+      - v1beta1
+    clientConfig:
+      service:
+        name: {{ include "hmc.webhook.serviceName" . }}
+        namespace: {{ include "hmc.webhook.serviceNamespace" . }}
+        path: /mutate-hmc-mirantis-com-v1alpha1-deployment
+    failurePolicy: Fail
+    matchPolicy: Equivalent
+    name: mutation.deployment.hmc.mirantis.com
+    rules:
+      - apiGroups:
+          - hmc.mirantis.com
+        apiVersions:
+          - v1alpha1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - deployments
+    sideEffects: None
+  - admissionReviewVersions:
+      - v1
+      - v1beta1
+    clientConfig:
+      service:
+        name: {{ include "hmc.webhook.serviceName" . }}
+        namespace: {{ include "hmc.webhook.serviceNamespace" . }}
+        path: /mutate-hmc-mirantis-com-v1alpha1-management
+    failurePolicy: Fail
+    matchPolicy: Equivalent
+    name: mutation.management.hmc.mirantis.com
+    rules:
+      - apiGroups:
+          - hmc.mirantis.com
+        apiVersions:
+          - v1alpha1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - managements
+    sideEffects: None
+  - admissionReviewVersions:
+      - v1
+      - v1beta1
+    clientConfig:
+      service:
+        name: {{ include "hmc.webhook.serviceName" . }}
+        namespace: {{ include "hmc.webhook.serviceNamespace" . }}
+        path: /mutate-hmc-mirantis-com-v1alpha1-template
+    failurePolicy: Fail
+    matchPolicy: Equivalent
+    name: mutation.template.hmc.mirantis.com
+    rules:
+      - apiGroups:
+          - hmc.mirantis.com
+        apiVersions:
+          - v1alpha1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - templates
+    sideEffects: None
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: {{ include "hmc.fullname" . }}-validating-webhook-configuration
+  annotations:
+    cert-manager.io/inject-ca-from: {{ include "hmc.webhook.certNamespace" . }}/{{ include "hmc.webhook.certName" . }}
+webhooks:
+  - admissionReviewVersions:
+      - v1
+      - v1beta1
+    clientConfig:
+      service:
+        name: {{ include "hmc.webhook.serviceName" . }}
+        namespace: {{ include "hmc.webhook.serviceNamespace" . }}
+        path: /validate-hmc-mirantis-com-v1alpha1-deployment
+    failurePolicy: Fail
+    matchPolicy: Equivalent
+    name: validation.deployment.hmc.mirantis.com
+    rules:
+      - apiGroups:
+          - hmc.mirantis.com
+        apiVersions:
+          - v1alpha1
+        operations:
+          - CREATE
+          - UPDATE
+          - DELETE
+        resources:
+          - deployments
+    sideEffects: None
+  - admissionReviewVersions:
+      - v1
+      - v1beta1
+    clientConfig:
+      service:
+        name: {{ include "hmc.webhook.serviceName" . }}
+        namespace: {{ include "hmc.webhook.serviceNamespace" . }}
+        path: /validate-hmc-mirantis-com-v1alpha1-management
+    failurePolicy: Fail
+    matchPolicy: Equivalent
+    name: validation.management.hmc.mirantis.com
+    rules:
+      - apiGroups:
+          - hmc.mirantis.com
+        apiVersions:
+          - v1alpha1
+        operations:
+          - CREATE
+          - UPDATE
+          - DELETE
+        resources:
+          - managements
+    sideEffects: None
+  - admissionReviewVersions:
+      - v1
+      - v1beta1
+    clientConfig:
+      service:
+        name: {{ include "hmc.webhook.serviceName" . }}
+        namespace: {{ include "hmc.webhook.serviceNamespace" . }}
+        path: /validate-hmc-mirantis-com-v1alpha1-template
+    failurePolicy: Fail
+    matchPolicy: Equivalent
+    name: validation.template.hmc.mirantis.com
+    rules:
+      - apiGroups:
+          - hmc.mirantis.com
+        apiVersions:
+          - v1alpha1
+        operations:
+          - CREATE
+          - UPDATE
+          - DELETE
+        resources:
+          - templates
+    sideEffects: None
+{{- end }}

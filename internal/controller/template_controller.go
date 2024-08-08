@@ -57,11 +57,6 @@ type TemplateReconciler struct {
 	downloadHelmChartFunc func(context.Context, *sourcev1.Artifact) (*chart.Chart, error)
 }
 
-// +kubebuilder:rbac:groups=hmc.mirantis.com,resources=templates,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=hmc.mirantis.com,resources=templates/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=hmc.mirantis.com,resources=templates/finalizers,verbs=update
-// +kubebuilder:rbac:groups=source.toolkit.fluxcd.io,resources=helmrepositories;helmcharts,verbs=get;list;watch;create;update;patch;delete
-
 func (r *TemplateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	l := log.FromContext(ctx).WithValues("TemplateController", req.NamespacedName)
 	l.Info("Reconciling Template")

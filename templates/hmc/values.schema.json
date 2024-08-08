@@ -2,6 +2,36 @@
   "$schema": "https://json-schema.org/draft/2019-09/schema",
   "type": "object",
   "properties": {
+    "nameOverride": {
+      "type": "string"
+    },
+    "fullnameOverride": {
+      "type": "string"
+    },
+    "cert-manager": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "installCRDs": {
+          "type": "boolean"
+        },
+        "global": {
+          "type": "object",
+          "properties": {
+            "leaderElection": {
+              "type": "object",
+              "properties": {
+                "namespace": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "flux2": {
       "type": "object",
       "properties": {
@@ -39,6 +69,35 @@
               "type": "boolean"
             }
           }
+        },
+        "helmController": {
+          "type": "object",
+          "properties": {
+            "container": {
+              "type": "object",
+              "properties": {
+                "additionalArgs": {
+                  "type": "array"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "admissionWebhook": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "port": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 49151
+        },
+        "certDir": {
+          "type": "string"
         }
       }
     },

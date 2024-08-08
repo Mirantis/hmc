@@ -1,3 +1,11 @@
+nameOverride: ""
+fullnameOverride: ""
+
+admissionWebhook:
+  enabled: false
+  port: 9443
+  certDir: "/tmp/k8s-webhook-server/serving-certs/"
+
 controllerManager:
   manager:
     args:
@@ -11,7 +19,7 @@ controllerManager:
         drop:
           - ALL
     image:
-      repository: hmc/controller
+      repository: ghcr.io/mirantis/hmc/controller
       tag: latest
     imagePullPolicy: IfNotPresent
     resources:
@@ -39,6 +47,7 @@ cert-manager:
   global:
     leaderElection:
       namespace: hmc-system
+
 flux2:
   enabled: true
   policies:

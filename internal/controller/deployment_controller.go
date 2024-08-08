@@ -27,7 +27,6 @@ import (
 	"github.com/go-logr/logr"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -52,11 +51,6 @@ type DeploymentReconciler struct {
 	Scheme *runtime.Scheme
 	Config *rest.Config
 }
-
-//+kubebuilder:rbac:groups=hmc.mirantis.com,resources=deployments,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=hmc.mirantis.com,resources=deployments/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=hmc.mirantis.com,resources=deployments/finalizers,verbs=update
-//+kubebuilder:rbac:groups=helm.toolkit.fluxcd.io,resources=helmreleases,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -153,11 +147,6 @@ func (r *DeploymentReconciler) Update(ctx context.Context, l logr.Logger, deploy
 		Reason:  hmc.SucceededReason,
 		Message: "Template is valid",
 	})
-	// TODO: this should be implemented in admission controller instead
-	if changed := applyDefaultDeploymentConfiguration(deployment, template); changed {
-		l.Info("Applying default configuration")
-		return ctrl.Result{}, r.Client.Update(ctx, deployment)
-	}
 	source, err := r.getSource(ctx, template.Status.ChartRef)
 	if err != nil {
 		apimeta.SetStatusCondition(deployment.GetConditions(), metav1.Condition{
@@ -308,16 +297,6 @@ func (r *DeploymentReconciler) getSource(ctx context.Context, ref *hcv2.CrossNam
 		return nil, err
 	}
 	return &hc, nil
-}
-
-func applyDefaultDeploymentConfiguration(deployment *hmc.Deployment, template *hmc.Template) (changed bool) {
-	if deployment.Spec.Config != nil || template.Status.Config == nil {
-		// Only apply defaults when there's no configuration provided
-		return false
-	}
-	deployment.Spec.DryRun = true
-	deployment.Spec.Config = &apiextensionsv1.JSON{Raw: template.Status.Config.Raw}
-	return true
 }
 
 func (r *DeploymentReconciler) Delete(ctx context.Context, l logr.Logger, deployment *hmc.Deployment) (ctrl.Result, error) {

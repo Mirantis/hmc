@@ -1,9 +1,0 @@
-apiVersion: hmc.mirantis.com/v1alpha1
-kind: AWSProvider
-metadata:
-  labels:
-    app.kubernetes.io/name: hmc
-    app.kubernetes.io/managed-by: kustomize
-  name: awsprovider-sample
-spec:
-  # TODO(user): Add fields here

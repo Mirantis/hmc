@@ -51,12 +51,44 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
-Create the name of the service account to use
+The name of the webhook service
 */}}
-{{- define "hmc.serviceAccountName" -}}
-{{- if .Values.serviceAccount.create }}
-{{- default (include "hmc.fullname" .) .Values.serviceAccount.name }}
-{{- else }}
-{{- default "default" .Values.serviceAccount.name }}
+{{- define "hmc.webhook.serviceName" -}}
+{{ include "hmc.fullname" . }}-webhook-service
 {{- end }}
+
+{{/*
+The namespace of the webhook service
+*/}}
+{{- define "hmc.webhook.serviceNamespace" -}}
+{{ .Release.Namespace }}
+{{- end }}
+
+{{/*
+The name of the webhook certificate
+*/}}
+{{- define "hmc.webhook.certName" -}}
+{{ include "hmc.fullname" . }}-webhook-serving-cert
+{{- end }}
+
+{{/*
+The namespace of the webhook certificate
+*/}}
+{{- define "hmc.webhook.certNamespace" -}}
+{{ .Release.Namespace }}
+{{- end }}
+
+{{/*
+The name of the secret with webhook certificate
+*/}}
+{{- define "hmc.webhook.certSecretName" -}}
+{{ include "hmc.fullname" . }}-webhook-serving-cert
+{{- end }}
+
+
+{{/*
+The name of the webhook port. Must be no more than 15 characters
+*/}}
+{{- define "hmc.webhook.portName" -}}
+hmc-webhook
 {{- end }}
