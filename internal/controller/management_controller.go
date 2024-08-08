@@ -45,17 +45,28 @@ type ManagementReconciler struct {
 
 func (r *ManagementReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	l := log.FromContext(ctx).WithValues("ManagementController", req.NamespacedName)
+	log.IntoContext(ctx, l)
 	l.Info("Reconciling Management")
-
 	management := &hmc.Management{}
 	if err := r.Get(ctx, req.NamespacedName, management); err != nil {
 		if apierrors.IsNotFound(err) {
-			l.Info("Management config not found, ignoring since object must be deleted")
+			l.Info("Management not found, ignoring since object must be deleted")
 			return ctrl.Result{}, nil
 		}
 		l.Error(err, "Failed to get Management")
 		return ctrl.Result{}, err
 	}
+
+	if !management.DeletionTimestamp.IsZero() {
+		l.Info("Deleting Management")
+		return r.Delete(ctx, management)
+	}
+
+	return r.Update(ctx, management)
+}
+
+func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Management) (ctrl.Result, error) {
+	l := log.FromContext(ctx)
 
 	finalizersUpdated := controllerutil.AddFinalizer(management, hmc.ManagementFinalizer)
 	if finalizersUpdated {
@@ -129,6 +140,10 @@ func (r *ManagementReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		l.Error(errs, "Multiple errors during Management reconciliation")
 		return ctrl.Result{}, errs
 	}
+	return ctrl.Result{}, nil
+}
+
+func (r *ManagementReconciler) Delete(_ context.Context, _ *hmc.Management) (ctrl.Result, error) {
 	return ctrl.Result{}, nil
 }
 
