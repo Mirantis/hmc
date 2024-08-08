@@ -12,6 +12,10 @@ or install using `helm`
 
 Then follow the [Deploy a managed cluster](#deploy-a-managed-cluster) guide to create a managed cluster.
 
+> Note. The HMC installation using Kubernetes manifests doesn't allow customizing the
+> deployment. If the custom HMC configuration should be applied, install HMC using
+> the Helm chart.
+
 ### Development guide
 
 See [Install HMC for development purposes](docs/dev.md#hmc-installation-for-development).
