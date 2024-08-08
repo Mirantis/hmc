@@ -28,10 +28,11 @@ import (
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
-	certmanager "github.com/Mirantis/hmc/internal/certmanager"
+	"github.com/Mirantis/hmc/internal/certmanager"
 	"github.com/Mirantis/hmc/internal/helm"
 )
 
@@ -44,16 +45,35 @@ type ManagementReconciler struct {
 
 func (r *ManagementReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	l := log.FromContext(ctx).WithValues("ManagementController", req.NamespacedName)
+	log.IntoContext(ctx, l)
 	l.Info("Reconciling Management")
-
 	management := &hmc.Management{}
 	if err := r.Get(ctx, req.NamespacedName, management); err != nil {
 		if apierrors.IsNotFound(err) {
-			l.Info("Management config not found, ignoring since object must be deleted")
+			l.Info("Management not found, ignoring since object must be deleted")
 			return ctrl.Result{}, nil
 		}
 		l.Error(err, "Failed to get Management")
 		return ctrl.Result{}, err
+	}
+
+	if !management.DeletionTimestamp.IsZero() {
+		l.Info("Deleting Management")
+		return r.Delete(ctx, management)
+	}
+
+	return r.Update(ctx, management)
+}
+
+func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Management) (ctrl.Result, error) {
+	l := log.FromContext(ctx)
+
+	finalizersUpdated := controllerutil.AddFinalizer(management, hmc.ManagementFinalizer)
+	if finalizersUpdated {
+		if err := r.Client.Update(ctx, management); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to update Management %s/%s: %w", management.Namespace, management.Name, err)
+		}
+		return ctrl.Result{}, nil
 	}
 
 	// TODO: this should be implemented in admission controller instead
@@ -120,6 +140,10 @@ func (r *ManagementReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		l.Error(errs, "Multiple errors during Management reconciliation")
 		return ctrl.Result{}, errs
 	}
+	return ctrl.Result{}, nil
+}
+
+func (r *ManagementReconciler) Delete(_ context.Context, _ *hmc.Management) (ctrl.Result, error) {
 	return ctrl.Result{}, nil
 }
 
