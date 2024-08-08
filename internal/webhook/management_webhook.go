@@ -16,18 +16,24 @@ package webhook // nolint:dupl
 
 import (
 	"context"
+	"errors"
 
-	"github.com/Mirantis/hmc/api/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	"github.com/Mirantis/hmc/api/v1alpha1"
 )
 
 type ManagementValidator struct {
 	client.Client
 }
+
+var (
+	ManagementDeletionForbidden = errors.New("management deletion is forbidden")
+)
 
 func (in *ManagementValidator) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	in.Client = mgr.GetClient()
@@ -54,7 +60,15 @@ func (*ManagementValidator) ValidateUpdate(_ context.Context, _ runtime.Object, 
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
-func (*ManagementValidator) ValidateDelete(_ context.Context, _ runtime.Object) (admission.Warnings, error) {
+func (v *ManagementValidator) ValidateDelete(ctx context.Context, _ runtime.Object) (admission.Warnings, error) {
+	deployments := &v1alpha1.DeploymentList{}
+	err := v.Client.List(ctx, deployments, client.Limit(1))
+	if err != nil {
+		return nil, err
+	}
+	if len(deployments.Items) > 0 {
+		return admission.Warnings{"The Management object can't be removed if Deployment objects still exist"}, ManagementDeletionForbidden
+	}
 	return nil, nil
 }
 
