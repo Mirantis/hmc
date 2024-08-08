@@ -30,6 +30,8 @@ const (
 
 	ManagementName      = "hmc"
 	ManagementNamespace = "hmc-system"
+
+	ManagementFinalizer = "hmc.mirantis.com/management"
 )
 
 // ManagementSpec defines the desired state of Management

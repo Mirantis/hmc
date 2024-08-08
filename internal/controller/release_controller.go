@@ -19,9 +19,6 @@ import (
 	"fmt"
 	"time"
 
-	hmc "github.com/Mirantis/hmc/api/v1alpha1"
-	"github.com/Mirantis/hmc/internal/build"
-	"github.com/Mirantis/hmc/internal/helm"
 	hcv2 "github.com/fluxcd/helm-controller/api/v2"
 	"github.com/fluxcd/pkg/apis/meta"
 	sourcev1 "github.com/fluxcd/source-controller/api/v1"
@@ -31,6 +28,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+
+	hmc "github.com/Mirantis/hmc/api/v1alpha1"
+	"github.com/Mirantis/hmc/internal/build"
+	"github.com/Mirantis/hmc/internal/helm"
 )
 
 const (
@@ -101,8 +102,9 @@ func (p *Poller) ensureManagement(ctx context.Context) error {
 	l := log.FromContext(ctx)
 	mgmtObj := &hmc.Management{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      hmc.ManagementName,
-			Namespace: hmc.ManagementNamespace,
+			Name:       hmc.ManagementName,
+			Namespace:  hmc.ManagementNamespace,
+			Finalizers: []string{hmc.ManagementFinalizer},
 		},
 	}
 	err := p.Get(ctx, client.ObjectKey{

@@ -28,10 +28,11 @@ import (
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
-	certmanager "github.com/Mirantis/hmc/internal/certmanager"
+	"github.com/Mirantis/hmc/internal/certmanager"
 	"github.com/Mirantis/hmc/internal/helm"
 )
 
@@ -54,6 +55,14 @@ func (r *ManagementReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 		l.Error(err, "Failed to get Management")
 		return ctrl.Result{}, err
+	}
+
+	finalizersUpdated := controllerutil.AddFinalizer(management, hmc.ManagementFinalizer)
+	if finalizersUpdated {
+		if err := r.Client.Update(ctx, management); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to update Management %s/%s: %w", management.Namespace, management.Name, err)
+		}
+		return ctrl.Result{}, nil
 	}
 
 	// TODO: this should be implemented in admission controller instead
