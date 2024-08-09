@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	"github.com/fluxcd/pkg/apis/meta"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -168,18 +169,21 @@ func wrappedComponents(mgmt *hmc.Management) (components []component) {
 func (r *ManagementReconciler) enableAdmissionWebhook(ctx context.Context, mgmt *hmc.Management) error {
 	l := log.FromContext(ctx)
 
-	mgmtComponent := mgmt.Spec.Core.HMC
-	config := map[string]interface{}{}
-	err := json.Unmarshal(mgmtComponent.Config.Raw, &config)
-	if err != nil {
-		return fmt.Errorf("failed to unmarshal HMC config into map[string]interface{}: %v", err)
+	hmcComponent := &mgmt.Spec.Core.HMC
+	config := make(map[string]interface{})
+
+	if hmcComponent.Config != nil {
+		err := json.Unmarshal(hmcComponent.Config.Raw, &config)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal HMC config into map[string]interface{}: %v", err)
+		}
 	}
 	admissionWebhookValues := make(map[string]interface{})
 	if config["admissionWebhook"] != nil {
 		admissionWebhookValues = config["admissionWebhook"].(map[string]interface{})
 	}
 
-	err = certmanager.VerifyAPI(ctx, r.Config, r.Scheme, hmc.ManagementNamespace)
+	err := certmanager.VerifyAPI(ctx, r.Config, r.Scheme, hmc.ManagementNamespace)
 	if err != nil {
 		return fmt.Errorf("failed to check in the cert-manager API is installed: %v", err)
 	}
@@ -191,7 +195,9 @@ func (r *ManagementReconciler) enableAdmissionWebhook(ctx context.Context, mgmt 
 	if err != nil {
 		return fmt.Errorf("failed to marshal HMC config: %v", err)
 	}
-	mgmtComponent.Config.Raw = updatedConfig
+	hmcComponent.Config = &apiextensionsv1.JSON{
+		Raw: updatedConfig,
+	}
 	return nil
 }
 
@@ -200,15 +206,7 @@ func applyDefaultCoreConfiguration(mgmt *hmc.Management) (changed bool) {
 		// Only apply defaults when there's no configuration provided
 		return false
 	}
-	mgmt.Spec.Core = &hmc.Core{
-		HMC: hmc.Component{
-			Template: hmc.DefaultCoreHMCTemplate,
-		},
-		CAPI: hmc.Component{
-			Template: hmc.DefaultCoreCAPITemplate,
-		},
-	}
-
+	mgmt.Spec.Core = &hmc.DefaultCoreConfiguration
 	return true
 }
 

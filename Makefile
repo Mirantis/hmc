@@ -264,16 +264,12 @@ dev-push: docker-build helm-push
 dev-templates: templates-generate
 	$(KUBECTL) -n $(NAMESPACE) apply -f templates/hmc-templates/files/templates
 
-.PHONY: dev-management
-dev-management: yq
-	$(YQ) '.spec.core.hmc.config += (load("config/dev/hmc_values.yaml"))' config/dev/management.yaml | $(KUBECTL) -n $(NAMESPACE) apply -f -
-
 .PHONY: dev-aws
 dev-aws: yq
 	@$(YQ) e ".data.credentials = \"${AWS_CREDENTIALS}\"" config/dev/awscredentials.yaml | $(KUBECTL) -n $(NAMESPACE) apply -f -
 
 .PHONY: dev-apply
-dev-apply: kind-deploy registry-deploy dev-push dev-deploy dev-templates dev-management dev-aws
+dev-apply: kind-deploy registry-deploy dev-push dev-deploy dev-templates dev-aws
 
 .PHONY: dev-destroy
 dev-destroy: kind-undeploy registry-undeploy

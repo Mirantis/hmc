@@ -185,6 +185,7 @@ func main() {
 	}
 	if err = mgr.Add(&controller.Poller{
 		Client:                    mgr.GetClient(),
+		Config:                    mgr.GetConfig(),
 		CreateManagement:          createManagement,
 		CreateTemplates:           createTemplates,
 		DefaultOCIRegistry:        defaultOCIRegistry,
