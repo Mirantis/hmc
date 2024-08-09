@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 
+	v2 "github.com/fluxcd/helm-controller/api/v2"
 	"github.com/fluxcd/pkg/apis/meta"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -120,7 +121,7 @@ func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Manag
 			continue
 		}
 
-		_, _, err = helm.ReconcileHelmRelease(ctx, r.Client, component.Template, management.Namespace, component.Config,
+		_, _, err = helm.ReconcileHelmRelease(ctx, r.Client, component.HelmReleaseName(), management.Namespace, component.Config,
 			ownerRef, template.Status.ChartRef, defaultReconcileInterval, component.dependsOn)
 		if err != nil {
 			errMsg := fmt.Sprintf("error reconciling HelmRelease %s/%s: %s", management.Namespace, component.Template, err)
@@ -144,7 +145,47 @@ func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Manag
 	return ctrl.Result{}, nil
 }
 
-func (r *ManagementReconciler) Delete(_ context.Context, _ *hmc.Management) (ctrl.Result, error) {
+func (r *ManagementReconciler) Delete(ctx context.Context, management *hmc.Management) (ctrl.Result, error) {
+	l := log.FromContext(ctx)
+	components := wrappedComponents(management)
+	var errs error
+	l.Info("Removing Management components")
+	for _, component := range components {
+		if component.Template == management.Spec.Core.HMC.Template {
+			// This one has to be removed manually
+			continue
+		}
+		lc := l.WithValues("component", component.Component.Template)
+		lc.Info("Processing Management component removal")
+		hr := &v2.HelmRelease{}
+		err := r.Client.Get(ctx, types.NamespacedName{Namespace: hmc.ManagementNamespace, Name: component.HelmReleaseName()}, hr)
+		if err != nil {
+			if !apierrors.IsNotFound(err) {
+				errs = errors.Join(err)
+			} else {
+				lc.Info("HelmRelease has already been removed")
+			}
+			continue
+		}
+		if hr.ObjectMeta.DeletionTimestamp.IsZero() {
+			lc.Info("Removing HelmRelease")
+			err := r.Client.Delete(ctx, hr)
+			if err != nil && !apierrors.IsNotFound(err) {
+				errs = errors.Join(err)
+				continue
+			}
+		}
+		lc.Info("Waiting for HelmRelease removal")
+		errs = errors.Join(fmt.Errorf("waiting for HelmRelease %s/%s removal", hr.Namespace, hr.Name))
+	}
+	if errs != nil {
+		return ctrl.Result{}, errs
+	}
+	// Removing finalizer in the end of cleanup
+	l.Info("Removing Management finalizer")
+	if controllerutil.RemoveFinalizer(management, hmc.ManagementFinalizer) {
+		return ctrl.Result{}, r.Client.Update(ctx, management)
+	}
 	return ctrl.Result{}, nil
 }
 
