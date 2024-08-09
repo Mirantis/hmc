@@ -101,92 +101,103 @@
         }
       }
     },
-    "controllerManager": {
+    "controller": {
       "type": "object",
       "properties": {
-        "manager": {
+        "defaultOCIRegistry": {
+          "type": "string"
+        },
+        "registryCredsSecret": {
+          "type": "string"
+        },
+        "insecureRegistry": {
+          "type": "boolean"
+        },
+        "createManagement": {
+          "type": "boolean"
+        },
+        "createTemplate": {
+          "type": "boolean"
+        }
+      }
+    },
+    "args": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "containerSecurityContext": {
+      "type": "object",
+      "properties": {
+        "allowPrivilegeEscalation": {
+          "type": "boolean"
+        },
+        "capabilities": {
           "type": "object",
           "properties": {
-            "args": {
+            "drop": {
               "type": "array",
               "items": {
                 "type": "string"
               },
               "uniqueItems": true
-            },
-            "containerSecurityContext": {
-              "type": "object",
-              "properties": {
-                "allowPrivilegeEscalation": {
-                  "type": "boolean"
-                },
-                "capabilities": {
-                  "type": "object",
-                  "properties": {
-                    "drop": {
-                      "type": "array",
-                      "items": {
-                        "type": "string"
-                      },
-                      "uniqueItems": true
-                    }
-                  }
-                }
-              }
-            },
-            "image": {
-              "type": "object",
-              "properties": {
-                "repository": {
-                  "type": "string"
-                },
-                "tag": {
-                  "type": "string"
-                }
-              }
-            },
-            "imagePullPolicy": {
+            }
+          }
+        }
+      }
+    },
+    "image": {
+      "type": "object",
+      "properties": {
+        "repository": {
+          "type": "string"
+        },
+        "tag": {
+          "type": "string"
+        },
+        "pullPolicy": {
+          "type": "string"
+        }
+      }
+    },
+    "resources": {
+      "type": "object",
+      "properties": {
+        "limits": {
+          "type": "object",
+          "properties": {
+            "cpu": {
               "type": "string"
             },
-            "resources": {
-              "type": "object",
-              "properties": {
-                "limits": {
-                  "type": "object",
-                  "properties": {
-                    "cpu": {
-                      "type": "string"
-                    },
-                    "memory": {
-                      "type": "string"
-                    }
-                  }
-                },
-                "requests": {
-                  "type": "object",
-                  "properties": {
-                    "cpu": {
-                      "type": "string"
-                    },
-                    "memory": {
-                      "type": "string"
-                    }
-                  }
-                }
-              }
+            "memory": {
+              "type": "string"
             }
           }
         },
-        "replicas": {
-          "type": "integer"
-        },
-        "serviceAccount": {
+        "requests": {
           "type": "object",
           "properties": {
-            "annotations": {
-              "type": "object",
-              "properties": {}
+            "cpu": {
+              "type": "string"
+            },
+            "memory": {
+              "type": "string"
             }
+          }
+        }
+      }
+    },
+    "replicas": {
+      "type": "integer"
+    },
+    "serviceAccount": {
+      "type": "object",
+      "properties": {
+        "annotations": {
+          "type": "object",
+          "properties": {
           }
         }
       }
