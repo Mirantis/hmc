@@ -9,3 +9,9 @@ spec:
     # name: aws-identity-name
   controlPlaneLoadBalancer:
     healthCheckProtocol: TCP
+  network:
+    additionalControlPlaneIngressRules:
+      - description: "k0s controller join API"
+        protocol: tcp
+        fromPort: 9443
+        toPort: 9443
