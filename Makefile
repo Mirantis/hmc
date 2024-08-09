@@ -229,8 +229,7 @@ registry-undeploy:
 
 .PHONY: hmc-deploy
 hmc-deploy: helm
-	$(HELM) dependency update templates/hmc
-	$(HELM) upgrade --values $(HMC_VALUES) --install --create-namespace hmc templates/hmc -n $(NAMESPACE)
+	$(HELM) upgrade --values $(HMC_VALUES) --reuse-values --install --create-namespace hmc templates/hmc -n $(NAMESPACE)
 
 .PHONY: dev-deploy
 dev-deploy: ## Deploy HMC helm chart to the K8s cluster specified in ~/.kube/config.
