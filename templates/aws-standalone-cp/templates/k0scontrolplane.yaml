@@ -9,7 +9,7 @@ spec:
     args:
       - --enable-worker
       - --enable-cloud-provider
-      - --kubelet-extra-args="--cloud-provider=external --hostname-override=$(hostname --fqdn)"
+      - --kubelet-extra-args="--cloud-provider=external"
       - --disable-components=konnectivity-server
     k0s:
       apiVersion: k0s.k0sproject.io/v1beta1
