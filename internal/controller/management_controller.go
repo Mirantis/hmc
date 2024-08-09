@@ -143,10 +143,6 @@ func (r *ManagementReconciler) Delete(ctx context.Context, management *hmc.Manag
 	var errs error
 	l.Info("Removing Management components")
 	for _, component := range components {
-		if component.Template == management.Spec.Core.HMC.Template {
-			// This one has to be removed manually
-			continue
-		}
 		lc := l.WithValues("component", component.Component.Template)
 		lc.Info("Processing Management component removal")
 		hr := &v2.HelmRelease{}
@@ -160,6 +156,15 @@ func (r *ManagementReconciler) Delete(ctx context.Context, management *hmc.Manag
 			continue
 		}
 		if hr.ObjectMeta.DeletionTimestamp.IsZero() {
+			if component.Template == management.Spec.Core.HMC.Template {
+				lc.Info("Suspending HelmRelease")
+				// This one has to be removed manually. HelmRelease is marked as suspended before deletion.
+				hr.Spec.Suspend = true
+				if err := r.Client.Update(ctx, hr); err != nil {
+					errs = errors.Join(err)
+					continue
+				}
+			}
 			lc.Info("Removing HelmRelease")
 			err := r.Client.Delete(ctx, hr)
 			if err != nil && !apierrors.IsNotFound(err) {
