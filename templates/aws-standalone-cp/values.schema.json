@@ -88,6 +88,10 @@
           "items": {
             "type": "string"
           }
+        },
+	"rootVolumeSize": {
+	  "description": "The size of the root volume of the instance (GB)",
+          "type": "integer"
         }
       }
     },
@@ -115,6 +119,10 @@
         "additionalSecurityGroupIDs": {
           "description": "An array of references to security groups that should be applied to the instance",
           "type": "array"
+        },
+	"rootVolumeSize": {
+	  "description": "The size of the root volume of the instance (GB)",
+          "type": "integer"
         }
       }
     },

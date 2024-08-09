@@ -20,11 +20,13 @@ controlPlane:
   amiID: ""
   iamInstanceProfile: control-plane.cluster-api-provider-aws.sigs.k8s.io
   instanceType: ""
+  rootVolumeSize: 8
 
 worker:
   amiID: ""
   iamInstanceProfile: nodes.cluster-api-provider-aws.sigs.k8s.io
   instanceType: ""
+  rootVolumeSize: 8
 
 # K0s parameters
 k0s:

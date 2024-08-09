@@ -23,6 +23,7 @@ amiID: ""
 iamInstanceProfile: nodes.cluster-api-provider-aws.sigs.k8s.io
 instanceType: ""
 securityGroupIDs: []
+rootVolumeSize: 8
 
 # K0smotron parameters
 k0smotron:
