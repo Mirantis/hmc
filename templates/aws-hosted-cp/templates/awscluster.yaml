@@ -16,3 +16,10 @@ spec:
     subnets:
       {{- toYaml . | nindent 6 }}
     {{- end }}
+  {{- if not (quote .Values.sshKeyName | empty) }}
+  sshKeyName: {{ .Values.sshKeyName | quote }}
+  {{- end }}
+  {{- with .Values.bastion }}
+  bastion:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}

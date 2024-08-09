@@ -61,6 +61,30 @@
       "description": "Specifies whether the instance should get a public IP",
       "type": "boolean"
     },
+    "bastion": {
+      "type": "object",
+      "description": "The configuration of the bastion host",
+      "required": [],
+      "properties": {
+          "enabled": {
+              "type": "boolean"
+          },
+          "disableIngressRules": {
+              "type": "boolean"
+          },
+          "allowedCIDRBlocks": {
+              "type": "array",
+              "items": {},
+              "uniqueItems": true
+          },
+          "instanceType": {
+              "type": "string"
+          },
+          "ami": {
+              "type": "string"
+          }
+      }
+    },
     "controlPlane": {
       "description": "The configuration of the control plane machines",
       "type": "object",

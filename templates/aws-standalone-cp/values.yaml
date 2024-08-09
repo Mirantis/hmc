@@ -14,7 +14,12 @@ clusterNetwork:
 region: ""
 sshKeyName: ""
 publicIP: false
-
+bastion:
+  enabled: false
+  disableIngressRules: false
+  allowedCIDRBlocks: []
+  instanceType: t2.micro
+  ami: ""
 # AWS machines parameters
 controlPlane:
   amiID: ""
