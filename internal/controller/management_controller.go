@@ -24,6 +24,7 @@ import (
 	"github.com/fluxcd/pkg/apis/meta"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
@@ -139,34 +140,31 @@ func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Manag
 
 func (r *ManagementReconciler) Delete(ctx context.Context, management *hmc.Management) (ctrl.Result, error) {
 	l := log.FromContext(ctx)
-	components := wrappedComponents(management)
+	l.Info("Removing HelmReleases owned by HMC")
+	helmReleases := &v2.HelmReleaseList{}
+	listOpts := &client.ListOptions{
+		LabelSelector: labels.SelectorFromSet(map[string]string{hmc.HMCManagedLabelKey: "true"}),
+	}
+	if err := r.Client.List(ctx, helmReleases, listOpts); err != nil {
+		return ctrl.Result{}, err
+	}
+
 	var errs error
-	l.Info("Removing Management components")
-	for _, component := range components {
-		lc := l.WithValues("component", component.Component.Template)
-		lc.Info("Processing Management component removal")
-		hr := &v2.HelmRelease{}
-		err := r.Client.Get(ctx, types.NamespacedName{Namespace: hmc.ManagementNamespace, Name: component.HelmReleaseName()}, hr)
-		if err != nil {
-			if !apierrors.IsNotFound(err) {
-				errs = errors.Join(err)
-			} else {
-				lc.Info("HelmRelease has already been removed")
-			}
-			continue
-		}
+	for _, hr := range helmReleases.Items {
+		lc := l.WithValues("name", hr.Name, "namespace", hr.Namespace)
+		lc.Info("Processing HelmRelease removal")
 		if hr.ObjectMeta.DeletionTimestamp.IsZero() {
-			if component.Template == management.Spec.Core.HMC.Template {
-				lc.Info("Suspending HelmRelease")
+			if hr.Name == management.Spec.Core.HMC.HelmReleaseName() {
+				lc.Info("Suspending HMC HelmRelease")
 				// This one has to be removed manually. HelmRelease is marked as suspended before deletion.
 				hr.Spec.Suspend = true
-				if err := r.Client.Update(ctx, hr); err != nil {
+				if err := r.Client.Update(ctx, &hr); err != nil {
 					errs = errors.Join(err)
 					continue
 				}
 			}
 			lc.Info("Removing HelmRelease")
-			err := r.Client.Delete(ctx, hr)
+			err := r.Client.Delete(ctx, &hr)
 			if err != nil && !apierrors.IsNotFound(err) {
 				errs = errors.Join(err)
 				continue
