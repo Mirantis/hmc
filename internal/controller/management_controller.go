@@ -24,7 +24,6 @@ import (
 	"github.com/fluxcd/pkg/apis/meta"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
@@ -84,13 +83,6 @@ func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Manag
 		return ctrl.Result{}, r.Client.Update(ctx, management)
 	}
 
-	ownerRef := &metav1.OwnerReference{
-		APIVersion: hmc.GroupVersion.String(),
-		Kind:       hmc.ManagementKind,
-		Name:       management.Name,
-		UID:        management.UID,
-	}
-
 	var errs error
 	detectedProviders := hmc.Providers{}
 	detectedComponents := make(map[string]hmc.ComponentStatus)
@@ -122,7 +114,7 @@ func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Manag
 		}
 
 		_, _, err = helm.ReconcileHelmRelease(ctx, r.Client, component.HelmReleaseName(), management.Namespace, component.Config,
-			ownerRef, template.Status.ChartRef, defaultReconcileInterval, component.dependsOn)
+			nil, template.Status.ChartRef, defaultReconcileInterval, component.dependsOn)
 		if err != nil {
 			errMsg := fmt.Sprintf("error reconciling HelmRelease %s/%s: %s", management.Namespace, component.Template, err)
 			updateComponentsStatus(detectedComponents, &detectedProviders, component.Template, template.Status, errMsg)
