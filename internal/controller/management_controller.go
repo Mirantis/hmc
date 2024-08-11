@@ -20,8 +20,9 @@ import (
 	"errors"
 	"fmt"
 
-	v2 "github.com/fluxcd/helm-controller/api/v2"
+	fluxv2 "github.com/fluxcd/helm-controller/api/v2"
 	"github.com/fluxcd/pkg/apis/meta"
+	sourcev1 "github.com/fluxcd/source-controller/api/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
@@ -36,6 +37,7 @@ import (
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
 	"github.com/Mirantis/hmc/internal/certmanager"
 	"github.com/Mirantis/hmc/internal/helm"
+	"github.com/Mirantis/hmc/internal/utils"
 )
 
 // ManagementReconciler reconciles a Management object
@@ -140,48 +142,70 @@ func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Manag
 
 func (r *ManagementReconciler) Delete(ctx context.Context, management *hmc.Management) (ctrl.Result, error) {
 	l := log.FromContext(ctx)
-	l.Info("Removing HelmReleases owned by HMC")
-	helmReleases := &v2.HelmReleaseList{}
 	listOpts := &client.ListOptions{
 		LabelSelector: labels.SelectorFromSet(map[string]string{hmc.HMCManagedLabelKey: "true"}),
 	}
-	if err := r.Client.List(ctx, helmReleases, listOpts); err != nil {
+	if err := r.removeHelmReleases(ctx, management.Spec.Core.HMC.HelmReleaseName(), listOpts); err != nil {
+		return ctrl.Result{}, err
+	}
+	if err := r.removeHelmCharts(ctx, listOpts); err != nil {
+		return ctrl.Result{}, err
+	}
+	if err := r.removeHelmRepositories(ctx, listOpts); err != nil {
 		return ctrl.Result{}, err
 	}
 
-	var errs error
-	for _, hr := range helmReleases.Items {
-		lc := l.WithValues("name", hr.Name, "namespace", hr.Namespace)
-		lc.Info("Processing HelmRelease removal")
-		if hr.ObjectMeta.DeletionTimestamp.IsZero() {
-			if hr.Name == management.Spec.Core.HMC.HelmReleaseName() {
-				lc.Info("Suspending HMC HelmRelease")
-				// This one has to be removed manually. HelmRelease is marked as suspended before deletion.
-				hr.Spec.Suspend = true
-				if err := r.Client.Update(ctx, &hr); err != nil {
-					errs = errors.Join(err)
-					continue
-				}
-			}
-			lc.Info("Removing HelmRelease")
-			err := r.Client.Delete(ctx, &hr)
-			if err != nil && !apierrors.IsNotFound(err) {
-				errs = errors.Join(err)
-				continue
-			}
-		}
-		lc.Info("Waiting for HelmRelease removal")
-		errs = errors.Join(fmt.Errorf("waiting for HelmRelease %s/%s removal", hr.Namespace, hr.Name))
-	}
-	if errs != nil {
-		return ctrl.Result{}, errs
-	}
 	// Removing finalizer in the end of cleanup
 	l.Info("Removing Management finalizer")
 	if controllerutil.RemoveFinalizer(management, hmc.ManagementFinalizer) {
 		return ctrl.Result{}, r.Client.Update(ctx, management)
 	}
 	return ctrl.Result{}, nil
+}
+
+func (r *ManagementReconciler) removeHelmReleases(ctx context.Context, hmcReleaseName string, opts *client.ListOptions) error {
+	l := log.FromContext(ctx)
+	l.Info("Suspending HMC Helm Release reconciles")
+	hmcRelease := &fluxv2.HelmRelease{}
+	err := r.Client.Get(ctx, types.NamespacedName{Namespace: hmc.ManagementNamespace, Name: hmcReleaseName}, hmcRelease)
+	if err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+	if err == nil && !hmcRelease.Spec.Suspend {
+		hmcRelease.Spec.Suspend = true
+		if err := r.Client.Update(ctx, hmcRelease); err != nil {
+			return err
+		}
+	}
+	l.Info("Ensuring all HelmReleases owned by HMC are removed")
+	gvk := fluxv2.GroupVersion.WithKind(fluxv2.HelmReleaseKind)
+	if err := utils.EnsureDeleteAllOf(ctx, r.Client, gvk, opts); err != nil {
+		l.Error(err, "Not all HelmReleases owned by HMC are removed")
+		return err
+	}
+	return nil
+}
+
+func (r *ManagementReconciler) removeHelmCharts(ctx context.Context, opts *client.ListOptions) error {
+	l := log.FromContext(ctx)
+	l.Info("Ensuring all HelmCharts owned by HMC are removed")
+	gvk := sourcev1.GroupVersion.WithKind(sourcev1.HelmChartKind)
+	if err := utils.EnsureDeleteAllOf(ctx, r.Client, gvk, opts); err != nil {
+		l.Error(err, "Not all HelmCharts owned by HMC are removed")
+		return err
+	}
+	return nil
+}
+
+func (r *ManagementReconciler) removeHelmRepositories(ctx context.Context, opts *client.ListOptions) error {
+	l := log.FromContext(ctx)
+	l.Info("Ensuring all HelmRepositories owned by HMC are removed")
+	gvk := sourcev1.GroupVersion.WithKind(sourcev1.HelmRepositoryKind)
+	if err := utils.EnsureDeleteAllOf(ctx, r.Client, gvk, opts); err != nil {
+		l.Error(err, "Not all HelmRepositories owned by HMC are removed")
+		return err
+	}
+	return nil
 }
 
 type component struct {
