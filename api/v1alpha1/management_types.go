@@ -79,6 +79,10 @@ func (in *Component) HelmValues() (values map[string]interface{}, err error) {
 	return values, err
 }
 
+func (in *Component) HelmReleaseName() string {
+	return in.Template
+}
+
 func (m *ManagementSpec) SetProvidersDefaults() {
 	m.Providers = []Component{
 		{

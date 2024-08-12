@@ -18,7 +18,6 @@ import (
 	"context"
 	"time"
 
-	hmc "github.com/Mirantis/hmc/api/v1alpha1"
 	hcv2 "github.com/fluxcd/helm-controller/api/v2"
 	"github.com/fluxcd/pkg/apis/meta"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -26,6 +25,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	hmc "github.com/Mirantis/hmc/api/v1alpha1"
 )
 
 func ReconcileHelmRelease(
@@ -50,7 +51,7 @@ func ReconcileHelmRelease(
 		if helmRelease.Labels == nil {
 			helmRelease.Labels = make(map[string]string)
 		}
-		helmRelease.Labels[hmc.HMCManagedLabelKey] = "true"
+		helmRelease.Labels[hmc.HMCManagedLabelKey] = hmc.HMCManagedLabelValue
 		if ownerReference != nil {
 			helmRelease.OwnerReferences = []metav1.OwnerReference{*ownerReference}
 		}
