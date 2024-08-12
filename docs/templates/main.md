@@ -11,9 +11,9 @@ and use them for deployment.
 Here are the instructions on how to bring your own Template to HMC:
 
 1. Create a [HelmRepository](https://fluxcd.io/flux/components/source/helmrepositories/) object containing the URL to the
-external Helm repository.
+external Helm repository. Label it with `hmc.mirantis.com/managed: "true"`.
 2. Create a [HelmChart](https://fluxcd.io/flux/components/source/helmcharts/) object referencing the `HelmRepository` as a
-`sourceRef`, specifying the name and version of your Helm chart.
+`sourceRef`, specifying the name and version of your Helm chart. Label it with `hmc.mirantis.com/managed: "true"`.
 3. Create a `Template` object in `hmc-system` namespace referencing this helm chart in `spec.helm.chartRef`.
 `chartRef` is a field of the
 [CrossNamespaceSourceReference](https://fluxcd.io/flux/components/helm/api/v2/#helm.toolkit.fluxcd.io/v2.CrossNamespaceSourceReference) kind.
@@ -26,6 +26,8 @@ kind: HelmRepository
 metadata:
   name: custom-templates-repo
   namespace: hmc-system
+  labels:
+    hmc.mirantis.com/managed: "true"
 spec:
   insecure: true
   interval: 10m0s
@@ -40,6 +42,8 @@ kind: HelmChart
 metadata:
   name: custom-template-chart
   namespace: hmc-system
+  labels:
+    hmc.mirantis.com/managed: "true"
 spec:
   interval: 5m0s
   chart: custom-template-chart-name
