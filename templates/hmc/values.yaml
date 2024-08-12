@@ -64,3 +64,7 @@ flux2:
     container:
       additionalArgs:
         - --watch-label-selector=hmc.mirantis.com/managed=true
+  sourceController:
+    container:
+      additionalArgs:
+        - --watch-label-selector=hmc.mirantis.com/managed=true
