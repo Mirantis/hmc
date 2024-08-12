@@ -168,6 +168,10 @@ func (p *Poller) reconcileDefaultHelmRepo(ctx context.Context) error {
 		},
 	}
 	operation, err := ctrl.CreateOrUpdate(ctx, p.Client, helmRepo, func() error {
+		if helmRepo.Labels == nil {
+			helmRepo.Labels = make(map[string]string)
+		}
+		helmRepo.Labels[hmc.HMCManagedLabelKey] = hmc.HMCManagedLabelValue
 		helmRepo.Spec = sourcev1.HelmRepositorySpec{
 			Type:     defaultRepoType,
 			URL:      p.DefaultOCIRegistry,
@@ -207,7 +211,7 @@ func (p *Poller) reconcileHMCTemplates(ctx context.Context) error {
 		if helmChart.Labels == nil {
 			helmChart.Labels = make(map[string]string)
 		}
-		helmChart.Labels[hmc.HMCManagedLabelKey] = "true"
+		helmChart.Labels[hmc.HMCManagedLabelKey] = hmc.HMCManagedLabelValue
 		helmChart.Spec = sourcev1.HelmChartSpec{
 			Chart:   p.HMCTemplatesChartName,
 			Version: build.Version,

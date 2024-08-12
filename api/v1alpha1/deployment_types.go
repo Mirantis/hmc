@@ -24,7 +24,8 @@ import (
 const (
 	DeploymentFinalizer = "hmc.mirantis.com/deployment"
 
-	HMCManagedLabelKey = "hmc.mirantis.com/managed"
+	HMCManagedLabelKey   = "hmc.mirantis.com/managed"
+	HMCManagedLabelValue = "true"
 )
 
 const (

@@ -220,7 +220,7 @@ func (r *TemplateReconciler) reconcileHelmChart(ctx context.Context, template *h
 		if helmChart.Labels == nil {
 			helmChart.Labels = make(map[string]string)
 		}
-		helmChart.Labels[hmc.HMCManagedLabelKey] = "true"
+		helmChart.Labels[hmc.HMCManagedLabelKey] = hmc.HMCManagedLabelValue
 		helmChart.OwnerReferences = []metav1.OwnerReference{
 			{
 				APIVersion: hmc.GroupVersion.String(),

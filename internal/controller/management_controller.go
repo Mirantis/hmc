@@ -143,7 +143,7 @@ func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Manag
 func (r *ManagementReconciler) Delete(ctx context.Context, management *hmc.Management) (ctrl.Result, error) {
 	l := log.FromContext(ctx)
 	listOpts := &client.ListOptions{
-		LabelSelector: labels.SelectorFromSet(map[string]string{hmc.HMCManagedLabelKey: "true"}),
+		LabelSelector: labels.SelectorFromSet(map[string]string{hmc.HMCManagedLabelKey: hmc.HMCManagedLabelValue}),
 	}
 	if err := r.removeHelmReleases(ctx, management.Spec.Core.HMC.HelmReleaseName(), listOpts); err != nil {
 		return ctrl.Result{}, err
