@@ -23,7 +23,7 @@ controlPlane:
 
 worker:
   amiID: ""
-  iamInstanceProfile: nodes.cluster-api-provider-aws.sigs.k8s.io
+  iamInstanceProfile: control-plane.cluster-api-provider-aws.sigs.k8s.io
   instanceType: ""
 
 # K0s parameters
