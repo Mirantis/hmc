@@ -17,8 +17,7 @@ spec:
     apiVersion: k0s.k0sproject.io/v1beta1
     kind: ClusterConfig
     metadata:
-      name: {{ include "k0sconfig.name" . }}
-      namespace: {{ .Release.Namespace }}
+      name: k0s
     spec:
       network:
         provider: calico
@@ -37,6 +36,8 @@ spec:
             chartname: aws-cloud-controller-manager/aws-cloud-controller-manager
             version: "0.0.8"
             values: |
+              image:
+                tag: v1.30.3
               args:
                 - --v=2
                 - --cloud-provider=aws
