@@ -20,7 +20,7 @@ subnets:
 
 # AWS machines parameters
 amiID: ""
-iamInstanceProfile: nodes.cluster-api-provider-aws.sigs.k8s.io
+iamInstanceProfile: control-plane.cluster-api-provider-aws.sigs.k8s.io
 instanceType: ""
 securityGroupIDs: []
 
