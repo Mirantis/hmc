@@ -80,8 +80,9 @@ func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Manag
 		return ctrl.Result{}, nil
 	}
 
-	// TODO: this should be implemented in admission controller instead
-	if changed := applyDefaultCoreConfiguration(management); changed {
+	// TODO: this is also implemented in admission but we have to keep it in controller as well
+	// to set defaults before the admission is started
+	if changed := management.Spec.SetDefaults(); changed {
 		l.Info("Applying default core configuration")
 		return ctrl.Result{}, r.Client.Update(ctx, management)
 	}
@@ -259,15 +260,6 @@ func (r *ManagementReconciler) enableAdmissionWebhook(ctx context.Context, mgmt 
 		Raw: updatedConfig,
 	}
 	return nil
-}
-
-func applyDefaultCoreConfiguration(mgmt *hmc.Management) (changed bool) {
-	if mgmt.Spec.Core != nil {
-		// Only apply defaults when there's no configuration provided
-		return false
-	}
-	mgmt.Spec.Core = &hmc.DefaultCoreConfiguration
-	return true
 }
 
 func updateComponentsStatus(
