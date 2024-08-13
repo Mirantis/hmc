@@ -9,14 +9,13 @@ spec:
     args:
       - --enable-worker
       - --enable-cloud-provider
-      - --kubelet-extra-args="--cloud-provider=external --hostname-override=$(hostname --fqdn)"
+      - --kubelet-extra-args="--cloud-provider=external"
       - --disable-components=konnectivity-server
     k0s:
       apiVersion: k0s.k0sproject.io/v1beta1
       kind: ClusterConfig
       metadata:
-        name: {{ include "k0sconfig.name" . }}
-        namespace: {{ .Release.Namespace }}
+        name: k0s
       spec:
         api:
           extraArgs:
@@ -40,6 +39,8 @@ spec:
                 values: |
                   nodeSelector:
                     node-role.kubernetes.io/control-plane: "true"
+                  image:
+                    tag: v1.30.3
                   args:
                     - --v=2
                     - --cloud-provider=aws

@@ -17,7 +17,3 @@
 {{- define "machinedeployment.name" -}}
     {{- include "cluster.name" . }}-md
 {{- end }}
-
-{{- define "k0sconfig.name" -}}
-    {{- include "cluster.name" . }}-k0sconfig
-{{- end }}
