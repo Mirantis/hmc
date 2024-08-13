@@ -17,7 +17,12 @@ publicIP: false
 subnets:
   - id: ""
     availabilityZone: ""
-
+bastion:
+  enabled: false
+  disableIngressRules: false
+  allowedCIDRBlocks: []
+  instanceType: t2.micro
+  ami: ""
 # AWS machines parameters
 amiID: ""
 iamInstanceProfile: control-plane.cluster-api-provider-aws.sigs.k8s.io

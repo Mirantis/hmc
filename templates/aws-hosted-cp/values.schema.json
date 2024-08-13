@@ -83,6 +83,30 @@
       "minItems": 1,
       "uniqueItems": true
     },
+    "bastion": {
+      "type": "object",
+      "description": "The configuration of the bastion host",
+      "required": [],
+      "properties": {
+          "enabled": {
+              "type": "boolean"
+          },
+          "disableIngressRules": {
+              "type": "boolean"
+          },
+          "allowedCIDRBlocks": {
+              "type": "array",
+              "items": {},
+              "uniqueItems": true
+          },
+          "instanceType": {
+              "type": "string"
+          },
+          "ami": {
+              "type": "string"
+          }
+      }
+    },
     "amiID": {
       "description": "The ID of Amazon Machine Image",
       "type": "string"

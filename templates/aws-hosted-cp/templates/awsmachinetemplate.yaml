@@ -18,9 +18,6 @@ spec:
       additionalSecurityGroups:
         - id: {{ $id }}
       {{- end }}
-      {{- if not (quote .Values.sshKeyName | empty) }}
-      sshKeyName: {{ .Values.sshKeyName | quote }}
-      {{- end }}
       publicIP: {{ .Values.publicIP }}
       rootVolume:
         size: {{ .Values.rootVolumeSize }}

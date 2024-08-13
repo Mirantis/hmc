@@ -15,3 +15,10 @@ spec:
         protocol: tcp
         fromPort: 9443
         toPort: 9443
+  {{- if not (quote .Values.sshKeyName | empty) }}
+  sshKeyName: {{ .Values.sshKeyName | quote }}
+  {{- end }}
+  {{- with .Values.bastion }}
+  bastion:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
