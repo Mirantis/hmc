@@ -22,3 +22,5 @@ spec:
       sshKeyName: {{ .Values.sshKeyName | quote }}
       {{- end }}
       publicIP: {{ .Values.publicIP }}
+      rootVolume:
+        size: {{ .Values.rootVolumeSize }}
