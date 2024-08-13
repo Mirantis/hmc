@@ -25,6 +25,7 @@ import (
 	sourcev1 "github.com/fluxcd/source-controller/api/v1"
 	"github.com/pkg/errors"
 	"helm.sh/helm/v3/pkg/action"
+	"helm.sh/helm/v3/pkg/chartutil"
 	"helm.sh/helm/v3/pkg/storage/driver"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -131,6 +132,8 @@ func (p *Poller) ensureManagement(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
+
+		hmcConfig := make(chartutil.Values)
 		release, err := actionConfig.Releases.Last("hmc")
 		if err != nil {
 			if !errors.Is(err, driver.ErrReleaseNotFound) {
@@ -138,21 +141,28 @@ func (p *Poller) ensureManagement(ctx context.Context) error {
 			}
 		} else {
 			if len(release.Config) > 0 {
-				values, err := json.Marshal(release.Config)
-				if err != nil {
-					return err
-				}
-				_ = applyDefaultCoreConfiguration(mgmtObj)
-				mgmtObj.Spec.Core = &hmc.DefaultCoreConfiguration
-				mgmtObj.Spec.Core.HMC.Config = &apiextensionsv1.JSON{
-					Raw: values,
-				}
+				chartutil.CoalesceTables(hmcConfig, release.Config)
 			}
+		}
+
+		// Initially set createManagement:false to automatically create Management object only once
+		chartutil.CoalesceTables(hmcConfig, map[string]interface{}{
+			"controller": map[string]interface{}{
+				"createManagement": false,
+			},
+		})
+		rawConfig, err := json.Marshal(hmcConfig)
+		if err != nil {
+			return err
+		}
+		mgmtObj.Spec.Core = &hmc.DefaultCoreConfiguration
+		mgmtObj.Spec.Core.HMC.Config = &apiextensionsv1.JSON{
+			Raw: rawConfig,
 		}
 
 		err = p.Create(ctx, mgmtObj)
 		if err != nil {
-			return fmt.Errorf("failed to create %s/%s Management object", hmc.ManagementNamespace, hmc.ManagementName)
+			return fmt.Errorf("failed to create %s/%s Management object: %s", hmc.ManagementNamespace, hmc.ManagementName, err)
 		}
 		l.Info("Successfully created Management object with default configuration")
 	}

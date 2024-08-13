@@ -6,32 +6,37 @@ admissionWebhook:
   port: 9443
   certDir: "/tmp/k8s-webhook-server/serving-certs/"
 
-controllerManager:
-  manager:
-    args:
-      - --leader-elect
-      - --health-probe-bind-address=:8081
-      - --metrics-bind-address=0
-      - --create-management=true
-    containerSecurityContext:
-      allowPrivilegeEscalation: false
-      capabilities:
-        drop:
-          - ALL
-    image:
-      repository: ghcr.io/mirantis/hmc/controller
-      tag: latest
-    imagePullPolicy: IfNotPresent
-    resources:
-      limits:
-        cpu: 500m
-        memory: 128Mi
-      requests:
-        cpu: 10m
-        memory: 64Mi
-  replicas: 1
-  serviceAccount:
-    annotations: {}
+controller:
+  defaultOCIRegistry: "oci://ghcr.io/mirantis/hmc/charts"
+  registryCredsSecret: ""
+  insecureRegistry: false
+  createManagement: true
+  createTemplates: true
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+
+image:
+  repository: ghcr.io/mirantis/hmc/controller
+  tag: latest
+  pullPolicy: IfNotPresent
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 128Mi
+  requests:
+    cpu: 10m
+    memory: 64Mi
+
+replicas: 1
+
+serviceAccount:
+  annotations: {}
+
 kubernetesClusterDomain: cluster.local
 metricsService:
   ports:

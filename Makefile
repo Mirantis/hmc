@@ -65,7 +65,7 @@ generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and
 set-hmc-version: yq
 	$(YQ) eval '.version = "$(VERSION)"' -i templates/hmc/Chart.yaml
 	$(YQ) eval '.version = "$(VERSION)"' -i templates/hmc-templates/Chart.yaml
-	$(YQ) eval '.controllerManager.manager.image.tag = "$(VERSION)"' -i templates/hmc/values.yaml
+	$(YQ) eval '.image.tag = "$(VERSION)"' -i templates/hmc/values.yaml
 
 .PHONY: hmc-chart-release
 hmc-chart-release: set-hmc-version templates-generate ## Generate hmc helm chart

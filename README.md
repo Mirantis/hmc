@@ -82,11 +82,11 @@ configuration:
    * Create `management.yaml` file and configure core components and providers.
    See [Management API](api/v1alpha1/management_types.go).
 
-   * Specify `--create-management=false` controllerManager argument and install HMC:
+   * Specify `--create-management=false` controller argument and install HMC:
 
     If installing using `helm` add the following parameter to the `helm install` command:
 
-    `--set="controllerManager.manager.args={--create-management=false}"`
+    `--set="controller.createManagement=false"`
 
    * Create `hmc-system/hmc` `Management` object after HMC installation:
 
