@@ -17,7 +17,9 @@ package webhook // nolint:dupl
 import (
 	"context"
 	"errors"
+	"fmt"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -73,6 +75,11 @@ func (v *ManagementValidator) ValidateDelete(ctx context.Context, _ runtime.Obje
 }
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type.
-func (*ManagementValidator) Default(_ context.Context, _ runtime.Object) error {
+func (*ManagementValidator) Default(_ context.Context, obj runtime.Object) error {
+	management, ok := obj.(*v1alpha1.Management)
+	if !ok {
+		return apierrors.NewBadRequest(fmt.Sprintf("expected Management but got a %T", obj))
+	}
+	management.Spec.SetDefaults()
 	return nil
 }

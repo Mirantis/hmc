@@ -83,6 +83,14 @@ func (in *Component) HelmReleaseName() string {
 	return in.Template
 }
 
+func (m *ManagementSpec) SetDefaults() bool {
+	if m.Core != nil {
+		return false
+	}
+	m.Core = &DefaultCoreConfiguration
+	return true
+}
+
 func (m *ManagementSpec) SetProvidersDefaults() {
 	m.Providers = []Component{
 		{
