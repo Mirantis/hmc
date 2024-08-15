@@ -129,7 +129,7 @@ func (r *DeploymentReconciler) Update(ctx context.Context, l logr.Logger, deploy
 			Reason:  hmc.FailedReason,
 			Message: errMsg,
 		})
-		return ctrl.Result{}, fmt.Errorf(errMsg)
+		return ctrl.Result{}, errors.New(errMsg)
 	}
 	if !template.Status.Valid {
 		errMsg := "provided template is not marked as valid"
@@ -139,7 +139,7 @@ func (r *DeploymentReconciler) Update(ctx context.Context, l logr.Logger, deploy
 			Reason:  hmc.FailedReason,
 			Message: errMsg,
 		})
-		return ctrl.Result{}, fmt.Errorf(errMsg)
+		return ctrl.Result{}, errors.New(errMsg)
 	}
 	apimeta.SetStatusCondition(deployment.GetConditions(), metav1.Condition{
 		Type:    hmc.TemplateReadyCondition,
