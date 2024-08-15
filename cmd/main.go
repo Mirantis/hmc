@@ -36,6 +36,7 @@ import (
 
 	hmcmirantiscomv1alpha1 "github.com/Mirantis/hmc/api/v1alpha1"
 	"github.com/Mirantis/hmc/internal/controller"
+	"github.com/Mirantis/hmc/internal/telemetry"
 	hmcwebhook "github.com/Mirantis/hmc/internal/webhook"
 	//+kubebuilder:scaffold:imports
 )
@@ -183,6 +184,13 @@ func main() {
 		HMCTemplatesChartName:     hmcTemplatesChartName,
 	}); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ReleaseController")
+		os.Exit(1)
+	}
+
+	if err = mgr.Add(&telemetry.Tracker{
+		Client: mgr.GetClient(),
+	}); err != nil {
+		setupLog.Error(err, "unable to create telemetry tracker")
 		os.Exit(1)
 	}
 

@@ -21,7 +21,8 @@ import (
 )
 
 const (
-	deploymentCreateEvent = "deployment-create"
+	deploymentCreateEvent    = "deployment-create"
+	deploymentHeartbeatEvent = "deployment-heartbeat"
 )
 
 func TrackDeploymentCreate(id, deploymentID, template string, dryRun bool) error {
@@ -32,6 +33,20 @@ func TrackDeploymentCreate(id, deploymentID, template string, dryRun bool) error
 		"dryRun":       dryRun,
 	}
 	return TrackEvent(deploymentCreateEvent, id, props)
+}
+
+func TrackDeploymentHeartbeat(id, deploymentID, clusterID, template, templateHelmChartVersion, infrastructureProvider, bootstrapProvider, controlPlaneProvider string) error {
+	props := map[string]interface{}{
+		"hmcVersion":               build.Version,
+		"deploymentID":             deploymentID,
+		"clusterID":                clusterID,
+		"template":                 template,
+		"templateHelmChartVersion": templateHelmChartVersion,
+		"infrastructureProvider":   infrastructureProvider,
+		"bootstrapProvider":        bootstrapProvider,
+		"controlPlaneProvider":     controlPlaneProvider,
+	}
+	return TrackEvent(deploymentHeartbeatEvent, id, props)
 }
 
 func TrackEvent(name, id string, properties map[string]interface{}) error {
