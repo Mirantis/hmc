@@ -236,3 +236,19 @@ spec:
       type: Ready
     observedGeneration: 1
 ```
+
+## Cleanup
+
+1. Remove the Management object:
+  
+`kubectl delete management.hmc hmc -n hmc-system`
+
+> Note: make sure you have no HMC Deployment objects left in the cluster prior to Management deletion
+
+2. Remove the `hmc` Helm release:
+
+`helm uninstall hmc -n hmc-system`
+
+3. Remove the `hmc-system` namespace:
+
+`kubectl delete ns hmc-system`
