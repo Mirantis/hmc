@@ -111,6 +111,28 @@
       "description": "The ID of Amazon Machine Image",
       "type": "string"
     },
+    "imageLookup": {
+      "description": "AMI lookup parameters",
+      "type": "object",
+      "required": [
+        "format",
+        "org"
+      ],
+      "properties": {
+        "format": {
+	  "description": "Format string which will be used for image lookup",
+          "type": "string"
+        },
+        "org": {
+	  "description": "AWS org ID which owns the AMI",
+          "type": "string"
+        },
+        "baseOS": {
+	  "description": "OS name which can be used in format string",
+          "type": "string"
+        }
+      }
+    },
     "iamInstanceProfile": {
       "description": "The name of an IAM instance profile to assign to the instance",
       "type": "string"

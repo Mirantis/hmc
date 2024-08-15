@@ -25,6 +25,10 @@ bastion:
   ami: ""
 # AWS machines parameters
 amiID: ""
+imageLookup:
+  format: "amzn2-ami-hvm*-gp2"
+  org: "137112412989"
+  baseOS: ""
 iamInstanceProfile: control-plane.cluster-api-provider-aws.sigs.k8s.io
 instanceType: ""
 securityGroupIDs: []
