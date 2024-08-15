@@ -60,6 +60,7 @@ type DeploymentSpec struct {
 	DryRun bool `json:"dryRun,omitempty"`
 	// Template is a reference to a Template object located in the same namespace.
 	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
 	Template string `json:"template"`
 	// Config allows to provide parameters for template customization.
 	// If no Config provided, the field will be populated with the default values for

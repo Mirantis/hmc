@@ -69,6 +69,7 @@ spec:
               template:
                 description: Template is a reference to a Template object located
                   in the same namespace.
+                minLength: 1
                 type: string
             required:
             - template
