@@ -107,13 +107,13 @@ func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Manag
 		if err != nil {
 			errMsg := fmt.Sprintf("Failed to get Template %s/%s: %s", hmc.TemplatesNamespace, component.Template, err)
 			updateComponentsStatus(detectedComponents, &detectedProviders, component.Template, template.Status, errMsg)
-			errs = errors.Join(fmt.Errorf(errMsg))
+			errs = errors.Join(errors.New(errMsg))
 			continue
 		}
 		if !template.Status.Valid {
 			errMsg := fmt.Sprintf("Template %s/%s is not marked as valid", hmc.TemplatesNamespace, component.Template)
 			updateComponentsStatus(detectedComponents, &detectedProviders, component.Template, template.Status, errMsg)
-			errs = errors.Join(fmt.Errorf(errMsg))
+			errs = errors.Join(errors.New(errMsg))
 			continue
 		}
 
@@ -122,7 +122,7 @@ func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Manag
 		if err != nil {
 			errMsg := fmt.Sprintf("error reconciling HelmRelease %s/%s: %s", management.Namespace, component.Template, err)
 			updateComponentsStatus(detectedComponents, &detectedProviders, component.Template, template.Status, errMsg)
-			errs = errors.Join(fmt.Errorf(errMsg))
+			errs = errors.Join(errors.New(errMsg))
 			continue
 		}
 		updateComponentsStatus(detectedComponents, &detectedProviders, component.Template, template.Status, "")
