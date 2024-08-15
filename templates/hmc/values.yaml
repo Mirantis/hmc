@@ -46,9 +46,12 @@ metricsService:
       targetPort: 8080
   type: ClusterIP
 
+# Subcharts
 cert-manager:
   enabled: true
-  installCRDs: true
+  crds:
+    enabled: true
+    keep: false
   global:
     leaderElection:
       namespace: hmc-system
