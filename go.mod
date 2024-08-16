@@ -3,7 +3,7 @@ module github.com/Mirantis/hmc
 go 1.22.0
 
 require (
-	github.com/cert-manager/cert-manager v1.15.2
+	github.com/cert-manager/cert-manager v1.15.3
 	github.com/fluxcd/helm-controller/api v1.0.1
 	github.com/fluxcd/pkg/apis/meta v1.6.0
 	github.com/fluxcd/pkg/runtime v0.49.0
