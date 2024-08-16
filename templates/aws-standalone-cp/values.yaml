@@ -26,12 +26,20 @@ controlPlane:
   iamInstanceProfile: control-plane.cluster-api-provider-aws.sigs.k8s.io
   instanceType: ""
   rootVolumeSize: 8
+  imageLookup:
+    format: "amzn2-ami-hvm*-gp2"
+    org: "137112412989"
+    baseOS: ""
 
 worker:
   amiID: ""
   iamInstanceProfile: control-plane.cluster-api-provider-aws.sigs.k8s.io
   instanceType: ""
   rootVolumeSize: 8
+  imageLookup:
+    format: "amzn2-ami-hvm*-gp2"
+    org: "137112412989"
+    baseOS: ""
 
 # K0s parameters
 k0s:

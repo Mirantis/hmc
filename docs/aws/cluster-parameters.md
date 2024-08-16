@@ -8,6 +8,34 @@ See [AWS credentials](credentials.md#aws-credentials-configuration) (p. 1-3)
 
 ## AWS AMI
 
+By default AMI id will be looked up automatically (latest Amazon Linux 2 image
+will be used).
+
+You can override lookup parameters to search your desired image automatically or
+use AMI ID directly.
+If both AMI ID and lookup paramters are defined AMI ID will have higher precedence.
+
+### Image lookup
+
+To configure automatic AMI lookup 3 parameters are used:
+
+`.imageLookup.format` - used directly as value for the `name` filter
+(see the [describe-images filters](https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-images.html#describe-images)).
+Supports substitutions for `{{.BaseOS}}` and `{{.K8sVersion}}` with the base OS
+and kubernetes version, respectively.
+
+`.imageLookup.org` - AWS org ID which will be used as value for the `owner-id`
+filter.
+
+`.imageLookup.baseOS` - will be used as value for `{{.BaseOS}}` substitution in
+the `.imageLookup.format` string.
+
+### AMI ID
+
+AMI ID can be directly used in the `.amiID` parameter.
+
+#### CAPA prebuilt AMIs
+
 Use `clusterawsadm` to get available AMIs to deploy managed cluster:
 
 ```bash

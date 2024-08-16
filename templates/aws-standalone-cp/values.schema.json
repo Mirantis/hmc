@@ -89,7 +89,6 @@
       "description": "The configuration of the control plane machines",
       "type": "object",
       "required": [
-        "amiID",
         "iamInstanceProfile",
         "instanceType"
       ],
@@ -116,6 +115,28 @@
 	"rootVolumeSize": {
 	  "description": "The size of the root volume of the instance (GB)",
           "type": "integer"
+        },
+        "imageLookup": {
+	  "description": "AMI lookup parameters",
+          "type": "object",
+          "required": [
+            "format",
+            "org"
+          ],
+          "properties": {
+            "format": {
+	      "description": "Format string which will be used for image lookup",
+              "type": "string"
+            },
+            "org": {
+	      "description": "AWS org ID which owns the AMI",
+              "type": "string"
+            },
+            "baseOS": {
+	      "description": "OS name which can be used in format string",
+              "type": "string"
+            }
+          }
         }
       }
     },
@@ -123,7 +144,6 @@
       "description": "The configuration of the worker machines",
       "type": "object",
       "required": [
-        "amiID",
         "iamInstanceProfile",
         "instanceType"
       ],
@@ -147,6 +167,28 @@
 	"rootVolumeSize": {
 	  "description": "The size of the root volume of the instance (GB)",
           "type": "integer"
+        },
+	"imageLookup": {
+	  "description": "AMI lookup parameters",
+          "type": "object",
+          "required": [
+            "format",
+            "org"
+          ],
+          "properties": {
+            "format": {
+	      "description": "Format string which will be used for image lookup",
+              "type": "string"
+            },
+            "org": {
+	      "description": "AWS org ID which owns the AMI",
+              "type": "string"
+            },
+            "baseOS": {
+	      "description": "OS name which can be used in format string",
+              "type": "string"
+            }
+          }
         }
       }
     },
