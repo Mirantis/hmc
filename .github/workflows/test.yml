@@ -10,7 +10,7 @@ on:
       - main
       - release-*
     tags:
-      - "*"
+      - '*'
     paths-ignore:
       - '**.md'
   pull_request:
@@ -18,7 +18,7 @@ on:
       - main
       - release-*
     tags:
-      - "*"
+      - '*'
     paths-ignore:
       - 'config/**'
       - '**.md'
@@ -33,7 +33,7 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Set up Go
+      - name: Setup Go
         uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
@@ -47,8 +47,28 @@ jobs:
         run: |
           make test
       - name: Build
-        run: | 
+        run: |
           make build
       - name: Image build
         run: |
           make docker-build
+  e2etest:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    needs: build
+    env:
+      AWS_REGION: us-west-2
+      AWS_ACCESS_KEY_ID: ${{ secrets.CI_AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.CI_AWS_SECRET_ACCESS_KEY }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+      - name: Run E2E tests
+        run: |
+          make e2e-test
