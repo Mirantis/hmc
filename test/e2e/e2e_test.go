@@ -49,7 +49,7 @@ var _ = Describe("controller", Ordered, func() {
 	Context("Operator", func() {
 		It("should run successfully", func() {
 			kc, err := kubeclient.New(namespace)
-			ExpectWithOffset(2, err).NotTo(HaveOccurred())
+			ExpectWithOffset(1, err).NotTo(HaveOccurred())
 
 			By("validating that the controller-manager pod is running as expected")
 			verifyControllerUp := func() error {
@@ -67,9 +67,12 @@ var _ = Describe("controller", Ordered, func() {
 
 				controllerPod := podList.Items[0]
 
+				// Ensure the pod is not being deleted.
 				if controllerPod.DeletionTimestamp != nil {
 					return fmt.Errorf("deletion timestamp should be nil, got: %v", controllerPod)
 				}
+
+				// Ensure the pod is running and has the expected name.
 				if !strings.Contains(controllerPod.Name, "controller-manager") {
 					return fmt.Errorf("controller pod name %s does not contain 'controller-manager'", controllerPod.Name)
 				}
@@ -84,11 +87,20 @@ var _ = Describe("controller", Ordered, func() {
 	})
 
 	Context("AWS Templates", func() {
+		var (
+			kc  *kubeclient.KubeClient
+			err error
+		)
+
 		BeforeAll(func() {
 			By("ensuring AWS credentials are set")
-			kc, err := kubeclient.New(namespace)
+			kc, err = kubeclient.New(namespace)
 			ExpectWithOffset(2, err).NotTo(HaveOccurred())
 			ExpectWithOffset(2, kc.CreateAWSCredentialsKubeSecret(context.Background())).To(Succeed())
+		})
+
+		AfterAll(func() {
+			// TODO: Purge the AWS resources
 		})
 
 		It("should work with an AWS provider", func() {
@@ -98,11 +110,9 @@ var _ = Describe("controller", Ordered, func() {
 			cmd := exec.Command("make", "dev-aws-apply")
 			_, err := utils.Run(cmd)
 			ExpectWithOffset(2, err).NotTo(HaveOccurred())
-
 			EventuallyWithOffset(2, func() error {
-				return nil
-			})
-
+				return verifyProviderDeployed(context.Background(), kc, "aws-dev")
+			}(), 30*time.Minute, 10*time.Second).Should(Succeed())
 		})
 	})
 })

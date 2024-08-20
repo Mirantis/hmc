@@ -12,6 +12,8 @@ import (
 	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -111,4 +113,14 @@ func (kc *KubeClient) CreateAWSCredentialsKubeSecret(ctx context.Context) error 
 	}
 
 	return nil
+}
+
+// GetDynamicClient returns a dynamic client for the given GroupVersionResource.
+func (kc *KubeClient) GetDynamicClient(gvr schema.GroupVersionResource) (dynamic.ResourceInterface, error) {
+	client, err := dynamic.NewForConfig(kc.Config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create dynamic client: %w", err)
+	}
+
+	return client.Resource(gvr).Namespace(kc.Namespace), nil
 }

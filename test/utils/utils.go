@@ -24,6 +24,8 @@ import (
 
 	. "github.com/onsi/ginkgo/v2" //nolint:golint,revive
 	"gopkg.in/yaml.v2"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 func warnError(err error) {
@@ -178,4 +180,54 @@ func ConfigureDeploymentConfig() error {
 	}
 
 	return os.WriteFile("./config/dev/deployment.yaml", deploymentConfigBytes, 0644)
+}
+
+// ValidateConditionsTrue iterates over the conditions of the given
+// unstructured object and returns an error if any of the conditions are not
+// true.  Conditions are expected to be of type metav1.Condition.
+func ValidateConditionsTrue(unstrObj *unstructured.Unstructured) error {
+	objKind, objName := ObjKindName(unstrObj)
+
+	// Iterate the status conditions and ensure each condition reports a "Ready"
+	// status.
+	conditions, found, err := unstructured.NestedSlice(unstrObj.Object, "status", "conditions")
+	if !found {
+		return fmt.Errorf("no status conditions found for %s: %s", objKind, objName)
+	}
+	if err != nil {
+		return fmt.Errorf("failed to get status conditions for %s: %s: %w", objKind, objName, err)
+	}
+
+	for _, condition := range conditions {
+		condition, ok := condition.(metav1.Condition)
+		if !ok {
+			return fmt.Errorf("expected %s: %s condition to be type metav1.Condition, got: %T",
+				objKind, objName, condition)
+		}
+
+		if condition.Status == metav1.ConditionTrue {
+			continue
+		}
+
+		return fmt.Errorf("%s %s condition %s is not ready: %s", objKind, objName, condition.Type, condition.Message)
+	}
+
+	return nil
+}
+
+// ValidateObjectNamePrefix checks if the given object name has the given prefix.
+func ValidateObjectNamePrefix(unstrObj *unstructured.Unstructured, clusterName string) error {
+	objKind, objName := ObjKindName(unstrObj)
+
+	// Verify the machines are prefixed with the cluster name and fail
+	// the test if they are not.
+	if !strings.HasPrefix(objName, clusterName) {
+		return fmt.Errorf("object %s %s does not have cluster name prefix: %s", objKind, objName, clusterName)
+	}
+
+	return nil
+}
+
+func ObjKindName(unstrObj *unstructured.Unstructured) (string, string) {
+	return unstrObj.GetKind(), unstrObj.GetName()
 }
