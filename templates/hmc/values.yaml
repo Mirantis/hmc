@@ -76,3 +76,14 @@ flux2:
     container:
       additionalArgs:
         - --watch-label-selector=hmc.mirantis.com/managed=true
+
+cluster-api-operator:
+  enabled: false
+  resources:
+    manager:
+      limits:
+        cpu: 100m
+        memory: 250Mi
+      requests:
+        cpu: 100m
+        memory: 150Mi

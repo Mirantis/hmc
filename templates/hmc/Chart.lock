@@ -5,5 +5,8 @@ dependencies:
 - name: cert-manager
   repository: https://charts.jetstack.io
   version: v1.15.1
-digest: sha256:eb8ee85d913ca7b3b220f40b3ca3a3b73ba13535f91e6cacd0765b16167dad13
-generated: "2024-08-01T14:26:53.086937+04:00"
+- name: cluster-api-operator
+  repository: https://kubernetes-sigs.github.io/cluster-api-operator
+  version: 0.12.0
+digest: sha256:f29162745d3dd876c3e35689b6771faa7b66d5f91c0ac532c28db580deadf218
+generated: "2024-08-21T19:47:21.00915+04:00"
