@@ -15,7 +15,6 @@
 package utils
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -23,7 +22,6 @@ import (
 	"strings"
 
 	. "github.com/onsi/ginkgo/v2" //nolint:golint,revive
-	"gopkg.in/yaml.v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -98,88 +96,6 @@ func GetProjectDir() (string, error) {
 	}
 	wd = strings.Replace(wd, "/test/e2e", "", -1)
 	return wd, nil
-}
-
-// getAWSAMI returns an AWS AMI ID to use for test.
-func getAWSAMI() (string, error) {
-	// For now we'll just use the latest Kubernetes version for ubuntu 20.04,
-	// but we could potentially pin the Kube version and specify that here.
-	cmd := exec.Command("./bin/clusterawsadm", "ami", "list", "--os=ubuntu-20.04", "-o", "json")
-	output, err := Run(cmd)
-	if err != nil {
-		return "", fmt.Errorf("failed to list AMIs: %w", err)
-	}
-
-	var amiList map[string]interface{}
-
-	if err := json.Unmarshal(output, &amiList); err != nil {
-		return "", fmt.Errorf("failed to unmarshal AMI list: %w", err)
-	}
-
-	// ami list returns a sorted list of AMIs by kube version, just get the
-	// first one.
-	for _, item := range amiList["items"].([]interface{}) {
-		spec := item.(map[string]interface{})["spec"].(map[string]interface{})
-		if imageID, ok := spec["imageID"]; ok {
-			ami, ok := imageID.(string)
-			if !ok {
-				continue
-			}
-
-			return ami, nil
-		}
-	}
-
-	return "", fmt.Errorf("no AMIs found")
-}
-
-// ConfigureDeploymentConfig modifies the ./config/dev/deployment.yaml for
-// use in test.  For now we modify only the AWS_REGION and AWSAMI's but in the
-// future this may mean more complex configuration.
-func ConfigureDeploymentConfig() error {
-	amiID, err := getAWSAMI()
-	if err != nil {
-		return fmt.Errorf("failed to get AWS AMI: %w", err)
-	}
-
-	deploymentConfigBytes, err := os.ReadFile("./config/dev/deployment.yaml")
-	if err != nil {
-		return fmt.Errorf("failed to read deployment config: %w", err)
-	}
-
-	var deploymentConfig map[string]interface{}
-
-	err = yaml.Unmarshal(deploymentConfigBytes, &deploymentConfig)
-	if err != nil {
-		return fmt.Errorf("failed to unmarshal deployment config: %w", err)
-	}
-
-	awsRegion := os.Getenv("AWS_REGION")
-
-	// Modify the existing ./config/dev/deployment.yaml file to use the
-	// AMI we just found and our AWS_REGION.
-	if spec, ok := deploymentConfig["spec"].(map[interface{}]interface{}); ok {
-		if config, ok := spec["config"].(map[interface{}]interface{}); ok {
-			if awsRegion != "" {
-				config["region"] = awsRegion
-			}
-
-			if worker, ok := config["worker"].(map[interface{}]interface{}); ok {
-				worker["amiID"] = amiID
-			}
-
-			if controlPlane, ok := config["controlPlane"].(map[interface{}]interface{}); ok {
-				controlPlane["amiID"] = amiID
-			}
-		}
-	}
-
-	deploymentConfigBytes, err = yaml.Marshal(deploymentConfig)
-	if err != nil {
-		return fmt.Errorf("failed to marshal deployment config: %w", err)
-	}
-
-	return os.WriteFile("./config/dev/deployment.yaml", deploymentConfigBytes, 0644)
 }
 
 // ValidateConditionsTrue iterates over the conditions of the given

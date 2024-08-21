@@ -48,7 +48,7 @@ var _ = Describe("controller", Ordered, func() {
 
 	Context("Operator", func() {
 		It("should run successfully", func() {
-			kc, err := kubeclient.New(namespace)
+			kc, err := kubeclient.NewFromLocal(namespace)
 			ExpectWithOffset(1, err).NotTo(HaveOccurred())
 
 			By("validating that the controller-manager pod is running as expected")
@@ -94,25 +94,32 @@ var _ = Describe("controller", Ordered, func() {
 
 		BeforeAll(func() {
 			By("ensuring AWS credentials are set")
-			kc, err = kubeclient.New(namespace)
+			kc, err = kubeclient.NewFromLocal(namespace)
 			ExpectWithOffset(2, err).NotTo(HaveOccurred())
 			ExpectWithOffset(2, kc.CreateAWSCredentialsKubeSecret(context.Background())).To(Succeed())
 		})
 
 		AfterAll(func() {
-			// TODO: Purge the AWS resources
+			// Purge the AWS resources, the AfterAll for the controller will
+			// clean up the management cluster.
 		})
 
 		It("should work with an AWS provider", func() {
 			By("using the aws-standalone-cp template")
-			ExpectWithOffset(2, utils.ConfigureDeploymentConfig()).To(Succeed())
+			clusterName, err := utils.ConfigureDeploymentConfig(utils.ProviderAWS, utils.AWSStandaloneCPTemplate)
+			ExpectWithOffset(2, err).NotTo(HaveOccurred())
 
 			cmd := exec.Command("make", "dev-aws-apply")
-			_, err := utils.Run(cmd)
+			_, err = utils.Run(cmd)
 			ExpectWithOffset(2, err).NotTo(HaveOccurred())
 			EventuallyWithOffset(2, func() error {
-				return verifyProviderDeployed(context.Background(), kc, "aws-dev")
+				return verifyProviderDeployed(context.Background(), kc, clusterName)
 			}(), 30*time.Minute, 10*time.Second).Should(Succeed())
+
+			By("using the aws-hosted-cp template")
+			// TODO: Use the standalone control plane resources to craft a hosted
+			// control plane and test it.
+
 		})
 	})
 })

@@ -31,8 +31,36 @@ type KubeClient struct {
 	Config         *rest.Config
 }
 
-// getKubeConfig returns the kubeconfig file content.
-func getKubeConfig() ([]byte, error) {
+// NewFromLocal creates a new instance of KubeClient from a given namespace
+// using the locally found kubeconfig.
+func NewFromLocal(namespace string) (*KubeClient, error) {
+	configBytes, err := getLocalKubeConfig()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get local kubeconfig: %w", err)
+	}
+
+	return new(configBytes, namespace)
+}
+
+// NewFromCluster creates a new KubeClient using the kubeconfig stored in the
+// secret affiliated with the given clusterName.  Since it relies on fetching
+// the kubeconfig from secret it needs an existing kubeclient.
+func (kc *KubeClient) NewFromCluster(ctx context.Context, namespace, clusterName string) (*KubeClient, error) {
+	secret, err := kc.Client.CoreV1().Secrets(kc.Namespace).Get(ctx, clusterName+"-kubeconfig", metav1.GetOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get cluster: %q kubeconfig secret: %w", clusterName, err)
+	}
+
+	secretData, ok := secret.Data["value"]
+	if !ok {
+		return nil, fmt.Errorf("kubeconfig secret %q has no 'value' key", clusterName)
+	}
+
+	return new(secretData, namespace)
+}
+
+// getLocalKubeConfig returns the kubeconfig file content.
+func getLocalKubeConfig() ([]byte, error) {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user home directory: %w", err)
@@ -53,13 +81,9 @@ func getKubeConfig() ([]byte, error) {
 	return configBytes, nil
 }
 
-// New creates a new instance of KubeClient from a given namespace.
-func New(namespace string) (*KubeClient, error) {
-	configBytes, err := getKubeConfig()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get kubeconfig: %w", err)
-	}
-
+// new creates a new instance of KubeClient from a given namespace using
+// the local kubeconfig.
+func new(configBytes []byte, namespace string) (*KubeClient, error) {
 	config, err := clientcmd.RESTConfigFromKubeConfig(configBytes)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse kubeconfig: %w", err)
