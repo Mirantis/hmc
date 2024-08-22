@@ -10,7 +10,7 @@ require (
 	github.com/fluxcd/source-controller/api v1.3.0
 	github.com/go-logr/logr v1.4.2
 	github.com/hashicorp/go-retryablehttp v0.7.7
-	github.com/onsi/ginkgo/v2 v2.20.0
+	github.com/onsi/ginkgo/v2 v2.20.1
 	github.com/onsi/gomega v1.34.1
 	github.com/opencontainers/go-digest v1.0.1-0.20231025023718-d50d2fec9c98
 	github.com/pkg/errors v0.9.1
