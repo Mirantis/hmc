@@ -25,7 +25,9 @@ const (
 	DefaultCoreCAPITemplate = "cluster-api"
 
 	DefaultCAPAConfig = `{
-		"credentialsSecretName": "aws-credentials"
+		"configSecret": {
+           "name": "aws-variables"
+        }
 	}`
 
 	ManagementName      = "hmc"

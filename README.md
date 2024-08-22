@@ -66,7 +66,8 @@ spec:
   providers:
   - template: k0smotron
   - config:
-      credentialsSecretName: aws-credentials
+      configSecret:
+       name: aws-variables
     template: cluster-api-provider-aws
 ```
 
