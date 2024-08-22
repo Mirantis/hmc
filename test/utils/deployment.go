@@ -66,6 +66,13 @@ func ConfigureDeploymentConfig(provider ProviderType, templateName Template) (st
 
 		// Modify the existing ./config/dev/deployment.yaml file to use the
 		// AMI we just found and our AWS_REGION.
+		if metadata, ok := deploymentConfig["metadata"].(map[string]interface{}); ok {
+			metadata["name"] = generatedName
+		} else {
+			// Ensure we always have a metadata.name field populated.
+			deploymentConfig["metadata"] = map[string]interface{}{"name": generatedName}
+		}
+
 		if spec, ok := deploymentConfig["spec"].(map[string]interface{}); ok {
 			if config, ok := spec["config"].(map[string]interface{}); ok {
 				if awsRegion != "" {

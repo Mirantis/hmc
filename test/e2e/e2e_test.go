@@ -102,6 +102,9 @@ var _ = Describe("controller", Ordered, func() {
 		AfterAll(func() {
 			// Purge the AWS resources, the AfterAll for the controller will
 			// clean up the management cluster.
+			cmd := exec.Command("make", "dev-aws-nuke")
+			_, err := utils.Run(cmd)
+			ExpectWithOffset(2, err).NotTo(HaveOccurred())
 		})
 
 		It("should work with an AWS provider", func() {

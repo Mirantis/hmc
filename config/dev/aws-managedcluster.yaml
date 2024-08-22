@@ -4,15 +4,15 @@ metadata:
   name: aws-dev
   namespace: ${NAMESPACE}
 spec:
-  config:
-    controlPlane:
-      amiID: ami-0989c067ff3da4b27
-      instanceType: t3.small
-    controlPlaneNumber: 1
-    publicIP: true
-    region: us-west-2
-    worker:
-      amiID: ami-0989c067ff3da4b27
-      instanceType: t3.small
-    workersNumber: 1
   template: aws-standalone-cp
+  config:
+    region: us-east-2
+    publicIP: true
+    controlPlaneNumber: 1
+    workersNumber: 1
+    controlPlane:
+      amiID: ami-02f3416038bdb17fb
+      instanceType: t3.small
+    worker:
+      amiID: ami-02f3416038bdb17fb
+      instanceType: t3.small

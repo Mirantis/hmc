@@ -192,6 +192,7 @@ REGISTRY_NAME ?= hmc-local-registry
 REGISTRY_PORT ?= 5001
 REGISTRY_REPO ?= oci://127.0.0.1:$(REGISTRY_PORT)/charts
 DEV_PROVIDER ?= aws
+CLUSTER_NAME ?= $(shell $(YQ) '.metadata.name' ./config/dev/deployment.yaml)
 
 AWS_CREDENTIALS=${AWS_B64ENCODED_CREDENTIALS}
 
@@ -279,8 +280,6 @@ dev-apply: kind-deploy registry-deploy dev-push dev-deploy dev-templates
 .PHONY: dev-destroy
 dev-destroy: kind-undeploy registry-undeploy
 
-.PHONY: dev-creds-apply
-dev-creds-apply: dev-$(DEV_PROVIDER)-creds
 
 .PHONY: dev-provider-apply
 dev-provider-apply: envsubst
@@ -290,8 +289,14 @@ dev-provider-apply: envsubst
 dev-provider-delete: envsubst
 	@NAMESPACE=$(NAMESPACE) $(ENVSUBST) -no-unset -i config/dev/$(DEV_PROVIDER)-managedcluster.yaml | $(KUBECTL) delete -f -
 
+.PHONY: dev-aws-nuke
+dev-aws-nuke: ## Warning: Destructive! Nuke all AWS resources deployed by 'dev-aws-apply', prefix with CLUSTER_NAME to nuke a specific cluster.
+	@CLUSTER_NAME=$(CLUSTER_NAME) envsubst < config/dev/cloud_nuke.yaml.tpl > config/dev/cloud_nuke.yaml
+	$(CLOUDNUKE) aws --region us-west-2 --force --config config/dev/cloud_nuke.yaml --resource-type vpc,eip,nat-gateway,ec2-subnet,internet-gateway,network-interface,security-group
+	@rm config/dev/cloud_nuke.yaml
+
 .PHONY: cli-install
-cli-install: clusterawsadm clusterctl
+cli-install: clusterawsadm clusterctl cloud-nuke
 
 ##@ Dependencies
 
@@ -320,6 +325,7 @@ KIND ?= $(LOCALBIN)/kind-$(KIND_VERSION)
 YQ ?= $(LOCALBIN)/yq-$(YQ_VERSION)
 CLUSTERAWSADM ?= $(LOCALBIN)/clusterawsadm
 CLUSTERCTL ?= $(LOCALBIN)/clusterctl
+CLOUDNUKE ?= $(LOCALBIN)/cloud-nuke
 ADDLICENSE ?= $(LOCALBIN)/addlicense-$(ADDLICENSE_VERSION)
 ENVSUBST ?= $(LOCALBIN)/envsubst-$(ENVSUBST_VERSION)
 
@@ -330,6 +336,7 @@ GOLANGCI_LINT_VERSION ?= v1.60.1
 HELM_VERSION ?= v3.15.1
 KIND_VERSION ?= v0.23.0
 YQ_VERSION ?= v4.44.2
+CLOUDNUKE_VERSION = v0.37.1
 CLUSTERAWSADM_VERSION ?= v2.5.2
 CLUSTERCTL_VERSION ?= v1.7.3
 ADDLICENSE_VERSION ?= v1.1.1
@@ -381,6 +388,12 @@ $(KIND): | $(LOCALBIN)
 yq: $(YQ) ## Download yq locally if necessary.
 $(YQ): | $(LOCALBIN)
 	$(call go-install-tool,$(YQ),github.com/mikefarah/yq/v4,${YQ_VERSION})
+
+.PHONY: cloud-nuke
+cloud-nuke: $(CLOUDNUKE) ## Download cloud-nuke locally if necessary.
+$(CLOUDNUKE): | $(LOCALBIN)
+	curl -sL https://github.com/gruntwork-io/cloud-nuke/releases/download/$(CLOUDNUKE_VERSION)/cloud-nuke_$(OS)_$(ARCH) -o $(CLOUDNUKE)
+	chmod +x $(CLOUDNUKE)
 
 .PHONY: clusterawsadm
 clusterawsadm: $(CLUSTERAWSADM) ## Download clusterawsadm locally if necessary.
