@@ -32,19 +32,19 @@ import (
 const namespace = "hmc-system"
 
 var _ = Describe("controller", Ordered, func() {
-	// BeforeAll(func() {
-	// 	By("building and deploying the controller-manager")
-	// 	cmd := exec.Command("make", "dev-apply")
-	// 	_, err := utils.Run(cmd)
-	// 	Expect(err).NotTo(HaveOccurred())
-	// })
+	BeforeAll(func() {
+		By("building and deploying the controller-manager")
+		cmd := exec.Command("make", "dev-apply")
+		_, err := utils.Run(cmd)
+		Expect(err).NotTo(HaveOccurred())
+	})
 
-	// AfterAll(func() {
-	// 	By("removing the controller-manager")
-	// 	cmd := exec.Command("make", "dev-destroy")
-	// 	_, err := utils.Run(cmd)
-	// 	Expect(err).NotTo(HaveOccurred())
-	// })
+	AfterAll(func() {
+		By("removing the controller-manager")
+		cmd := exec.Command("make", "dev-destroy")
+		_, err := utils.Run(cmd)
+		Expect(err).NotTo(HaveOccurred())
+	})
 
 	Context("Operator", func() {
 		It("should run successfully", func() {

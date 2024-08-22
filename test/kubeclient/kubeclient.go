@@ -75,15 +75,15 @@ func (kc *KubeClient) NewFromCluster(ctx context.Context, namespace, clusterName
 
 // getLocalKubeConfig returns the kubeconfig file content.
 func getLocalKubeConfig() ([]byte, error) {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get user home directory: %w", err)
-	}
-
 	// Use the KUBECONFIG environment variable if it is set, otherwise use the
 	// default path.
 	kubeConfig, ok := os.LookupEnv("KUBECONFIG")
 	if !ok {
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get user home directory: %w", err)
+		}
+
 		kubeConfig = filepath.Join(homeDir, ".kube", "config")
 	}
 
