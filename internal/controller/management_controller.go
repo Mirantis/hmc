@@ -91,9 +91,9 @@ func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Manag
 	detectedProviders := hmc.Providers{}
 	detectedComponents := make(map[string]hmc.ComponentStatus)
 
-	err := r.enableAdmissionWebhook(ctx, management)
+	err := r.enableAdditionalComponents(ctx, management)
 	if err != nil {
-		l.Error(err, "failed to enable admission webhook")
+		l.Error(err, "failed to enable additional HMC components")
 		return ctrl.Result{}, err
 	}
 
@@ -227,7 +227,9 @@ func wrappedComponents(mgmt *hmc.Management) (components []component) {
 	return
 }
 
-func (r *ManagementReconciler) enableAdmissionWebhook(ctx context.Context, mgmt *hmc.Management) error {
+// enableAdditionalComponents enables the admission controller and cluster api operator
+// once the cert manager is ready
+func (r *ManagementReconciler) enableAdditionalComponents(ctx context.Context, mgmt *hmc.Management) error {
 	l := log.FromContext(ctx)
 
 	hmcComponent := &mgmt.Spec.Core.HMC
@@ -243,6 +245,10 @@ func (r *ManagementReconciler) enableAdmissionWebhook(ctx context.Context, mgmt 
 	if config["admissionWebhook"] != nil {
 		admissionWebhookValues = config["admissionWebhook"].(map[string]interface{})
 	}
+	capiOperatorValues := make(map[string]interface{})
+	if config["cluster-api-operator"] != nil {
+		capiOperatorValues = config["cluster-api-operator"].(map[string]interface{})
+	}
 
 	err := certmanager.VerifyAPI(ctx, r.Config, r.Scheme, hmc.ManagementNamespace)
 	if err != nil {
@@ -252,6 +258,15 @@ func (r *ManagementReconciler) enableAdmissionWebhook(ctx context.Context, mgmt 
 
 	admissionWebhookValues["enabled"] = true
 	config["admissionWebhook"] = admissionWebhookValues
+
+	// Enable HMC capi operator only if it was not explicitly disabled in the config to
+	// support installation with existing cluster api operator
+	if capiOperatorValues["enabled"] != false {
+		l.Info("Enabling cluster API operator")
+		capiOperatorValues["enabled"] = true
+	}
+	config["cluster-api-operator"] = capiOperatorValues
+
 	updatedConfig, err := json.Marshal(config)
 	if err != nil {
 		return fmt.Errorf("failed to marshal HMC config: %v", err)
