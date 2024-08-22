@@ -1,85 +1,26 @@
 {
   "$schema": "https://json-schema.org/draft/2019-09/schema",
   "type": "object",
-  "required": [
-    "credentialsSecretName"
-  ],
   "properties": {
-    "manager": {
+    "configSecret": {
       "type": "object",
       "properties": {
-        "image": {
-          "type": "object",
-          "properties": {
-            "repository": {
-              "type": "string"
-            },
-            "name": {
-              "type": "string"
-            },
-            "tag": {
-              "type": "string"
-            }
-          }
+        "create": {
+          "type": "boolean"
         },
-        "imagePullPolicy": {
+        "name": {
+          "type": "string"
+        },
+        "namespace": {
           "type": "string"
         }
       }
     },
-    "credentialsSecretName": {
-      "type": "string"
-    },
-    "autoControllerIdentityCreator": {
-      "type": "boolean"
-    },
-    "awsControllerIamRole": {
-      "type": "string"
-    },
-    "capaDiagnosticsAddress": {
-      "type": "string"
-    },
-    "capaEks": {
-      "type": "boolean"
-    },
-    "capaEksAddRoles": {
-      "type": "boolean"
-    },
-    "capaEksIam": {
-      "type": "boolean"
-    },
-    "capaInsecureDiagnostics": {
-      "type": "boolean"
-    },
-    "capaLoglevel": {
-      "type": "integer"
-    },
-    "eventBridgeInstanceState": {
-      "type": "boolean"
-    },
-    "expAlternativeGcStrategy": {
-      "type": "boolean"
-    },
-    "expBootstrapFormatIgnition": {
-      "type": "boolean"
-    },
-    "expEksFargate": {
-      "type": "boolean"
-    },
-    "expExternalResourceGc": {
-      "type": "boolean"
-    },
-    "expMachinePool": {
-      "type": "boolean"
-    },
-    "expRosa": {
-      "type": "boolean"
-    },
-    "k8sCpLabel": {
-      "type": "string"
-    },
-    "tagUnmanagedNetworkResources": {
-      "type": "boolean"
+    "config": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
     }
   }
 }
