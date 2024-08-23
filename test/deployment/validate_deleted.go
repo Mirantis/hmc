@@ -36,7 +36,7 @@ func VerifyProviderDeleted(ctx context.Context, kc *kubeclient.KubeClient, clust
 	// as to not move on to the next resource type until the first is resolved.
 	// We use []string here since order is important.
 	for _, name := range []string{"control-planes", "machinedeployments", "clusters"} {
-		validator, ok := resourceValidators[name]
+		validator, ok := deletionValidators[name]
 		if !ok {
 			continue
 		}

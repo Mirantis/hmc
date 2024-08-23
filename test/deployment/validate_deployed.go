@@ -191,8 +191,7 @@ func validateCSIDriver(ctx context.Context, kc *kubeclient.KubeClient, clusterNa
 		// Since these resourceValidationFuncs are intended to be used in
 		// Eventually we should ensure a follow-up PVCreate is a no-op.
 		if !apierrors.IsAlreadyExists(err) {
-			// XXX: Maybe we should Fail here?
-			return fmt.Errorf("failed to create test PVC: %w", err)
+			Fail(fmt.Sprintf("failed to create test PVC: %v", err))
 		}
 	}
 
@@ -228,7 +227,7 @@ func validateCSIDriver(ctx context.Context, kc *kubeclient.KubeClient, clusterNa
 	}, metav1.CreateOptions{})
 	if err != nil {
 		if !apierrors.IsAlreadyExists(err) {
-			return fmt.Errorf("failed to create test Pod: %w", err)
+			Fail(fmt.Sprintf("failed to create test Pod: %v", err))
 		}
 	}
 

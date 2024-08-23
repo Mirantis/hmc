@@ -130,16 +130,16 @@ func ValidateConditionsTrue(unstrObj *unstructured.Unstructured) error {
 			continue
 		}
 
-		errorStr := fmt.Sprintf("%s: %s", c.Type, c.Reason)
+		errorStr := fmt.Sprintf("%s - Reason: %s", c.Type, c.Reason)
 		if c.Message != "" {
 			errorStr = fmt.Sprintf("%s: %s", errorStr, c.Message)
 		}
 
-		errs = errors.Join(fmt.Errorf(errorStr), errs)
+		errs = errors.Join(errors.New(errorStr), errs)
 	}
 
 	if errs != nil {
-		return fmt.Errorf("%s %s is not ready with conditions: %w", objKind, objName, errs)
+		return fmt.Errorf("%s %s is not ready with conditions:\n%w", objKind, objName, errs)
 	}
 
 	return nil

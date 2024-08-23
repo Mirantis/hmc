@@ -262,7 +262,7 @@ func (kc *KubeClient) ListMachineDeployments(
 func (kc *KubeClient) ListK0sControlPlanes(
 	ctx context.Context, clusterName string) ([]unstructured.Unstructured, error) {
 	return kc.listResource(ctx, schema.GroupVersionResource{
-		Group:    "control-plane.cluster.x-k8s.io",
+		Group:    "controlplane.cluster.x-k8s.io",
 		Version:  "v1beta1",
 		Resource: "k0scontrolplanes",
 	}, clusterName)

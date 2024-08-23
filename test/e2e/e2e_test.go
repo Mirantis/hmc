@@ -64,7 +64,7 @@ var _ = Describe("controller", Ordered, func() {
 				}
 
 				if len(podList.Items) != 1 {
-					return fmt.Errorf("expected 1 controller pod, got %d", len(podList.Items))
+					return fmt.Errorf("expected 1 cluster-api-controller pod, got %d", len(podList.Items))
 				}
 
 				controllerPod := podList.Items[0]
@@ -84,7 +84,7 @@ var _ = Describe("controller", Ordered, func() {
 
 				return nil
 			}
-			EventuallyWithOffset(1, func() error {
+			Eventually(func() error {
 				err := verifyControllerUp()
 				if err != nil {
 					_, _ = fmt.Fprintf(GinkgoWriter, "Controller pod validation failed: %v\n", err)
@@ -92,7 +92,7 @@ var _ = Describe("controller", Ordered, func() {
 				}
 
 				return nil
-			}(), 5*time.Minute, time.Second).Should(Succeed())
+			}).WithTimeout(5 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
 		})
 	})
 

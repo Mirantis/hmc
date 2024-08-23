@@ -22,6 +22,7 @@ import (
 	"os/exec"
 
 	"github.com/Mirantis/hmc/test/utils"
+	"github.com/a8m/envsubst"
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -43,7 +44,7 @@ const (
 )
 
 //go:embed resources/deployment.yaml.tpl
-var deploymentConfigBytes []byte
+var deploymentTemplateBytes []byte
 
 // GetUnstructuredDeployment returns an unstructured deployment object based on
 // the provider and template.
@@ -53,41 +54,22 @@ func GetUnstructuredDeployment(provider ProviderType, templateName Template) *un
 	generatedName := uuid.New().String()[:8] + "-e2e-test"
 	_, _ = fmt.Fprintf(GinkgoWriter, "Generated AWS cluster name: %q\n", generatedName)
 
-	var deploymentConfig map[string]interface{}
-
-	err := yaml.Unmarshal(deploymentConfigBytes, &deploymentConfig)
-	Expect(err).NotTo(HaveOccurred(), "failed to unmarshal deployment config")
-
 	switch provider {
 	case ProviderAWS:
 		// XXX: Maybe we should just use automatic AMI selection here.
 		amiID := getAWSAMI()
-		awsRegion := os.Getenv("AWS_REGION")
 
-		// Modify the deployment config to use the generated name and the AMI.
-		// TODO: This should be modified to use go templating.
-		if metadata, ok := deploymentConfig["metadata"].(map[string]interface{}); ok {
-			metadata["name"] = generatedName
-		} else {
-			// Ensure we always have a metadata.name field populated.
-			deploymentConfig["metadata"] = map[string]interface{}{"name": generatedName}
-		}
+		Expect(os.Setenv("AMI_ID", amiID)).NotTo(HaveOccurred())
+		Expect(os.Setenv("DEPLOYMENT_NAME", generatedName)).NotTo(HaveOccurred())
+		Expect(os.Setenv("TEMPLATE_NAME", string(templateName))).NotTo(HaveOccurred())
 
-		if spec, ok := deploymentConfig["spec"].(map[string]interface{}); ok {
-			if config, ok := spec["config"].(map[string]interface{}); ok {
-				if awsRegion != "" {
-					config["region"] = awsRegion
-				}
+		deploymentConfigBytes, err := envsubst.Bytes(deploymentTemplateBytes)
+		Expect(err).NotTo(HaveOccurred(), "failed to substitute environment variables")
 
-				if worker, ok := config["worker"].(map[string]interface{}); ok {
-					worker["amiID"] = amiID
-				}
+		var deploymentConfig map[string]interface{}
 
-				if controlPlane, ok := config["controlPlane"].(map[string]interface{}); ok {
-					controlPlane["amiID"] = amiID
-				}
-			}
-		}
+		err = yaml.Unmarshal(deploymentConfigBytes, &deploymentConfig)
+		Expect(err).NotTo(HaveOccurred(), "failed to unmarshal deployment config")
 
 		return &unstructured.Unstructured{Object: deploymentConfig}
 	default:
