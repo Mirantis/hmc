@@ -12,17 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package utils
+package deployment
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
 
+	"github.com/Mirantis/hmc/test/utils"
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 	"gopkg.in/yaml.v3"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 type ProviderType string
@@ -36,39 +40,32 @@ type Template string
 const (
 	TemplateAWSStandaloneCP Template = "aws-standalone-cp"
 	TemplateAWSHostedCP     Template = "aws-hosted-cp"
-
-	deploymentConfigFile = "./config/dev/deployment.yaml"
 )
 
-// ConfigureDeploymentConfig modifies the config/dev/deployment.yaml for
-// use in test and returns the generated cluster name.
-func ConfigureDeploymentConfig(provider ProviderType, templateName Template) (string, error) {
-	generatedName := uuid.NewString()[:8] + "-e2e-test"
+//go:embed resources/deployment.yaml.tpl
+var deploymentConfigBytes []byte
 
-	deploymentConfigBytes, err := os.ReadFile(deploymentConfigFile)
-	if err != nil {
-		return "", fmt.Errorf("failed to read deployment config: %w", err)
-	}
+// GetUnstructuredDeployment returns an unstructured deployment object based on
+// the provider and template.
+func GetUnstructuredDeployment(provider ProviderType, templateName Template) *unstructured.Unstructured {
+	GinkgoHelper()
+
+	generatedName := uuid.New().String()[:8] + "-e2e-test"
+	_, _ = fmt.Fprintf(GinkgoWriter, "Generated AWS cluster name: %q\n", generatedName)
 
 	var deploymentConfig map[string]interface{}
 
-	err = yaml.Unmarshal(deploymentConfigBytes, &deploymentConfig)
-	if err != nil {
-		return "", fmt.Errorf("failed to unmarshal deployment config: %w", err)
-	}
+	err := yaml.Unmarshal(deploymentConfigBytes, &deploymentConfig)
+	Expect(err).NotTo(HaveOccurred(), "failed to unmarshal deployment config")
 
 	switch provider {
 	case ProviderAWS:
 		// XXX: Maybe we should just use automatic AMI selection here.
-		amiID, err := getAWSAMI()
-		if err != nil {
-			return "", fmt.Errorf("failed to get AWS AMI: %w", err)
-		}
-
+		amiID := getAWSAMI()
 		awsRegion := os.Getenv("AWS_REGION")
 
-		// Modify the existing ./config/dev/deployment.yaml file to use the
-		// AMI we just found and our AWS_REGION.
+		// Modify the deployment config to use the generated name and the AMI.
+		// TODO: This should be modified to use go templating.
 		if metadata, ok := deploymentConfig["metadata"].(map[string]interface{}); ok {
 			metadata["name"] = generatedName
 		} else {
@@ -92,34 +89,28 @@ func ConfigureDeploymentConfig(provider ProviderType, templateName Template) (st
 			}
 		}
 
-		deploymentConfigBytes, err = yaml.Marshal(deploymentConfig)
-		if err != nil {
-			return "", fmt.Errorf("failed to marshal deployment config: %w", err)
-		}
-
-		_, _ = fmt.Fprintf(GinkgoWriter, "Generated AWS cluster name: %q\n", generatedName)
-
-		return generatedName, os.WriteFile(deploymentConfigFile, deploymentConfigBytes, 0644)
+		return &unstructured.Unstructured{Object: deploymentConfig}
 	default:
-		return "", fmt.Errorf("unsupported provider: %s", provider)
+		Fail(fmt.Sprintf("unsupported provider: %s", provider))
 	}
+
+	return nil
 }
 
 // getAWSAMI returns an AWS AMI ID to use for test.
-func getAWSAMI() (string, error) {
+func getAWSAMI() string {
+	GinkgoHelper()
+
 	// For now we'll just use the latest Kubernetes version for ubuntu 20.04,
 	// but we could potentially pin the Kube version and specify that here.
 	cmd := exec.Command("./bin/clusterawsadm", "ami", "list", "--os=ubuntu-20.04", "-o", "json")
-	output, err := Run(cmd)
-	if err != nil {
-		return "", fmt.Errorf("failed to list AMIs: %w", err)
-	}
+	output, err := utils.Run(cmd)
+	Expect(err).NotTo(HaveOccurred(), "failed to list AMIs")
 
 	var amiList map[string]interface{}
 
-	if err := json.Unmarshal(output, &amiList); err != nil {
-		return "", fmt.Errorf("failed to unmarshal AMI list: %w", err)
-	}
+	err = json.Unmarshal(output, &amiList)
+	Expect(err).NotTo(HaveOccurred(), "failed to unmarshal AMI list")
 
 	// ami list returns a sorted list of AMIs by kube version, just get the
 	// first one.
@@ -131,9 +122,11 @@ func getAWSAMI() (string, error) {
 				continue
 			}
 
-			return ami, nil
+			return ami
 		}
 	}
 
-	return "", fmt.Errorf("no AMIs found")
+	Fail("no AMIs found")
+
+	return ""
 }

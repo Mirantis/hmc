@@ -12,11 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package e2e
+package deployment
 
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/Mirantis/hmc/test/kubeclient"
 	"github.com/Mirantis/hmc/test/utils"
@@ -26,7 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
@@ -35,22 +35,24 @@ import (
 type resourceValidationFunc func(context.Context, *kubeclient.KubeClient, string) error
 
 var resourceValidators = map[string]resourceValidationFunc{
-	"clusters":       validateClusters,
+	"clusters":       validateCluster,
 	"machines":       validateMachines,
 	"control-planes": validateK0sControlPlanes,
 	"csi-driver":     validateCSIDriver,
 	"ccm":            validateCCM,
 }
 
-// verifyProviderDeployed is a provider-agnostic verification that checks for
+// VerifyProviderDeployed is a provider-agnostic verification that checks for
 // the presence of specific resources in the cluster using
-// resourceValidationFuncs and clusterValidationFuncs. It is meant to be used
-// in conjunction with an Eventually block. In some cases it may be necessary
-// to end the Eventually block early if the resource will never reach a ready
-// state, in these instances Ginkgo's Fail function should be used.
-func verifyProviderDeployed(ctx context.Context, kc *kubeclient.KubeClient, clusterName string) error {
+// resourceValidationFuncs. It is meant to be used in conjunction with an
+// Eventually block.
+// In some cases it may be necessary to end the Eventually block early if the
+// resource will never reach a ready state, in these instances Ginkgo's Fail
+// should be used to end the spec early.
+func VerifyProviderDeployed(ctx context.Context, kc *kubeclient.KubeClient, clusterName string) error {
 	// Sequentially validate each resource type, only returning the first error
 	// as to not move on to the next resource type until the first is resolved.
+	// We use []string here since order is important.
 	for _, name := range []string{"clusters", "machines", "control-planes", "csi-driver", "ccm"} {
 		validator, ok := resourceValidators[name]
 		if !ok {
@@ -63,30 +65,16 @@ func verifyProviderDeployed(ctx context.Context, kc *kubeclient.KubeClient, clus
 		}
 
 		_, _ = fmt.Fprintf(GinkgoWriter, "[%s] validation succeeded\n", name)
-		// XXX: Once we validate for the first time should we move the
-		// validation out and consider it "done"?  Or is there a possibility
-		// that the resources could enter a non-ready state later?
 		delete(resourceValidators, name)
 	}
 
 	return nil
 }
 
-func validateClusters(ctx context.Context, kc *kubeclient.KubeClient, clusterName string) error {
-	gvr := schema.GroupVersionResource{
-		Group:    "cluster.x-k8s.io",
-		Version:  "v1beta1",
-		Resource: "clusters",
-	}
-
-	client, err := kc.GetDynamicClient(gvr)
+func validateCluster(ctx context.Context, kc *kubeclient.KubeClient, clusterName string) error {
+	cluster, err := kc.GetCluster(ctx, clusterName)
 	if err != nil {
-		Fail(fmt.Sprintf("failed to get %s client: %v", gvr.Resource, err))
-	}
-
-	cluster, err := client.Get(ctx, clusterName, metav1.GetOptions{})
-	if err != nil {
-		return fmt.Errorf("failed to get %s %s: %v", gvr.Resource, clusterName, err)
+		return err
 	}
 
 	phase, _, err := unstructured.NestedString(cluster.Object, "status", "phase")
@@ -110,25 +98,16 @@ func validateClusters(ctx context.Context, kc *kubeclient.KubeClient, clusterNam
 }
 
 func validateMachines(ctx context.Context, kc *kubeclient.KubeClient, clusterName string) error {
-	gvr := schema.GroupVersionResource{
-		Group:    "cluster.x-k8s.io",
-		Version:  "v1beta1",
-		Resource: "machines",
-	}
-
-	client, err := kc.GetDynamicClient(gvr)
+	machines, err := kc.ListMachines(ctx, clusterName)
 	if err != nil {
-		Fail(fmt.Sprintf("failed to get %s client: %v", gvr.Resource, err))
+		return fmt.Errorf("failed to list machines: %w", err)
 	}
 
-	machines, err := client.List(ctx, metav1.ListOptions{
-		LabelSelector: "cluster.x-k8s.io/cluster-name=" + clusterName,
-	})
 	if err != nil {
-		return fmt.Errorf("failed to list %s: %v", gvr.Resource, err)
+		return fmt.Errorf("failed to list Machines: %w", err)
 	}
 
-	for _, machine := range machines.Items {
+	for _, machine := range machines {
 		if err := utils.ValidateObjectNamePrefix(&machine, clusterName); err != nil {
 			Fail(err.Error())
 		}
@@ -142,23 +121,12 @@ func validateMachines(ctx context.Context, kc *kubeclient.KubeClient, clusterNam
 }
 
 func validateK0sControlPlanes(ctx context.Context, kc *kubeclient.KubeClient, clusterName string) error {
-	k0sControlPlaneClient, err := kc.GetDynamicClient(schema.GroupVersionResource{
-		Group:    "controlplane.cluster.x-k8s.io",
-		Version:  "v1beta1",
-		Resource: "k0scontrolplanes",
-	})
-	if err != nil {
-		return fmt.Errorf("failed to get K0sControlPlane client: %w", err)
-	}
-
-	controlPlanes, err := k0sControlPlaneClient.List(ctx, metav1.ListOptions{
-		LabelSelector: "cluster.x-k8s.io/cluster-name=" + clusterName,
-	})
+	controlPlanes, err := kc.ListK0sControlPlanes(ctx, clusterName)
 	if err != nil {
 		return fmt.Errorf("failed to list K0sControlPlanes: %w", err)
 	}
 
-	for _, controlPlane := range controlPlanes.Items {
+	for _, controlPlane := range controlPlanes {
 		if err := utils.ValidateObjectNamePrefix(&controlPlane, clusterName); err != nil {
 			Fail(err.Error())
 		}
@@ -181,29 +149,17 @@ func validateK0sControlPlanes(ctx context.Context, kc *kubeclient.KubeClient, cl
 			return fmt.Errorf("expected K0sControlPlane condition to be type map[string]interface{}, got: %T", status)
 		}
 
+		if _, ok := st["ready"]; !ok {
+			return fmt.Errorf("%s %s has no 'ready' status", objKind, objName)
+		}
+
 		if !st["ready"].(bool) {
-			return fmt.Errorf("K0sControlPlane %s is not ready, status: %+v", controlPlane.GetName(), status)
+			return fmt.Errorf("%s %s is not ready, status: %+v", objKind, objName, st)
 		}
 	}
 
 	return nil
 }
-
-// apiVersion: v1
-// kind: Pod
-// metadata:
-//   name: test-pvc-pod
-// spec:
-//   volumes:
-//     - name: test-pvc-vol
-//       persistentVolumeClaim:
-//         claimName: pvcName
-//   containers:
-//     - name: test-pvc-container
-//       image: nginx
-//       volumeMounts:
-//         - mountPath: "/storage"
-//           name: task-pv-storage
 
 // validateCSIDriver validates that the provider CSI driver is functioning
 // by creating a PVC and verifying it enters "Bound" status.
@@ -235,22 +191,64 @@ func validateCSIDriver(ctx context.Context, kc *kubeclient.KubeClient, clusterNa
 		// Since these resourceValidationFuncs are intended to be used in
 		// Eventually we should ensure a follow-up PVCreate is a no-op.
 		if !apierrors.IsAlreadyExists(err) {
+			// XXX: Maybe we should Fail here?
 			return fmt.Errorf("failed to create test PVC: %w", err)
 		}
 	}
 
-	// Verify the PVC enters "Bound" status.
+	// Create a pod that uses the PVC so that the PVC enters "Bound" status.
+	_, err = clusterKC.Client.CoreV1().Pods(clusterKC.Namespace).Create(ctx, &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: pvcName + "-pod",
+		},
+		Spec: corev1.PodSpec{
+			Volumes: []corev1.Volume{
+				{
+					Name: "test-pvc-vol",
+					VolumeSource: corev1.VolumeSource{
+						PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+							ClaimName: pvcName,
+						},
+					},
+				},
+			},
+			Containers: []corev1.Container{
+				{
+					Name:  "test-pvc-container",
+					Image: "nginx",
+					VolumeMounts: []corev1.VolumeMount{
+						{
+							MountPath: "/storage",
+							Name:      "test-pvc-vol",
+						},
+					},
+				},
+			},
+		},
+	}, metav1.CreateOptions{})
+	if err != nil {
+		if !apierrors.IsAlreadyExists(err) {
+			return fmt.Errorf("failed to create test Pod: %w", err)
+		}
+	}
+
+	// Verify the PVC enters "Bound" status and inherits the CSI driver
+	// storageClass without us having to specify it.
 	pvc, err := clusterKC.Client.CoreV1().PersistentVolumeClaims(clusterKC.Namespace).
 		Get(ctx, pvcName, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to get test PVC: %w", err)
 	}
 
-	if pvc.Status.Phase == corev1.ClaimBound {
-		return nil
+	if !strings.Contains(*pvc.Spec.StorageClassName, "csi") {
+		Fail(fmt.Sprintf("%s PersistentVolumeClaim does not have a CSI driver storageClass", pvcName))
 	}
 
-	return fmt.Errorf("%s PersistentVolume not yet 'Bound', current phase: %q", pvcName, pvc.Status.Phase)
+	if pvc.Status.Phase != corev1.ClaimBound {
+		return fmt.Errorf("%s PersistentVolume not yet 'Bound', current phase: %q", pvcName, pvc.Status.Phase)
+	}
+
+	return nil
 }
 
 // validateCCM validates that the provider's cloud controller manager is

@@ -17,6 +17,7 @@ package e2e
 import (
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -25,6 +26,7 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/Mirantis/hmc/test/deployment"
 	"github.com/Mirantis/hmc/test/kubeclient"
 	"github.com/Mirantis/hmc/test/utils"
 )
@@ -32,12 +34,12 @@ import (
 const namespace = "hmc-system"
 
 var _ = Describe("controller", Ordered, func() {
-	// BeforeAll(func() {
-	// 	By("building and deploying the controller-manager")
-	// 	cmd := exec.Command("make", "test-apply")
-	// 	_, err := utils.Run(cmd)
-	// 	Expect(err).NotTo(HaveOccurred())
-	// })
+	BeforeAll(func() {
+		By("building and deploying the controller-manager")
+		cmd := exec.Command("make", "test-apply")
+		_, err := utils.Run(cmd)
+		Expect(err).NotTo(HaveOccurred())
+	})
 
 	// AfterAll(func() {
 	// 	By("removing the controller-manager")
@@ -96,8 +98,10 @@ var _ = Describe("controller", Ordered, func() {
 
 	Context("AWS Templates", func() {
 		var (
-			kc  *kubeclient.KubeClient
-			err error
+			kc                   *kubeclient.KubeClient
+			deleteDeploymentFunc func() error
+			clusterName          string
+			err                  error
 		)
 
 		BeforeAll(func() {
@@ -108,30 +112,44 @@ var _ = Describe("controller", Ordered, func() {
 		})
 
 		AfterAll(func() {
-			// // Purge the AWS resources, the AfterAll for the controller will
-			// // clean up the management cluster.
-			// cmd := exec.Command("make", "dev-aws-nuke")
-			// _, err := utils.Run(cmd)
-			// ExpectWithOffset(2, err).NotTo(HaveOccurred())
+			// Delete the deployment if it was created.
+			if deleteDeploymentFunc != nil {
+				err = deleteDeploymentFunc()
+				Expect(err).NotTo(HaveOccurred())
+			}
+
+			// Purge the AWS resources, the AfterAll for the controller will
+			// clean up the management cluster.
+			err = os.Setenv("CLUSTER_NAME", clusterName)
+			Expect(err).NotTo(HaveOccurred())
+			cmd := exec.Command("make", "dev-aws-nuke")
+			_, err := utils.Run(cmd)
+			ExpectWithOffset(2, err).NotTo(HaveOccurred())
 		})
 
 		It("should work with an AWS provider", func() {
-			By("using the aws-standalone-cp template")
-			//clusterName, err := utils.ConfigureDeploymentConfig(utils.ProviderAWS, utils.TemplateAWSStandaloneCP)
-			//ExpectWithOffset(1, err).NotTo(HaveOccurred())
+			By("creating a Deployment with aws-standalone-cp template")
+			d := deployment.GetUnstructuredDeployment(deployment.ProviderAWS, deployment.TemplateAWSStandaloneCP)
+			clusterName = d.GetName()
 
-			clusterName := "bba1743d-e2e-test"
+			deleteDeploymentFunc, err = kc.CreateDeployment(context.Background(), d)
+			Expect(err).NotTo(HaveOccurred())
 
-			cmd := exec.Command("make", "dev-aws-apply")
-			_, err = utils.Run(cmd)
-			ExpectWithOffset(2, err).NotTo(HaveOccurred())
-			_, _ = fmt.Fprintf(GinkgoWriter, "Waiting for resource validation to succeed\n")
+			By("waiting for infrastructure providers to deploy successfully")
 			Eventually(func() error {
-				return verifyProviderDeployed(context.Background(), kc, clusterName)
-			}).WithTimeout(30 * time.Minute).WithPolling(5 * time.Second).Should(Succeed())
-			By("using the aws-hosted-cp template")
-			// TODO: Use the standalone control plane resources to craft a hosted
-			// control plane and test it.
+				return deployment.VerifyProviderDeployed(context.Background(), kc, clusterName)
+			}).WithTimeout(30 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
+
+			By("verifying the deployment deletes successfully")
+			err = deleteDeploymentFunc()
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(func() error {
+				return deployment.VerifyProviderDeleted(context.Background(), kc, clusterName)
+			}).WithTimeout(10 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
+
+			By("creating a Deployment with aws-hosted-cp template")
+			// TODO: Use the standalone control plane resources to craft a
+			// hosted control plane and test it.
 		})
 	})
 })
