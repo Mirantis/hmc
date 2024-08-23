@@ -71,4 +71,4 @@ jobs:
         uses: azure/setup-kubectl@v4
       - name: Run E2E tests
         run: |
-          make e2e-test
+          make test-e2e

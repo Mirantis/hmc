@@ -106,7 +106,7 @@ test: generate-all fmt vet envtest tidy external-crd ## Run tests.
 # Utilize Kind or modify the e2e tests to load the image locally, enabling compatibility with other vendors.
 .PHONY: test-e2e # Run the e2e tests against a Kind k8s instance that is spun up.
 test-e2e: cli-install
-	KIND_CLUSTER_NAME=$(KIND_CLUSTER_NAME) KIND_VERSION=$(KIND_VERSION) go test ./test/e2e/ -v -ginkgo.v
+	KIND_CLUSTER_NAME="hmc-test" KIND_VERSION=$(KIND_VERSION) go test ./test/e2e/ -v -ginkgo.v -timeout=2h
 
 .PHONY: lint
 lint: golangci-lint ## Run golangci-lint linter & yamllint
@@ -278,7 +278,7 @@ dev-azure-creds: envsubst
 dev-apply: kind-deploy registry-deploy dev-push dev-deploy dev-templates
 
 .PHONY: dev-destroy
-dev-destroy: kind-undeploy registry-undeploy
+dev-destroy: kind-undeploy registry-undeploy ## Destroy the development environment by deleting the kind cluster and local registry.
 
 
 .PHONY: dev-provider-apply
@@ -292,11 +292,17 @@ dev-provider-delete: envsubst
 .PHONY: dev-aws-nuke
 dev-aws-nuke: ## Warning: Destructive! Nuke all AWS resources deployed by 'dev-aws-apply', prefix with CLUSTER_NAME to nuke a specific cluster.
 	@CLUSTER_NAME=$(CLUSTER_NAME) envsubst < config/dev/cloud_nuke.yaml.tpl > config/dev/cloud_nuke.yaml
-	$(CLOUDNUKE) aws --region us-west-2 --force --config config/dev/cloud_nuke.yaml --resource-type vpc,eip,nat-gateway,ec2-subnet,internet-gateway,network-interface,security-group
+	DISABLE_TELEMETRY=true $(CLOUDNUKE) aws --region $$AWS_REGION --config config/dev/cloud_nuke.yaml --resource-type vpc,eip,nat-gateway,ec2-subnet,elb,elbv2,internet-gateway,network-interface,security-group
 	@rm config/dev/cloud_nuke.yaml
 
+.PHONY: test-apply
+test-apply: kind-deploy registry-deploy dev-push dev-deploy dev-templates
+
+.PHONY: test-destroy
+test-destroy: kind-undeploy registry-undeploy
+
 .PHONY: cli-install
-cli-install: clusterawsadm clusterctl cloud-nuke
+cli-install: clusterawsadm clusterctl cloud-nuke yq ## Install the necessary CLI tools for deployment, development and testing.
 
 ##@ Dependencies
 

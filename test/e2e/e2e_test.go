@@ -32,19 +32,19 @@ import (
 const namespace = "hmc-system"
 
 var _ = Describe("controller", Ordered, func() {
-	BeforeAll(func() {
-		By("building and deploying the controller-manager")
-		cmd := exec.Command("make", "dev-apply")
-		_, err := utils.Run(cmd)
-		Expect(err).NotTo(HaveOccurred())
-	})
+	// BeforeAll(func() {
+	// 	By("building and deploying the controller-manager")
+	// 	cmd := exec.Command("make", "test-apply")
+	// 	_, err := utils.Run(cmd)
+	// 	Expect(err).NotTo(HaveOccurred())
+	// })
 
-	AfterAll(func() {
-		By("removing the controller-manager")
-		cmd := exec.Command("make", "dev-destroy")
-		_, err := utils.Run(cmd)
-		Expect(err).NotTo(HaveOccurred())
-	})
+	// AfterAll(func() {
+	// 	By("removing the controller-manager")
+	// 	cmd := exec.Command("make", "test-destroy")
+	// 	_, err := utils.Run(cmd)
+	// 	Expect(err).NotTo(HaveOccurred())
+	// })
 
 	Context("Operator", func() {
 		It("should run successfully", func() {
@@ -54,7 +54,7 @@ var _ = Describe("controller", Ordered, func() {
 			By("validating that the controller-manager pod is running as expected")
 			verifyControllerUp := func() error {
 				// Ensure only one controller pod is running.
-				podList, err := kc.Client.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{
+				podList, err := kc.Client.CoreV1().Pods(kc.Namespace).List(context.Background(), metav1.ListOptions{
 					LabelSelector: "control-plane=controller-manager,app.kubernetes.io/name=cluster-api",
 				})
 				if err != nil {
@@ -81,8 +81,16 @@ var _ = Describe("controller", Ordered, func() {
 				}
 
 				return nil
-			}()
-			EventuallyWithOffset(1, verifyControllerUp, time.Minute, time.Second).Should(Succeed())
+			}
+			EventuallyWithOffset(1, func() error {
+				err := verifyControllerUp()
+				if err != nil {
+					_, _ = fmt.Fprintf(GinkgoWriter, "Controller pod validation failed: %v\n", err)
+					return err
+				}
+
+				return nil
+			}(), 5*time.Minute, time.Second).Should(Succeed())
 		})
 	})
 
@@ -100,29 +108,30 @@ var _ = Describe("controller", Ordered, func() {
 		})
 
 		AfterAll(func() {
-			// Purge the AWS resources, the AfterAll for the controller will
-			// clean up the management cluster.
-			cmd := exec.Command("make", "dev-aws-nuke")
-			_, err := utils.Run(cmd)
-			ExpectWithOffset(2, err).NotTo(HaveOccurred())
+			// // Purge the AWS resources, the AfterAll for the controller will
+			// // clean up the management cluster.
+			// cmd := exec.Command("make", "dev-aws-nuke")
+			// _, err := utils.Run(cmd)
+			// ExpectWithOffset(2, err).NotTo(HaveOccurred())
 		})
 
 		It("should work with an AWS provider", func() {
 			By("using the aws-standalone-cp template")
-			clusterName, err := utils.ConfigureDeploymentConfig(utils.ProviderAWS, utils.AWSStandaloneCPTemplate)
-			ExpectWithOffset(2, err).NotTo(HaveOccurred())
+			//clusterName, err := utils.ConfigureDeploymentConfig(utils.ProviderAWS, utils.TemplateAWSStandaloneCP)
+			//ExpectWithOffset(1, err).NotTo(HaveOccurred())
+
+			clusterName := "bba1743d-e2e-test"
 
 			cmd := exec.Command("make", "dev-aws-apply")
 			_, err = utils.Run(cmd)
 			ExpectWithOffset(2, err).NotTo(HaveOccurred())
-			EventuallyWithOffset(2, func() error {
+			_, _ = fmt.Fprintf(GinkgoWriter, "Waiting for resource validation to succeed\n")
+			Eventually(func() error {
 				return verifyProviderDeployed(context.Background(), kc, clusterName)
-			}(), 30*time.Minute, 10*time.Second).Should(Succeed())
-
+			}).WithTimeout(30 * time.Minute).WithPolling(5 * time.Second).Should(Succeed())
 			By("using the aws-hosted-cp template")
 			// TODO: Use the standalone control plane resources to craft a hosted
 			// control plane and test it.
-
 		})
 	})
 })

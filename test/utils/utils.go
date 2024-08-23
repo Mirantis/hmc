@@ -24,6 +24,7 @@ import (
 	. "github.com/onsi/ginkgo/v2" //nolint:golint,revive
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // Run executes the provided command within this context
@@ -110,18 +111,35 @@ func ValidateConditionsTrue(unstrObj *unstructured.Unstructured) error {
 		return fmt.Errorf("failed to get status conditions for %s: %s: %w", objKind, objName, err)
 	}
 
+	var errs error
+
 	for _, condition := range conditions {
-		condition, ok := condition.(metav1.Condition)
+		conditionMap, ok := condition.(map[string]interface{})
 		if !ok {
-			return fmt.Errorf("expected %s: %s condition to be type metav1.Condition, got: %T",
-				objKind, objName, condition)
+			return fmt.Errorf("expected %s: %s condition to be type map[string]interface{}, got: %T",
+				objKind, objName, conditionMap)
 		}
 
-		if condition.Status == metav1.ConditionTrue {
+		var c *metav1.Condition
+
+		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(conditionMap, &c); err != nil {
+			return fmt.Errorf("failed to convert condition map to metav1.Condition: %w", err)
+		}
+
+		if c.Status == metav1.ConditionTrue {
 			continue
 		}
 
-		return fmt.Errorf("%s %s condition %s is not ready: %s", objKind, objName, condition.Type, condition.Message)
+		errorStr := fmt.Sprintf("%s: %s", c.Type, c.Reason)
+		if c.Message != "" {
+			errorStr = fmt.Sprintf("%s: %s", errorStr, c.Message)
+		}
+
+		errs = errors.Join(fmt.Errorf(errorStr), errs)
+	}
+
+	if errs != nil {
+		return fmt.Errorf("%s %s is not ready with conditions: %w", objKind, objName, errs)
 	}
 
 	return nil

@@ -21,6 +21,7 @@ import (
 	"os/exec"
 
 	"github.com/google/uuid"
+	. "github.com/onsi/ginkgo/v2"
 	"gopkg.in/yaml.v3"
 )
 
@@ -33,16 +34,18 @@ const (
 type Template string
 
 const (
-	AWSStandaloneCPTemplate Template = "aws-standalone-cp"
-	AWSHostedCPTemplate     Template = "aws-hosted-cp"
+	TemplateAWSStandaloneCP Template = "aws-standalone-cp"
+	TemplateAWSHostedCP     Template = "aws-hosted-cp"
+
+	deploymentConfigFile = "./config/dev/deployment.yaml"
 )
 
-// ConfigureDeploymentConfig modifies the ./config/dev/deployment.yaml for
+// ConfigureDeploymentConfig modifies the config/dev/deployment.yaml for
 // use in test and returns the generated cluster name.
 func ConfigureDeploymentConfig(provider ProviderType, templateName Template) (string, error) {
 	generatedName := uuid.NewString()[:8] + "-e2e-test"
 
-	deploymentConfigBytes, err := os.ReadFile("./config/dev/deployment.yaml")
+	deploymentConfigBytes, err := os.ReadFile(deploymentConfigFile)
 	if err != nil {
 		return "", fmt.Errorf("failed to read deployment config: %w", err)
 	}
@@ -94,7 +97,9 @@ func ConfigureDeploymentConfig(provider ProviderType, templateName Template) (st
 			return "", fmt.Errorf("failed to marshal deployment config: %w", err)
 		}
 
-		return generatedName, os.WriteFile("./config/dev/deployment.yaml", deploymentConfigBytes, 0644)
+		_, _ = fmt.Fprintf(GinkgoWriter, "Generated AWS cluster name: %q\n", generatedName)
+
+		return generatedName, os.WriteFile(deploymentConfigFile, deploymentConfigBytes, 0644)
 	default:
 		return "", fmt.Errorf("unsupported provider: %s", provider)
 	}
