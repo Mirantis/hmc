@@ -1,0 +1,17 @@
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: AzureCluster
+metadata:
+  name: {{ include "cluster.name" . }}
+spec:
+  identityRef:
+    kind: AzureClusterIdentity
+    name: {{ .Values.clusterIdentity.name }}
+    namespace: {{ .Values.clusterIdentity.namespace }}
+  location: {{ .Values.location }}
+  {{- if .Values.bastion.enabled }}
+  {{- with .Values.bastion.bastionSpec }}
+  bastionSpec:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- end }}
+  subscriptionID: {{ .Values.subscriptionID }}
