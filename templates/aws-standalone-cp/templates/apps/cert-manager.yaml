@@ -1,3 +1,4 @@
+{{- if .Values.installApps }}
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
 metadata:
@@ -21,7 +22,7 @@ spec:
         hmc.mirantis.com/managed: "true"
     spec:
       chart: cert-manager
-      version: ">=v1.12.3"
+      version: "v1.12.3"
       sourceRef:
         kind: HelmRepository
         name: cert-manager
@@ -38,3 +39,4 @@ spec:
   storageNamespace: cert-manager
   values:
     installCRDs: true
+{{- end }}

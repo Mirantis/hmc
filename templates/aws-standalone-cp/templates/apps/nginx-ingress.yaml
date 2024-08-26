@@ -1,3 +1,4 @@
+{{- if .Values.installApps }}
 apiVersion: source.toolkit.fluxcd.io/v1beta2
 kind: OCIRepository
 metadata:
@@ -32,3 +33,4 @@ spec:
       retries: -1
   values:
     fullnameOverride: nginx-ingress
+{{- end }}

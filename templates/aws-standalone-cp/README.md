@@ -4,7 +4,7 @@ To install applications into the target cluster created using Cluster API (CAPI)
 
 **Reference:** https://fluxcd.io/flux/components/helm/helmreleases/#remote-clusters--cluster-api
 
-This chart/template already defines the following applications under `templates/apps` to be installed into the target cluster:
+This chart/template already defines the following applications under `templates/apps` which can be be installed into the target cluster by setting `.Values.installApps=true`:
 1. cert-manager
 2. nginx-ingress
 
