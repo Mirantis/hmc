@@ -1,0 +1,49 @@
+apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+kind: K0smotronControlPlane
+metadata:
+  name: {{ include "k0smotroncontrolplane.name" . }}
+spec:
+  replicas: {{ .Values.controlPlaneNumber }}
+  version: {{ .Values.k0s.version | replace "+" "-" }}
+  {{- with .Values.k0smotron.service }}
+  service:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  controllerPlaneFlags:
+  - "--enable-cloud-provider=true"
+  - "--debug=true"
+  k0sConfig:
+    apiVersion: k0s.k0sproject.io/v1beta1
+    kind: ClusterConfig
+    metadata:
+      name: k0s
+    spec:
+      network:
+        provider: calico
+        calico:
+          mode: vxlan
+      extensions:
+        helm:
+          repositories:
+            - name: cloud-provider-azure
+              url: https://raw.githubusercontent.com/kubernetes-sigs/cloud-provider-azure/master/helm/repo
+            - name: azuredisk-csi-driver
+              url: https://raw.githubusercontent.com/kubernetes-sigs/azuredisk-csi-driver/master/charts
+          charts:
+            - name: cloud-provider-azure
+              namespace: kube-system
+              chartname: cloud-provider-azure/cloud-provider-azure
+              version: 1.30.4
+              order: 1
+              values: |
+                cloudControllerManager:
+                  nodeSelector:
+                    node-role.kubernetes.io/control-plane: null
+            - name: azuredisk-csi-driver
+              namespace: kube-system
+              chartname: azuredisk-csi-driver/azuredisk-csi-driver
+              version: 1.30.3
+              order: 2
+              values: |
+                linux:
+                  kubelet: "/var/lib/k0s/kubelet"
