@@ -43,8 +43,11 @@ const (
 	TemplateAWSHostedCP     Template = "aws-hosted-cp"
 )
 
-//go:embed resources/deployment.yaml.tpl
-var deploymentTemplateBytes []byte
+//go:embed resources/aws-standalone-cp.yaml.tpl
+var awsStandaloneCPDeploymentTemplateBytes []byte
+
+//go:embed resources/aws-hosted-cp.yaml.tpl
+var awsHostedCPDeploymentTemplateBytes []byte
 
 // GetUnstructuredDeployment returns an unstructured deployment object based on
 // the provider and template.
@@ -52,16 +55,24 @@ func GetUnstructuredDeployment(provider ProviderType, templateName Template) *un
 	GinkgoHelper()
 
 	generatedName := uuid.New().String()[:8] + "-e2e-test"
-	_, _ = fmt.Fprintf(GinkgoWriter, "Generated AWS cluster name: %q\n", generatedName)
+	_, _ = fmt.Fprintf(GinkgoWriter, "Generated cluster name: %q\n", generatedName)
 
 	switch provider {
 	case ProviderAWS:
 		// XXX: Maybe we should just use automatic AMI selection here.
 		amiID := getAWSAMI()
-
-		Expect(os.Setenv("AMI_ID", amiID)).NotTo(HaveOccurred())
+		Expect(os.Setenv("AWS_AMI_ID", amiID)).NotTo(HaveOccurred())
 		Expect(os.Setenv("DEPLOYMENT_NAME", generatedName)).NotTo(HaveOccurred())
-		Expect(os.Setenv("TEMPLATE_NAME", string(templateName))).NotTo(HaveOccurred())
+
+		var deploymentTemplateBytes []byte
+		switch templateName {
+		case TemplateAWSStandaloneCP:
+			deploymentTemplateBytes = awsStandaloneCPDeploymentTemplateBytes
+		case TemplateAWSHostedCP:
+			deploymentTemplateBytes = awsHostedCPDeploymentTemplateBytes
+		default:
+			Fail(fmt.Sprintf("unsupported AWS template: %s", templateName))
+		}
 
 		deploymentConfigBytes, err := envsubst.Bytes(deploymentTemplateBytes)
 		Expect(err).NotTo(HaveOccurred(), "failed to substitute environment variables")

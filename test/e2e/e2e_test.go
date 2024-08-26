@@ -15,16 +15,20 @@
 package e2e
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 
 	"github.com/Mirantis/hmc/test/deployment"
 	"github.com/Mirantis/hmc/test/kubeclient"
@@ -98,10 +102,10 @@ var _ = Describe("controller", Ordered, func() {
 
 	Context("AWS Templates", func() {
 		var (
-			kc                   *kubeclient.KubeClient
-			deleteDeploymentFunc func() error
-			clusterName          string
-			err                  error
+			kc          *kubeclient.KubeClient
+			deleteFunc  func() error
+			clusterName string
+			err         error
 		)
 
 		BeforeAll(func() {
@@ -111,10 +115,17 @@ var _ = Describe("controller", Ordered, func() {
 			ExpectWithOffset(2, kc.CreateAWSCredentialsKubeSecret(context.Background())).To(Succeed())
 		})
 
-		AfterAll(func() {
-			// Delete the deployment if it was created.
-			if deleteDeploymentFunc != nil {
-				err = deleteDeploymentFunc()
+		AfterEach(func() {
+			// If we failed collect logs from each of the affiliated controllers
+			// as well as the output of clusterctl to store as artifacts.
+			if CurrentSpecReport().Failed() {
+				By("collecting failure logs from controllers")
+				collectLogArtifacts(kc, clusterName, deployment.ProviderAWS)
+			}
+
+			// Delete the deployments if they were created.
+			if deleteFunc != nil {
+				err = deleteFunc()
 				Expect(err).NotTo(HaveOccurred())
 			}
 
@@ -127,29 +138,79 @@ var _ = Describe("controller", Ordered, func() {
 			ExpectWithOffset(2, err).NotTo(HaveOccurred())
 		})
 
-		It("should work with an AWS provider", func() {
-			By("creating a Deployment with aws-standalone-cp template")
-			d := deployment.GetUnstructuredDeployment(deployment.ProviderAWS, deployment.TemplateAWSStandaloneCP)
-			clusterName = d.GetName()
+		for _, template := range []deployment.Template{deployment.TemplateAWSStandaloneCP, deployment.TemplateAWSHostedCP} {
+			It(fmt.Sprintf("should work with an AWS provider and %s template", template), func() {
+				if template == deployment.TemplateAWSHostedCP {
+					// TODO: Create AWS resources for hosted control plane.
+					Skip("AWS hosted control plane not yet implemented")
+				}
 
-			deleteDeploymentFunc, err = kc.CreateDeployment(context.Background(), d)
-			Expect(err).NotTo(HaveOccurred())
+				By("creating a Deployment")
+				d := deployment.GetUnstructuredDeployment(deployment.ProviderAWS, template)
+				clusterName = d.GetName()
 
-			By("waiting for infrastructure providers to deploy successfully")
-			Eventually(func() error {
-				return deployment.VerifyProviderDeployed(context.Background(), kc, clusterName)
-			}).WithTimeout(30 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
+				deleteFunc, err = kc.CreateDeployment(context.Background(), d)
+				Expect(err).NotTo(HaveOccurred())
 
-			By("verifying the deployment deletes successfully")
-			err = deleteDeploymentFunc()
-			Expect(err).NotTo(HaveOccurred())
-			Eventually(func() error {
-				return deployment.VerifyProviderDeleted(context.Background(), kc, clusterName)
-			}).WithTimeout(10 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
+				By("waiting for infrastructure providers to deploy successfully")
+				Eventually(func() error {
+					return deployment.VerifyProviderDeployed(context.Background(), kc, clusterName)
+				}).WithTimeout(30 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
 
-			By("creating a Deployment with aws-hosted-cp template")
-			// TODO: Use the standalone control plane resources to craft a
-			// hosted control plane and test it.
-		})
+				By("verify the deployment deletes successfully")
+				err = deleteFunc()
+				Expect(err).NotTo(HaveOccurred())
+				Eventually(func() error {
+					return deployment.VerifyProviderDeleted(context.Background(), kc, clusterName)
+				}).WithTimeout(10 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
+			})
+		}
 	})
 })
+
+// collectLogArtfiacts collects log output from each the HMC controller,
+// CAPI controller and the provider controller as well as output from clusterctl
+// and stores them in the test/e2e directory as artifacts.
+// We could do this at the end or we could use Kubernetes' CopyPodLogs from
+// https://github.com/kubernetes/kubernetes/blob/v1.31.0/test/e2e/storage/podlogs/podlogs.go#L88
+// to stream the logs to GinkgoWriter during the test.
+func collectLogArtifacts(kc *kubeclient.KubeClient, clusterName string, providerType deployment.ProviderType) {
+	GinkgoHelper()
+
+	filterLabels := []string{
+		"app.kubernetes.io/name=hmc-controller-manager",
+		"app.kubernetes.io/name=cluster-api",
+		fmt.Sprintf("app.kubernetes.io/name=cluster-api-provider-%s", providerType),
+	}
+
+	for _, label := range filterLabels {
+		pods, _ := kc.Client.CoreV1().Pods(kc.Namespace).List(context.Background(), metav1.ListOptions{
+			LabelSelector: label,
+		})
+
+		for _, pod := range pods.Items {
+			req := kc.Client.CoreV1().Pods(kc.Namespace).GetLogs(pod.Name, &corev1.PodLogOptions{
+				TailLines: ptr.To(int64(1000)),
+			})
+			podLogs, err := req.Stream(context.Background())
+			Expect(err).NotTo(HaveOccurred(), "failed to get log stream for pod %s", pod.Name)
+			DeferCleanup(Expect(podLogs.Close()).NotTo(HaveOccurred()))
+
+			output, err := os.Create(fmt.Sprintf("test/e2e/%s.log", pod.Name))
+			Expect(err).NotTo(HaveOccurred(), "failed to create log file for pod %s", pod.Name)
+			DeferCleanup(Expect(output.Close()).NotTo(HaveOccurred()))
+
+			r := bufio.NewReader(podLogs)
+			_, err = r.WriteTo(output)
+			Expect(err).NotTo(HaveOccurred(), "failed to write log file for pod %s", pod.Name)
+		}
+	}
+
+	cmd := exec.Command("./bin/clusterctl",
+		"describe", "cluster", clusterName, "--show-conditions=all")
+	output, err := utils.Run(cmd)
+	Expect(err).NotTo(HaveOccurred(), "failed to get clusterctl log")
+
+	err = os.WriteFile(filepath.Join("test/e2e", "clusterctl.log"), output, 0644)
+	Expect(err).NotTo(HaveOccurred(), "failed to write clusterctl log")
+}

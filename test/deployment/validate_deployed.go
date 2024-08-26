@@ -103,10 +103,6 @@ func validateMachines(ctx context.Context, kc *kubeclient.KubeClient, clusterNam
 		return fmt.Errorf("failed to list machines: %w", err)
 	}
 
-	if err != nil {
-		return fmt.Errorf("failed to list Machines: %w", err)
-	}
-
 	for _, machine := range machines {
 		if err := utils.ValidateObjectNamePrefix(&machine, clusterName); err != nil {
 			Fail(err.Error())

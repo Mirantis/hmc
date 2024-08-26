@@ -72,3 +72,13 @@ jobs:
       - name: Run E2E tests
         run: |
           make test-e2e
+      - name: Get test logs
+        run: |
+          kubectl logs -n hmc-system -l app=e2e-test > test/e2e/e2e-test.log
+          ./bin/clusterctl describe cluster --show-conditions=all > test/e2e/clusterctl.log
+      - name: Archive test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-logs
+          path: |
+            test/e2e/*.log
