@@ -1,0 +1,31 @@
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: AzureCluster
+metadata:
+  name: {{ include "cluster.name" . }}
+  annotations:
+    cluster.x-k8s.io/managed-by: k0smotron
+spec:
+  identityRef:
+    kind: AzureClusterIdentity
+    name: {{ .Values.clusterIdentity.name }}
+    namespace: {{ .Values.clusterIdentity.namespace }}
+  networkSpec:
+    vnet:
+      resourceGroup: {{ .Values.resourceGroup }}
+      name: {{ .Values.network.vnetName }}
+    subnets:
+      - name: {{ .Values.network.nodeSubnetName }}
+        role: node
+        routeTable:
+          name: {{ .Values.network.routeTableName }}
+        securityGroup:
+          name: {{ .Values.network.securityGroupName }}
+  location: {{ .Values.location }}
+  {{- if .Values.bastion.enabled }}
+  {{- with .Values.bastion.bastionSpec }}
+  bastionSpec:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- end }}
+  subscriptionID: {{ .Values.subscriptionID }}
+  resourceGroup: {{ .Values.resourceGroup }}

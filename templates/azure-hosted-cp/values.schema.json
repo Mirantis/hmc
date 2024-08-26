@@ -1,0 +1,228 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "An HMC template to deploy a K8s cluster on Azure with control plane components within the management cluster.",
+  "type": "object",
+  "required": [
+    "controlPlaneNumber",
+    "workersNumber",
+    "location",
+    "subscriptionID",
+    "tenantID",
+    "clientID",
+    "clientSecret",
+    "clusterIdentity",
+    "resourceGroup",
+    "network",
+    "vmSize"
+  ],
+  "properties": {
+    "controlPlaneNumber": {
+      "description": "The number of the control plane pods",
+      "type": "number",
+      "minimum": 1
+    },
+    "workersNumber": {
+      "description": "The number of the worker machines",
+      "type": "number",
+      "minimum": 1
+    },
+    "clusterNetwork": {
+      "type": "object",
+      "properties": {
+        "pods": {
+          "type": "object",
+          "properties": {
+            "cidrBlocks": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "uniqueItems": true
+            }
+          }
+        },
+        "services": {
+          "type": "object",
+          "properties": {
+            "cidrBlocks": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "uniqueItems": true
+            }
+          }
+        }
+      }
+    },
+    "location": {
+      "description": "Azure location to deploy the cluster in",
+      "type": "string"
+    },
+    "subscriptionID": {
+      "description": "Azure subscription ID which will be used for all resources",
+      "type": "string"
+    },
+    "tenantID": {
+      "description": "Tenant ID for the service principal",
+      "type": "string"
+    },
+    "clientID": {
+      "description": "Client ID of the service principal",
+      "type": "string"
+    },
+    "clientSecret": {
+      "description": "Client secret of the service principal",
+      "type": "string"
+    },
+    "bastion": {
+      "type": "object",
+      "description": "The configuration of the bastion host",
+      "required": [],
+      "properties": {
+          "enabled": {
+              "type": "boolean"
+          }
+      }
+    },
+    "clusterIdentity": {
+      "type": "object",
+      "description": "AzureClusterIdentity object reference",
+      "required": [
+        "name",
+        "namespace"
+      ],
+      "properties": {
+        "name": {
+	  "description": "AzureClusterIdentity object name",
+          "type": "string"
+        },
+        "namespace": {
+	  "description": "AzureClusterIdentity object namespace",
+          "type": "string"
+        }
+      }
+    },
+    "resourceGroup": {
+      "description": "Existing resource group name for worker nodes",
+      "type": "string"
+    },
+    "network": {
+      "type": "object",
+      "description": "Networking resources reference for worker nodes",
+      "required": [
+        "vnetName",
+        "nodeSubnetName",
+        "routeTableName",
+        "securityGroupName"
+      ],
+      "properties": {
+        "vnetName": {
+	  "description": "Existing vnet name for worker nodes",
+          "type": "string"
+        },
+        "nodeSubnetName": {
+	  "description": "Existing subnet name for worker nodes",
+          "type": "string"
+        },
+        "routeTableName": {
+	  "description": "Existing route table name for worker nodes",
+          "type": "string"
+        },
+        "securityGroupName": {
+	  "description": "Existing security group name for worker nodes",
+          "type": "string"
+        }
+      }
+    },
+    "sshPublicKey": {
+      "description": "SSH public key in base64 format, which will be used on the machine.",
+      "type": "string"
+    },
+    "vmSize": {
+      "description": "The size of instance to create",
+      "type": "string"
+    },
+    "rootVolumeSize": {
+      "description": "The size of the root volume of the instance (GB)",
+      "type": "integer"
+    },
+    "image": {
+      "type": "object",
+      "description": "Azure VM image configuration",
+      "properties": {
+        "marketplace": {
+	  "description": "Azure Marketplace image reference",
+          "type": "object",
+          "required": [
+            "publisher",
+            "offer",
+            "sku",
+            "version"
+          ],
+          "properties": {
+            "publisher": {
+              "type": "string"
+            },
+            "offer": {
+              "type": "string"
+            },
+            "sku": {
+              "type": "string"
+            },
+            "version": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "k0smotron": {
+      "description": "K0smotron parameters",
+      "type": "object",
+      "properties": {
+        "service": {
+          "description": "The configuration of a K0smotron service",
+          "properties": {
+            "type": {
+              "description": "Ingress methods for a k0smotron service",
+              "enum": [
+                "ClusterIP",
+                "NodePort",
+                "LoadBalancer"
+              ],
+              "type": "string"
+            },
+            "apiPort": {
+              "description": "The kubernetes API port for a k0smotron service",
+              "type": "number",
+              "minimum": 1,
+              "maximum": 65535
+            },
+            "konnectivityPort": {
+              "description": "The konnectivity port",
+              "type": "number",
+              "minimum": 1,
+              "maximum": 65535
+            }
+          }
+        }
+      }
+    },
+    "k0s": {
+      "description": "K0s parameters",
+      "type": "object",
+      "required": [
+        "version"
+      ],
+      "properties": {
+        "version":{
+          "description": "K0s version to use",
+          "type": "string"
+        }
+      }
+    }
+  }
+}
