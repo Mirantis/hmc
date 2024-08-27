@@ -12,6 +12,7 @@ controller:
   insecureRegistry: false
   createManagement: true
   createTemplates: true
+  enableTelemetry: true
 
 containerSecurityContext:
   allowPrivilegeEscalation: false

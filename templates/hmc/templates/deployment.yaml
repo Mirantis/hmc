@@ -28,6 +28,7 @@ spec:
         {{- end }}
         - --create-management={{ .Values.controller.createManagement }}
         - --create-templates={{ .Values.controller.createTemplates }}
+        - --enable-telemetry={{ .Values.controller.enableTelemetry }}
         - --enable-webhook={{ .Values.admissionWebhook.enabled }}
         - --webhook-port={{ .Values.admissionWebhook.port }}
         - --webhook-cert-dir={{ .Values.admissionWebhook.certDir }}
