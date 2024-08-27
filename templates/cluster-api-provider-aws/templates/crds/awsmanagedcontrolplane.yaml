@@ -353,7 +353,7 @@ spec:
                   apiServer:
                     default: false
                     description: APIServer indicates if the Kubernetes API Server log
-                      (kube-apiserver) shoulkd be enabled
+                      (kube-apiserver) should be enabled
                     type: boolean
                   audit:
                     default: false
@@ -2352,7 +2352,7 @@ spec:
                   apiServer:
                     default: false
                     description: APIServer indicates if the Kubernetes API Server log
-                      (kube-apiserver) shoulkd be enabled
+                      (kube-apiserver) should be enabled
                     type: boolean
                   audit:
                     default: false

@@ -319,6 +319,15 @@ func (r *DeploymentReconciler) Delete(ctx context.Context, l logr.Logger, deploy
 		}
 		return ctrl.Result{}, err
 	}
+	uninstall := hr.GetUninstall()
+	if !uninstall.DisableHooks {
+		uninstall.DisableHooks = true
+		hr.Spec.Uninstall = &uninstall
+		l.Info("Disabling hooks for HelmRelease")
+		if err := r.Client.Update(ctx, hr); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
 	err = helm.DeleteHelmRelease(ctx, r.Client, deployment.Name, deployment.Namespace)
 	if err != nil {
 		return ctrl.Result{}, err
