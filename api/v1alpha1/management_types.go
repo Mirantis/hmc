@@ -104,6 +104,9 @@ func (m *ManagementSpec) SetProvidersDefaults() {
 				Raw: []byte(DefaultCAPAConfig),
 			},
 		},
+		{
+			Template: "cluster-api-provider-azure",
+		},
 	}
 }
 
