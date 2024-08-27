@@ -1,4 +1,4 @@
-{{- if .Values.installApps }}
+{{- if .Values.installBeachHeadServices }}
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
 metadata:

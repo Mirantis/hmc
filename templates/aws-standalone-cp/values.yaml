@@ -45,6 +45,6 @@ worker:
 k0s:
   version: v1.30.2+k0s.0
 
-# Optionally install apps defined under 
-# templates/apps into target cluster
-installApps: false
+# Optionally install applications defined under 
+# templates/beachheadservices into target cluster
+installBeachHeadServices: true

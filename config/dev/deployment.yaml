@@ -15,4 +15,3 @@ spec:
     worker:
       amiID: ami-02f3416038bdb17fb
       instanceType: t3.small
-    installApps: true
