@@ -1,6 +1,6 @@
 apiVersion: v2
-name: cluster-api
-description: A Helm chart for Cluster API core components
+name: cluster-api-provider-azure
+description: A Helm chart for Cluster API provider Azure
 # A chart can be either an 'application' or a 'library' chart.
 #
 # Application charts are a collection of templates that can be packaged into versioned archives
@@ -13,11 +13,12 @@ type: application
 # This is the chart version. This version number should be incremented each time you make changes
 # to the chart and its templates, including the app version.
 # Versions are expected to follow Semantic Versioning (https://semver.org/)
-version: 0.1.1
+version: 0.0.1
 # This is the version number of the application being deployed. This version number should be
 # incremented each time you make changes to the application. Versions are not expected to
 # follow Semantic Versioning. They should reflect the version the application is using.
 # It is recommended to use it with quotes.
-appVersion: "1.7.2"
+appVersion: "1.16.0"
 annotations:
-  hmc.mirantis.com/type: core
+  hmc.mirantis.com/type: provider
+  hmc.mirantis.com/infrastructure-providers: azure

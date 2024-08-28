@@ -1,0 +1,8 @@
+apiVersion: hmc.mirantis.com/v1alpha1
+kind: Template
+metadata:
+  name: cluster-api-provider-azure
+spec:
+  helm:
+    chartName: cluster-api-provider-azure
+    chartVersion: 0.0.1

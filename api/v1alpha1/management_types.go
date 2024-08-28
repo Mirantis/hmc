@@ -25,7 +25,9 @@ const (
 	DefaultCoreCAPITemplate = "cluster-api"
 
 	DefaultCAPAConfig = `{
-		"credentialsSecretName": "aws-credentials"
+		"configSecret": {
+           "name": "aws-variables"
+        }
 	}`
 
 	ManagementName      = "hmc"
@@ -101,6 +103,9 @@ func (m *ManagementSpec) SetProvidersDefaults() {
 			Config: &apiextensionsv1.JSON{
 				Raw: []byte(DefaultCAPAConfig),
 			},
+		},
+		{
+			Template: "cluster-api-provider-azure",
 		},
 	}
 }

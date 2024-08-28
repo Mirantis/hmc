@@ -21,8 +21,15 @@ export AWS_SESSION_TOKEN=<session-token> # Optional. If you are using Multi-Fact
 export AWS_B64ENCODED_CREDENTIALS=$(clusterawsadm bootstrap credentials encode-as-profile)
 ```
 
-4. Create the secret with AWS credentials in the `hmc-system` namespace:
+4. Create the secret with AWS variables:
+
+> By default, HMC fetches the AWS variables configuration from the `aws-variables` secret in the `hmc-system`
+> namespace. If you want to change the name of the secret you should overwrite the configuration of the cluster 
+> API provider AWS in the HMC Management object. \
+> For details, see: [Extended Management Configuration](../../README.md#extended-management-configuration)
+
+> You can also provide additional configuration variables, but the `AWS_B64ENCODED_CREDENTIALS` parameter is required.
 
 ```
-kubectl create secret generic aws-credentials -n hmc-system --from-literal credentials="$(echo $AWS_B64ENCODED_CREDENTIALS | base64 -d)"
+kubectl create secret generic aws-variables -n hmc-system --from-literal AWS_B64ENCODED_CREDENTIALS="$AWS_B64ENCODED_CREDENTIALS"
 ```

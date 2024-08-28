@@ -2,36 +2,25 @@
   "$schema": "https://json-schema.org/draft/2019-09/schema",
   "type": "object",
   "properties": {
-    "manager": {
+    "configSecret": {
       "type": "object",
       "properties": {
-        "image": {
-          "type": "object",
-          "properties": {
-            "repository": {
-              "type": "string"
-            },
-            "name": {
-              "type": "string"
-            },
-            "tag": {
-              "type": "string"
-            }
-          }
+        "create": {
+          "type": "boolean"
         },
-        "imagePullPolicy": {
+        "name": {
+          "type": "string"
+        },
+        "namespace": {
           "type": "string"
         }
       }
     },
-    "clusterTopology": {
-      "type": "boolean"
-    },
-    "expClusterResourceSet": {
-      "type": "boolean"
-    },
-    "expMachinePool": {
-      "type": "boolean"
+    "config": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
     }
   }
 }

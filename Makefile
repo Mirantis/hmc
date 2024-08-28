@@ -266,7 +266,7 @@ dev-templates: templates-generate
 
 .PHONY: dev-aws
 dev-aws: yq
-	@$(YQ) e ".data.credentials = \"${AWS_CREDENTIALS}\"" config/dev/awscredentials.yaml | $(KUBECTL) -n $(NAMESPACE) apply -f -
+	@$(YQ) e ".stringData.AWS_B64ENCODED_CREDENTIALS = \"${AWS_CREDENTIALS}\"" config/dev/awscredentials.yaml | $(KUBECTL) -n $(NAMESPACE) apply -f -
 
 .PHONY: dev-apply
 dev-apply: kind-deploy registry-deploy dev-push dev-deploy dev-templates dev-aws

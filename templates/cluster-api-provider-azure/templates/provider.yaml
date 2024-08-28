@@ -1,0 +1,33 @@
+apiVersion: operator.cluster.x-k8s.io/v1alpha2
+kind: InfrastructureProvider
+metadata:
+  name: azure
+spec:
+  version: v1.16.0
+  {{- if .Values.configSecret.name }}
+  configSecret:
+    name: {{ .Values.configSecret.name }}
+    namespace: {{ .Values.configSecret.namespace | default .Release.Namespace | trunc 63 }}
+  {{- end }}
+  manifestPatches:
+    - |
+      apiVersion: v1
+      kind: Service
+      metadata:
+        name: azureserviceoperator-webhook-service
+      spec:
+        selector:
+          control-plane: aso-controller-manager
+    - |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: azureserviceoperator-controller-manager
+      spec:
+        selector:
+          matchLabels:
+            control-plane: aso-controller-manager
+        template:
+          metadata:
+            labels:
+              control-plane: aso-controller-manager
