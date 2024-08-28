@@ -36,6 +36,7 @@ import (
 
 	hmcmirantiscomv1alpha1 "github.com/Mirantis/hmc/api/v1alpha1"
 	"github.com/Mirantis/hmc/internal/controller"
+	"github.com/Mirantis/hmc/internal/telemetry"
 	hmcwebhook "github.com/Mirantis/hmc/internal/webhook"
 	//+kubebuilder:scaffold:imports
 )
@@ -65,6 +66,7 @@ func main() {
 	var createManagement bool
 	var createTemplates bool
 	var hmcTemplatesChartName string
+	var enableTelemetry bool
 	var enableWebhook bool
 	var webhookPort int
 	var webhookCertDir string
@@ -84,6 +86,7 @@ func main() {
 	flag.BoolVar(&createTemplates, "create-templates", true, "Create HMC Templates.")
 	flag.StringVar(&hmcTemplatesChartName, "hmc-templates-chart-name", "hmc-templates",
 		"The name of the helm chart with HMC Templates.")
+	flag.BoolVar(&enableTelemetry, "enable-telemetry", true, "Collect and send telemetry data.")
 	flag.BoolVar(&enableWebhook, "enable-webhook", true, "Enable admission webhook.")
 	flag.IntVar(&webhookPort, "webhook-port", 9443, "Admission webhook port.")
 	flag.StringVar(&webhookCertDir, "webhook-cert-dir", "/tmp/k8s-webhook-server/serving-certs/",
@@ -184,6 +187,15 @@ func main() {
 	}); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ReleaseController")
 		os.Exit(1)
+	}
+
+	if enableTelemetry {
+		if err = mgr.Add(&telemetry.Tracker{
+			Client: mgr.GetClient(),
+		}); err != nil {
+			setupLog.Error(err, "unable to create telemetry tracker")
+			os.Exit(1)
+		}
 	}
 
 	//+kubebuilder:scaffold:builder
