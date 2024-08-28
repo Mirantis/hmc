@@ -56,20 +56,23 @@ func init() {
 }
 
 func main() {
-	var metricsAddr string
-	var probeAddr string
-	var secureMetrics bool
-	var enableHTTP2 bool
-	var defaultOCIRegistry string
-	var insecureRegistry bool
-	var registryCredentialsSecret string
-	var createManagement bool
-	var createTemplates bool
-	var hmcTemplatesChartName string
-	var enableTelemetry bool
-	var enableWebhook bool
-	var webhookPort int
-	var webhookCertDir string
+	var (
+		metricsAddr               string
+		probeAddr                 string
+		secureMetrics             bool
+		enableHTTP2               bool
+		defaultRegistryURL        string
+		defaultRepoType           string
+		insecureRegistry          bool
+		registryCredentialsSecret string
+		createManagement          bool
+		createTemplates           bool
+		hmcTemplatesChartName     string
+		enableTelemetry           bool
+		enableWebhook             bool
+		webhookPort               int
+		webhookCertDir            string
+	)
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
@@ -77,8 +80,10 @@ func main() {
 		"If set the metrics endpoint is served securely")
 	flag.BoolVar(&enableHTTP2, "enable-http2", false,
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
-	flag.StringVar(&defaultOCIRegistry, "default-oci-registry", "oci://ghcr.io/mirantis/hmc/charts",
+	flag.StringVar(&defaultRegistryURL, "default-registry-url", "oci://ghcr.io/mirantis/hmc/charts",
 		"The default OCI registry to download Helm charts from.")
+	flag.StringVar(&defaultRepoType, "default-repo-type", "oci",
+		"The default repository type to download Helm charts from specify 'default' for http/https or 'oci' for oci.")
 	flag.StringVar(&registryCredentialsSecret, "registry-creds-secret", "",
 		"Secret containing authentication credentials for the registry.")
 	flag.BoolVar(&insecureRegistry, "insecure-registry", false, "Allow connecting to an HTTP registry.")
@@ -180,7 +185,8 @@ func main() {
 		Config:                    mgr.GetConfig(),
 		CreateManagement:          createManagement,
 		CreateTemplates:           createTemplates,
-		DefaultOCIRegistry:        defaultOCIRegistry,
+		DefaultRegistryURL:        defaultRegistryURL,
+		DefaultRepoType:           defaultRepoType,
 		RegistryCredentialsSecret: registryCredentialsSecret,
 		InsecureRegistry:          insecureRegistry,
 		HMCTemplatesChartName:     hmcTemplatesChartName,
