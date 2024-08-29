@@ -45,12 +45,12 @@ var _ = Describe("controller", Ordered, func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	// AfterAll(func() {
-	// 	By("removing the controller-manager")
-	// 	cmd := exec.Command("make", "test-destroy")
-	// 	_, err := utils.Run(cmd)
-	// 	Expect(err).NotTo(HaveOccurred())
-	// })
+	AfterAll(func() {
+		By("removing the controller-manager")
+		cmd := exec.Command("make", "test-destroy")
+		_, err := utils.Run(cmd)
+		Expect(err).NotTo(HaveOccurred())
+	})
 
 	Context("Operator", func() {
 		It("should run successfully", func() {
