@@ -36,7 +36,7 @@ import (
 )
 
 const (
-	awsCredentialsSecretName = "aws-credentials"
+	awsCredentialsSecretName = "aws-variables"
 )
 
 type KubeClient struct {

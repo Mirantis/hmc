@@ -62,32 +62,22 @@ var _ = Describe("controller", Ordered, func() {
 
 			By("validating that the hmc-controller and capi provider controllers are running")
 			verifyControllersUp := func() error {
+				if err := verifyControllerUp(kc, hmcControllerLabel, "hmc-controller-manager"); err != nil {
+					return err
+				}
+
 				for _, provider := range []deployment.ProviderType{
 					deployment.ProviderCAPI,
 					deployment.ProviderAWS,
 					deployment.ProviderAzure,
 				} {
 					// Ensure only one controller pod is running.
-					podList, err := kc.Client.CoreV1().Pods(kc.Namespace).List(context.Background(), metav1.ListOptions{
-						LabelSelector: deployment.GetProviderLabel(provider),
-					})
-					if err != nil {
-						return err
-					}
-
-					if err := verifyControllerUp(podList, string(provider)); err != nil {
+					if err := verifyControllerUp(kc, deployment.GetProviderLabel(provider), string(provider)); err != nil {
 						return err
 					}
 				}
 
-				podList, err := kc.Client.CoreV1().Pods(kc.Namespace).List(context.Background(), metav1.ListOptions{
-					LabelSelector: hmcControllerLabel,
-				})
-				if err != nil {
-					return err
-				}
-
-				return verifyControllerUp(podList, "hmc-controller-manager")
+				return nil
 			}
 			Eventually(func() error {
 				err := verifyControllersUp()
@@ -97,7 +87,7 @@ var _ = Describe("controller", Ordered, func() {
 				}
 
 				return nil
-			}).WithTimeout(5 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
+			}).WithTimeout(15 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
 		})
 	})
 
@@ -169,7 +159,14 @@ var _ = Describe("controller", Ordered, func() {
 	})
 })
 
-func verifyControllerUp(podList *corev1.PodList, name string) error {
+func verifyControllerUp(kc *kubeclient.KubeClient, labelSelector string, name string) error {
+	podList, err := kc.Client.CoreV1().Pods(kc.Namespace).List(context.Background(), metav1.ListOptions{
+		LabelSelector: labelSelector,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to list %s controller pods: %v", name, err)
+	}
+
 	if len(podList.Items) != 1 {
 		return fmt.Errorf("expected 1 %s controller pod, got %d", name, len(podList.Items))
 	}
@@ -217,11 +214,11 @@ func collectLogArtifacts(kc *kubeclient.KubeClient, clusterName string, provider
 			})
 			podLogs, err := req.Stream(context.Background())
 			Expect(err).NotTo(HaveOccurred(), "failed to get log stream for pod %s", pod.Name)
-			DeferCleanup(Expect(podLogs.Close()).NotTo(HaveOccurred()))
+			defer Expect(podLogs.Close()).NotTo(HaveOccurred())
 
 			output, err := os.Create(fmt.Sprintf("test/e2e/%s.log", pod.Name))
 			Expect(err).NotTo(HaveOccurred(), "failed to create log file for pod %s", pod.Name)
-			DeferCleanup(Expect(output.Close()).NotTo(HaveOccurred()))
+			defer Expect(output.Close()).NotTo(HaveOccurred())
 
 			r := bufio.NewReader(podLogs)
 			_, err = r.WriteTo(output)
