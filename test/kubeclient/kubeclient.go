@@ -124,16 +124,15 @@ func new(configBytes []byte, namespace string) (*KubeClient, error) {
 }
 
 // CreateAWSCredentialsKubeSecret uses clusterawsadm to encode existing AWS
-// credentials and create a secret named 'aws-credentials' in the given
-// namespace if one does not already exist.
+// credentials and create a secret in the given namespace if one does not
+// already exist.
 func (kc *KubeClient) CreateAWSCredentialsKubeSecret(ctx context.Context) error {
 	_, err := kc.Client.CoreV1().Secrets(kc.Namespace).Get(ctx, awsCredentialsSecretName, metav1.GetOptions{})
 	if !apierrors.IsNotFound(err) {
 		return nil
 	}
 
-	cmd := exec.Command("./bin/clusterawsadm",
-		"bootstrap", "credentials", "encode-as-profile", "--output", "rawSharedConfig")
+	cmd := exec.Command("./bin/clusterawsadm", "bootstrap", "credentials", "encode-as-profile")
 	output, err := utils.Run(cmd)
 	if err != nil {
 		return fmt.Errorf("failed to encode AWS credentials with clusterawsadm: %w", err)
@@ -144,7 +143,7 @@ func (kc *KubeClient) CreateAWSCredentialsKubeSecret(ctx context.Context) error 
 			Name: awsCredentialsSecretName,
 		},
 		Data: map[string][]byte{
-			"credentials": output,
+			"AWS_B64ENCODED_CREDENTIALS": output,
 		},
 		Type: corev1.SecretTypeOpaque,
 	}, metav1.CreateOptions{})

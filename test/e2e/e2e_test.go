@@ -59,6 +59,7 @@ var _ = Describe("controller", Ordered, func() {
 		It("should run successfully", func() {
 			kc, err := kubeclient.NewFromLocal(namespace)
 			ExpectWithOffset(1, err).NotTo(HaveOccurred())
+			ExpectWithOffset(1, kc.CreateAWSCredentialsKubeSecret(context.Background())).To(Succeed())
 
 			By("validating that the hmc-controller and capi provider controllers are running")
 			verifyControllersUp := func() error {
@@ -175,14 +176,14 @@ func verifyControllerUp(kc *kubeclient.KubeClient, labelSelector string, name st
 
 	// Ensure the pod is not being deleted.
 	if controllerPod.DeletionTimestamp != nil {
-		return fmt.Errorf("deletion timestamp should be nil, got: %v", controllerPod)
+		return fmt.Errorf("controller pod: %s deletion timestamp should be nil, got: %v", controllerPod.Name, controllerPod)
 	}
 	// Ensure the pod is running and has the expected name.
 	if !strings.Contains(controllerPod.Name, "controller-manager") {
 		return fmt.Errorf("controller pod name %s does not contain 'controller-manager'", controllerPod.Name)
 	}
 	if controllerPod.Status.Phase != "Running" {
-		return fmt.Errorf("controller pod in %s status", controllerPod.Status.Phase)
+		return fmt.Errorf("controller pod: %s in %s status", controllerPod.Name, controllerPod.Status.Phase)
 	}
 
 	return nil

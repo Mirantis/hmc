@@ -245,7 +245,7 @@ dev-undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/c
 
 .PHONY: helm-push
 helm-push: helm-package
-	if [ ! $(REGISTRY_IS_OCI) ]; then \
+	@if [ ! $(REGISTRY_IS_OCI) ]; then \
 	    repo_flag="--repo"; \
 	fi; \
 	for chart in $(CHARTS_PACKAGE_DIR)/*.tgz; do \
@@ -315,6 +315,10 @@ test-apply: kind-deploy registry-deploy dev-push dev-deploy dev-templates
 
 .PHONY: test-destroy
 test-destroy: kind-undeploy registry-undeploy
+
+.PHONY: get-local-bin
+get-local-bin:
+	$(shell pwd)/bin
 
 .PHONY: cli-install
 cli-install: clusterawsadm clusterctl cloud-nuke yq ## Install the necessary CLI tools for deployment, development and testing.

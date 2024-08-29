@@ -45,7 +45,7 @@ func Run(cmd *exec.Cmd) ([]byte, error) {
 		var exitError *exec.ExitError
 
 		if errors.As(err, &exitError) {
-			return output, fmt.Errorf("%s failed with error: (%v) %s", command, err, string(output))
+			return output, fmt.Errorf("%s failed with error: (%v): %s", command, err, string(exitError.Stderr))
 		}
 	}
 
