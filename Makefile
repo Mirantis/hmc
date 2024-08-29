@@ -192,6 +192,7 @@ REGISTRY_NAME ?= hmc-local-registry
 REGISTRY_PORT ?= 5001
 REGISTRY_REPO ?= oci://127.0.0.1:$(REGISTRY_PORT)/charts
 DEV_PROVIDER ?= aws
+REGISTRY_IS_OCI = $(shell echo $(REGISTRY_REPO) | grep -q oci && echo true || echo false)
 CLUSTER_NAME ?= $(shell $(YQ) '.metadata.name' ./config/dev/deployment.yaml)
 
 AWS_CREDENTIALS=${AWS_B64ENCODED_CREDENTIALS}
@@ -244,16 +245,19 @@ dev-undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/c
 
 .PHONY: helm-push
 helm-push: helm-package
-	@for chart in $(CHARTS_PACKAGE_DIR)/*.tgz; do \
+	if [ ! $(REGISTRY_IS_OCI) ]; then \
+	    repo_flag="--repo"; \
+	fi; \
+	for chart in $(CHARTS_PACKAGE_DIR)/*.tgz; do \
 		base=$$(basename $$chart .tgz); \
 		chart_version=$$(echo $$base | grep -o "v\{0,1\}[0-9]\+\.[0-9]\+\.[0-9].*"); \
 		chart_name="$${base%-"$$chart_version"}"; \
 		echo "Verifying if chart $$chart_name, version $$chart_version already exists in $(REGISTRY_REPO)"; \
-		chart_exists=$$($(HELM) pull --repo $(REGISTRY_REPO) $$chart_name --version $$chart_version --destination /tmp 2>&1 | grep "not found" || true); \
+		chart_exists=$$($(HELM) pull $$repo_flag $(REGISTRY_REPO) $$chart_name --version $$chart_version --destination /tmp 2>&1 | grep "not found" || true); \
 		if [ -z "$$chart_exists" ]; then \
 			echo "Chart $$chart_name version $$chart_version already exists in the repository."; \
 		else \
-			if [ $(REGISTRY_REPO) == "oci://*" ]; then \
+			if $(REGISTRY_IS_OCI); then \
 				echo "Pushing $$chart to $(REGISTRY_REPO)"; \
 				$(HELM) push "$$chart" $(REGISTRY_REPO); \
 			else \
