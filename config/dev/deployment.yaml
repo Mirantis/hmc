@@ -5,13 +5,13 @@ metadata:
 spec:
   template: aws-standalone-cp
   config:
-    region: us-west-2
+    region: us-east-2
     publicIP: true
     controlPlaneNumber: 1
     workersNumber: 1
     controlPlane:
-      amiID: ami-0989c067ff3da4b27
+      amiID: ami-02f3416038bdb17fb
       instanceType: t3.small
     worker:
-      amiID: ami-0989c067ff3da4b27
+      amiID: ami-02f3416038bdb17fb
       instanceType: t3.small

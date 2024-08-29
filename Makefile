@@ -249,12 +249,23 @@ helm-push: helm-package
 		chart_version=$$(echo $$base | grep -o "v\{0,1\}[0-9]\+\.[0-9]\+\.[0-9].*"); \
 		chart_name="$${base%-"$$chart_version"}"; \
 		echo "Verifying if chart $$chart_name, version $$chart_version already exists in $(REGISTRY_REPO)"; \
-		chart_exists=$$($(HELM) pull $(REGISTRY_REPO)/$$chart_name --version $$chart_version --destination /tmp 2>&1 | grep "not found" || true); \
+		chart_exists=$$($(HELM) pull --repo $(REGISTRY_REPO) $$chart_name --version $$chart_version --destination /tmp 2>&1 | grep "not found" || true); \
 		if [ -z "$$chart_exists" ]; then \
 			echo "Chart $$chart_name version $$chart_version already exists in the repository."; \
 		else \
-			echo "Pushing $$chart to $(REGISTRY_REPO)"; \
-			$(HELM) push "$$chart" $(REGISTRY_REPO); \
+			if [ $(REGISTRY_REPO) == "oci://*" ]; then \
+				echo "Pushing $$chart to $(REGISTRY_REPO)"; \
+				$(HELM) push "$$chart" $(REGISTRY_REPO); \
+			else \
+				if [ ! $$REGISTRY_USERNAME ] && [ ! $$REGISTRY_PASSWORD ]; then \
+					echo "REGISTRY_USERNAME and REGISTRY_PASSWORD must be populated to push the chart to an HTTPS repository"; \
+					exit 1; \
+				else \
+					$(HELM) repo add hmc $(REGISTRY_REPO); \
+					echo "Pushing $$chart to $(REGISTRY_REPO)"; \
+					$(HELM) cm-push "$$chart" $(REGISTRY_REPO) --username $$REGISTRY_USERNAME --password $$REGISTRY_PASSWORD; \
+				fi; \
+			fi; \
 		fi; \
 	done
 
