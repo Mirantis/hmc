@@ -75,7 +75,9 @@ var _ = Describe("controller", Ordered, func() {
 						return err
 					}
 
-					verifyControllerUp(podList, string(provider))
+					if err := verifyControllerUp(podList, string(provider)); err != nil {
+						return err
+					}
 				}
 
 				podList, err := kc.Client.CoreV1().Pods(kc.Namespace).List(context.Background(), metav1.ListOptions{
