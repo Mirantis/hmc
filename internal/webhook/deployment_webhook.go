@@ -18,9 +18,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 
-	"github.com/Mirantis/hmc/api/v1alpha1"
-	"github.com/Mirantis/hmc/internal/utils"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -29,6 +28,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	"github.com/Mirantis/hmc/api/v1alpha1"
+	"github.com/Mirantis/hmc/internal/utils"
 )
 
 type DeploymentValidator struct {
@@ -156,14 +158,20 @@ func (v *DeploymentValidator) verifyProviders(ctx context.Context, template *v1a
 	missingProviders["control plane"] = getMissingProviders(exposedProviders.ControlPlaneProviders, requiredProviders.ControlPlaneProviders)
 	missingProviders["infrastructure"] = getMissingProviders(exposedProviders.InfrastructureProviders, requiredProviders.InfrastructureProviders)
 
-	var err error
+	var errs []error
 	for providerType, missing := range missingProviders {
 		if len(missing) > 0 {
-			err = errors.Join(err, fmt.Errorf("one or more required %s providers are not deployed yet: %v", providerType, missing))
+			sort.Slice(missing, func(i, j int) bool {
+				return missing[i] < missing[j]
+			})
+			errs = append(errs, fmt.Errorf("one or more required %s providers are not deployed yet: %v", providerType, missing))
 		}
 	}
-	if err != nil {
-		return err
+	if len(errs) > 0 {
+		sort.Slice(errs, func(i, j int) bool {
+			return errs[i].Error() < errs[j].Error()
+		})
+		return errors.Join(errs...)
 	}
 	return nil
 }
