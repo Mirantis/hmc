@@ -35,7 +35,10 @@ import (
 	"github.com/Mirantis/hmc/test/utils"
 )
 
-const namespace = "hmc-system"
+const (
+	namespace          = "hmc-system"
+	hmcControllerLabel = "app.kubernetes.io/name=hmc"
+)
 
 var _ = Describe("controller", Ordered, func() {
 	BeforeAll(func() {
@@ -57,39 +60,35 @@ var _ = Describe("controller", Ordered, func() {
 			kc, err := kubeclient.NewFromLocal(namespace)
 			ExpectWithOffset(1, err).NotTo(HaveOccurred())
 
-			By("validating that the controller-manager pod is running as expected")
-			verifyControllerUp := func() error {
-				// Ensure only one controller pod is running.
+			By("validating that the hmc-controller and capi provider controllers are running")
+			verifyControllersUp := func() error {
+				for _, provider := range []deployment.ProviderType{
+					deployment.ProviderCAPI,
+					deployment.ProviderAWS,
+					deployment.ProviderAzure,
+				} {
+					// Ensure only one controller pod is running.
+					podList, err := kc.Client.CoreV1().Pods(kc.Namespace).List(context.Background(), metav1.ListOptions{
+						LabelSelector: deployment.GetProviderLabel(provider),
+					})
+					if err != nil {
+						return err
+					}
+
+					verifyControllerUp(podList, string(provider))
+				}
+
 				podList, err := kc.Client.CoreV1().Pods(kc.Namespace).List(context.Background(), metav1.ListOptions{
-					LabelSelector: "control-plane=controller-manager,app.kubernetes.io/name=cluster-api",
+					LabelSelector: hmcControllerLabel,
 				})
 				if err != nil {
 					return err
 				}
 
-				if len(podList.Items) != 1 {
-					return fmt.Errorf("expected 1 cluster-api-controller pod, got %d", len(podList.Items))
-				}
-
-				controllerPod := podList.Items[0]
-
-				// Ensure the pod is not being deleted.
-				if controllerPod.DeletionTimestamp != nil {
-					return fmt.Errorf("deletion timestamp should be nil, got: %v", controllerPod)
-				}
-
-				// Ensure the pod is running and has the expected name.
-				if !strings.Contains(controllerPod.Name, "controller-manager") {
-					return fmt.Errorf("controller pod name %s does not contain 'controller-manager'", controllerPod.Name)
-				}
-				if controllerPod.Status.Phase != "Running" {
-					return fmt.Errorf("controller pod in %s status", controllerPod.Status.Phase)
-				}
-
-				return nil
+				return verifyControllerUp(podList, "hmc-controller-manager")
 			}
 			Eventually(func() error {
-				err := verifyControllerUp()
+				err := verifyControllersUp()
 				if err != nil {
 					_, _ = fmt.Fprintf(GinkgoWriter, "Controller pod validation failed: %v\n", err)
 					return err
@@ -120,7 +119,7 @@ var _ = Describe("controller", Ordered, func() {
 			// as well as the output of clusterctl to store as artifacts.
 			if CurrentSpecReport().Failed() {
 				By("collecting failure logs from controllers")
-				collectLogArtifacts(kc, clusterName, deployment.ProviderAWS)
+				collectLogArtifacts(kc, clusterName, deployment.ProviderAWS, deployment.ProviderCAPI)
 			}
 
 			// Delete the deployments if they were created.
@@ -168,19 +167,41 @@ var _ = Describe("controller", Ordered, func() {
 	})
 })
 
+func verifyControllerUp(podList *corev1.PodList, name string) error {
+	if len(podList.Items) != 1 {
+		return fmt.Errorf("expected 1 %s controller pod, got %d", name, len(podList.Items))
+	}
+
+	controllerPod := podList.Items[0]
+
+	// Ensure the pod is not being deleted.
+	if controllerPod.DeletionTimestamp != nil {
+		return fmt.Errorf("deletion timestamp should be nil, got: %v", controllerPod)
+	}
+	// Ensure the pod is running and has the expected name.
+	if !strings.Contains(controllerPod.Name, "controller-manager") {
+		return fmt.Errorf("controller pod name %s does not contain 'controller-manager'", controllerPod.Name)
+	}
+	if controllerPod.Status.Phase != "Running" {
+		return fmt.Errorf("controller pod in %s status", controllerPod.Status.Phase)
+	}
+
+	return nil
+}
+
 // collectLogArtfiacts collects log output from each the HMC controller,
-// CAPI controller and the provider controller as well as output from clusterctl
+// CAPI controller and the provider controller(s) as well as output from clusterctl
 // and stores them in the test/e2e directory as artifacts.
 // We could do this at the end or we could use Kubernetes' CopyPodLogs from
 // https://github.com/kubernetes/kubernetes/blob/v1.31.0/test/e2e/storage/podlogs/podlogs.go#L88
 // to stream the logs to GinkgoWriter during the test.
-func collectLogArtifacts(kc *kubeclient.KubeClient, clusterName string, providerType deployment.ProviderType) {
+func collectLogArtifacts(kc *kubeclient.KubeClient, clusterName string, providerTypes ...deployment.ProviderType) {
 	GinkgoHelper()
 
-	filterLabels := []string{
-		"app.kubernetes.io/name=hmc-controller-manager",
-		"app.kubernetes.io/name=cluster-api",
-		fmt.Sprintf("app.kubernetes.io/name=cluster-api-provider-%s", providerType),
+	filterLabels := []string{hmcControllerLabel}
+
+	for _, providerType := range providerTypes {
+		filterLabels = append(filterLabels, deployment.GetProviderLabel(providerType))
 	}
 
 	for _, label := range filterLabels {

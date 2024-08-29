@@ -33,7 +33,11 @@ import (
 type ProviderType string
 
 const (
-	ProviderAWS ProviderType = "aws"
+	ProviderCAPI  ProviderType = "cluster-api"
+	ProviderAWS   ProviderType = "infrastructure-aws"
+	ProviderAzure ProviderType = "infrastructure-azure"
+
+	providerLabel = "cluster.x-k8s.io/provider"
 )
 
 type Template string
@@ -48,6 +52,10 @@ var awsStandaloneCPDeploymentTemplateBytes []byte
 
 //go:embed resources/aws-hosted-cp.yaml.tpl
 var awsHostedCPDeploymentTemplateBytes []byte
+
+func GetProviderLabel(provider ProviderType) string {
+	return fmt.Sprintf("%s=%s", providerLabel, provider)
+}
 
 // GetUnstructuredDeployment returns an unstructured deployment object based on
 // the provider and template.
