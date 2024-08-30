@@ -255,9 +255,11 @@ func validateCCM(ctx context.Context, kc *kubeclient.KubeClient, clusterName str
 		Fail(fmt.Sprintf("failed to create KubeClient for managed cluster %s: %v", clusterName, err))
 	}
 
+	createdServiceName := "loadbalancer-" + clusterName
+
 	_, err = clusterKC.Client.CoreV1().Services(clusterKC.Namespace).Create(ctx, &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: clusterName + "-test-service",
+			Name: createdServiceName,
 		},
 		Spec: corev1.ServiceSpec{
 			Selector: map[string]string{
@@ -282,7 +284,7 @@ func validateCCM(ctx context.Context, kc *kubeclient.KubeClient, clusterName str
 
 	// Verify the Service is assigned an external IP.
 	service, err := clusterKC.Client.CoreV1().Services(clusterKC.Namespace).
-		Get(ctx, clusterName+"-test-service", metav1.GetOptions{})
+		Get(ctx, createdServiceName, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to get test Service: %w", err)
 	}

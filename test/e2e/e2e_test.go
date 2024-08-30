@@ -117,12 +117,14 @@ var _ = Describe("controller", Ordered, func() {
 
 			// Delete the deployments if they were created.
 			if deleteFunc != nil {
+				By("deleting the deployment")
 				err = deleteFunc()
 				Expect(err).NotTo(HaveOccurred())
 			}
 
 			// Purge the AWS resources, the AfterAll for the controller will
 			// clean up the management cluster.
+			By("nuking remaining AWS resources")
 			err = os.Setenv("CLUSTER_NAME", clusterName)
 			Expect(err).NotTo(HaveOccurred())
 			cmd := exec.Command("make", "dev-aws-nuke")
