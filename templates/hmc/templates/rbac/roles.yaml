@@ -6,6 +6,13 @@ metadata:
   {{- include "hmc.labels" . | nindent 4 }}
 rules:
 - apiGroups:
+    - cluster.x-k8s.io
+  resources:
+    - clusters
+  verbs:
+    - get
+    - list
+- apiGroups:
   - helm.toolkit.fluxcd.io
   resources:
   - helmreleases

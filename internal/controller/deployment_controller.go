@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"time"
 
+	"k8s.io/apimachinery/pkg/labels"
+
 	hcv2 "github.com/fluxcd/helm-controller/api/v2"
 	fluxmeta "github.com/fluxcd/pkg/apis/meta"
 	fluxconditions "github.com/fluxcd/pkg/runtime/conditions"
@@ -30,8 +32,11 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -48,8 +53,9 @@ import (
 // DeploymentReconciler reconciles a Deployment object
 type DeploymentReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
-	Config *rest.Config
+	Scheme        *runtime.Scheme
+	Config        *rest.Config
+	DynamicClient *dynamic.DynamicClient
 }
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
@@ -57,7 +63,6 @@ type DeploymentReconciler struct {
 func (r *DeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	l := log.FromContext(ctx).WithValues("DeploymentController", req.NamespacedName)
 	l.Info("Reconciling Deployment")
-
 	deployment := &hmc.Deployment{}
 	if err := r.Get(ctx, req.NamespacedName, deployment); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -85,6 +90,63 @@ func (r *DeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 	}
 	return r.Update(ctx, l, deployment)
+}
+
+func (r *DeploymentReconciler) setStatusFromClusterStatus(ctx context.Context, l logr.Logger, deployment *hmc.Deployment) (bool, error) {
+	resourceId := schema.GroupVersionResource{
+		Group:    "cluster.x-k8s.io",
+		Version:  "v1beta1",
+		Resource: "clusters",
+	}
+
+	list, err := r.DynamicClient.Resource(resourceId).Namespace(deployment.Namespace).List(ctx, metav1.ListOptions{
+		LabelSelector: labels.SelectorFromSet(map[string]string{hmc.FluxHelmChartNameKey: deployment.Name}).String(),
+	})
+
+	if apierrors.IsNotFound(err) || len(list.Items) == 0 {
+		l.Info("Clusters not found, ignoring since object must be deleted or not yet created")
+		return true, nil
+	}
+
+	if err != nil {
+		return true, fmt.Errorf("failed to get cluster information for deployment %s in namespace: %s: %w",
+			deployment.Namespace, deployment.Name, err)
+	}
+	conditions, found, err := unstructured.NestedSlice(list.Items[0].Object, "status", "conditions")
+	if err != nil {
+		return true, fmt.Errorf("failed to get cluster information for deployment %s in namespace: %s: %w",
+			deployment.Namespace, deployment.Name, err)
+	}
+	if !found {
+		return true, fmt.Errorf("failed to get cluster information for deployment %s in namespace: %s: status.conditions not found",
+			deployment.Namespace, deployment.Name)
+	}
+
+	allConditionsComplete := true
+	for _, condition := range conditions {
+		conditionMap, ok := condition.(map[string]interface{})
+		if !ok {
+			return true, fmt.Errorf("failed to cast condition to map[string]interface{} for deployment: %s in namespace: %s: %w",
+				deployment.Namespace, deployment.Name, err)
+		}
+
+		var metaCondition metav1.Condition
+		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(conditionMap, &metaCondition); err != nil {
+			return true, fmt.Errorf("failed to convert unstructured conditions to metav1.Condition for deployment %s in namespace: %s: %w",
+				deployment.Namespace, deployment.Name, err)
+		}
+
+		if metaCondition.Status != "True" {
+			allConditionsComplete = false
+		}
+
+		if metaCondition.Reason == "" && metaCondition.Status == "True" {
+			metaCondition.Reason = "Succeeded"
+		}
+		apimeta.SetStatusCondition(deployment.GetConditions(), metaCondition)
+	}
+
+	return !allConditionsComplete, nil
 }
 
 func (r *DeploymentReconciler) Update(ctx context.Context, l logr.Logger, deployment *hmc.Deployment) (result ctrl.Result, err error) {
@@ -224,6 +286,20 @@ func (r *DeploymentReconciler) Update(ctx context.Context, l logr.Logger, deploy
 				Message: hrReadyCondition.Message,
 			})
 		}
+
+		requeue, err := r.setStatusFromClusterStatus(ctx, l, deployment)
+		if err != nil {
+			if requeue {
+				return ctrl.Result{RequeueAfter: 10 * time.Second}, err
+			} else {
+				return ctrl.Result{}, err
+			}
+		}
+
+		if requeue {
+			return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
+		}
+
 		if !fluxconditions.IsReady(hr) {
 			return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 		}
