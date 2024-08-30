@@ -25,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
@@ -128,6 +129,7 @@ var _ = Describe("Deployment Controller", func() {
 			controllerReconciler := &DeploymentReconciler{
 				Client: k8sClient,
 				Scheme: k8sClient.Scheme(),
+				Config: &rest.Config{},
 			}
 
 			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{

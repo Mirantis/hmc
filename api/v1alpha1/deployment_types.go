@@ -24,6 +24,7 @@ import (
 const (
 	DeploymentFinalizer = "hmc.mirantis.com/deployment"
 
+	FluxHelmChartNameKey = "helm.toolkit.fluxcd.io/name"
 	HMCManagedLabelKey   = "hmc.mirantis.com/managed"
 	HMCManagedLabelValue = "true"
 )
