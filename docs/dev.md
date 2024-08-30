@@ -82,3 +82,4 @@ export KUBECONFIG=~/.kube/config
 ```
 kubectl --kubeconfig ~/.kube/config get secret -n hmc-system <managedcluster-name>-kubeconfig -o=jsonpath={.data.value} | base64 -d > kubeconfig
 ```
+

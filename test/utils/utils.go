@@ -141,7 +141,7 @@ func GetConditionsFromUnstructured(unstrObj *unstructured.Unstructured) ([]metav
 		return nil, fmt.Errorf("failed to get status conditions for %s: %s: %w", objKind, objName, err)
 	}
 
-	var conditions []metav1.Condition
+	conditions := make([]metav1.Condition, 0, len(unstrConditions))
 
 	for _, condition := range unstrConditions {
 		conditionMap, ok := condition.(map[string]interface{})

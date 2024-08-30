@@ -193,7 +193,8 @@ func verifyControllerUp(kc *kubeclient.KubeClient, labelSelector string, name st
 
 // collectLogArtfiacts collects log output from each the HMC controller,
 // CAPI controller and the provider controller(s) as well as output from clusterctl
-// and stores them in the test/e2e directory as artifacts.
+// and stores them in the test/e2e directory as artifacts.  If it fails it
+// produces a warning message to the GinkgoWriter, but does not fail the test.
 // We could do this at the end or we could use Kubernetes' CopyPodLogs from
 // https://github.com/kubernetes/kubernetes/blob/v1.31.0/test/e2e/storage/podlogs/podlogs.go#L88
 // to stream the logs to GinkgoWriter during the test.
@@ -216,24 +217,28 @@ func collectLogArtifacts(kc *kubeclient.KubeClient, clusterName string, provider
 				TailLines: ptr.To(int64(1000)),
 			})
 			podLogs, err := req.Stream(context.Background())
-			Expect(err).NotTo(HaveOccurred(), "failed to get log stream for pod %s", pod.Name)
-			defer Expect(podLogs.Close()).NotTo(HaveOccurred())
+			warnError(fmt.Errorf("failed to get log stream for pod %s: %w", pod.Name, err))
+			defer podLogs.Close() //nolint:errcheck
 
 			output, err := os.Create(fmt.Sprintf("test/e2e/%s.log", pod.Name))
-			Expect(err).NotTo(HaveOccurred(), "failed to create log file for pod %s", pod.Name)
-			defer Expect(output.Close()).NotTo(HaveOccurred())
+			warnError(fmt.Errorf("failed to create log file for pod %s: %w", pod.Name, err))
+			defer output.Close() //nolint:errcheck
 
 			r := bufio.NewReader(podLogs)
 			_, err = r.WriteTo(output)
-			Expect(err).NotTo(HaveOccurred(), "failed to write log file for pod %s", pod.Name)
+			warnError(fmt.Errorf("failed to write log file for pod %s: %w", pod.Name, err))
 		}
 	}
 
 	cmd := exec.Command("./bin/clusterctl",
 		"describe", "cluster", clusterName, "--show-conditions=all")
 	output, err := utils.Run(cmd)
-	Expect(err).NotTo(HaveOccurred(), "failed to get clusterctl log")
+	warnError(fmt.Errorf("failed to get clusterctl log: %w", err))
 
 	err = os.WriteFile(filepath.Join("test/e2e", "clusterctl.log"), output, 0644)
-	Expect(err).NotTo(HaveOccurred(), "failed to write clusterctl log")
+	warnError(fmt.Errorf("failed to write clusterctl log: %w", err))
+}
+
+func warnError(err error) {
+	_, _ = fmt.Fprintf(GinkgoWriter, "Warning: %v\n", err)
 }

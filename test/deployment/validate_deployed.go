@@ -58,7 +58,9 @@ func VerifyProviderDeployed(ctx context.Context, kc *kubeclient.KubeClient, clus
 // In some cases it may be necessary to end the Eventually block early if the
 // resource will never reach a ready state, in these instances Ginkgo's Fail
 // should be used to end the spec early.
-func verifyProviderAction(ctx context.Context, kc *kubeclient.KubeClient, clusterName string, resourcesToValidate map[string]resourceValidationFunc, order []string) error {
+func verifyProviderAction(
+	ctx context.Context, kc *kubeclient.KubeClient, clusterName string,
+	resourcesToValidate map[string]resourceValidationFunc, order []string) error {
 	// Sequentially validate each resource type, only returning the first error
 	// as to not move on to the next resource type until the first is resolved.
 	// We use []string here since order is important.

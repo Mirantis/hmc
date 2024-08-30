@@ -20,7 +20,6 @@ import (
 
 	"github.com/Mirantis/hmc/test/kubeclient"
 	"github.com/Mirantis/hmc/test/utils"
-	. "github.com/onsi/ginkgo/v2"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -49,7 +48,11 @@ func validateClusterDeleted(ctx context.Context, kc *kubeclient.KubeClient, clus
 	if cluster != nil {
 		phase, _, _ := unstructured.NestedString(cluster.Object, "status", "phase")
 		if phase != "Deleting" {
-			Fail(fmt.Sprintf("cluster %q exists, but is not in 'Deleting' phase", clusterName))
+			// TODO: We should have a threshold error system for situations
+			// like this, we probably don't want to wait the full Eventually
+			// for something like this, but we can't immediately fail the test
+			// either.
+			return fmt.Errorf("cluster %q exists, but is not in 'Deleting' phase", clusterName)
 		}
 
 		conditions, err := utils.GetConditionsFromUnstructured(cluster)
