@@ -42,19 +42,28 @@ var resourceValidators = map[string]resourceValidationFunc{
 	"ccm":            validateCCM,
 }
 
-// VerifyProviderDeployed is a provider-agnostic verification that checks for
-// the presence of specific resources in the cluster using
-// resourceValidationFuncs. It is meant to be used in conjunction with an
-// Eventually block.
+// VerifyProviderDeployed is a provider-agnostic verification that checks
+// to ensure generic resources managed by the provider have been deleted.
+// It is intended to be used in conjunction with an Eventually block.
+func VerifyProviderDeployed(ctx context.Context, kc *kubeclient.KubeClient, clusterName string) error {
+	return verifyProviderAction(ctx, kc, clusterName, resourceValidators,
+		[]string{"clusters", "machines", "control-planes", "csi-driver", "ccm"})
+}
+
+// verifyProviderAction is a provider-agnostic verification that checks for
+// a specific set of resources and either validates their readiness or
+// their deletion depending on the passed map of resourceValidationFuncs and
+// desired order.
+// It is meant to be used in conjunction with an Eventually block.
 // In some cases it may be necessary to end the Eventually block early if the
 // resource will never reach a ready state, in these instances Ginkgo's Fail
 // should be used to end the spec early.
-func VerifyProviderDeployed(ctx context.Context, kc *kubeclient.KubeClient, clusterName string) error {
+func verifyProviderAction(ctx context.Context, kc *kubeclient.KubeClient, clusterName string, resourcesToValidate map[string]resourceValidationFunc, order []string) error {
 	// Sequentially validate each resource type, only returning the first error
 	// as to not move on to the next resource type until the first is resolved.
 	// We use []string here since order is important.
-	for _, name := range []string{"clusters", "machines", "control-planes", "csi-driver", "ccm"} {
-		validator, ok := resourceValidators[name]
+	for _, name := range order {
+		validator, ok := resourcesToValidate[name]
 		if !ok {
 			continue
 		}
@@ -65,7 +74,7 @@ func VerifyProviderDeployed(ctx context.Context, kc *kubeclient.KubeClient, clus
 		}
 
 		_, _ = fmt.Fprintf(GinkgoWriter, "[%s] validation succeeded\n", name)
-		delete(resourceValidators, name)
+		delete(resourcesToValidate, name)
 	}
 
 	return nil

@@ -101,41 +101,19 @@ func GetProjectDir() (string, error) {
 func ValidateConditionsTrue(unstrObj *unstructured.Unstructured) error {
 	objKind, objName := ObjKindName(unstrObj)
 
-	// Iterate the status conditions and ensure each condition reports a "Ready"
-	// status.
-	conditions, found, err := unstructured.NestedSlice(unstrObj.Object, "status", "conditions")
-	if !found {
-		return fmt.Errorf("no status conditions found for %s: %s", objKind, objName)
-	}
+	conditions, err := GetConditionsFromUnstructured(unstrObj)
 	if err != nil {
-		return fmt.Errorf("failed to get status conditions for %s: %s: %w", objKind, objName, err)
+		return fmt.Errorf("failed to get conditions from unstructured object: %w", err)
 	}
 
 	var errs error
 
-	for _, condition := range conditions {
-		conditionMap, ok := condition.(map[string]interface{})
-		if !ok {
-			return fmt.Errorf("expected %s: %s condition to be type map[string]interface{}, got: %T",
-				objKind, objName, conditionMap)
-		}
-
-		var c *metav1.Condition
-
-		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(conditionMap, &c); err != nil {
-			return fmt.Errorf("failed to convert condition map to metav1.Condition: %w", err)
-		}
-
+	for _, c := range conditions {
 		if c.Status == metav1.ConditionTrue {
 			continue
 		}
 
-		errorStr := fmt.Sprintf("%s - Reason: %s", c.Type, c.Reason)
-		if c.Message != "" {
-			errorStr = fmt.Sprintf("%s: %s", errorStr, c.Message)
-		}
-
-		errs = errors.Join(errors.New(errorStr), errs)
+		errs = errors.Join(errors.New(ConvertConditionsToString(c)), errs)
 	}
 
 	if errs != nil {
@@ -143,6 +121,45 @@ func ValidateConditionsTrue(unstrObj *unstructured.Unstructured) error {
 	}
 
 	return nil
+}
+
+func ConvertConditionsToString(condition metav1.Condition) string {
+	return fmt.Sprintf("Type: %s, Status: %s, Reason: %s, Message: %s",
+		condition.Type, condition.Status, condition.Reason, condition.Message)
+}
+
+func GetConditionsFromUnstructured(unstrObj *unstructured.Unstructured) ([]metav1.Condition, error) {
+	objKind, objName := ObjKindName(unstrObj)
+
+	// Iterate the status conditions and ensure each condition reports a "Ready"
+	// status.
+	unstrConditions, found, err := unstructured.NestedSlice(unstrObj.Object, "status", "conditions")
+	if !found {
+		return nil, fmt.Errorf("no status conditions found for %s: %s", objKind, objName)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get status conditions for %s: %s: %w", objKind, objName, err)
+	}
+
+	var conditions []metav1.Condition
+
+	for _, condition := range unstrConditions {
+		conditionMap, ok := condition.(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("expected %s: %s condition to be type map[string]interface{}, got: %T",
+				objKind, objName, conditionMap)
+		}
+
+		var c *metav1.Condition
+
+		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(conditionMap, &c); err != nil {
+			return nil, fmt.Errorf("failed to convert condition map to metav1.Condition: %w", err)
+		}
+
+		conditions = append(conditions, *c)
+	}
+
+	return conditions, nil
 }
 
 // ValidateObjectNamePrefix checks if the given object name has the given prefix.

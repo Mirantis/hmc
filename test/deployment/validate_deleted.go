@@ -15,9 +15,11 @@ package deployment
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/Mirantis/hmc/test/kubeclient"
+	"github.com/Mirantis/hmc/test/utils"
 	. "github.com/onsi/ginkgo/v2"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -32,25 +34,8 @@ var deletionValidators = map[string]resourceValidationFunc{
 // to ensure generic resources managed by the provider have been deleted.
 // It is intended to be used in conjunction with an Eventually block.
 func VerifyProviderDeleted(ctx context.Context, kc *kubeclient.KubeClient, clusterName string) error {
-	// Sequentially validate each resource type, only returning the first error
-	// as to not move on to the next resource type until the first is resolved.
-	// We use []string here since order is important.
-	for _, name := range []string{"control-planes", "machinedeployments", "clusters"} {
-		validator, ok := deletionValidators[name]
-		if !ok {
-			continue
-		}
-
-		if err := validator(ctx, kc, clusterName); err != nil {
-			_, _ = fmt.Fprintf(GinkgoWriter, "[%s] validation error: %v\n", name, err)
-			return err
-		}
-
-		_, _ = fmt.Fprintf(GinkgoWriter, "[%s] validation succeeded\n", name)
-		delete(resourceValidators, name)
-	}
-
-	return nil
+	return verifyProviderAction(ctx, kc, clusterName, deletionValidators,
+		[]string{"clusters", "machinedeployments", "control-planes"})
 }
 
 // validateClusterDeleted validates that the Cluster resource has been deleted.
@@ -61,15 +46,24 @@ func validateClusterDeleted(ctx context.Context, kc *kubeclient.KubeClient, clus
 		return err
 	}
 
-	var inPhase string
-
 	if cluster != nil {
 		phase, _, _ := unstructured.NestedString(cluster.Object, "status", "phase")
-		if phase != "" {
-			inPhase = ", in phase: " + phase
+		if phase != "Deleting" {
+			Fail(fmt.Sprintf("cluster %q exists, but is not in 'Deleting' phase", clusterName))
 		}
 
-		return fmt.Errorf("cluster %q still exists%s", clusterName, inPhase)
+		conditions, err := utils.GetConditionsFromUnstructured(cluster)
+		if err != nil {
+			return fmt.Errorf("failed to get conditions from unstructured object: %w", err)
+		}
+
+		var errs error
+
+		for _, c := range conditions {
+			errs = errors.Join(errors.New(utils.ConvertConditionsToString(c)), errs)
+		}
+
+		return fmt.Errorf("cluster %q still in 'Deleting' phase with conditions:\n%w", clusterName, errs)
 	}
 
 	return nil
