@@ -16,12 +16,9 @@ package deployment
 
 import (
 	_ "embed"
-	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 
-	"github.com/Mirantis/hmc/test/utils"
 	"github.com/a8m/envsubst"
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
@@ -67,9 +64,6 @@ func GetUnstructuredDeployment(provider ProviderType, templateName Template) *un
 
 	switch provider {
 	case ProviderAWS:
-		// XXX: Maybe we should just use automatic AMI selection here.
-		amiID := getAWSAMI()
-		Expect(os.Setenv("AWS_AMI_ID", amiID)).NotTo(HaveOccurred())
 		Expect(os.Setenv("DEPLOYMENT_NAME", generatedName)).NotTo(HaveOccurred())
 
 		var deploymentTemplateBytes []byte
@@ -96,38 +90,4 @@ func GetUnstructuredDeployment(provider ProviderType, templateName Template) *un
 	}
 
 	return nil
-}
-
-// getAWSAMI returns an AWS AMI ID to use for test.
-func getAWSAMI() string {
-	GinkgoHelper()
-
-	// For now we'll just use the latest Kubernetes version for ubuntu 20.04,
-	// but we could potentially pin the Kube version and specify that here.
-	cmd := exec.Command("./bin/clusterawsadm", "ami", "list", "--os=ubuntu-20.04", "-o", "json")
-	output, err := utils.Run(cmd)
-	Expect(err).NotTo(HaveOccurred(), "failed to list AMIs")
-
-	var amiList map[string]interface{}
-
-	err = json.Unmarshal(output, &amiList)
-	Expect(err).NotTo(HaveOccurred(), "failed to unmarshal AMI list")
-
-	// ami list returns a sorted list of AMIs by kube version, just get the
-	// first one.
-	for _, item := range amiList["items"].([]interface{}) {
-		spec := item.(map[string]interface{})["spec"].(map[string]interface{})
-		if imageID, ok := spec["imageID"]; ok {
-			ami, ok := imageID.(string)
-			if !ok {
-				continue
-			}
-
-			return ami
-		}
-	}
-
-	Fail("no AMIs found")
-
-	return ""
 }

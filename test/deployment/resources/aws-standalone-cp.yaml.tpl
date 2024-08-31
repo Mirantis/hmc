@@ -10,10 +10,8 @@ spec:
     controlPlaneNumber: ${CONTROL_PLANE_NUMBER:=1}
     workersNumber: ${WORKERS_NUMBER:=1}
     controlPlane:
-      amiID: ${AWS_AMI_ID}
       instanceType: ${INSTANCE_TYPE:=t3.small}
     worker:
-      amiID: ${AWS_AMI_ID}
       instanceType: ${INSTANCE_TYPE:=t3.small}
 
 

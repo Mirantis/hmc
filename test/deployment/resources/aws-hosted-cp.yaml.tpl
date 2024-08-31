@@ -11,7 +11,6 @@ spec:
     subnets:
       - id: ${AWS_SUBNET_ID}
         availabilityZone: ${AWS_SUBNET_AVAILABILITY_ZONE}
-    amiID: ${AWS_AMI_ID}
     instanceType: ${INSTANCE_TYPE:=t3.medium}
     securityGroupIDs:
       - ${AWS_SG_ID}
