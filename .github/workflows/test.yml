@@ -17,12 +17,14 @@ on:
       - '*'
     paths-ignore:
       - '**.md'
-  pull_request:
+  pull_request_target:
+    types:
+      - opened
+      - synchronize
+      - reopened
     branches:
       - main
       - release-*
-    tags:
-      - '*'
     paths-ignore:
       - 'config/**'
       - '**.md'
@@ -63,7 +65,7 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.CI_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.CI_AWS_SECRET_ACCESS_KEY }}
           SOME_TEST_SECRET: ${{ secrets.CI_TEST_SECRET }}
-          AWS_REGION: "us-west-2"
+          AWS_REGION: 'us-west-2'
         run: |
           echo $SOME_TEST_SECRET
           make test-e2e
