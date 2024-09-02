@@ -16,6 +16,7 @@ package controller
 
 import (
 	"context"
+	"time"
 
 	hcv2 "github.com/fluxcd/helm-controller/api/v2"
 	. "github.com/onsi/ginkgo/v2"
@@ -75,10 +76,12 @@ var _ = Describe("Deployment Controller", func() {
 								Namespace: "default",
 							},
 						},
+						Type: hmc.TemplateTypeDeployment,
 					},
 				}
 				Expect(k8sClient.Create(ctx, template)).To(Succeed())
 				template.Status = hmc.TemplateStatus{
+					Type: hmc.TemplateTypeDeployment,
 					TemplateValidationStatus: hmc.TemplateValidationStatus{
 						Valid: true,
 					},
@@ -119,7 +122,19 @@ var _ = Describe("Deployment Controller", func() {
 
 		AfterEach(func() {
 			By("Cleanup")
+
+			controllerReconciler := &DeploymentReconciler{
+				Client: k8sClient,
+				Scheme: k8sClient.Scheme(),
+			}
+
 			Expect(k8sClient.Delete(ctx, deployment)).To(Succeed())
+			// Running reconcile to remove the finalizer and delete the Deployment
+			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{NamespacedName: typeNamespacedName})
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(k8sClient.Get(ctx, typeNamespacedName, deployment), 1*time.Minute, 5*time.Second).Should(HaveOccurred())
+
 			Expect(k8sClient.Delete(ctx, template)).To(Succeed())
 			Expect(k8sClient.Delete(ctx, management)).To(Succeed())
 			Expect(k8sClient.Delete(ctx, namespace)).To(Succeed())
