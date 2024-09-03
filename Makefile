@@ -290,12 +290,10 @@ dev-azure-creds: envsubst
 	@NAMESPACE=$(NAMESPACE) $(ENVSUBST) -no-unset -i config/dev/azure-credentials.yaml | $(KUBECTL) apply -f -
 
 .PHONY: dev-apply
-dev-apply: kind-deploy registry-deploy dev-push dev-deploy dev-templates
-	make dev-$(DEV_PROVIDER)-creds
+dev-apply: kind-deploy registry-deploy dev-push dev-deploy dev-templates dev-creds-apply
 
 .PHONY: dev-destroy
 dev-destroy: kind-undeploy registry-undeploy ## Destroy the development environment by deleting the kind cluster and local registry.
-
 
 .PHONY: dev-provider-apply
 dev-provider-apply: envsubst
@@ -305,8 +303,11 @@ dev-provider-apply: envsubst
 dev-provider-delete: envsubst
 	@NAMESPACE=$(NAMESPACE) $(ENVSUBST) -no-unset -i config/dev/$(DEV_PROVIDER)-managedcluster.yaml | $(KUBECTL) delete -f -
 
+.PHONY: dev-creds-apply
+dev-creds-apply: dev-$(DEV_PROVIDER)-creds
+
 .PHONY: dev-aws-nuke
-dev-aws-nuke: ## Warning: Destructive! Nuke all AWS resources deployed by 'dev-aws-apply', prefix with CLUSTER_NAME to nuke a specific cluster.
+dev-aws-nuke: ## Warning: Destructive! Nuke all AWS resources deployed by 'DEV_PROVIDER=aws dev-provider-apply', prefix with CLUSTER_NAME to nuke a specific cluster.
 	@CLUSTER_NAME=$(CLUSTER_NAME) YQ=$(YQ) bash -c ./scripts/aws-nuke-ccm.sh
 	@CLUSTER_NAME=$(CLUSTER_NAME) envsubst < config/dev/cloud_nuke.yaml.tpl > config/dev/cloud_nuke.yaml
 	DISABLE_TELEMETRY=true $(CLOUDNUKE) aws --region $$AWS_REGION --force --config config/dev/cloud_nuke.yaml --resource-type vpc,eip,nat-gateway,ec2-subnet,elb,elbv2,internet-gateway,network-interface,security-group
