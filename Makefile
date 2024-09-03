@@ -291,6 +291,7 @@ dev-azure-creds: envsubst
 
 .PHONY: dev-apply
 dev-apply: kind-deploy registry-deploy dev-push dev-deploy dev-templates
+	make dev-$(DEV_PROVIDER)-creds
 
 .PHONY: dev-destroy
 dev-destroy: kind-undeploy registry-undeploy ## Destroy the development environment by deleting the kind cluster and local registry.
