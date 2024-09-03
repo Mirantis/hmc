@@ -163,29 +163,29 @@ var _ = Describe("controller", Ordered, func() {
 })
 
 func verifyControllerUp(kc *kubeclient.KubeClient, labelSelector string, name string) error {
-	podList, err := kc.Client.CoreV1().Pods(kc.Namespace).List(context.Background(), metav1.ListOptions{
+	deployList, err := kc.Client.AppsV1().Deployments(kc.Namespace).List(context.Background(), metav1.ListOptions{
 		LabelSelector: labelSelector,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to list %s controller pods: %v", name, err)
+		return fmt.Errorf("failed to list %s controller deployments: %w", name, err)
 	}
 
-	if len(podList.Items) != 1 {
-		return fmt.Errorf("expected 1 %s controller pod, got %d", name, len(podList.Items))
+	if len(deployList.Items) < 1 {
+		return fmt.Errorf("expected at least 1 %s controller deployment, got %d", name, len(deployList.Items))
 	}
 
-	controllerPod := podList.Items[0]
+	deployment := deployList.Items[0]
 
-	// Ensure the pod is not being deleted.
-	if controllerPod.DeletionTimestamp != nil {
-		return fmt.Errorf("controller pod: %s deletion timestamp should be nil, got: %v", controllerPod.Name, controllerPod)
+	// Ensure the deployment is not being deleted.
+	if deployment.DeletionTimestamp != nil {
+		return fmt.Errorf("controller pod: %s deletion timestamp should be nil, got: %v", deployment.Name, deployment.DeletionTimestamp)
 	}
-	// Ensure the pod is running and has the expected name.
-	if !strings.Contains(controllerPod.Name, "controller-manager") {
-		return fmt.Errorf("controller pod name %s does not contain 'controller-manager'", controllerPod.Name)
+	// Ensure the deployment is running and has the expected name.
+	if !strings.Contains(deployment.Name, "controller-manager") {
+		return fmt.Errorf("controller deployment name %s does not contain 'controller-manager'", deployment.Name)
 	}
-	if controllerPod.Status.Phase != "Running" {
-		return fmt.Errorf("controller pod: %s in %s status", controllerPod.Name, controllerPod.Status.Phase)
+	if deployment.Status.ReadyReplicas < 1 {
+		return fmt.Errorf("controller deployment: %s does not yet have any ReadyReplicas", deployment.Name)
 	}
 
 	return nil

@@ -290,14 +290,17 @@ dev-azure-creds: envsubst
 	@NAMESPACE=$(NAMESPACE) $(ENVSUBST) -no-unset -i config/dev/azure-credentials.yaml | $(KUBECTL) apply -f -
 
 .PHONY: dev-apply
-dev-apply: kind-deploy registry-deploy dev-push dev-deploy dev-templates dev-creds-apply
+dev-apply: kind-deploy registry-deploy dev-push dev-deploy dev-templates
 
 .PHONY: dev-destroy
 dev-destroy: kind-undeploy registry-undeploy ## Destroy the development environment by deleting the kind cluster and local registry.
 
 .PHONY: dev-provider-apply
 dev-provider-apply: envsubst
-	@NAMESPACE=$(NAMESPACE) $(ENVSUBST) -no-unset -i config/dev/$(DEV_PROVIDER)-managedcluster.yaml | $(KUBECTL) apply -f -
+	@if [ $(DEV_PROVIDER) = "aws" ]; then \
+		$(MAKE) dev-aws-creds; \
+	fi
+	@NAMESPACE=$(NAMESPACE) $(ENVSUBST) -no-unset -i config/dev/$(DEV_PROVIDER)-deployment.yaml | $(KUBECTL) apply -f -
 
 .PHONY: dev-provider-delete
 dev-provider-delete: envsubst
@@ -306,10 +309,10 @@ dev-provider-delete: envsubst
 .PHONY: dev-creds-apply
 dev-creds-apply: dev-$(DEV_PROVIDER)-creds
 
-.PHONY: dev-aws-nuke
+.PHONY: envsubst awscli dev-aws-nuke
 dev-aws-nuke: ## Warning: Destructive! Nuke all AWS resources deployed by 'DEV_PROVIDER=aws dev-provider-apply', prefix with CLUSTER_NAME to nuke a specific cluster.
-	@CLUSTER_NAME=$(CLUSTER_NAME) YQ=$(YQ) bash -c ./scripts/aws-nuke-ccm.sh
-	@CLUSTER_NAME=$(CLUSTER_NAME) envsubst < config/dev/cloud_nuke.yaml.tpl > config/dev/cloud_nuke.yaml
+	@CLUSTER_NAME=$(CLUSTER_NAME) YQ=$(YQ) AWSCLI=$(AWSCLI) bash -c ./scripts/aws-nuke-ccm.sh
+	@CLUSTER_NAME=$(CLUSTER_NAME) $(ENVSUBST) < config/dev/cloud_nuke.yaml.tpl > config/dev/cloud_nuke.yaml
 	DISABLE_TELEMETRY=true $(CLOUDNUKE) aws --region $$AWS_REGION --force --config config/dev/cloud_nuke.yaml --resource-type vpc,eip,nat-gateway,ec2-subnet,elb,elbv2,internet-gateway,network-interface,security-group
 	@rm config/dev/cloud_nuke.yaml
 
@@ -319,12 +322,8 @@ test-apply: kind-deploy registry-deploy dev-push dev-deploy dev-templates
 .PHONY: test-destroy
 test-destroy: kind-undeploy registry-undeploy
 
-.PHONY: get-local-bin
-get-local-bin:
-	$(shell pwd)/bin
-
 .PHONY: cli-install
-cli-install: clusterawsadm clusterctl cloud-nuke yq ## Install the necessary CLI tools for deployment, development and testing.
+cli-install: clusterawsadm clusterctl cloud-nuke yq awscli ## Install the necessary CLI tools for deployment, development and testing.
 
 ##@ Dependencies
 
@@ -356,6 +355,7 @@ CLUSTERCTL ?= $(LOCALBIN)/clusterctl
 CLOUDNUKE ?= $(LOCALBIN)/cloud-nuke
 ADDLICENSE ?= $(LOCALBIN)/addlicense-$(ADDLICENSE_VERSION)
 ENVSUBST ?= $(LOCALBIN)/envsubst-$(ENVSUBST_VERSION)
+AWSCLI ?= $(LOCALBIN)/aws
 
 ## Tool Versions
 CONTROLLER_TOOLS_VERSION ?= v0.14.0
@@ -369,6 +369,7 @@ CLUSTERAWSADM_VERSION ?= v2.5.2
 CLUSTERCTL_VERSION ?= v1.7.3
 ADDLICENSE_VERSION ?= v1.1.1
 ENVSUBST_VERSION ?= v1.4.2
+AWSCLI_VERSION ?= 2.17.42
 
 .PHONY: controller-gen
 controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary.
@@ -443,6 +444,13 @@ $(ADDLICENSE): | $(LOCALBIN)
 envsubst: $(ENVSUBST)
 $(ENVSUBST): | $(LOCALBIN)
 	$(call go-install-tool,$(ENVSUBST),github.com/a8m/envsubst/cmd/envsubst,${ENVSUBST_VERSION})
+
+.PHONY: awscli
+awscli: $(AWSCLI)
+$(AWSCLI): | $(LOCALBIN)
+	curl "https://awscli.amazonaws.com/awscli-exe-$(OS)-$(shell uname -m)-$(AWSCLI_VERSION).zip" -o "/tmp/awscliv2.zip"
+	unzip /tmp/awscliv2.zip -d /tmp
+	/tmp/aws/install -i $(LOCALBIN)/aws-cli -b $(LOCALBIN) --update
 
 # go-install-tool will 'go install' any package with custom target and name of binary, if it doesn't exist
 # $1 - target path with name of binary (ideally with version)

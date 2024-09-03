@@ -22,7 +22,15 @@ if [ -z $CLUSTER_NAME ]; then
 fi
 
 if [ -z $YQ ]; then
-    YQ=$(which yq)
+    echo "YQ must be set to the path of the yq binary"
+    echo "Use 'make dev-aws-nuke' instead of running this script directly"
+    exit 1
+fi
+
+if [ -z AWSCLI ]; then
+    echo "AWSCLI must be set to the path of the AWS CLI"
+    echo "Use 'make dev-aws-nuke' instead of running this script directly"
+    exit 1
 fi
 
 echo "Checking for ELB with 'kubernetes.io/cluster/$CLUSTER_NAME' tag"
