@@ -176,7 +176,7 @@ docker-push: ## Push docker image with the manager.
 PLATFORMS ?= linux/arm64,linux/amd64,linux/s390x,linux/ppc64le
 .PHONY: docker-buildx
 docker-buildx: ## Build and push docker image for the manager for cross-platform support
-	# copy existing Dockerfile and insert --platform=${BUILDPLATFORM} into Dockerfile.cross, and preserve the original Dockerfile
+        # copy existing Dockerfile and insert --platform=${BUILDPLATFORM} into Dockerfile.cross, and preserve the original Dockerfile
 	sed -e '1 s/\(^FROM\)/FROM --platform=\$$\{BUILDPLATFORM\}/; t' -e ' 1,// s//FROM --platform=\$$\{BUILDPLATFORM\}/' Dockerfile > Dockerfile.cross
 	- $(CONTAINER_TOOL) buildx create --name project-v3-builder
 	$(CONTAINER_TOOL) buildx use project-v3-builder
@@ -191,6 +191,7 @@ KIND_NETWORK ?= kind
 REGISTRY_NAME ?= hmc-local-registry
 REGISTRY_PORT ?= 5001
 REGISTRY_REPO ?= oci://127.0.0.1:$(REGISTRY_PORT)/charts
+DEV_PROVIDER ?= aws
 
 AWS_CREDENTIALS=${AWS_B64ENCODED_CREDENTIALS}
 
@@ -223,7 +224,7 @@ registry-deploy:
 .PHONY: registry-undeploy
 registry-undeploy:
 	@if [ "$$($(CONTAINER_TOOL) ps -aq -f name=$(REGISTRY_NAME))" ]; then \
-  		echo "Removing local registry container $(REGISTRY_NAME)"; \
+		echo "Removing local registry container $(REGISTRY_NAME)"; \
 		$(CONTAINER_TOOL) rm -f "$(REGISTRY_NAME)"; \
 	fi
 
@@ -233,7 +234,7 @@ hmc-deploy: helm
 
 .PHONY: dev-deploy
 dev-deploy: ## Deploy HMC helm chart to the K8s cluster specified in ~/.kube/config.
-	make hmc-deploy HMC_VALUES=config/dev/hmc_values.yaml
+	$(MAKE) hmc-deploy HMC_VALUES=config/dev/hmc_values.yaml
 	$(KUBECTL) rollout restart -n $(NAMESPACE) deployment/hmc-controller-manager
 
 .PHONY: dev-undeploy
@@ -264,23 +265,30 @@ dev-push: docker-build helm-push
 dev-templates: templates-generate
 	$(KUBECTL) -n $(NAMESPACE) apply -f templates/hmc-templates/files/templates
 
-.PHONY: dev-aws
-dev-aws: yq
+.PHONY: dev-aws-creds
+dev-aws-creds: yq
 	@$(YQ) e ".stringData.AWS_B64ENCODED_CREDENTIALS = \"${AWS_CREDENTIALS}\"" config/dev/awscredentials.yaml | $(KUBECTL) -n $(NAMESPACE) apply -f -
 
+.PHONY: dev-azure-creds
+dev-azure-creds: envsubst
+	@NAMESPACE=$(NAMESPACE) $(ENVSUBST) -no-unset -i config/dev/azure-credentials.yaml | $(KUBECTL) apply -f -
+
 .PHONY: dev-apply
-dev-apply: kind-deploy registry-deploy dev-push dev-deploy dev-templates dev-aws
+dev-apply: kind-deploy registry-deploy dev-push dev-deploy dev-templates
 
 .PHONY: dev-destroy
 dev-destroy: kind-undeploy registry-undeploy
 
-.PHONY: dev-aws-apply
-dev-aws-apply:
-	$(KUBECTL) -n $(NAMESPACE) apply -f config/dev/deployment.yaml
+.PHONY: dev-creds-apply
+dev-creds-apply: dev-$(DEV_PROVIDER)-creds
 
-.PHONY: dev-aws-destroy
-dev-aws-destroy:
-	$(KUBECTL) -n $(NAMESPACE) delete -f config/dev/deployment.yaml
+.PHONY: dev-provider-apply
+dev-provider-apply: envsubst
+	@NAMESPACE=$(NAMESPACE) $(ENVSUBST) -no-unset -i config/dev/$(DEV_PROVIDER)-deployment.yaml | $(KUBECTL) apply -f -
+
+.PHONY: dev-provider-delete
+dev-provider-delete: envsubst
+	@NAMESPACE=$(NAMESPACE) $(ENVSUBST) -no-unset -i config/dev/$(DEV_PROVIDER)-deployment.yaml | $(KUBECTL) delete -f -
 
 .PHONY: cli-install
 cli-install: clusterawsadm clusterctl
@@ -313,6 +321,7 @@ YQ ?= $(LOCALBIN)/yq-$(YQ_VERSION)
 CLUSTERAWSADM ?= $(LOCALBIN)/clusterawsadm
 CLUSTERCTL ?= $(LOCALBIN)/clusterctl
 ADDLICENSE ?= $(LOCALBIN)/addlicense-$(ADDLICENSE_VERSION)
+ENVSUBST ?= $(LOCALBIN)/envsubst-$(ENVSUBST_VERSION)
 
 ## Tool Versions
 CONTROLLER_TOOLS_VERSION ?= v0.14.0
@@ -324,6 +333,7 @@ YQ_VERSION ?= v4.44.2
 CLUSTERAWSADM_VERSION ?= v2.5.2
 CLUSTERCTL_VERSION ?= v1.7.3
 ADDLICENSE_VERSION ?= v1.1.1
+ENVSUBST_VERSION ?= v1.4.2
 
 .PHONY: controller-gen
 controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary.
@@ -387,6 +397,11 @@ $(CLUSTERCTL): | $(LOCALBIN)
 addlicense: $(ADDLICENSE) ## Download addlicense locally if necessary.
 $(ADDLICENSE): | $(LOCALBIN)
 	$(call go-install-tool,$(ADDLICENSE),github.com/google/addlicense,${ADDLICENSE_VERSION})
+
+.PHONY: envsubst
+envsubst: $(ENVSUBST)
+$(ENVSUBST): | $(LOCALBIN)
+	$(call go-install-tool,$(ENVSUBST),github.com/a8m/envsubst/cmd/envsubst,${ENVSUBST_VERSION})
 
 # go-install-tool will 'go install' any package with custom target and name of binary, if it doesn't exist
 # $1 - target path with name of binary (ideally with version)

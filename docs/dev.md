@@ -23,22 +23,45 @@ make cli-install
 
 Follow the instruction to configure AWS Provider: [AWS Provider Setup](aws/main.md#prepare-the-aws-infra-provider)
 
+### Azure Provider Setup
+
+Follow the instruction on how to configure [Azure Provider](azure/main.md).
+
+Additionally to deploy dev cluster on Azure the following env variables should
+be set before running deployment:
+
+- `AZURE_SUBSCRIPTION_ID` - Subscription ID
+- `AZURE_TENANT_ID` - Service principal tenant ID
+- `AZURE_CLIENT_ID` - Service principal App ID
+- `AZURE_CLIENT_SECRET` - Service principal password
+
+More detailed description of these parameters can be found
+[here](azure/cluster-parameters.md).
+
 ## Deploy HMC
 
-1. Configure your cluster parameters in `config/dev/deployment.yaml`:
+Default provider which will be used to deploy cluster is AWS, if you want to use
+another provider change `DEV_PROVIDER` variable with the name of provider before
+running make (e.g. `export DEV_PROVIDER=azure`).
+
+1. Configure your cluster parameters in provider specific file
+   (for example `config/dev/aws-deployment.yaml` in case of AWS):
 
     * Configure the `name` of the deployment
-    * Change `amiID` and `instanceType` for control plane and worker machines
+    * Change instance type or size for control plane and worker machines
     * Specify the number of control plane and worker machines, etc
 
-2. Run `make dev-apply` to deploy and configure management cluster
+2. Run `make dev-apply` to deploy and configure management cluster.
 
-3. Wait a couple of minutes for management components to be up and running
+3. Wait a couple of minutes for management components to be up and running.
 
-4. Run `make dev-aws-apply` to deploy managed cluster on AWS with default configuration
+4. Apply credentials for your provider by executing `make dev-creds-apply`.
 
-5. Wait for infrastructure to be provisioned and the cluster to be deployed. You may watch the process with the
-   `./bin/clusterctl describe` command. Example:
+5. Run `make dev-provider-apply` to deploy managed cluster on provider of your
+   choice with default configuration.
+
+6. Wait for infrastructure to be provisioned and the cluster to be deployed. You
+   may watch the process with the `./bin/clusterctl describe` command. Example:
 
 ```
 export KUBECONFIG=~/.kube/config
@@ -54,7 +77,7 @@ export KUBECONFIG=~/.kube/config
 > ```
 > This may help identify any potential issues with deployment of the AWS infrastructure.
 
-6. Retrieve the `kubeconfig` of your managed cluster:
+7. Retrieve the `kubeconfig` of your managed cluster:
 
 ```
 kubectl --kubeconfig ~/.kube/config get secret -n hmc-system <deployment-name>-kubeconfig -o=jsonpath={.data.value} | base64 -d > kubeconfig
