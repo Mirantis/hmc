@@ -171,14 +171,16 @@ func verifyControllerUp(kc *kubeclient.KubeClient, labelSelector string, name st
 	}
 
 	if len(deployList.Items) < 1 {
-		return fmt.Errorf("expected at least 1 %s controller deployment, got %d", name, len(deployList.Items))
+		return fmt.Errorf("expected at least 1 %s controller deployment, got %d",
+			name, len(deployList.Items))
 	}
 
 	deployment := deployList.Items[0]
 
 	// Ensure the deployment is not being deleted.
 	if deployment.DeletionTimestamp != nil {
-		return fmt.Errorf("controller pod: %s deletion timestamp should be nil, got: %v", deployment.Name, deployment.DeletionTimestamp)
+		return fmt.Errorf("controller pod: %s deletion timestamp should be nil, got: %v",
+			deployment.Name, deployment.DeletionTimestamp)
 	}
 	// Ensure the deployment is running and has the expected name.
 	if !strings.Contains(deployment.Name, "controller-manager") {
@@ -220,7 +222,7 @@ func collectLogArtifacts(kc *kubeclient.KubeClient, clusterName string, provider
 			}
 			defer podLogs.Close() //nolint:errcheck
 
-			output, err := os.Create(fmt.Sprintf("%s.log", pod.Name))
+			output, err := os.Create(fmt.Sprintf("./test/e2e/%s.log", pod.Name))
 			if err != nil {
 				warnError(fmt.Errorf("failed to create log file for pod %s: %w", pod.Name, err))
 				continue
