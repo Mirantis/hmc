@@ -2,7 +2,6 @@ apiVersion: hmc.mirantis.com/v1alpha1
 kind: Deployment
 metadata:
   name: ${DEPLOYMENT_NAME}
-  namespace: {NAMESPACE:=default}
 spec:
   template: aws-hosted-cp
   config:

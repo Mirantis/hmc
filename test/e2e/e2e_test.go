@@ -195,9 +195,6 @@ func verifyControllerUp(kc *kubeclient.KubeClient, labelSelector string, name st
 // CAPI controller and the provider controller(s) as well as output from clusterctl
 // and stores them in the test/e2e directory as artifacts.  If it fails it
 // produces a warning message to the GinkgoWriter, but does not fail the test.
-// We could do this at the end or we could use Kubernetes' CopyPodLogs from
-// https://github.com/kubernetes/kubernetes/blob/v1.31.0/test/e2e/storage/podlogs/podlogs.go#L88
-// to stream the logs to GinkgoWriter during the test.
 func collectLogArtifacts(kc *kubeclient.KubeClient, clusterName string, providerTypes ...deployment.ProviderType) {
 	GinkgoHelper()
 
@@ -217,26 +214,39 @@ func collectLogArtifacts(kc *kubeclient.KubeClient, clusterName string, provider
 				TailLines: ptr.To(int64(1000)),
 			})
 			podLogs, err := req.Stream(context.Background())
-			warnError(fmt.Errorf("failed to get log stream for pod %s: %w", pod.Name, err))
+			if err != nil {
+				warnError(fmt.Errorf("failed to get log stream for pod %s: %w", pod.Name, err))
+				continue
+			}
 			defer podLogs.Close() //nolint:errcheck
 
-			output, err := os.Create(fmt.Sprintf("test/e2e/%s.log", pod.Name))
-			warnError(fmt.Errorf("failed to create log file for pod %s: %w", pod.Name, err))
+			output, err := os.Create(fmt.Sprintf("%s.log", pod.Name))
+			if err != nil {
+				warnError(fmt.Errorf("failed to create log file for pod %s: %w", pod.Name, err))
+				continue
+			}
 			defer output.Close() //nolint:errcheck
 
 			r := bufio.NewReader(podLogs)
 			_, err = r.WriteTo(output)
-			warnError(fmt.Errorf("failed to write log file for pod %s: %w", pod.Name, err))
+			if err != nil {
+				warnError(fmt.Errorf("failed to write log file for pod %s: %w", pod.Name, err))
+			}
 		}
 	}
 
 	cmd := exec.Command("./bin/clusterctl",
-		"describe", "cluster", clusterName, "--show-conditions=all")
+		"describe", "cluster", clusterName, "--namespace", namespace, "--show-conditions=all")
 	output, err := utils.Run(cmd)
-	warnError(fmt.Errorf("failed to get clusterctl log: %w", err))
+	if err != nil {
+		warnError(fmt.Errorf("failed to get clusterctl log: %w", err))
+		return
+	}
 
 	err = os.WriteFile(filepath.Join("test/e2e", "clusterctl.log"), output, 0644)
-	warnError(fmt.Errorf("failed to write clusterctl log: %w", err))
+	if err != nil {
+		warnError(fmt.Errorf("failed to write clusterctl log: %w", err))
+	}
 }
 
 func warnError(err error) {
