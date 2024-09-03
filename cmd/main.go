@@ -81,7 +81,7 @@ func main() {
 	flag.BoolVar(&enableHTTP2, "enable-http2", false,
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
 	flag.StringVar(&defaultRegistryURL, "default-registry-url", "oci://ghcr.io/mirantis/hmc/charts",
-		"The default OCI registry to download Helm charts from.")
+		"The default registry to download Helm charts from.")
 	flag.StringVar(&defaultRepoType, "default-repo-type", "oci",
 		"The default repository type to download Helm charts from specify 'default' for http/https or 'oci' for oci.")
 	flag.StringVar(&registryCredentialsSecret, "registry-creds-secret", "",
