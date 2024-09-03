@@ -21,6 +21,7 @@ import (
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
+
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	hcv2 "github.com/fluxcd/helm-controller/api/v2"
@@ -37,6 +38,7 @@ import (
 	hmcmirantiscomv1alpha1 "github.com/Mirantis/hmc/api/v1alpha1"
 	"github.com/Mirantis/hmc/internal/controller"
 	"github.com/Mirantis/hmc/internal/telemetry"
+	"github.com/Mirantis/hmc/internal/utils"
 	hmcwebhook "github.com/Mirantis/hmc/internal/webhook"
 	//+kubebuilder:scaffold:imports
 )
@@ -62,7 +64,6 @@ func main() {
 		secureMetrics             bool
 		enableHTTP2               bool
 		defaultRegistryURL        string
-		defaultRepoType           string
 		insecureRegistry          bool
 		registryCredentialsSecret string
 		createManagement          bool
@@ -81,9 +82,7 @@ func main() {
 	flag.BoolVar(&enableHTTP2, "enable-http2", false,
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
 	flag.StringVar(&defaultRegistryURL, "default-registry-url", "oci://ghcr.io/mirantis/hmc/charts",
-		"The default registry to download Helm charts from.")
-	flag.StringVar(&defaultRepoType, "default-repo-type", "oci",
-		"The default repository type to download Helm charts from specify 'default' for http/https or 'oci' for oci.")
+		"The default registry to download Helm charts from, prefix with oci:// for OCI registries.")
 	flag.StringVar(&registryCredentialsSecret, "registry-creds-secret", "",
 		"Secret containing authentication credentials for the registry.")
 	flag.BoolVar(&insecureRegistry, "insecure-registry", false, "Allow connecting to an HTTP registry.")
@@ -103,6 +102,12 @@ func main() {
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+
+	determinedRepositoryType, err := utils.DetermineDefaultRepositoryType(defaultRegistryURL)
+	if err != nil {
+		setupLog.Error(err, "failed to determine default repository type")
+		os.Exit(1)
+	}
 
 	// if the enable-http2 flag is false (the default), http/2 should be disabled
 	// due to its vulnerabilities. More specifically, disabling http/2 will
@@ -186,7 +191,7 @@ func main() {
 		CreateManagement:          createManagement,
 		CreateTemplates:           createTemplates,
 		DefaultRegistryURL:        defaultRegistryURL,
-		DefaultRepoType:           defaultRepoType,
+		DefaultRepoType:           determinedRepositoryType,
 		RegistryCredentialsSecret: registryCredentialsSecret,
 		InsecureRegistry:          insecureRegistry,
 		HMCTemplatesChartName:     hmcTemplatesChartName,
