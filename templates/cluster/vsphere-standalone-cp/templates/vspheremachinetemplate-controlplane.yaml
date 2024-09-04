@@ -1,0 +1,25 @@
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: VSphereMachineTemplate
+metadata:
+  name: {{ include "vspheremachinetemplate.controlplane.name" . }}
+spec:
+  template:
+    spec:
+      cloneMode: linkedClone
+      datacenter: {{ .Values.vsphere.datacenter }}
+      datastore: {{ .Values.vsphere.datastore }}
+      diskGiB: {{ .Values.controlPlane.rootVolumeSize }}
+      folder: {{ .Values.vsphere.folder }}
+      memoryMiB: {{ .Values.controlPlane.memory }}
+      network:
+        devices:
+        - dhcp4: true
+          networkName: {{ .Values.controlPlane.network }}
+      numCPUs: {{ .Values.controlPlane.cpus }}
+      os: Linux
+      powerOffMode: hard
+      resourcePool: {{ .Values.vsphere.resourcePool }}
+      server: {{ .Values.vsphere.server }}
+      storagePolicyName: ""
+      template: {{ .Values.controlPlane.vmTemplate }}
+      thumbprint: {{ .Values.vsphere.thumbprint }}

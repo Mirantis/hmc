@@ -1,0 +1,50 @@
+# Cluster parameters
+controlPlaneNumber: 3
+workersNumber: 2
+
+clusterNetwork:
+  pods:
+    cidrBlocks:
+    - "10.244.0.0/16"
+  services:
+    cidrBlocks:
+    - "10.96.0.0/12"
+
+# vSphere cluster parameters
+clusterIdentity:
+  name: ""
+vsphere:
+  server: ""
+  thumbprint: ""
+  datacenter: ""
+  datastore: ""
+  resourcePool: ""
+  folder: ""
+  username: ""
+  password: ""
+controlPlaneEndpointIP: ""
+
+# vSphere machines parameters
+controlPlane:
+  ssh:
+    user: ""
+    publicKey: ""
+  rootVolumeSize: 30
+  cpus: 2
+  memory: 4096
+  vmTemplate: ""
+  network: ""
+
+worker:
+  ssh:
+    user: ""
+    publicKey: ""
+  rootVolumeSize: 30
+  cpus: 2
+  memory: 4096
+  vmTemplate: ""
+  network: ""
+
+# K0s parameters
+k0s:
+  version: v1.30.4+k0s.0
