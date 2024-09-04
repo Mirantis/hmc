@@ -71,9 +71,9 @@ export KUBECONFIG=~/.kube/config
 
 > [!NOTE]
 > If you encounter any errors in the output of `clusterctl describe cluster` inspect the logs of the
-> `cluster-api-provider-aws-controller-manager` with:
+> `capa-controller-manager` with:
 > ```
-> kubectl logs -n hmc-system deploy/cluster-api-provider-aws-controller-manager
+> kubectl logs -n hmc-system deploy/capa-controller-manager
 > ```
 > This may help identify any potential issues with deployment of the AWS infrastructure.
 
