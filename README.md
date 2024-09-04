@@ -37,6 +37,7 @@ Optionally, the following CLIs may be helpful:
 Follow the instruction to configure providers. Currently supported providers:
 * [AWS](docs/aws/main.md#prepare-the-aws-infra-provider)
 * [Azure](docs/azure/main.md)
+* [vSphere](docs/vsphere/main.md)
 
 ### Installation
 
