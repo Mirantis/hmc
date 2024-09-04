@@ -1,0 +1,8 @@
+apiVersion: hmc.mirantis.com/v1alpha1
+kind: ProviderTemplate
+metadata:
+  name: cluster-api-provider-vsphere
+spec:
+  helm:
+    chartName: cluster-api-provider-vsphere
+    chartVersion: 0.0.1
