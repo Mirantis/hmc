@@ -37,9 +37,7 @@ type DeploymentValidator struct {
 	client.Client
 }
 
-var (
-	InvalidDeploymentErr = errors.New("the deployment is invalid")
-)
+var InvalidDeploymentErr = errors.New("the deployment is invalid")
 
 func (v *DeploymentValidator) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	v.Client = mgr.GetClient()

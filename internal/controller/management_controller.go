@@ -107,13 +107,13 @@ func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Manag
 		if err != nil {
 			errMsg := fmt.Sprintf("Failed to get Template %s/%s: %s", hmc.TemplatesNamespace, component.Template, err)
 			updateComponentsStatus(detectedComponents, &detectedProviders, component.Template, template.Status, errMsg)
-			errs = errors.Join(errors.New(errMsg))
+			errs = errors.Join(errs, errors.New(errMsg))
 			continue
 		}
 		if !template.Status.Valid {
 			errMsg := fmt.Sprintf("Template %s/%s is not marked as valid", hmc.TemplatesNamespace, component.Template)
 			updateComponentsStatus(detectedComponents, &detectedProviders, component.Template, template.Status, errMsg)
-			errs = errors.Join(errors.New(errMsg))
+			errs = errors.Join(errs, errors.New(errMsg))
 			continue
 		}
 
@@ -122,7 +122,7 @@ func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Manag
 		if err != nil {
 			errMsg := fmt.Sprintf("error reconciling HelmRelease %s/%s: %s", management.Namespace, component.Template, err)
 			updateComponentsStatus(detectedComponents, &detectedProviders, component.Template, template.Status, errMsg)
-			errs = errors.Join(errors.New(errMsg))
+			errs = errors.Join(errs, errors.New(errMsg))
 			continue
 		}
 		updateComponentsStatus(detectedComponents, &detectedProviders, component.Template, template.Status, "")
@@ -132,7 +132,8 @@ func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Manag
 	management.Status.AvailableProviders = detectedProviders
 	management.Status.Components = detectedComponents
 	if err := r.Status().Update(ctx, management); err != nil {
-		errs = errors.Join(fmt.Errorf("failed to update status for Management %s/%s: %w", management.Namespace, management.Name, err))
+		errs = errors.Join(errs, fmt.Errorf("failed to update status for Management %s/%s: %w",
+			management.Namespace, management.Name, err))
 	}
 	if errs != nil {
 		l.Error(errs, "Multiple errors during Management reconciliation")
@@ -282,8 +283,8 @@ func updateComponentsStatus(
 	providers *hmc.Providers,
 	componentName string,
 	templateStatus hmc.TemplateStatus,
-	err string) {
-
+	err string,
+) {
 	components[componentName] = hmc.ComponentStatus{
 		Error:   err,
 		Success: err == "",

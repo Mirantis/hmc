@@ -35,11 +35,11 @@ func EnsureDeleteAllOf(ctx context.Context, cl client.Client, gvk schema.GroupVe
 	for _, item := range itemsList.Items {
 		if item.DeletionTimestamp.IsZero() {
 			if err := cl.Delete(ctx, &item); err != nil && !apierrors.IsNotFound(err) {
-				errs = errors.Join(err)
+				errs = errors.Join(errs, err)
 				continue
 			}
 		}
-		errs = errors.Join(fmt.Errorf("waiting for %s %s/%s removal", gvk.Kind, item.Namespace, item.Name))
+		errs = errors.Join(errs, fmt.Errorf("waiting for %s %s/%s removal", gvk.Kind, item.Namespace, item.Name))
 	}
 	return errs
 }
