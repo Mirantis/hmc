@@ -311,10 +311,10 @@ dev-creds-apply: dev-$(DEV_PROVIDER)-creds
 
 .PHONY: envsubst awscli dev-aws-nuke
 dev-aws-nuke: ## Warning: Destructive! Nuke all AWS resources deployed by 'DEV_PROVIDER=aws dev-provider-apply', prefix with CLUSTER_NAME to nuke a specific cluster.
-	@CLUSTER_NAME=$(CLUSTER_NAME) YQ=$(YQ) AWSCLI=$(AWSCLI) bash -c ./scripts/aws-nuke-ccm.sh
 	@CLUSTER_NAME=$(CLUSTER_NAME) $(ENVSUBST) < config/dev/cloud_nuke.yaml.tpl > config/dev/cloud_nuke.yaml
 	DISABLE_TELEMETRY=true $(CLOUDNUKE) aws --region $$AWS_REGION --force --config config/dev/cloud_nuke.yaml --resource-type vpc,eip,nat-gateway,ec2-subnet,elb,elbv2,internet-gateway,network-interface,security-group
 	@rm config/dev/cloud_nuke.yaml
+	@CLUSTER_NAME=$(CLUSTER_NAME) YQ=$(YQ) AWSCLI=$(AWSCLI) bash -c ./scripts/aws-nuke-ccm.sh
 
 .PHONY: test-apply
 test-apply: kind-deploy registry-deploy dev-push dev-deploy dev-templates

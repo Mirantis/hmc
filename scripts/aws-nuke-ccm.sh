@@ -27,34 +27,34 @@ if [ -z $YQ ]; then
     exit 1
 fi
 
-if [ -z AWSCLI ]; then
+if [ -z $AWSCLI ]; then
     echo "AWSCLI must be set to the path of the AWS CLI"
     echo "Use 'make dev-aws-nuke' instead of running this script directly"
     exit 1
 fi
 
 echo "Checking for ELB with 'kubernetes.io/cluster/$CLUSTER_NAME' tag"
-for LOADBALANCER in $(aws elb describe-load-balancers --output yaml | yq '.LoadBalancerDescriptions[].LoadBalancerName');
+for LOADBALANCER in $($AWSCLI elb describe-load-balancers --output yaml | $YQ '.LoadBalancerDescriptions[].LoadBalancerName');
 do
     echo "Checking ELB: $LOADBALANCER for 'kubernetes.io/cluster/$CLUSTER_NAME tag"
-    DESCRIBE_TAGS=$(aws elb describe-tags \
+    DESCRIBE_TAGS=$($AWSCLI elb describe-tags \
         --load-balancer-names $LOADBALANCER \
-        --output yaml | yq '.TagDescriptions[].Tags.[]' | grep 'kubernetes.io/cluster/$CLUSTER_NAME')
+        --output yaml | $YQ '.TagDescriptions[].Tags.[]' | grep 'kubernetes.io/cluster/$CLUSTER_NAME')
     if [ ! -z "${DESCRIBE_TAGS}" ]; then
         echo "Deleting ELB: $LOADBALANCER"
-        aws elb delete-load-balancer --load-balancer-name $LOADBALANCER
+        $AWSCLI elb delete-load-balancer --load-balancer-name $LOADBALANCER
     fi
 done
 
 echo "Checking for EBS Volumes with $CLUSTER_NAME within the 'kubernetes.io/created-for/pvc/name' tag"
-for VOLUME in $(aws ec2 describe-volumes --output yaml | yq '.Volumes[].VolumeId');
+for VOLUME in $($AWSCLI  ec2 describe-volumes --output yaml | $YQ '.Volumes[].VolumeId');
 do
     echo "Checking EBS Volume: $VOLUME for $CLUSTER_NAME claim"
-    DESCRIBE_VOLUMES=$(aws ec2 describe-volumes \
+    DESCRIBE_VOLUMES=$($AWSCLI ec2 describe-volumes \
         --volume-id $VOLUME \
-        --output yaml | yq '.Volumes | to_entries[] | .value.Tags[] | select(.Key == "kubernetes.io/created-for/pvc/name")' | grep $CLUSTER_NAME)
+        --output yaml | $YQ '.Volumes | to_entries[] | .value.Tags[] | select(.Key == "kubernetes.io/created-for/pvc/name")' | grep $CLUSTER_NAME)
     if [ ! -z "${DESCRIBE_VOLUMES}" ]; then
         echo "Deleting EBS Volume: $VOLUME"
-        aws ec2 delete-volume --volume-id $VOLUME
+        $AWSCLI ec2 delete-volume --volume-id $VOLUME
     fi
 done
