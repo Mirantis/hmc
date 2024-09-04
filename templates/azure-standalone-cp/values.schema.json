@@ -7,9 +7,6 @@
     "workersNumber",
     "location",
     "subscriptionID",
-    "tenantID",
-    "clientID",
-    "clientSecret",
     "clusterIdentity"
   ],
   "properties": {
@@ -60,18 +57,6 @@
     },
     "subscriptionID": {
       "description": "Azure subscription ID which will be used for all resources",
-      "type": "string"
-    },
-    "tenantID": {
-      "description": "Tenant ID for the service principal",
-      "type": "string"
-    },
-    "clientID": {
-      "description": "Client ID of the service principal",
-      "type": "string"
-    },
-    "clientSecret": {
-      "description": "Client secret of the service principal",
       "type": "string"
     },
     "bastion": {

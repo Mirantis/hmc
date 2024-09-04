@@ -3,7 +3,7 @@ kind: InfrastructureProvider
 metadata:
   name: k0smotron
 spec:
-  version: v1.0.2
+  version: v1.0.4
   fetchConfig:
     url: https://github.com/k0sproject/k0smotron/releases/{{ .Values.version }}/infrastructure-components.yaml
   {{- if .Values.configSecret.name }}
@@ -17,7 +17,7 @@ kind: BootstrapProvider
 metadata:
   name: k0smotron
 spec:
-  version: v1.0.2
+  version: v1.0.4
   fetchConfig:
     url: https://github.com/k0sproject/k0smotron/releases/{{ .Values.version }}/bootstrap-components.yaml
   {{- if .Values.configSecret.name }}
@@ -31,7 +31,7 @@ kind: ControlPlaneProvider
 metadata:
   name: k0smotron
 spec:
-  version: v1.0.2
+  version: v1.0.4
   fetchConfig:
     url: https://github.com/k0sproject/k0smotron/releases/{{ .Values.version }}/control-plane-components.yaml
   {{- if .Values.configSecret.name }}
