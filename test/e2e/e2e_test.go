@@ -146,7 +146,7 @@ var _ = Describe("controller", Ordered, func() {
 				d := managedcluster.GetUnstructured(managedcluster.ProviderAWS, template)
 				clusterName = d.GetName()
 
-				deleteFunc, err = kc.CreateDeployment(context.Background(), d)
+				deleteFunc, err = kc.CreateManagedCluster(context.Background(), d)
 				Expect(err).NotTo(HaveOccurred())
 
 				By("waiting for infrastructure providers to deploy successfully")

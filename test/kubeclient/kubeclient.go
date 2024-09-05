@@ -164,33 +164,33 @@ func (kc *KubeClient) GetDynamicClient(gvr schema.GroupVersionResource) (dynamic
 	return client.Resource(gvr).Namespace(kc.Namespace), nil
 }
 
-// CreateDeployment creates a deployment.hmc.mirantis.com in the given
+// CreateDeployment creates a managedcluster.hmc.mirantis.com in the given
 // namespace and returns a DeleteFunc to clean up the deployment.
 // The DeleteFunc is a no-op if the deployment has already been deleted.
-func (kc *KubeClient) CreateDeployment(
-	ctx context.Context, deployment *unstructured.Unstructured) (func() error, error) {
-	kind := deployment.GetKind()
+func (kc *KubeClient) CreateManagedCluster(
+	ctx context.Context, managedcluster *unstructured.Unstructured) (func() error, error) {
+	kind := managedcluster.GetKind()
 
-	if kind != "Deployment" {
-		return nil, fmt.Errorf("expected kind Deployment, got: %s", kind)
+	if kind != "ManagedCluster" {
+		return nil, fmt.Errorf("expected kind ManagedCluster, got: %s", kind)
 	}
 
 	client, err := kc.GetDynamicClient(schema.GroupVersionResource{
 		Group:    "hmc.mirantis.com",
 		Version:  "v1alpha1",
-		Resource: "deployments",
+		Resource: "managedclusters",
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get dynamic client: %w", err)
 	}
 
-	_, err = client.Create(ctx, deployment, metav1.CreateOptions{})
+	_, err = client.Create(ctx, managedcluster, metav1.CreateOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Deployment: %w", err)
 	}
 
 	return func() error {
-		err := client.Delete(ctx, deployment.GetName(), metav1.DeleteOptions{})
+		err := client.Delete(ctx, managedcluster.GetName(), metav1.DeleteOptions{})
 		if apierrors.IsNotFound(err) {
 			return nil
 		}
