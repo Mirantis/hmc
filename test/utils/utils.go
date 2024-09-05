@@ -15,34 +15,17 @@
 package utils
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"strings"
 
 	. "github.com/onsi/ginkgo/v2" //nolint:golint,revive
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 )
-
-const (
-	prometheusOperatorVersion = "v0.72.0"
-	prometheusOperatorURL     = "https://github.com/prometheus-operator/prometheus-operator/" +
-		"releases/download/%s/bundle.yaml"
-
-	certmanagerVersion = "v1.14.4"
-	certmanagerURLTmpl = "https://github.com/jetstack/cert-manager/releases/download/%s/cert-manager.yaml"
-)
-
-func warnError(err error) {
-	_, _ = fmt.Fprintf(GinkgoWriter, "warning: %v\n", err)
-}
-
-// InstallPrometheusOperator installs the prometheus Operator to be used to export the enabled metrics.
-func InstallPrometheusOperator() error {
-	url := fmt.Sprintf(prometheusOperatorURL, prometheusOperatorVersion)
-	cmd := exec.Command("kubectl", "create", "-f", url)
-	_, err := Run(cmd)
-	return err
-}
 
 // Run executes the provided command within this context
 func Run(cmd *exec.Cmd) ([]byte, error) {
@@ -56,59 +39,34 @@ func Run(cmd *exec.Cmd) ([]byte, error) {
 	cmd.Env = append(os.Environ(), "GO111MODULE=on")
 	command := strings.Join(cmd.Args, " ")
 	_, _ = fmt.Fprintf(GinkgoWriter, "running: %s\n", command)
-	output, err := cmd.CombinedOutput()
+
+	output, err := cmd.Output()
 	if err != nil {
-		return output, fmt.Errorf("%s failed with error: (%v) %s", command, err, string(output))
+		var exitError *exec.ExitError
+
+		if errors.As(err, &exitError) {
+			return output, fmt.Errorf("%s failed with error: (%v): %s", command, err, string(exitError.Stderr))
+		}
 	}
 
 	return output, nil
 }
 
-// UninstallPrometheusOperator uninstalls the prometheus
-func UninstallPrometheusOperator() {
-	url := fmt.Sprintf(prometheusOperatorURL, prometheusOperatorVersion)
-	cmd := exec.Command("kubectl", "delete", "-f", url)
-	if _, err := Run(cmd); err != nil {
-		warnError(err)
-	}
-}
-
-// UninstallCertManager uninstalls the cert manager
-func UninstallCertManager() {
-	url := fmt.Sprintf(certmanagerURLTmpl, certmanagerVersion)
-	cmd := exec.Command("kubectl", "delete", "-f", url)
-	if _, err := Run(cmd); err != nil {
-		warnError(err)
-	}
-}
-
-// InstallCertManager installs the cert manager bundle.
-func InstallCertManager() error {
-	url := fmt.Sprintf(certmanagerURLTmpl, certmanagerVersion)
-	cmd := exec.Command("kubectl", "apply", "-f", url)
-	if _, err := Run(cmd); err != nil {
-		return err
-	}
-	// Wait for cert-manager-webhook to be ready, which can take time if cert-manager
-	// was re-installed after uninstalling on a cluster.
-	cmd = exec.Command("kubectl", "wait", "managedcluster.apps/cert-manager-webhook",
-		"--for", "condition=Available",
-		"--namespace", "cert-manager",
-		"--timeout", "5m",
-	)
-
-	_, err := Run(cmd)
-	return err
-}
-
 // LoadImageToKindCluster loads a local docker image to the kind cluster
 func LoadImageToKindClusterWithName(name string) error {
 	cluster := "kind"
-	if v, ok := os.LookupEnv("KIND_CLUSTER"); ok {
+	if v, ok := os.LookupEnv("KIND_CLUSTER_NAME"); ok {
 		cluster = v
 	}
 	kindOptions := []string{"load", "docker-image", name, "--name", cluster}
-	cmd := exec.Command("kind", kindOptions...)
+
+	kindBinary := "kind"
+
+	if kindVersion, ok := os.LookupEnv("KIND_VERSION"); ok {
+		kindBinary = fmt.Sprintf("./bin/kind-%s", kindVersion)
+	}
+
+	cmd := exec.Command(kindBinary, kindOptions...)
 	_, err := Run(cmd)
 	return err
 }
@@ -135,4 +93,92 @@ func GetProjectDir() (string, error) {
 	}
 	wd = strings.Replace(wd, "/test/e2e", "", -1)
 	return wd, nil
+}
+
+// ValidateConditionsTrue iterates over the conditions of the given
+// unstructured object and returns an error if any of the conditions are not
+// true.  Conditions are expected to be of type metav1.Condition.
+func ValidateConditionsTrue(unstrObj *unstructured.Unstructured) error {
+	objKind, objName := ObjKindName(unstrObj)
+
+	conditions, err := GetConditionsFromUnstructured(unstrObj)
+	if err != nil {
+		return fmt.Errorf("failed to get conditions from unstructured object: %w", err)
+	}
+
+	var errs error
+
+	for _, c := range conditions {
+		if c.Status == metav1.ConditionTrue {
+			continue
+		}
+
+		errs = errors.Join(errors.New(ConvertConditionsToString(c)), errs)
+	}
+
+	if errs != nil {
+		return fmt.Errorf("%s %s is not ready with conditions:\n%w", objKind, objName, errs)
+	}
+
+	return nil
+}
+
+func ConvertConditionsToString(condition metav1.Condition) string {
+	return fmt.Sprintf("Type: %s, Status: %s, Reason: %s, Message: %s",
+		condition.Type, condition.Status, condition.Reason, condition.Message)
+}
+
+func GetConditionsFromUnstructured(unstrObj *unstructured.Unstructured) ([]metav1.Condition, error) {
+	objKind, objName := ObjKindName(unstrObj)
+
+	// Iterate the status conditions and ensure each condition reports a "Ready"
+	// status.
+	unstrConditions, found, err := unstructured.NestedSlice(unstrObj.Object, "status", "conditions")
+	if !found {
+		return nil, fmt.Errorf("no status conditions found for %s: %s", objKind, objName)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get status conditions for %s: %s: %w", objKind, objName, err)
+	}
+
+	conditions := make([]metav1.Condition, 0, len(unstrConditions))
+
+	for _, condition := range unstrConditions {
+		conditionMap, ok := condition.(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("expected %s: %s condition to be type map[string]interface{}, got: %T",
+				objKind, objName, conditionMap)
+		}
+
+		var c *metav1.Condition
+
+		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(conditionMap, &c); err != nil {
+			return nil, fmt.Errorf("failed to convert condition map to metav1.Condition: %w", err)
+		}
+
+		conditions = append(conditions, *c)
+	}
+
+	return conditions, nil
+}
+
+// ValidateObjectNamePrefix checks if the given object name has the given prefix.
+func ValidateObjectNamePrefix(unstrObj *unstructured.Unstructured, clusterName string) error {
+	objKind, objName := ObjKindName(unstrObj)
+
+	// Verify the machines are prefixed with the cluster name and fail
+	// the test if they are not.
+	if !strings.HasPrefix(objName, clusterName) {
+		return fmt.Errorf("object %s %s does not have cluster name prefix: %s", objKind, objName, clusterName)
+	}
+
+	return nil
+}
+
+func ObjKindName(unstrObj *unstructured.Unstructured) (string, string) {
+	return unstrObj.GetKind(), unstrObj.GetName()
+}
+
+func WarnError(err error) {
+	_, _ = fmt.Fprintf(GinkgoWriter, "Warning: %v\n", err)
 }

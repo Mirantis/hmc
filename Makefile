@@ -104,9 +104,9 @@ test: generate-all fmt vet envtest tidy external-crd ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test $$(go list ./... | grep -v /e2e) -coverprofile cover.out
 
 # Utilize Kind or modify the e2e tests to load the image locally, enabling compatibility with other vendors.
-.PHONY: test-e2e  # Run the e2e tests against a Kind k8s instance that is spun up.
-test-e2e:
-	go test ./test/e2e/ -v -ginkgo.v
+.PHONY: test-e2e # Run the e2e tests against a Kind k8s instance that is spun up.
+test-e2e: cli-install
+	KIND_CLUSTER_NAME="hmc-test" KIND_VERSION=$(KIND_VERSION) go test ./test/e2e/ -v -ginkgo.v -timeout=2h
 
 .PHONY: lint
 lint: golangci-lint ## Run golangci-lint linter & yamllint
@@ -192,6 +192,8 @@ REGISTRY_NAME ?= hmc-local-registry
 REGISTRY_PORT ?= 5001
 REGISTRY_REPO ?= oci://127.0.0.1:$(REGISTRY_PORT)/charts
 DEV_PROVIDER ?= aws
+REGISTRY_IS_OCI = $(shell echo $(REGISTRY_REPO) | grep -q oci && echo true || echo false)
+CLUSTER_NAME ?= $(shell $(YQ) '.metadata.name' ./config/dev/deployment.yaml)
 
 AWS_CREDENTIALS=${AWS_B64ENCODED_CREDENTIALS}
 
@@ -243,17 +245,31 @@ dev-undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/c
 
 .PHONY: helm-push
 helm-push: helm-package
-	@for chart in $(CHARTS_PACKAGE_DIR)/*.tgz; do \
+	@if [ ! $(REGISTRY_IS_OCI) ]; then \
+	    repo_flag="--repo"; \
+	fi; \
+	for chart in $(CHARTS_PACKAGE_DIR)/*.tgz; do \
 		base=$$(basename $$chart .tgz); \
 		chart_version=$$(echo $$base | grep -o "v\{0,1\}[0-9]\+\.[0-9]\+\.[0-9].*"); \
 		chart_name="$${base%-"$$chart_version"}"; \
 		echo "Verifying if chart $$chart_name, version $$chart_version already exists in $(REGISTRY_REPO)"; \
-		chart_exists=$$($(HELM) pull $(REGISTRY_REPO)/$$chart_name --version $$chart_version --destination /tmp 2>&1 | grep "not found" || true); \
+		chart_exists=$$($(HELM) pull $$repo_flag $(REGISTRY_REPO) $$chart_name --version $$chart_version --destination /tmp 2>&1 | grep "not found" || true); \
 		if [ -z "$$chart_exists" ]; then \
 			echo "Chart $$chart_name version $$chart_version already exists in the repository."; \
 		else \
-			echo "Pushing $$chart to $(REGISTRY_REPO)"; \
-			$(HELM) push "$$chart" $(REGISTRY_REPO); \
+			if $(REGISTRY_IS_OCI); then \
+				echo "Pushing $$chart to $(REGISTRY_REPO)"; \
+				$(HELM) push "$$chart" $(REGISTRY_REPO); \
+			else \
+				if [ ! $$REGISTRY_USERNAME ] && [ ! $$REGISTRY_PASSWORD ]; then \
+					echo "REGISTRY_USERNAME and REGISTRY_PASSWORD must be populated to push the chart to an HTTPS repository"; \
+					exit 1; \
+				else \
+					$(HELM) repo add hmc $(REGISTRY_REPO); \
+					echo "Pushing $$chart to $(REGISTRY_REPO)"; \
+					$(HELM) cm-push "$$chart" $(REGISTRY_REPO) --username $$REGISTRY_USERNAME --password $$REGISTRY_PASSWORD; \
+				fi; \
+			fi; \
 		fi; \
 	done
 
@@ -277,21 +293,37 @@ dev-azure-creds: envsubst
 dev-apply: kind-deploy registry-deploy dev-push dev-deploy dev-templates
 
 .PHONY: dev-destroy
-dev-destroy: kind-undeploy registry-undeploy
-
-.PHONY: dev-creds-apply
-dev-creds-apply: dev-$(DEV_PROVIDER)-creds
+dev-destroy: kind-undeploy registry-undeploy ## Destroy the development environment by deleting the kind cluster and local registry.
 
 .PHONY: dev-provider-apply
 dev-provider-apply: envsubst
-	@NAMESPACE=$(NAMESPACE) $(ENVSUBST) -no-unset -i config/dev/$(DEV_PROVIDER)-managedcluster.yaml | $(KUBECTL) apply -f -
+	@if [ $(DEV_PROVIDER) = "aws" ]; then \
+		$(MAKE) dev-aws-creds; \
+	fi
+	@NAMESPACE=$(NAMESPACE) $(ENVSUBST) -no-unset -i config/dev/$(DEV_PROVIDER)-deployment.yaml | $(KUBECTL) apply -f -
 
 .PHONY: dev-provider-delete
 dev-provider-delete: envsubst
 	@NAMESPACE=$(NAMESPACE) $(ENVSUBST) -no-unset -i config/dev/$(DEV_PROVIDER)-managedcluster.yaml | $(KUBECTL) delete -f -
 
+.PHONY: dev-creds-apply
+dev-creds-apply: dev-$(DEV_PROVIDER)-creds
+
+.PHONY: envsubst awscli dev-aws-nuke
+dev-aws-nuke: ## Warning: Destructive! Nuke all AWS resources deployed by 'DEV_PROVIDER=aws dev-provider-apply', prefix with CLUSTER_NAME to nuke a specific cluster.
+	@CLUSTER_NAME=$(CLUSTER_NAME) $(ENVSUBST) < config/dev/cloud_nuke.yaml.tpl > config/dev/cloud_nuke.yaml
+	DISABLE_TELEMETRY=true $(CLOUDNUKE) aws --region $$AWS_REGION --force --config config/dev/cloud_nuke.yaml --resource-type vpc,eip,nat-gateway,ec2-subnet,elb,elbv2,internet-gateway,network-interface,security-group
+	@rm config/dev/cloud_nuke.yaml
+	@CLUSTER_NAME=$(CLUSTER_NAME) YQ=$(YQ) AWSCLI=$(AWSCLI) bash -c ./scripts/aws-nuke-ccm.sh
+
+.PHONY: test-apply
+test-apply: kind-deploy registry-deploy dev-push dev-deploy dev-templates
+
+.PHONY: test-destroy
+test-destroy: kind-undeploy registry-undeploy
+
 .PHONY: cli-install
-cli-install: clusterawsadm clusterctl
+cli-install: clusterawsadm clusterctl cloud-nuke yq awscli ## Install the necessary CLI tools for deployment, development and testing.
 
 ##@ Dependencies
 
@@ -320,8 +352,10 @@ KIND ?= $(LOCALBIN)/kind-$(KIND_VERSION)
 YQ ?= $(LOCALBIN)/yq-$(YQ_VERSION)
 CLUSTERAWSADM ?= $(LOCALBIN)/clusterawsadm
 CLUSTERCTL ?= $(LOCALBIN)/clusterctl
+CLOUDNUKE ?= $(LOCALBIN)/cloud-nuke
 ADDLICENSE ?= $(LOCALBIN)/addlicense-$(ADDLICENSE_VERSION)
 ENVSUBST ?= $(LOCALBIN)/envsubst-$(ENVSUBST_VERSION)
+AWSCLI ?= $(LOCALBIN)/aws
 
 ## Tool Versions
 CONTROLLER_TOOLS_VERSION ?= v0.14.0
@@ -330,10 +364,12 @@ GOLANGCI_LINT_VERSION ?= v1.60.1
 HELM_VERSION ?= v3.15.1
 KIND_VERSION ?= v0.23.0
 YQ_VERSION ?= v4.44.2
+CLOUDNUKE_VERSION = v0.37.1
 CLUSTERAWSADM_VERSION ?= v2.5.2
 CLUSTERCTL_VERSION ?= v1.7.3
 ADDLICENSE_VERSION ?= v1.1.1
 ENVSUBST_VERSION ?= v1.4.2
+AWSCLI_VERSION ?= 2.17.42
 
 .PHONY: controller-gen
 controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary.
@@ -382,6 +418,12 @@ yq: $(YQ) ## Download yq locally if necessary.
 $(YQ): | $(LOCALBIN)
 	$(call go-install-tool,$(YQ),github.com/mikefarah/yq/v4,${YQ_VERSION})
 
+.PHONY: cloud-nuke
+cloud-nuke: $(CLOUDNUKE) ## Download cloud-nuke locally if necessary.
+$(CLOUDNUKE): | $(LOCALBIN)
+	curl -sL https://github.com/gruntwork-io/cloud-nuke/releases/download/$(CLOUDNUKE_VERSION)/cloud-nuke_$(OS)_$(ARCH) -o $(CLOUDNUKE)
+	chmod +x $(CLOUDNUKE)
+
 .PHONY: clusterawsadm
 clusterawsadm: $(CLUSTERAWSADM) ## Download clusterawsadm locally if necessary.
 $(CLUSTERAWSADM): | $(LOCALBIN)
@@ -403,6 +445,13 @@ envsubst: $(ENVSUBST)
 $(ENVSUBST): | $(LOCALBIN)
 	$(call go-install-tool,$(ENVSUBST),github.com/a8m/envsubst/cmd/envsubst,${ENVSUBST_VERSION})
 
+.PHONY: awscli
+awscli: $(AWSCLI)
+$(AWSCLI): | $(LOCALBIN)
+	curl "https://awscli.amazonaws.com/awscli-exe-$(OS)-$(shell uname -m)-$(AWSCLI_VERSION).zip" -o "/tmp/awscliv2.zip"
+	unzip /tmp/awscliv2.zip -d /tmp
+	/tmp/aws/install -i $(LOCALBIN)/aws-cli -b $(LOCALBIN) --update
+
 # go-install-tool will 'go install' any package with custom target and name of binary, if it doesn't exist
 # $1 - target path with name of binary (ideally with version)
 # $2 - package url which can be installed
@@ -413,6 +462,6 @@ set -e; \
 package=$(2)@$(3) ;\
 echo "Downloading $${package}" ;\
 GOBIN=$(LOCALBIN) go install $${package} ;\
-mv "$$(echo "$(1)" | sed "s/-$(3)$$//")" $(1) ;\
+if [ ! -f $(1) ]; then mv -f "$$(echo "$(1)" | sed "s/-$(3)$$//")" $(1); fi ;\
 }
 endef

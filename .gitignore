@@ -14,7 +14,13 @@ dist
 go.work
 go.work.sum
 
-# editors
+# cloud-nuke config
+*cloud_nuke.yaml
+
+# Test artifacts
+test/e2e/*.log
+
+# ditors
 .idea
 *.swp
 *.swo
