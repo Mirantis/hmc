@@ -1,5 +1,5 @@
 apiVersion: hmc.mirantis.com/v1alpha1
-kind: Deployment
+kind: ManagedCluster
 metadata:
   name: aws-dev
   namespace: ${NAMESPACE}
