@@ -46,7 +46,8 @@ spec:
                 - --cluster-name={{ include "cluster.name" . }}
               # Removing the default `node-role.kubernetes.io/control-plane` node selector
               # TODO: it does not work
-              # nodeSelector: ""
+              nodeSelector:
+                node-role.kubernetes.io/control-plane: null
           - name: aws-ebs-csi-driver
             namespace: kube-system
             chartname: aws-ebs-csi-driver/aws-ebs-csi-driver

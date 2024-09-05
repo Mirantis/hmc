@@ -5,4 +5,4 @@ metadata:
 spec:
   helm:
     chartName: aws-standalone-cp
-    chartVersion: 0.1.2
+    chartVersion: 0.1.3

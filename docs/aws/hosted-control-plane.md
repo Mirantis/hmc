@@ -19,7 +19,12 @@ reused with a management cluster.
 If you deployed your AWS Kubernetes cluster using Cluster API Provider AWS (CAPA)
 you can obtain all the necessary data with the commands below or use the
 template found below in the
-[HMC ManagedCluster manifest generation](#hmc-managed-cluster-manifest-generation) section.
+[HMC ManagedCluster manifest
+generation](#hmc-managed-cluster-manifest-generation) section.
+
+If using the `aws-standalone-cp` template to deploy a hosted cluster it is
+recommended to use a `t3.large` or larger instance type as the `hmc-controller`
+and other provider controllers will need a large amount of resources to run.
 
 **VPC ID**
 
@@ -89,7 +94,7 @@ Grab the following `ManagedCluster` manifest template and save it to a file name
 apiVersion: hmc.mirantis.com/v1alpha1
 kind: ManagedCluster
 metadata:
-  name: aws-hosted-cp
+  name: aws-hosted
 spec:
   template: aws-hosted-cp
   config:
@@ -109,3 +114,24 @@ Then run the following command to create the `managedcluster.yaml`:
 ```
 kubectl get awscluster cluster -o go-template="$(cat managedcluster.yaml.tpl)" > managedcluster.yaml
 ```
+## Deployment Tips
+* Ensure HMC templates and the controller image are somewhere public and
+  fetchable.
+* For installing the HMC charts and templates from a custom repository, load
+  the `kubeconfig` from the cluster and run the commands:
+
+```
+KUBECONFIG=kubeconfig IMG="ghcr.io/mirantis/hmc/controller-ci:v0.0.1-179-ga5bdf29" REGISTRY_REPO="oci://ghcr.io/mirantis/hmc/charts-ci" make dev-apply
+KUBECONFIG=kubeconfig make dev-templates
+```
+* The infrastructure will need to manually be marked `Ready` to get the
+  `MachineDeployment` to scale up.  You can patch the `AWSCluster` kind using
+  the command:
+
+```
+KUBECONFIG=kubeconfig kubectl patch AWSCluster <hosted-cluster-name> --type=merge --subresource status --patch 'status: {ready: true}' -n hmc-system
+```
+
+For additional information on why this is required [click here](https://docs.k0smotron.io/stable/capi-aws/#:~:text=As%20we%20are%20using%20self%2Dmanaged%20infrastructure%20we%20need%20to%20manually%20mark%20the%20infrastructure%20ready.%20This%20can%20be%20accomplished%20using%20the%20following%20command).
+
+

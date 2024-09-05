@@ -1,15 +1,14 @@
-nameOverride: ""
-fullnameOverride: ""
+nameOverride: ''
+fullnameOverride: ''
 
 admissionWebhook:
   enabled: false
   port: 9443
-  certDir: "/tmp/k8s-webhook-server/serving-certs/"
+  certDir: '/tmp/k8s-webhook-server/serving-certs/'
 
 controller:
-  defaultRegistryURL: "oci://ghcr.io/mirantis/hmc/charts"
-  defaultRepoType: "oci"
-  registryCredsSecret: ""
+  defaultRegistryURL: 'oci://ghcr.io/mirantis/hmc/charts'
+  registryCredsSecret: ''
   insecureRegistry: false
   createManagement: true
   createTemplates: true

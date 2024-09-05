@@ -18,6 +18,7 @@ import (
 	_ "embed"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/a8m/envsubst"
 	"github.com/google/uuid"
@@ -68,23 +69,43 @@ func GetProviderLabel(provider ProviderType) string {
 func GetUnstructured(templateName Template) *unstructured.Unstructured {
 	GinkgoHelper()
 
-	generatedName := uuid.New().String()[:8] + "-e2e-test"
-	_, _ = fmt.Fprintf(GinkgoWriter, "Generated cluster name: %q\n", generatedName)
+	generatedName := os.Getenv(EnvVarManagedClusterName)
+	if generatedName == "" {
+		generatedName = uuid.New().String()[:8] + "-e2e-test"
+		_, _ = fmt.Fprintf(GinkgoWriter, "Generated cluster name: %q\n", generatedName)
+		GinkgoT().Setenv(EnvVarManagedClusterName, generatedName)
+	} else {
+		_, _ = fmt.Fprintf(GinkgoWriter, "Using configured cluster name: %q\n", generatedName)
+	}
 
-	Expect(os.Setenv("MANAGED_CLUSTER_NAME", generatedName)).NotTo(HaveOccurred())
+	var hostedName string
+	if strings.Contains(string(templateName), "-hosted") {
+		hostedName = generatedName + "-hosted"
+		GinkgoT().Setenv(EnvVarHostedManagedClusterName, hostedName)
+		_, _ = fmt.Fprintf(GinkgoWriter, "Creating hosted ManagedCluster with name: %q\n", hostedName)
+	}
 
 	var managedClusterTemplateBytes []byte
 	switch templateName {
 	case TemplateAWSStandaloneCP:
 		managedClusterTemplateBytes = awsStandaloneCPManagedClusterTemplateBytes
 	case TemplateAWSHostedCP:
+		// Validate environment vars that do not have defaults are populated.
+		// We perform this validation here instead of within a Before block
+		// since we populate the vars from standalone prior to this step.
+		ValidateDeploymentVars([]string{
+			EnvVarAWSVPCID,
+			EnvVarAWSSubnetID,
+			EnvVarAWSSubnetAvailabilityZone,
+			EnvVarAWSSecurityGroupID,
+		})
 		managedClusterTemplateBytes = awsHostedCPManagedClusterTemplateBytes
 	case TemplateVSphereStandaloneCP:
 		managedClusterTemplateBytes = vsphereStandaloneCPManagedClusterTemplateBytes
 	case TemplateVSphereHostedCP:
 		managedClusterTemplateBytes = vsphereHostedCPManagedClusterTemplateBytes
 	default:
-		Fail(fmt.Sprintf("unsupported template type: %s", templateName))
+		Fail(fmt.Sprintf("unsupported AWS template: %s", templateName))
 	}
 
 	managedClusterConfigBytes, err := envsubst.Bytes(managedClusterTemplateBytes)
@@ -96,4 +117,12 @@ func GetUnstructured(templateName Template) *unstructured.Unstructured {
 	Expect(err).NotTo(HaveOccurred(), "failed to unmarshal deployment config")
 
 	return &unstructured.Unstructured{Object: managedClusterConfig}
+}
+
+func ValidateDeploymentVars(v []string) {
+	GinkgoHelper()
+
+	for _, envVar := range v {
+		Expect(os.Getenv(envVar)).NotTo(BeEmpty(), envVar+" must be set")
+	}
 }

@@ -2,6 +2,8 @@ apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 kind: AWSCluster
 metadata:
   name: {{ include "cluster.name" . }}
+  annotations:
+    aws.cluster.x-k8s.io/external-resource-gc: "true"
 spec:
   region: {{ .Values.region }}
   # identityRef:

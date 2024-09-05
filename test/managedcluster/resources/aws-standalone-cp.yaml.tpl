@@ -6,12 +6,13 @@ spec:
   template: aws-standalone-cp
   config:
     region: ${AWS_REGION}
-    publicIP: ${PUBLIC_IP:=true}
+    publicIP: ${AWS_PUBLIC_IP:=true}
     controlPlaneNumber: ${CONTROL_PLANE_NUMBER:=1}
     workersNumber: ${WORKERS_NUMBER:=1}
     controlPlane:
-      instanceType: ${INSTANCE_TYPE:=t3.small}
+      instanceType: ${AWS_INSTANCE_TYPE:=t3.small}
     worker:
-      instanceType: ${INSTANCE_TYPE:=t3.small}
+      instanceType: ${AWS_INSTANCE_TYPE:=t3.small}
+    installBeachHeadServices: ${INSTALL_BEACH_HEAD_SERVICES:=true}
 
 
