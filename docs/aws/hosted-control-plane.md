@@ -19,7 +19,7 @@ reused with a management cluster.
 If you deployed your AWS Kubernetes cluster using Cluster API Provider AWS (CAPA)
 you can obtain all the necessary data with the commands below or use the
 template found below in the
-[HMC Deployment manifest generation](#hmc-deployment-manifest-generation) section.
+[HMC ManagedCluster manifest generation](#hmc-managed-cluster-manifest-generation) section.
 
 **VPC ID**
 
@@ -54,13 +54,13 @@ If you want to use different VPCs/regions for your management or managed cluster
 you should setup additional connectivity rules like [VPC peering](https://docs.aws.amazon.com/whitepapers/latest/building-scalable-secure-multi-vpc-network-infrastructure/vpc-peering.html).
 
 
-## HMC Deployment manifest
+## HMC ManagedCluster manifest
 
-With all the collected data your `Deployment` manifest will look similar to this:
+With all the collected data your `ManagedCluster` manifest will look similar to this:
 
 ```yaml
     apiVersion: hmc.mirantis.com/v1alpha1
-    kind: Deployment
+    kind: ManagedCluster
     metadata:
       name: aws-hosted-cp
     spec:
@@ -81,13 +81,13 @@ With all the collected data your `Deployment` manifest will look similar to this
 > [!NOTE]
 > In this example we're using the `us-west-1` region, but you should use the region of your VPC.
 
-## HMC Deployment manifest generation
+## HMC ManagedCluster manifest generation
 
-Grab the following `Deployment` manifest template and save it to a file named `deployment.yaml.tpl`:
+Grab the following `ManagedCluster` manifest template and save it to a file named `managedcluster.yaml.tpl`:
 
 ```yaml
 apiVersion: hmc.mirantis.com/v1alpha1
-kind: Deployment
+kind: ManagedCluster
 metadata:
   name: aws-hosted-cp
 spec:
@@ -104,8 +104,8 @@ spec:
       - "{{.status.networkStatus.securityGroups.node.id}}"
 ```
 
-Then run the following command to create the `deployment.yaml`:
+Then run the following command to create the `managedcluster.yaml`:
 
 ```
-kubectl get awscluster cluster -o go-template="$(cat deployment.yaml.tpl)" > deployment.yaml
+kubectl get awscluster cluster -o go-template="$(cat managedcluster.yaml.tpl)" > managedcluster.yaml
 ```

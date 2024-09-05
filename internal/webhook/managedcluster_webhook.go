@@ -33,79 +33,79 @@ import (
 	"github.com/Mirantis/hmc/internal/utils"
 )
 
-type DeploymentValidator struct {
+type ManagedClusterValidator struct {
 	client.Client
 }
 
-var InvalidDeploymentErr = errors.New("the deployment is invalid")
+var InvalidManagedClusterErr = errors.New("the ManagedCluster is invalid")
 
-func (v *DeploymentValidator) SetupWebhookWithManager(mgr ctrl.Manager) error {
+func (v *ManagedClusterValidator) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	v.Client = mgr.GetClient()
 	return ctrl.NewWebhookManagedBy(mgr).
-		For(&v1alpha1.Deployment{}).
+		For(&v1alpha1.ManagedCluster{}).
 		WithValidator(v).
 		WithDefaulter(v).
 		Complete()
 }
 
 var (
-	_ webhook.CustomValidator = &DeploymentValidator{}
-	_ webhook.CustomDefaulter = &DeploymentValidator{}
+	_ webhook.CustomValidator = &ManagedClusterValidator{}
+	_ webhook.CustomDefaulter = &ManagedClusterValidator{}
 )
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type.
-func (v *DeploymentValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	deployment, ok := obj.(*v1alpha1.Deployment)
+func (v *ManagedClusterValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+	managedCluster, ok := obj.(*v1alpha1.ManagedCluster)
 	if !ok {
-		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected Deployment but got a %T", obj))
+		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected ManagedCluster but got a %T", obj))
 	}
-	template, err := v.getDeploymentTemplate(ctx, deployment.Spec.Template)
+	template, err := v.getManagedClusterTemplate(ctx, managedCluster.Spec.Template)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %v", InvalidDeploymentErr, err)
+		return nil, fmt.Errorf("%s: %v", InvalidManagedClusterErr, err)
 	}
 	err = v.isTemplateValid(ctx, template)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %v", InvalidDeploymentErr, err)
+		return nil, fmt.Errorf("%s: %v", InvalidManagedClusterErr, err)
 	}
 	return nil, nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type.
-func (v *DeploymentValidator) ValidateUpdate(ctx context.Context, _ runtime.Object, newObj runtime.Object) (admission.Warnings, error) {
-	newDeployment, ok := newObj.(*v1alpha1.Deployment)
+func (v *ManagedClusterValidator) ValidateUpdate(ctx context.Context, _ runtime.Object, newObj runtime.Object) (admission.Warnings, error) {
+	newManagedCluster, ok := newObj.(*v1alpha1.ManagedCluster)
 	if !ok {
-		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected Deployment but got a %T", newObj))
+		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected ManagedCluster but got a %T", newObj))
 	}
-	template, err := v.getDeploymentTemplate(ctx, newDeployment.Spec.Template)
+	template, err := v.getManagedClusterTemplate(ctx, newManagedCluster.Spec.Template)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %v", InvalidDeploymentErr, err)
+		return nil, fmt.Errorf("%s: %v", InvalidManagedClusterErr, err)
 	}
 	err = v.isTemplateValid(ctx, template)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %v", InvalidDeploymentErr, err)
+		return nil, fmt.Errorf("%s: %v", InvalidManagedClusterErr, err)
 	}
 	return nil, nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
-func (*DeploymentValidator) ValidateDelete(_ context.Context, _ runtime.Object) (admission.Warnings, error) {
+func (*ManagedClusterValidator) ValidateDelete(_ context.Context, _ runtime.Object) (admission.Warnings, error) {
 	return nil, nil
 }
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type.
-func (v *DeploymentValidator) Default(ctx context.Context, obj runtime.Object) error {
-	deployment, ok := obj.(*v1alpha1.Deployment)
+func (v *ManagedClusterValidator) Default(ctx context.Context, obj runtime.Object) error {
+	managedCluster, ok := obj.(*v1alpha1.ManagedCluster)
 	if !ok {
-		return apierrors.NewBadRequest(fmt.Sprintf("expected Deployment but got a %T", obj))
+		return apierrors.NewBadRequest(fmt.Sprintf("expected ManagedCluster but got a %T", obj))
 	}
 
 	// Only apply defaults when there's no configuration provided
-	if deployment.Spec.Config != nil {
+	if managedCluster.Spec.Config != nil {
 		return nil
 	}
-	template, err := v.getDeploymentTemplate(ctx, deployment.Spec.Template)
+	template, err := v.getManagedClusterTemplate(ctx, managedCluster.Spec.Template)
 	if err != nil {
-		return fmt.Errorf("could not get template for the deployment: %s", err)
+		return fmt.Errorf("could not get template for the managedcluster: %s", err)
 	}
 	err = v.isTemplateValid(ctx, template)
 	if err != nil {
@@ -114,12 +114,12 @@ func (v *DeploymentValidator) Default(ctx context.Context, obj runtime.Object) e
 	if template.Status.Config == nil {
 		return nil
 	}
-	deployment.Spec.DryRun = true
-	deployment.Spec.Config = &apiextensionsv1.JSON{Raw: template.Status.Config.Raw}
+	managedCluster.Spec.DryRun = true
+	managedCluster.Spec.Config = &apiextensionsv1.JSON{Raw: template.Status.Config.Raw}
 	return nil
 }
 
-func (v *DeploymentValidator) getDeploymentTemplate(ctx context.Context, templateName string) (*v1alpha1.Template, error) {
+func (v *ManagedClusterValidator) getManagedClusterTemplate(ctx context.Context, templateName string) (*v1alpha1.Template, error) {
 	template := &v1alpha1.Template{}
 	templateRef := types.NamespacedName{Name: templateName, Namespace: v1alpha1.TemplatesNamespace}
 	if err := v.Get(ctx, templateRef, template); err != nil {
@@ -128,7 +128,7 @@ func (v *DeploymentValidator) getDeploymentTemplate(ctx context.Context, templat
 	return template, nil
 }
 
-func (v *DeploymentValidator) isTemplateValid(ctx context.Context, template *v1alpha1.Template) error {
+func (v *ManagedClusterValidator) isTemplateValid(ctx context.Context, template *v1alpha1.Template) error {
 	if template.Status.Type != v1alpha1.TemplateTypeDeployment {
 		return fmt.Errorf("the template should be of the deployment type. Current: %s", template.Status.Type)
 	}
@@ -142,7 +142,7 @@ func (v *DeploymentValidator) isTemplateValid(ctx context.Context, template *v1a
 	return nil
 }
 
-func (v *DeploymentValidator) verifyProviders(ctx context.Context, template *v1alpha1.Template) error {
+func (v *ManagedClusterValidator) verifyProviders(ctx context.Context, template *v1alpha1.Template) error {
 	requiredProviders := template.Status.Providers
 	management := &v1alpha1.Management{}
 	managementRef := types.NamespacedName{Name: v1alpha1.ManagementName, Namespace: v1alpha1.ManagementNamespace}

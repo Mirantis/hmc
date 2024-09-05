@@ -50,8 +50,8 @@ func (t *Tracker) Start(ctx context.Context) error {
 func (t *Tracker) Tick(ctx context.Context) {
 	l := log.FromContext(ctx).WithName("telemetry tracker")
 
-	logger := l.WithValues("event", deploymentHeartbeatEvent)
-	err := t.trackDeploymentHeartbeat(ctx)
+	logger := l.WithValues("event", managedClusterHeartbeatEvent)
+	err := t.trackManagedClusterHeartbeat(ctx)
 	if err != nil {
 		logger.Error(err, "failed to track an event")
 	} else {
@@ -59,7 +59,7 @@ func (t *Tracker) Tick(ctx context.Context) {
 	}
 }
 
-func (t *Tracker) trackDeploymentHeartbeat(ctx context.Context) error {
+func (t *Tracker) trackManagedClusterHeartbeat(ctx context.Context) error {
 	mgmt := &v1alpha1.Management{}
 	mgmtRef := types.NamespacedName{Namespace: v1alpha1.ManagementNamespace, Name: v1alpha1.ManagementName}
 	err := t.Get(ctx, mgmtRef, mgmt)
@@ -78,28 +78,28 @@ func (t *Tracker) trackDeploymentHeartbeat(ctx context.Context) error {
 	}
 
 	var errs error
-	deployments := &v1alpha1.DeploymentList{}
-	err = t.List(ctx, deployments, &crclient.ListOptions{})
+	managedClusters := &v1alpha1.ManagedClusterList{}
+	err = t.List(ctx, managedClusters, &crclient.ListOptions{})
 	if err != nil {
 		return err
 	}
 
-	for _, deployment := range deployments.Items {
-		template := templates[deployment.Spec.Template]
+	for _, managedCluster := range managedClusters.Items {
+		template := templates[managedCluster.Spec.Template]
 		// TODO: get k0s cluster ID once it's exposed in k0smotron API
 		clusterID := ""
-		err = TrackDeploymentHeartbeat(
+		err = TrackManagedClusterHeartbeat(
 			string(mgmt.UID),
-			string(deployment.UID),
+			string(managedCluster.UID),
 			clusterID,
-			deployment.Spec.Template,
+			managedCluster.Spec.Template,
 			template.Spec.Helm.ChartVersion,
 			strings.Join(template.Status.Providers.InfrastructureProviders, ","),
 			strings.Join(template.Status.Providers.BootstrapProviders, ","),
 			strings.Join(template.Status.Providers.ControlPlaneProviders, ","),
 		)
 		if err != nil {
-			errs = errors.Join(errs, fmt.Errorf("failed to track the heartbeat of the deployment %s/%s", deployment.Namespace, deployment.Name))
+			errs = errors.Join(errs, fmt.Errorf("failed to track the heartbeat of the managedcluster %s/%s", managedCluster.Namespace, managedCluster.Name))
 			continue
 		}
 	}

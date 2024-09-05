@@ -24,7 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/Mirantis/hmc/api/v1alpha1"
-	"github.com/Mirantis/hmc/test/objects/deployment"
+	"github.com/Mirantis/hmc/test/objects/managedcluster"
 	"github.com/Mirantis/hmc/test/objects/management"
 	"github.com/Mirantis/hmc/test/scheme"
 )
@@ -42,10 +42,10 @@ func TestManagementValidateDelete(t *testing.T) {
 		warnings        admission.Warnings
 	}{
 		{
-			name:            "should fail if Deployment objects exist",
+			name:            "should fail if ManagedCluster objects exist",
 			management:      management.NewManagement(),
-			existingObjects: []runtime.Object{deployment.NewDeployment()},
-			warnings:        admission.Warnings{"The Management object can't be removed if Deployment objects still exist"},
+			existingObjects: []runtime.Object{managedcluster.NewManagedCluster()},
+			warnings:        admission.Warnings{"The Management object can't be removed if ManagedCluster objects still exist"},
 			err:             "management deletion is forbidden",
 		},
 		{

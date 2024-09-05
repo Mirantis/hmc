@@ -32,18 +32,18 @@ import (
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
 )
 
-var _ = Describe("Deployment Controller", func() {
+var _ = Describe("ManagedCluster Controller", func() {
 	Context("When reconciling a resource", func() {
-		const deploymentName = "test-deployment"
+		const managedClusterName = "test-managed-cluster"
 		const templateName = "test-template"
 
 		ctx := context.Background()
 
 		typeNamespacedName := types.NamespacedName{
-			Name:      deploymentName,
+			Name:      managedClusterName,
 			Namespace: "default",
 		}
-		deployment := &hmc.Deployment{}
+		managedCluster := &hmc.ManagedCluster{}
 		template := &hmc.Template{}
 		management := &hmc.Management{}
 		namespace := &v1.Namespace{}
@@ -104,36 +104,36 @@ var _ = Describe("Deployment Controller", func() {
 				}
 				Expect(k8sClient.Create(ctx, management)).To(Succeed())
 			}
-			By("creating the custom resource for the Kind Deployment")
-			err = k8sClient.Get(ctx, typeNamespacedName, deployment)
+			By("creating the custom resource for the Kind ManagedCluster")
+			err = k8sClient.Get(ctx, typeNamespacedName, managedCluster)
 			if err != nil && errors.IsNotFound(err) {
-				deployment = &hmc.Deployment{
+				managedCluster = &hmc.ManagedCluster{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      deploymentName,
+						Name:      managedClusterName,
 						Namespace: "default",
 					},
-					Spec: hmc.DeploymentSpec{
+					Spec: hmc.ManagedClusterSpec{
 						Template: templateName,
 					},
 				}
-				Expect(k8sClient.Create(ctx, deployment)).To(Succeed())
+				Expect(k8sClient.Create(ctx, managedCluster)).To(Succeed())
 			}
 		})
 
 		AfterEach(func() {
 			By("Cleanup")
 
-			controllerReconciler := &DeploymentReconciler{
+			controllerReconciler := &ManagedClusterReconciler{
 				Client: k8sClient,
 				Scheme: k8sClient.Scheme(),
 			}
 
-			Expect(k8sClient.Delete(ctx, deployment)).To(Succeed())
-			// Running reconcile to remove the finalizer and delete the Deployment
+			Expect(k8sClient.Delete(ctx, managedCluster)).To(Succeed())
+			// Running reconcile to remove the finalizer and delete the ManagedCluster
 			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{NamespacedName: typeNamespacedName})
 			Expect(err).NotTo(HaveOccurred())
 
-			Eventually(k8sClient.Get(ctx, typeNamespacedName, deployment), 1*time.Minute, 5*time.Second).Should(HaveOccurred())
+			Eventually(k8sClient.Get(ctx, typeNamespacedName, managedCluster), 1*time.Minute, 5*time.Second).Should(HaveOccurred())
 
 			Expect(k8sClient.Delete(ctx, template)).To(Succeed())
 			Expect(k8sClient.Delete(ctx, management)).To(Succeed())
@@ -141,7 +141,7 @@ var _ = Describe("Deployment Controller", func() {
 		})
 		It("should successfully reconcile the resource", func() {
 			By("Reconciling the created resource")
-			controllerReconciler := &DeploymentReconciler{
+			controllerReconciler := &ManagedClusterReconciler{
 				Client: k8sClient,
 				Scheme: k8sClient.Scheme(),
 				Config: &rest.Config{},

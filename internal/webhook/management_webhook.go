@@ -63,13 +63,13 @@ func (*ManagementValidator) ValidateUpdate(_ context.Context, _ runtime.Object, 
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
 func (v *ManagementValidator) ValidateDelete(ctx context.Context, _ runtime.Object) (admission.Warnings, error) {
-	deployments := &v1alpha1.DeploymentList{}
-	err := v.Client.List(ctx, deployments, client.Limit(1))
+	managedClusters := &v1alpha1.ManagedClusterList{}
+	err := v.Client.List(ctx, managedClusters, client.Limit(1))
 	if err != nil {
 		return nil, err
 	}
-	if len(deployments.Items) > 0 {
-		return admission.Warnings{"The Management object can't be removed if Deployment objects still exist"}, ManagementDeletionForbidden
+	if len(managedClusters.Items) > 0 {
+		return admission.Warnings{"The Management object can't be removed if ManagedCluster objects still exist"}, ManagementDeletionForbidden
 	}
 	return nil, nil
 }

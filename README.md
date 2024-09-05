@@ -110,14 +110,14 @@ For details about the `Template system` in HMC, see [Templates system](docs/temp
 
 If you want to deploy hostded control plate template, make sure to check additional notes on [Hosted control plane](docs/aws/hosted-control-plane.md).
 
-2. Create the file with the `Deployment` configuration:
+2. Create the file with the `ManagedCluster` configuration:
 
 > Substitute the parameters enclosed in angle brackets with the corresponding values.\
 > Enable the `dryRun` flag if required. For details, see [Dry run](#dry-run).
 
 ```yaml
 apiVersion: hmc.mirantis.com/v1alpha1
-kind: Deployment
+kind: ManagedCluster
 metadata:
   name: <cluster-name>
   namespace: <cluster-namespace>
@@ -128,42 +128,42 @@ spec:
     <cluster-configuration>
 ```
 
-3. Create the `Deployment` object:
+3. Create the `ManagedCluster` object:
 
-`kubectl create -f deployment.yaml`
+`kubectl create -f managedcluster.yaml`
 
-4. Check the status of the newly created `Deployment` object:
+4. Check the status of the newly created `ManagedCluster` object:
 
-`kubectl -n <deployment-namespace> get deployment.hmc <deployment-name> -o=yaml`
+`kubectl -n <managedcluster-namespace> get managedcluster <managedcluster-name> -o=yaml`
 
 5. Wait for infrastructure to be provisioned and the cluster to be deployed (the provisioning starts only when
 `spec.dryRun` is disabled):
 
-   `kubectl -n <deployment-namespace> get cluster <deployment-name> -o=yaml`
+   `kubectl -n <managedcluster-namespace> get cluster <managedcluster-name> -o=yaml`
 
 > You may also watch the process with the `clusterctl describe` command (requires the `clusterctl` CLI to be installed):
 > ```
-> clusterctl describe cluster <deployment-name> -n <deployment-namespace> --show-conditions all
+> clusterctl describe cluster <managedcluster-name> -n <managedcluster-namespace> --show-conditions all
 > ```
 
 6. Retrieve the `kubeconfig` of your managed cluster:
 
 ```
-kubectl get secret -n hmc-system <deployment-name>-kubeconfig -o=jsonpath={.data.value} | base64 -d > kubeconfig
+kubectl get secret -n hmc-system <managedcluster-name>-kubeconfig -o=jsonpath={.data.value} | base64 -d > kubeconfig
 ```
 
 ### Dry run
 
-HMC `Deployment` supports two modes: with and without (default) `dryRun`.
+HMC `ManagedCluster` supports two modes: with and without (default) `dryRun`.
 
-If no configuration (`spec.config`) provided, the `Deployment` object will be populated with defaults
+If no configuration (`spec.config`) provided, the `ManagedCluster` object will be populated with defaults
 (default configuration can be found in the corresponding `Template` status) and automatically marked as `dryRun`.
 
-Here is an example of the `Deployment` object with default configuration:
+Here is an example of the `ManagedCluster` object with default configuration:
 
 ```yaml
 apiVersion: hmc.mirantis.com/v1alpha1
-kind: Deployment
+kind: ManagedCluster
 metadata:
   name: <cluster-name>
   namespace: <cluster-namespace>
@@ -198,11 +198,11 @@ spec:
 After you adjust your configuration and ensure that it passes validation (`TemplateReady` condition
 from `status.conditions`), remove the `spec.dryRun` flag to proceed with the deployment.
 
-Here is an example of a `Deployment` object that passed the validation:
+Here is an example of a `ManagedCluster` object that passed the validation:
 
 ```yaml
 apiVersion: hmc.mirantis.com/v1alpha1
-kind: Deployment
+kind: ManagedCluster
 metadata:
   name: aws-standalone
   namespace: aws
@@ -232,7 +232,7 @@ spec:
       status: "True"
       type: HelmChartReady
     - lastTransitionTime: "2024-07-22T09:25:49Z"
-      message: Deployment is ready
+      message: ManagedCluster is ready
       reason: Succeeded
       status: "True"
       type: Ready
@@ -245,7 +245,7 @@ spec:
   
 `kubectl delete management.hmc hmc -n hmc-system`
 
-> Note: make sure you have no HMC Deployment objects left in the cluster prior to Management deletion
+> Note: make sure you have no HMC ManagedCluster objects left in the cluster prior to Management deletion
 
 2. Remove the `hmc` Helm release:
 

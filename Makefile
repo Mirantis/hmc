@@ -284,11 +284,11 @@ dev-creds-apply: dev-$(DEV_PROVIDER)-creds
 
 .PHONY: dev-provider-apply
 dev-provider-apply: envsubst
-	@NAMESPACE=$(NAMESPACE) $(ENVSUBST) -no-unset -i config/dev/$(DEV_PROVIDER)-deployment.yaml | $(KUBECTL) apply -f -
+	@NAMESPACE=$(NAMESPACE) $(ENVSUBST) -no-unset -i config/dev/$(DEV_PROVIDER)-managedcluster.yaml | $(KUBECTL) apply -f -
 
 .PHONY: dev-provider-delete
 dev-provider-delete: envsubst
-	@NAMESPACE=$(NAMESPACE) $(ENVSUBST) -no-unset -i config/dev/$(DEV_PROVIDER)-deployment.yaml | $(KUBECTL) delete -f -
+	@NAMESPACE=$(NAMESPACE) $(ENVSUBST) -no-unset -i config/dev/$(DEV_PROVIDER)-managedcluster.yaml | $(KUBECTL) delete -f -
 
 .PHONY: cli-install
 cli-install: clusterawsadm clusterctl
