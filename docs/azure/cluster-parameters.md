@@ -74,12 +74,12 @@ spec:
   type: ServicePrincipal
 ```
 
-These objects then should be referenced in the `Deployment` object in the
+These objects then should be referenced in the `ManagedCluster` object in the
 `.spec.config.clusterIdentity` field.
 
 Subscription ID which was used to create service principal should be the
 same that will be used in the `.spec.config.subscriptionID` field of the
-`Deployment` object.
+`ManagedCluster` object.
 
 ### Cloud controller manager note
 
@@ -90,7 +90,7 @@ Because of a limitation (k0sproject/k0smotron#692) it's not currently possible
 to automatically pass credentials to all nodes.
 
 To mitigate that you should pass cluster identity data once again in the
-following fields of a `Deployment` object:
+following fields of a `ManagedCluster` object:
 
 - `.spec.config.tenantID` - value of the `tenant` field of a service principal
 - `.spec.config.clientID` - value of the `appId` field of a service principal

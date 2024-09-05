@@ -25,7 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/Mirantis/hmc/api/v1alpha1"
-	"github.com/Mirantis/hmc/test/objects/deployment"
+	"github.com/Mirantis/hmc/test/objects/managedcluster"
 	"github.com/Mirantis/hmc/test/objects/management"
 	"github.com/Mirantis/hmc/test/objects/template"
 	"github.com/Mirantis/hmc/test/scheme"
@@ -44,19 +44,19 @@ var (
 
 	createAndUpdateTests = []struct {
 		name            string
-		deployment      *v1alpha1.Deployment
+		managedCluster  *v1alpha1.ManagedCluster
 		existingObjects []runtime.Object
 		err             string
 		warnings        admission.Warnings
 	}{
 		{
-			name:       "should fail if the template is unset",
-			deployment: deployment.NewDeployment(),
-			err:        "the deployment is invalid: templates.hmc.mirantis.com \"\" not found",
+			name:           "should fail if the template is unset",
+			managedCluster: managedcluster.NewManagedCluster(),
+			err:            "the ManagedCluster is invalid: templates.hmc.mirantis.com \"\" not found",
 		},
 		{
-			name:       "should fail if the template is not found in hmc-system namespace",
-			deployment: deployment.NewDeployment(deployment.WithTemplate(testTemplateName)),
+			name:           "should fail if the template is not found in hmc-system namespace",
+			managedCluster: managedcluster.NewManagedCluster(managedcluster.WithTemplate(testTemplateName)),
 			existingObjects: []runtime.Object{
 				mgmt,
 				template.NewTemplate(
@@ -64,20 +64,20 @@ var (
 					template.WithNamespace("default"),
 				),
 			},
-			err: fmt.Sprintf("the deployment is invalid: templates.hmc.mirantis.com \"%s\" not found", testTemplateName),
+			err: fmt.Sprintf("the ManagedCluster is invalid: templates.hmc.mirantis.com \"%s\" not found", testTemplateName),
 		},
 		{
-			name:       "should fail if the template was found but is invalid (type is unset)",
-			deployment: deployment.NewDeployment(deployment.WithTemplate(testTemplateName)),
+			name:           "should fail if the template was found but is invalid (type is unset)",
+			managedCluster: managedcluster.NewManagedCluster(managedcluster.WithTemplate(testTemplateName)),
 			existingObjects: []runtime.Object{
 				mgmt,
 				template.NewTemplate(template.WithName(testTemplateName)),
 			},
-			err: "the deployment is invalid: the template should be of the deployment type. Current: ",
+			err: "the ManagedCluster is invalid: the template should be of the deployment type. Current: ",
 		},
 		{
-			name:       "should fail if the template was found but is invalid (some validation error)",
-			deployment: deployment.NewDeployment(deployment.WithTemplate(testTemplateName)),
+			name:           "should fail if the template was found but is invalid (some validation error)",
+			managedCluster: managedcluster.NewManagedCluster(managedcluster.WithTemplate(testTemplateName)),
 			existingObjects: []runtime.Object{
 				mgmt,
 				template.NewTemplate(
@@ -89,11 +89,11 @@ var (
 					}),
 				),
 			},
-			err: "the deployment is invalid: the template is not valid: validation error example",
+			err: "the ManagedCluster is invalid: the template is not valid: validation error example",
 		},
 		{
-			name:       "should fail if one or more requested providers are not available yet",
-			deployment: deployment.NewDeployment(deployment.WithTemplate(testTemplateName)),
+			name:           "should fail if one or more requested providers are not available yet",
+			managedCluster: managedcluster.NewManagedCluster(managedcluster.WithTemplate(testTemplateName)),
 			existingObjects: []runtime.Object{
 				management.NewManagement(
 					management.WithAvailableProviders(v1alpha1.Providers{
@@ -112,11 +112,11 @@ var (
 					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
 				),
 			},
-			err: "the deployment is invalid: providers verification failed: one or more required control plane providers are not deployed yet: [k0s]\none or more required infrastructure providers are not deployed yet: [azure]",
+			err: "the ManagedCluster is invalid: providers verification failed: one or more required control plane providers are not deployed yet: [k0s]\none or more required infrastructure providers are not deployed yet: [azure]",
 		},
 		{
-			name:       "should succeed",
-			deployment: deployment.NewDeployment(deployment.WithTemplate(testTemplateName)),
+			name:           "should succeed",
+			managedCluster: managedcluster.NewManagedCluster(managedcluster.WithTemplate(testTemplateName)),
 			existingObjects: []runtime.Object{
 				mgmt,
 				template.NewTemplate(
@@ -134,15 +134,15 @@ var (
 	}
 )
 
-func TestDeploymentValidateCreate(t *testing.T) {
+func TestManagedClusterValidateCreate(t *testing.T) {
 	g := NewWithT(t)
 
 	ctx := context.Background()
 	for _, tt := range createAndUpdateTests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(tt.existingObjects...).Build()
-			validator := &DeploymentValidator{Client: c}
-			warn, err := validator.ValidateCreate(ctx, tt.deployment)
+			validator := &ManagedClusterValidator{Client: c}
+			warn, err := validator.ValidateCreate(ctx, tt.managedCluster)
 			if tt.err != "" {
 				g.Expect(err).To(HaveOccurred())
 				if err.Error() != tt.err {
@@ -160,15 +160,15 @@ func TestDeploymentValidateCreate(t *testing.T) {
 	}
 }
 
-func TestDeploymentValidateUpdate(t *testing.T) {
+func TestManagedClusterValidateUpdate(t *testing.T) {
 	g := NewWithT(t)
 
 	ctx := context.Background()
 	for _, tt := range createAndUpdateTests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(tt.existingObjects...).Build()
-			validator := &DeploymentValidator{Client: c}
-			warn, err := validator.ValidateUpdate(ctx, deployment.NewDeployment(), tt.deployment)
+			validator := &ManagedClusterValidator{Client: c}
+			warn, err := validator.ValidateUpdate(ctx, managedcluster.NewManagedCluster(), tt.managedCluster)
 			if tt.err != "" {
 				g.Expect(err).To(HaveOccurred())
 				if err.Error() != tt.err {
@@ -186,29 +186,29 @@ func TestDeploymentValidateUpdate(t *testing.T) {
 	}
 }
 
-func TestDeploymentDefault(t *testing.T) {
+func TestManagedClusterDefault(t *testing.T) {
 	g := NewWithT(t)
 
 	ctx := context.Background()
 
-	deploymentConfig := `{"foo":"bar"}`
+	managedClusterConfig := `{"foo":"bar"}`
 
 	tests := []struct {
 		name            string
-		input           *v1alpha1.Deployment
-		output          *v1alpha1.Deployment
+		input           *v1alpha1.ManagedCluster
+		output          *v1alpha1.ManagedCluster
 		existingObjects []runtime.Object
 		err             string
 	}{
 		{
 			name:   "should not set defaults if the config is provided",
-			input:  deployment.NewDeployment(deployment.WithConfig(deploymentConfig)),
-			output: deployment.NewDeployment(deployment.WithConfig(deploymentConfig)),
+			input:  managedcluster.NewManagedCluster(managedcluster.WithConfig(managedClusterConfig)),
+			output: managedcluster.NewManagedCluster(managedcluster.WithConfig(managedClusterConfig)),
 		},
 		{
 			name:   "should not set defaults: template is invalid",
-			input:  deployment.NewDeployment(deployment.WithTemplate(testTemplateName)),
-			output: deployment.NewDeployment(deployment.WithTemplate(testTemplateName)),
+			input:  managedcluster.NewManagedCluster(managedcluster.WithTemplate(testTemplateName)),
+			output: managedcluster.NewManagedCluster(managedcluster.WithTemplate(testTemplateName)),
 			existingObjects: []runtime.Object{
 				mgmt,
 				template.NewTemplate(
@@ -224,8 +224,8 @@ func TestDeploymentDefault(t *testing.T) {
 		},
 		{
 			name:   "should not set defaults: config in template status is unset",
-			input:  deployment.NewDeployment(deployment.WithTemplate(testTemplateName)),
-			output: deployment.NewDeployment(deployment.WithTemplate(testTemplateName)),
+			input:  managedcluster.NewManagedCluster(managedcluster.WithTemplate(testTemplateName)),
+			output: managedcluster.NewManagedCluster(managedcluster.WithTemplate(testTemplateName)),
 			existingObjects: []runtime.Object{
 				mgmt,
 				template.NewTemplate(
@@ -237,11 +237,11 @@ func TestDeploymentDefault(t *testing.T) {
 		},
 		{
 			name:  "should set defaults",
-			input: deployment.NewDeployment(deployment.WithTemplate(testTemplateName)),
-			output: deployment.NewDeployment(
-				deployment.WithTemplate(testTemplateName),
-				deployment.WithConfig(deploymentConfig),
-				deployment.WithDryRun(true),
+			input: managedcluster.NewManagedCluster(managedcluster.WithTemplate(testTemplateName)),
+			output: managedcluster.NewManagedCluster(
+				managedcluster.WithTemplate(testTemplateName),
+				managedcluster.WithConfig(managedClusterConfig),
+				managedcluster.WithDryRun(true),
 			),
 			existingObjects: []runtime.Object{
 				mgmt,
@@ -249,7 +249,7 @@ func TestDeploymentDefault(t *testing.T) {
 					template.WithName(testTemplateName),
 					template.WithTypeStatus(v1alpha1.TemplateTypeDeployment),
 					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
-					template.WithConfigStatus(deploymentConfig),
+					template.WithConfigStatus(managedClusterConfig),
 				),
 			},
 		},
@@ -258,7 +258,7 @@ func TestDeploymentDefault(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(tt.existingObjects...).Build()
-			validator := &DeploymentValidator{Client: c}
+			validator := &ManagedClusterValidator{Client: c}
 			err := validator.Default(ctx, tt.input)
 			if tt.err != "" {
 				g.Expect(err).To(HaveOccurred())

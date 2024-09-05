@@ -130,7 +130,7 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	err = (&hmcwebhook.DeploymentValidator{}).SetupWebhookWithManager(mgr)
+	err = (&hmcwebhook.ManagedClusterValidator{}).SetupWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
 	err = (&hmcwebhook.ManagementValidator{}).SetupWebhookWithManager(mgr)

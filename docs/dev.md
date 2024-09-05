@@ -45,9 +45,9 @@ another provider change `DEV_PROVIDER` variable with the name of provider before
 running make (e.g. `export DEV_PROVIDER=azure`).
 
 1. Configure your cluster parameters in provider specific file
-   (for example `config/dev/aws-deployment.yaml` in case of AWS):
+   (for example `config/dev/aws-managedcluster.yaml` in case of AWS):
 
-    * Configure the `name` of the deployment
+    * Configure the `name` of the ManagedCluster
     * Change instance type or size for control plane and worker machines
     * Specify the number of control plane and worker machines, etc
 
@@ -66,7 +66,7 @@ running make (e.g. `export DEV_PROVIDER=azure`).
 ```
 export KUBECONFIG=~/.kube/config
 
-./bin/clusterctl describe cluster <deployment-name> -n hmc-system --show-conditions all
+./bin/clusterctl describe cluster <managedcluster-name> -n hmc-system --show-conditions all
 ```
 
 > [!NOTE]
@@ -80,5 +80,5 @@ export KUBECONFIG=~/.kube/config
 7. Retrieve the `kubeconfig` of your managed cluster:
 
 ```
-kubectl --kubeconfig ~/.kube/config get secret -n hmc-system <deployment-name>-kubeconfig -o=jsonpath={.data.value} | base64 -d > kubeconfig
+kubectl --kubeconfig ~/.kube/config get secret -n hmc-system <managedcluster-name>-kubeconfig -o=jsonpath={.data.value} | base64 -d > kubeconfig
 ```

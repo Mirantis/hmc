@@ -166,13 +166,13 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "Template")
 		os.Exit(1)
 	}
-	if err = (&controller.DeploymentReconciler{
+	if err = (&controller.ManagedClusterReconciler{
 		Client:        mgr.GetClient(),
 		Scheme:        mgr.GetScheme(),
 		Config:        mgr.GetConfig(),
 		DynamicClient: dc,
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Deployment")
+		setupLog.Error(err, "unable to create controller", "controller", "ManagedCluster")
 		os.Exit(1)
 	}
 	if err = (&controller.ManagementReconciler{
@@ -218,8 +218,8 @@ func main() {
 	}
 
 	if enableWebhook {
-		if err := (&hmcwebhook.DeploymentValidator{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "Deployment")
+		if err := (&hmcwebhook.ManagedClusterValidator{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "ManagedCluster")
 			os.Exit(1)
 		}
 		if err := (&hmcwebhook.ManagementValidator{}).SetupWebhookWithManager(mgr); err != nil {

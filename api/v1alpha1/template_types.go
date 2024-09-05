@@ -29,8 +29,6 @@ const (
 	ManagementKind = "Management"
 	// TemplateKind is the string representation of a Template.
 	TemplateKind = "Template"
-	// DeploymentKind is the string representation of a Deployment.
-	DeploymentKind = "Deployment"
 
 	// ChartAnnotationType is an annotation containing the type of Template.
 	ChartAnnotationType = "hmc.mirantis.com/type"
@@ -47,7 +45,7 @@ const (
 type TemplateType string
 
 const (
-	// TemplateTypeDeployment is the type used for creating HMC Deployment objects
+	// TemplateTypeDeployment is the type used for creating HMC ManagedCluster objects
 	TemplateTypeDeployment TemplateType = "deployment"
 	// TemplateTypeProvider is the type used for adding CAPI providers in the HMC Management object.
 	TemplateTypeProvider TemplateType = "provider"
@@ -92,7 +90,7 @@ type TemplateStatus struct {
 	// +optional
 	Description string `json:"description,omitempty"`
 	// Config demonstrates available parameters for template customization,
-	// that can be used when creating Deployment objects.
+	// that can be used when creating ManagedCluster objects.
 	// +optional
 	Config *apiextensionsv1.JSON `json:"config,omitempty"`
 	// ChartRef is a reference to a source controller resource containing the

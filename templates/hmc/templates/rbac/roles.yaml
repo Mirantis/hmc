@@ -27,7 +27,7 @@ rules:
 - apiGroups:
   - hmc.mirantis.com
   resources:
-  - deployments
+  - managedclusters
   verbs:
   - create
   - delete
@@ -39,13 +39,13 @@ rules:
 - apiGroups:
   - hmc.mirantis.com
   resources:
-  - deployments/finalizers
+  - managedclusters/finalizers
   verbs:
   - update
 - apiGroups:
   - hmc.mirantis.com
   resources:
-  - deployments/status
+  - managedclusters/status
   verbs:
   - get
   - patch

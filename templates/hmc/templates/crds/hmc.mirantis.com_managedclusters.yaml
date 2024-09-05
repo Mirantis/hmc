@@ -4,17 +4,17 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.14.0
-  name: deployments.hmc.mirantis.com
+  name: managedclusters.hmc.mirantis.com
 spec:
   group: hmc.mirantis.com
   names:
-    kind: Deployment
-    listKind: DeploymentList
-    plural: deployments
+    kind: ManagedCluster
+    listKind: ManagedClusterList
+    plural: managedclusters
     shortNames:
     - hmc-deploy
     - deploy
-    singular: deployment
+    singular: managedcluster
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
@@ -34,7 +34,7 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: Deployment is the Schema for the deployments API
+        description: ManagedCluster is the Schema for the managedclusters API
         properties:
           apiVersion:
             description: |-
@@ -54,7 +54,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: DeploymentSpec defines the desired state of Deployment
+            description: ManagedClusterSpec defines the desired state of ManagedCluster
             properties:
               config:
                 description: |-
@@ -75,11 +75,11 @@ spec:
             - template
             type: object
           status:
-            description: DeploymentStatus defines the observed state of Deployment
+            description: ManagedClusterStatus defines the observed state of ManagedCluster
             properties:
               conditions:
                 description: Conditions contains details for the current state of
-                  the Deployment
+                  the ManagedCluster
                 items:
                   description: "Condition contains details for one aspect of the current
                     state of this API Resource.\n---\nThis struct is intended for

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package deployment
+package managedcluster
 
 import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -22,14 +22,14 @@ import (
 )
 
 const (
-	DefaultName      = "deployment"
+	DefaultName      = "managedcluster"
 	DefaultNamespace = "default"
 )
 
-type Opt func(deployment *v1alpha1.Deployment)
+type Opt func(managedCluster *v1alpha1.ManagedCluster)
 
-func NewDeployment(opts ...Opt) *v1alpha1.Deployment {
-	p := &v1alpha1.Deployment{
+func NewManagedCluster(opts ...Opt) *v1alpha1.ManagedCluster {
+	p := &v1alpha1.ManagedCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      DefaultName,
 			Namespace: DefaultNamespace,
@@ -43,31 +43,31 @@ func NewDeployment(opts ...Opt) *v1alpha1.Deployment {
 }
 
 func WithName(name string) Opt {
-	return func(p *v1alpha1.Deployment) {
+	return func(p *v1alpha1.ManagedCluster) {
 		p.Name = name
 	}
 }
 
 func WithNamespace(namespace string) Opt {
-	return func(p *v1alpha1.Deployment) {
+	return func(p *v1alpha1.ManagedCluster) {
 		p.Namespace = namespace
 	}
 }
 
 func WithDryRun(dryRun bool) Opt {
-	return func(p *v1alpha1.Deployment) {
+	return func(p *v1alpha1.ManagedCluster) {
 		p.Spec.DryRun = dryRun
 	}
 }
 
 func WithTemplate(templateName string) Opt {
-	return func(p *v1alpha1.Deployment) {
+	return func(p *v1alpha1.ManagedCluster) {
 		p.Spec.Template = templateName
 	}
 }
 
 func WithConfig(config string) Opt {
-	return func(p *v1alpha1.Deployment) {
+	return func(p *v1alpha1.ManagedCluster) {
 		p.Spec.Config = &apiextensionsv1.JSON{
 			Raw: []byte(config),
 		}

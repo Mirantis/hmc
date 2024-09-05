@@ -6,7 +6,7 @@ and use them for deployment.
 ## Custom deployment Templates
 
 > At the moment all `Templates` should reside in the `hmc-system` namespace. But they can be referenced
-> by `Deployments` from any namespace.
+> by `ManagedClusters` from any namespace.
 
 Here are the instructions on how to bring your own Template to HMC:
 

@@ -21,24 +21,24 @@ import (
 )
 
 const (
-	deploymentCreateEvent    = "deployment-create"
-	deploymentHeartbeatEvent = "deployment-heartbeat"
+	managedClusterCreateEvent    = "managed-cluster-create"
+	managedClusterHeartbeatEvent = "managed-cluster-heartbeat"
 )
 
-func TrackDeploymentCreate(id, deploymentID, template string, dryRun bool) error {
+func TrackManagedClusterCreate(id, managedClusterID, template string, dryRun bool) error {
 	props := map[string]interface{}{
-		"hmcVersion":   build.Version,
-		"deploymentID": deploymentID,
-		"template":     template,
-		"dryRun":       dryRun,
+		"hmcVersion":       build.Version,
+		"managedClusterID": managedClusterID,
+		"template":         template,
+		"dryRun":           dryRun,
 	}
-	return TrackEvent(deploymentCreateEvent, id, props)
+	return TrackEvent(managedClusterCreateEvent, id, props)
 }
 
-func TrackDeploymentHeartbeat(id, deploymentID, clusterID, template, templateHelmChartVersion, infrastructureProvider, bootstrapProvider, controlPlaneProvider string) error {
+func TrackManagedClusterHeartbeat(id, managedClusterID, clusterID, template, templateHelmChartVersion, infrastructureProvider, bootstrapProvider, controlPlaneProvider string) error {
 	props := map[string]interface{}{
 		"hmcVersion":               build.Version,
-		"deploymentID":             deploymentID,
+		"managedClusterID":         managedClusterID,
 		"clusterID":                clusterID,
 		"template":                 template,
 		"templateHelmChartVersion": templateHelmChartVersion,
@@ -46,7 +46,7 @@ func TrackDeploymentHeartbeat(id, deploymentID, clusterID, template, templateHel
 		"bootstrapProvider":        bootstrapProvider,
 		"controlPlaneProvider":     controlPlaneProvider,
 	}
-	return TrackEvent(deploymentHeartbeatEvent, id, props)
+	return TrackEvent(managedClusterHeartbeatEvent, id, props)
 }
 
 func TrackEvent(name, id string, properties map[string]interface{}) error {

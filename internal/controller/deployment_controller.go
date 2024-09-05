@@ -50,8 +50,8 @@ import (
 	"github.com/Mirantis/hmc/internal/telemetry"
 )
 
-// DeploymentReconciler reconciles a Deployment object
-type DeploymentReconciler struct {
+// ManagedClusterReconciler reconciles a ManagedCluster object
+type ManagedClusterReconciler struct {
 	client.Client
 	Scheme        *runtime.Scheme
 	Config        *rest.Config
@@ -60,47 +60,47 @@ type DeploymentReconciler struct {
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-func (r *DeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	l := log.FromContext(ctx).WithValues("DeploymentController", req.NamespacedName)
-	l.Info("Reconciling Deployment")
-	deployment := &hmc.Deployment{}
-	if err := r.Get(ctx, req.NamespacedName, deployment); err != nil {
+func (r *ManagedClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	l := log.FromContext(ctx).WithValues("ManagedClusterController", req.NamespacedName)
+	l.Info("Reconciling ManagedCluster")
+	managedCluster := &hmc.ManagedCluster{}
+	if err := r.Get(ctx, req.NamespacedName, managedCluster); err != nil {
 		if apierrors.IsNotFound(err) {
-			l.Info("Deployment not found, ignoring since object must be deleted")
+			l.Info("ManagedCluster not found, ignoring since object must be deleted")
 			return ctrl.Result{}, nil
 		}
-		l.Error(err, "Failed to get Deployment")
+		l.Error(err, "Failed to get ManagedCluster")
 		return ctrl.Result{}, err
 	}
 
-	if !deployment.DeletionTimestamp.IsZero() {
-		l.Info("Deleting Deployment")
-		return r.Delete(ctx, l, deployment)
+	if !managedCluster.DeletionTimestamp.IsZero() {
+		l.Info("Deleting ManagedCluster")
+		return r.Delete(ctx, l, managedCluster)
 	}
 
-	if deployment.Status.ObservedGeneration == 0 {
+	if managedCluster.Status.ObservedGeneration == 0 {
 		mgmt := &hmc.Management{}
 		mgmtRef := types.NamespacedName{Namespace: hmc.ManagementNamespace, Name: hmc.ManagementName}
 		if err := r.Get(ctx, mgmtRef, mgmt); err != nil {
 			l.Error(err, "Failed to get Management object")
 			return ctrl.Result{}, err
 		}
-		if err := telemetry.TrackDeploymentCreate(string(mgmt.UID), string(deployment.UID), deployment.Spec.Template, deployment.Spec.DryRun); err != nil {
-			l.Error(err, "Failed to track Deployment creation")
+		if err := telemetry.TrackManagedClusterCreate(string(mgmt.UID), string(managedCluster.UID), managedCluster.Spec.Template, managedCluster.Spec.DryRun); err != nil {
+			l.Error(err, "Failed to track ManagedCluster creation")
 		}
 	}
-	return r.Update(ctx, l, deployment)
+	return r.Update(ctx, l, managedCluster)
 }
 
-func (r *DeploymentReconciler) setStatusFromClusterStatus(ctx context.Context, l logr.Logger, deployment *hmc.Deployment) (bool, error) {
+func (r *ManagedClusterReconciler) setStatusFromClusterStatus(ctx context.Context, l logr.Logger, managedCluster *hmc.ManagedCluster) (bool, error) {
 	resourceId := schema.GroupVersionResource{
 		Group:    "cluster.x-k8s.io",
 		Version:  "v1beta1",
 		Resource: "clusters",
 	}
 
-	list, err := r.DynamicClient.Resource(resourceId).Namespace(deployment.Namespace).List(ctx, metav1.ListOptions{
-		LabelSelector: labels.SelectorFromSet(map[string]string{hmc.FluxHelmChartNameKey: deployment.Name}).String(),
+	list, err := r.DynamicClient.Resource(resourceId).Namespace(managedCluster.Namespace).List(ctx, metav1.ListOptions{
+		LabelSelector: labels.SelectorFromSet(map[string]string{hmc.FluxHelmChartNameKey: managedCluster.Name}).String(),
 	})
 
 	if apierrors.IsNotFound(err) || len(list.Items) == 0 {
@@ -109,31 +109,31 @@ func (r *DeploymentReconciler) setStatusFromClusterStatus(ctx context.Context, l
 	}
 
 	if err != nil {
-		return true, fmt.Errorf("failed to get cluster information for deployment %s in namespace: %s: %w",
-			deployment.Namespace, deployment.Name, err)
+		return true, fmt.Errorf("failed to get cluster information for managedCluster %s in namespace: %s: %w",
+			managedCluster.Namespace, managedCluster.Name, err)
 	}
 	conditions, found, err := unstructured.NestedSlice(list.Items[0].Object, "status", "conditions")
 	if err != nil {
-		return true, fmt.Errorf("failed to get cluster information for deployment %s in namespace: %s: %w",
-			deployment.Namespace, deployment.Name, err)
+		return true, fmt.Errorf("failed to get cluster information for managedCluster %s in namespace: %s: %w",
+			managedCluster.Namespace, managedCluster.Name, err)
 	}
 	if !found {
-		return true, fmt.Errorf("failed to get cluster information for deployment %s in namespace: %s: status.conditions not found",
-			deployment.Namespace, deployment.Name)
+		return true, fmt.Errorf("failed to get cluster information for managedCluster %s in namespace: %s: status.conditions not found",
+			managedCluster.Namespace, managedCluster.Name)
 	}
 
 	allConditionsComplete := true
 	for _, condition := range conditions {
 		conditionMap, ok := condition.(map[string]interface{})
 		if !ok {
-			return true, fmt.Errorf("failed to cast condition to map[string]interface{} for deployment: %s in namespace: %s: %w",
-				deployment.Namespace, deployment.Name, err)
+			return true, fmt.Errorf("failed to cast condition to map[string]interface{} for managedCluster: %s in namespace: %s: %w",
+				managedCluster.Namespace, managedCluster.Name, err)
 		}
 
 		var metaCondition metav1.Condition
 		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(conditionMap, &metaCondition); err != nil {
-			return true, fmt.Errorf("failed to convert unstructured conditions to metav1.Condition for deployment %s in namespace: %s: %w",
-				deployment.Namespace, deployment.Name, err)
+			return true, fmt.Errorf("failed to convert unstructured conditions to metav1.Condition for managedCluster %s in namespace: %s: %w",
+				managedCluster.Namespace, managedCluster.Name, err)
 		}
 
 		if metaCondition.Status != "True" {
@@ -143,38 +143,38 @@ func (r *DeploymentReconciler) setStatusFromClusterStatus(ctx context.Context, l
 		if metaCondition.Reason == "" && metaCondition.Status == "True" {
 			metaCondition.Reason = "Succeeded"
 		}
-		apimeta.SetStatusCondition(deployment.GetConditions(), metaCondition)
+		apimeta.SetStatusCondition(managedCluster.GetConditions(), metaCondition)
 	}
 
 	return !allConditionsComplete, nil
 }
 
-func (r *DeploymentReconciler) Update(ctx context.Context, l logr.Logger, deployment *hmc.Deployment) (result ctrl.Result, err error) {
-	finalizersUpdated := controllerutil.AddFinalizer(deployment, hmc.DeploymentFinalizer)
+func (r *ManagedClusterReconciler) Update(ctx context.Context, l logr.Logger, managedCluster *hmc.ManagedCluster) (result ctrl.Result, err error) {
+	finalizersUpdated := controllerutil.AddFinalizer(managedCluster, hmc.ManagedClusterFinalizer)
 	if finalizersUpdated {
-		if err := r.Client.Update(ctx, deployment); err != nil {
-			return ctrl.Result{}, fmt.Errorf("failed to update deployment %s/%s: %w", deployment.Namespace, deployment.Name, err)
+		if err := r.Client.Update(ctx, managedCluster); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to update managedCluster %s/%s: %w", managedCluster.Namespace, managedCluster.Name, err)
 		}
 		return ctrl.Result{}, nil
 	}
 
-	if len(deployment.Status.Conditions) == 0 {
-		deployment.InitConditions()
+	if len(managedCluster.Status.Conditions) == 0 {
+		managedCluster.InitConditions()
 	}
 
 	defer func() {
-		err = errors.Join(err, r.updateStatus(ctx, deployment))
+		err = errors.Join(err, r.updateStatus(ctx, managedCluster))
 	}()
 
 	template := &hmc.Template{}
-	templateRef := types.NamespacedName{Name: deployment.Spec.Template, Namespace: hmc.TemplatesNamespace}
+	templateRef := types.NamespacedName{Name: managedCluster.Spec.Template, Namespace: hmc.TemplatesNamespace}
 	if err := r.Get(ctx, templateRef, template); err != nil {
 		l.Error(err, "Failed to get Template")
 		errMsg := fmt.Sprintf("failed to get provided template: %s", err)
 		if apierrors.IsNotFound(err) {
 			errMsg = "provided template is not found"
 		}
-		apimeta.SetStatusCondition(deployment.GetConditions(), metav1.Condition{
+		apimeta.SetStatusCondition(managedCluster.GetConditions(), metav1.Condition{
 			Type:    hmc.TemplateReadyCondition,
 			Status:  metav1.ConditionFalse,
 			Reason:  hmc.FailedReason,
@@ -184,8 +184,8 @@ func (r *DeploymentReconciler) Update(ctx context.Context, l logr.Logger, deploy
 	}
 	templateType := template.Status.Type
 	if templateType != hmc.TemplateTypeDeployment {
-		errMsg := "only templates of 'deployment' type are supported"
-		apimeta.SetStatusCondition(deployment.GetConditions(), metav1.Condition{
+		errMsg := "only templates of 'managedCluster' type are supported"
+		apimeta.SetStatusCondition(managedCluster.GetConditions(), metav1.Condition{
 			Type:    hmc.TemplateReadyCondition,
 			Status:  metav1.ConditionFalse,
 			Reason:  hmc.FailedReason,
@@ -195,7 +195,7 @@ func (r *DeploymentReconciler) Update(ctx context.Context, l logr.Logger, deploy
 	}
 	if !template.Status.Valid {
 		errMsg := "provided template is not marked as valid"
-		apimeta.SetStatusCondition(deployment.GetConditions(), metav1.Condition{
+		apimeta.SetStatusCondition(managedCluster.GetConditions(), metav1.Condition{
 			Type:    hmc.TemplateReadyCondition,
 			Status:  metav1.ConditionFalse,
 			Reason:  hmc.FailedReason,
@@ -203,7 +203,7 @@ func (r *DeploymentReconciler) Update(ctx context.Context, l logr.Logger, deploy
 		})
 		return ctrl.Result{}, errors.New(errMsg)
 	}
-	apimeta.SetStatusCondition(deployment.GetConditions(), metav1.Condition{
+	apimeta.SetStatusCondition(managedCluster.GetConditions(), metav1.Condition{
 		Type:    hmc.TemplateReadyCondition,
 		Status:  metav1.ConditionTrue,
 		Reason:  hmc.SucceededReason,
@@ -211,7 +211,7 @@ func (r *DeploymentReconciler) Update(ctx context.Context, l logr.Logger, deploy
 	})
 	source, err := r.getSource(ctx, template.Status.ChartRef)
 	if err != nil {
-		apimeta.SetStatusCondition(deployment.GetConditions(), metav1.Condition{
+		apimeta.SetStatusCondition(managedCluster.GetConditions(), metav1.Condition{
 			Type:    hmc.HelmChartReadyCondition,
 			Status:  metav1.ConditionFalse,
 			Reason:  hmc.FailedReason,
@@ -222,7 +222,7 @@ func (r *DeploymentReconciler) Update(ctx context.Context, l logr.Logger, deploy
 	l.Info("Downloading Helm chart")
 	hcChart, err := helm.DownloadChartFromArtifact(ctx, source.GetArtifact())
 	if err != nil {
-		apimeta.SetStatusCondition(deployment.GetConditions(), metav1.Condition{
+		apimeta.SetStatusCondition(managedCluster.GetConditions(), metav1.Condition{
 			Type:    hmc.HelmChartReadyCondition,
 			Status:  metav1.ConditionFalse,
 			Reason:  hmc.FailedReason,
@@ -234,14 +234,14 @@ func (r *DeploymentReconciler) Update(ctx context.Context, l logr.Logger, deploy
 	l.Info("Initializing Helm client")
 	getter := helm.NewMemoryRESTClientGetter(r.Config, r.RESTMapper())
 	actionConfig := new(action.Configuration)
-	err = actionConfig.Init(getter, deployment.Namespace, "secret", l.Info)
+	err = actionConfig.Init(getter, managedCluster.Namespace, "secret", l.Info)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
 	l.Info("Validating Helm chart with provided values")
-	if err := r.validateReleaseWithValues(ctx, actionConfig, deployment, hcChart); err != nil {
-		apimeta.SetStatusCondition(deployment.GetConditions(), metav1.Condition{
+	if err := r.validateReleaseWithValues(ctx, actionConfig, managedCluster, hcChart); err != nil {
+		apimeta.SetStatusCondition(managedCluster.GetConditions(), metav1.Condition{
 			Type:    hmc.HelmChartReadyCondition,
 			Status:  metav1.ConditionFalse,
 			Reason:  hmc.FailedReason,
@@ -250,25 +250,25 @@ func (r *DeploymentReconciler) Update(ctx context.Context, l logr.Logger, deploy
 		return ctrl.Result{}, err
 	}
 
-	apimeta.SetStatusCondition(deployment.GetConditions(), metav1.Condition{
+	apimeta.SetStatusCondition(managedCluster.GetConditions(), metav1.Condition{
 		Type:    hmc.HelmChartReadyCondition,
 		Status:  metav1.ConditionTrue,
 		Reason:  hmc.SucceededReason,
 		Message: "Helm chart is valid",
 	})
 
-	if !deployment.Spec.DryRun {
+	if !managedCluster.Spec.DryRun {
 		ownerRef := &metav1.OwnerReference{
 			APIVersion: hmc.GroupVersion.String(),
-			Kind:       hmc.DeploymentKind,
-			Name:       deployment.Name,
-			UID:        deployment.UID,
+			Kind:       hmc.ManagedClusterKind,
+			Name:       managedCluster.Name,
+			UID:        managedCluster.UID,
 		}
 
-		hr, _, err := helm.ReconcileHelmRelease(ctx, r.Client, deployment.Name, deployment.Namespace, deployment.Spec.Config,
+		hr, _, err := helm.ReconcileHelmRelease(ctx, r.Client, managedCluster.Name, managedCluster.Namespace, managedCluster.Spec.Config,
 			ownerRef, template.Status.ChartRef, defaultReconcileInterval, nil)
 		if err != nil {
-			apimeta.SetStatusCondition(deployment.GetConditions(), metav1.Condition{
+			apimeta.SetStatusCondition(managedCluster.GetConditions(), metav1.Condition{
 				Type:    hmc.HelmReleaseReadyCondition,
 				Status:  metav1.ConditionFalse,
 				Reason:  hmc.FailedReason,
@@ -279,7 +279,7 @@ func (r *DeploymentReconciler) Update(ctx context.Context, l logr.Logger, deploy
 
 		hrReadyCondition := fluxconditions.Get(hr, fluxmeta.ReadyCondition)
 		if hrReadyCondition != nil {
-			apimeta.SetStatusCondition(deployment.GetConditions(), metav1.Condition{
+			apimeta.SetStatusCondition(managedCluster.GetConditions(), metav1.Condition{
 				Type:    hmc.HelmReleaseReadyCondition,
 				Status:  hrReadyCondition.Status,
 				Reason:  hrReadyCondition.Reason,
@@ -287,7 +287,7 @@ func (r *DeploymentReconciler) Update(ctx context.Context, l logr.Logger, deploy
 			})
 		}
 
-		requeue, err := r.setStatusFromClusterStatus(ctx, l, deployment)
+		requeue, err := r.setStatusFromClusterStatus(ctx, l, managedCluster)
 		if err != nil {
 			if requeue {
 				return ctrl.Result{RequeueAfter: 10 * time.Second}, err
@@ -307,14 +307,14 @@ func (r *DeploymentReconciler) Update(ctx context.Context, l logr.Logger, deploy
 	return ctrl.Result{}, nil
 }
 
-func (r *DeploymentReconciler) validateReleaseWithValues(ctx context.Context, actionConfig *action.Configuration, deployment *hmc.Deployment, hcChart *chart.Chart) error {
+func (r *ManagedClusterReconciler) validateReleaseWithValues(ctx context.Context, actionConfig *action.Configuration, managedCluster *hmc.ManagedCluster, hcChart *chart.Chart) error {
 	install := action.NewInstall(actionConfig)
 	install.DryRun = true
-	install.ReleaseName = deployment.Name
-	install.Namespace = deployment.Namespace
+	install.ReleaseName = managedCluster.Name
+	install.Namespace = managedCluster.Namespace
 	install.ClientOnly = true
 
-	vals, err := deployment.HelmValues()
+	vals, err := managedCluster.HelmValues()
 	if err != nil {
 		return err
 	}
@@ -325,11 +325,11 @@ func (r *DeploymentReconciler) validateReleaseWithValues(ctx context.Context, ac
 	return nil
 }
 
-func (r *DeploymentReconciler) updateStatus(ctx context.Context, deployment *hmc.Deployment) error {
-	deployment.Status.ObservedGeneration = deployment.Generation
+func (r *ManagedClusterReconciler) updateStatus(ctx context.Context, managedCluster *hmc.ManagedCluster) error {
+	managedCluster.Status.ObservedGeneration = managedCluster.Generation
 	warnings := ""
 	errs := ""
-	for _, condition := range deployment.Status.Conditions {
+	for _, condition := range managedCluster.Status.Conditions {
 		if condition.Type == hmc.ReadyCondition {
 			continue
 		}
@@ -344,7 +344,7 @@ func (r *DeploymentReconciler) updateStatus(ctx context.Context, deployment *hmc
 		Type:    hmc.ReadyCondition,
 		Status:  metav1.ConditionTrue,
 		Reason:  hmc.SucceededReason,
-		Message: "Deployment is ready",
+		Message: "ManagedCluster is ready",
 	}
 	if warnings != "" {
 		condition.Status = metav1.ConditionUnknown
@@ -356,14 +356,14 @@ func (r *DeploymentReconciler) updateStatus(ctx context.Context, deployment *hmc
 		condition.Reason = hmc.FailedReason
 		condition.Message = errs
 	}
-	apimeta.SetStatusCondition(deployment.GetConditions(), condition)
-	if err := r.Status().Update(ctx, deployment); err != nil {
-		return fmt.Errorf("failed to update status for deployment %s/%s: %w", deployment.Namespace, deployment.Name, err)
+	apimeta.SetStatusCondition(managedCluster.GetConditions(), condition)
+	if err := r.Status().Update(ctx, managedCluster); err != nil {
+		return fmt.Errorf("failed to update status for managedCluster %s/%s: %w", managedCluster.Namespace, managedCluster.Name, err)
 	}
 	return nil
 }
 
-func (r *DeploymentReconciler) getSource(ctx context.Context, ref *hcv2.CrossNamespaceSourceReference) (sourcev1.Source, error) {
+func (r *ManagedClusterReconciler) getSource(ctx context.Context, ref *hcv2.CrossNamespaceSourceReference) (sourcev1.Source, error) {
 	if ref == nil {
 		return nil, fmt.Errorf("helm chart source is not provided")
 	}
@@ -375,27 +375,27 @@ func (r *DeploymentReconciler) getSource(ctx context.Context, ref *hcv2.CrossNam
 	return &hc, nil
 }
 
-func (r *DeploymentReconciler) Delete(ctx context.Context, l logr.Logger, deployment *hmc.Deployment) (ctrl.Result, error) {
+func (r *ManagedClusterReconciler) Delete(ctx context.Context, l logr.Logger, managedCluster *hmc.ManagedCluster) (ctrl.Result, error) {
 	hr := &hcv2.HelmRelease{}
 	err := r.Get(ctx, types.NamespacedName{
-		Name:      deployment.Name,
-		Namespace: deployment.Namespace,
+		Name:      managedCluster.Name,
+		Namespace: managedCluster.Namespace,
 	}, hr)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			l.Info("Removing Finalizer", "finalizer", hmc.DeploymentFinalizer)
-			finalizersUpdated := controllerutil.RemoveFinalizer(deployment, hmc.DeploymentFinalizer)
+			l.Info("Removing Finalizer", "finalizer", hmc.ManagedClusterFinalizer)
+			finalizersUpdated := controllerutil.RemoveFinalizer(managedCluster, hmc.ManagedClusterFinalizer)
 			if finalizersUpdated {
-				if err := r.Client.Update(ctx, deployment); err != nil {
-					return ctrl.Result{}, fmt.Errorf("failed to update deployment %s/%s: %w", deployment.Namespace, deployment.Name, err)
+				if err := r.Client.Update(ctx, managedCluster); err != nil {
+					return ctrl.Result{}, fmt.Errorf("failed to update managedCluster %s/%s: %w", managedCluster.Namespace, managedCluster.Name, err)
 				}
 			}
-			l.Info("Deployment deleted")
+			l.Info("ManagedCluster deleted")
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, err
 	}
-	err = helm.DeleteHelmRelease(ctx, r.Client, deployment.Name, deployment.Namespace)
+	err = helm.DeleteHelmRelease(ctx, r.Client, managedCluster.Name, managedCluster.Namespace)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -404,23 +404,23 @@ func (r *DeploymentReconciler) Delete(ctx context.Context, l logr.Logger, deploy
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *DeploymentReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *ManagedClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&hmc.Deployment{}).
+		For(&hmc.ManagedCluster{}).
 		Watches(&hcv2.HelmRelease{},
 			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, o client.Object) []ctrl.Request {
-				deployment := hmc.Deployment{}
-				deploymentRef := types.NamespacedName{
+				managedCluster := hmc.ManagedCluster{}
+				managedClusterRef := types.NamespacedName{
 					Namespace: o.GetNamespace(),
 					Name:      o.GetName(),
 				}
-				err := r.Client.Get(ctx, deploymentRef, &deployment)
+				err := r.Client.Get(ctx, managedClusterRef, &managedCluster)
 				if err != nil {
 					return []ctrl.Request{}
 				}
 				return []reconcile.Request{
 					{
-						NamespacedName: deploymentRef,
+						NamespacedName: managedClusterRef,
 					},
 				}
 			}),

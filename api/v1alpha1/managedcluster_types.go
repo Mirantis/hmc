@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	DeploymentFinalizer = "hmc.mirantis.com/deployment"
+	ManagedClusterFinalizer = "hmc.mirantis.com/managed-cluster"
 
 	FluxHelmChartNameKey = "helm.toolkit.fluxcd.io/name"
 	HMCManagedLabelKey   = "hmc.mirantis.com/managed"
@@ -30,13 +30,16 @@ const (
 )
 
 const (
+	// ManagedClusterKind is the string representation of a ManagedCluster.
+	ManagedClusterKind = "ManagedCluster"
+
 	// TemplateReadyCondition indicates the referenced Template exists and valid.
 	TemplateReadyCondition = "TemplateReady"
 	// HelmChartReadyCondition indicates the corresponding HelmChart is valid and ready.
 	HelmChartReadyCondition = "HelmChartReady"
 	// HelmReleaseReadyCondition indicates the corresponding HelmRelease is ready and fully reconciled.
 	HelmReleaseReadyCondition = "HelmReleaseReady"
-	// ReadyCondition indicates the Deployment is ready and fully reconciled.
+	// ReadyCondition indicates the ManagedCluster is ready and fully reconciled.
 	ReadyCondition string = "Ready"
 )
 
@@ -54,8 +57,8 @@ const (
 	ProgressingReason string = "Progressing"
 )
 
-// DeploymentSpec defines the desired state of Deployment
-type DeploymentSpec struct {
+// ManagedClusterSpec defines the desired state of ManagedCluster
+type ManagedClusterSpec struct {
 	// DryRun specifies whether the template should be applied after validation or only validated.
 	// +optional
 	DryRun bool `json:"dryRun,omitempty"`
@@ -70,12 +73,12 @@ type DeploymentSpec struct {
 	Config *apiextensionsv1.JSON `json:"config,omitempty"`
 }
 
-// DeploymentStatus defines the observed state of Deployment
-type DeploymentStatus struct {
+// ManagedClusterStatus defines the observed state of ManagedCluster
+type ManagedClusterStatus struct {
 	// ObservedGeneration is the last observed generation.
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
-	// Conditions contains details for the current state of the Deployment
+	// Conditions contains details for the current state of the ManagedCluster
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
@@ -86,27 +89,27 @@ type DeploymentStatus struct {
 // +kubebuilder:printcolumn:name="status",type="string",JSONPath=".status.conditions[?(@.type==\"Ready\")].message",description="Status",priority=0
 // +kubebuilder:printcolumn:name="dryRun",type="string",JSONPath=".spec.dryRun",description="Dry Run",priority=1
 
-// Deployment is the Schema for the deployments API
-type Deployment struct {
+// ManagedCluster is the Schema for the managedclusters API
+type ManagedCluster struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   DeploymentSpec   `json:"spec,omitempty"`
-	Status DeploymentStatus `json:"status,omitempty"`
+	Spec   ManagedClusterSpec   `json:"spec,omitempty"`
+	Status ManagedClusterStatus `json:"status,omitempty"`
 }
 
-func (in *Deployment) HelmValues() (values map[string]interface{}, err error) {
+func (in *ManagedCluster) HelmValues() (values map[string]interface{}, err error) {
 	if in.Spec.Config != nil {
 		err = yaml.Unmarshal(in.Spec.Config.Raw, &values)
 	}
 	return values, err
 }
 
-func (in *Deployment) GetConditions() *[]metav1.Condition {
+func (in *ManagedCluster) GetConditions() *[]metav1.Condition {
 	return &in.Status.Conditions
 }
 
-func (in *Deployment) InitConditions() {
+func (in *ManagedCluster) InitConditions() {
 	apimeta.SetStatusCondition(in.GetConditions(), metav1.Condition{
 		Type:    TemplateReadyCondition,
 		Status:  metav1.ConditionUnknown,
@@ -131,19 +134,19 @@ func (in *Deployment) InitConditions() {
 		Type:    ReadyCondition,
 		Status:  metav1.ConditionUnknown,
 		Reason:  ProgressingReason,
-		Message: "Deployment is not yet ready",
+		Message: "ManagedCluster is not yet ready",
 	})
 }
 
 //+kubebuilder:object:root=true
 
-// DeploymentList contains a list of Deployment
-type DeploymentList struct {
+// ManagedClusterList contains a list of ManagedCluster
+type ManagedClusterList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Deployment `json:"items"`
+	Items           []ManagedCluster `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&Deployment{}, &DeploymentList{})
+	SchemeBuilder.Register(&ManagedCluster{}, &ManagedClusterList{})
 }
