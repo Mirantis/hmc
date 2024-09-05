@@ -18,6 +18,8 @@ import (
 	"errors"
 	"fmt"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+
 	"github.com/Mirantis/hmc/test/kubeclient"
 	"github.com/Mirantis/hmc/test/utils"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -41,7 +43,7 @@ func VerifyProviderDeleted(ctx context.Context, kc *kubeclient.KubeClient, clust
 func validateClusterDeleted(ctx context.Context, kc *kubeclient.KubeClient, clusterName string) error {
 	// Validate that the Cluster resource has been deleted
 	cluster, err := kc.GetCluster(ctx, clusterName)
-	if err != nil {
+	if err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
 

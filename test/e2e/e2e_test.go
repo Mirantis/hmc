@@ -143,7 +143,7 @@ var _ = Describe("controller", Ordered, func() {
 				}
 
 				By("creating a Deployment")
-				d := managedcluster.GetUnstructured(managedcluster.ProviderAWS, template)
+				d := managedcluster.GetUnstructured(managedcluster.ProviderAWS, template, namespace)
 				clusterName = d.GetName()
 
 				deleteFunc, err = kc.CreateManagedCluster(context.Background(), d)
@@ -151,7 +151,7 @@ var _ = Describe("controller", Ordered, func() {
 
 				By("waiting for infrastructure providers to deploy successfully")
 				Eventually(func() error {
-					return managedcluster.VerifyProviderDeployed(context.Background(), kc, clusterName)
+					return managedcluster.VerifyProviderDeployed(context.Background(), kc, clusterName, managedcluster.ProviderAWS)
 				}).WithTimeout(30 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
 
 				By("verify the deployment deletes successfully")
@@ -163,6 +163,68 @@ var _ = Describe("controller", Ordered, func() {
 			})
 		}
 	})
+
+	Context("Azure Templates", func() {
+		var (
+			kc          *kubeclient.KubeClient
+			deleteFunc  func() error
+			clusterName string
+			err         error
+		)
+
+		BeforeAll(func() {
+			By("ensuring Azure credentials are set")
+			kc, err = kubeclient.NewFromLocal(namespace)
+			ExpectWithOffset(2, err).NotTo(HaveOccurred())
+
+			//time.Sleep(60 * time.Second)
+			ExpectWithOffset(2, kc.CreateAzureCredentialsKubeSecret(context.Background())).To(Succeed())
+		})
+
+		AfterEach(func() {
+			// If we failed collect logs from each of the affiliated controllers
+			// as well as the output of clusterctl to store as artifacts.
+			if CurrentSpecReport().Failed() {
+				By("collecting failure logs from controllers")
+				collectLogArtifacts(kc, clusterName, managedcluster.ProviderAWS, managedcluster.ProviderCAPI)
+			}
+
+			// Delete the deployments if they were created.
+			if deleteFunc != nil {
+				By("deleting the deployment")
+				err = deleteFunc()
+				Expect(err).NotTo(HaveOccurred())
+			}
+
+		})
+
+		for _, template := range []managedcluster.Template{
+			managedcluster.TemplateAzureStandaloneCP,
+			managedcluster.TemplateAzureHostedCP,
+		} {
+			It(fmt.Sprintf("should work with an Azure provider and %s template", template), func() {
+				By("creating a Deployment")
+				d := managedcluster.GetUnstructured(managedcluster.ProviderAzure, template, namespace)
+				clusterName = d.GetName()
+
+				deleteFunc, err = kc.CreateManagedCluster(context.Background(), d)
+				Expect(err).NotTo(HaveOccurred())
+
+				By("waiting for infrastructure providers to deploy successfully")
+				Eventually(func() error {
+					return managedcluster.VerifyProviderDeployed(context.Background(), kc, clusterName, managedcluster.ProviderAzure)
+				}).WithTimeout(90 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
+
+				By("verify the deployment deletes successfully")
+				err = deleteFunc()
+				Expect(err).NotTo(HaveOccurred())
+				Eventually(func() error {
+					return managedcluster.VerifyProviderDeleted(context.Background(), kc, clusterName)
+				}).WithTimeout(10 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
+			})
+		}
+	})
+
 })
 
 func verifyControllerUp(kc *kubeclient.KubeClient, labelSelector string, name string) error {

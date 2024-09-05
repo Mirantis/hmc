@@ -40,8 +40,10 @@ const (
 type Template string
 
 const (
-	TemplateAWSStandaloneCP Template = "aws-standalone-cp"
-	TemplateAWSHostedCP     Template = "aws-hosted-cp"
+	TemplateAWSStandaloneCP   Template = "aws-standalone-cp"
+	TemplateAWSHostedCP       Template = "aws-hosted-cp"
+	TemplateAzureHostedCP     Template = "azure-hosted-cp"
+	TemplateAzureStandaloneCP Template = "azure-standalone-cp"
 )
 
 //go:embed resources/aws-standalone-cp.yaml.tpl
@@ -50,16 +52,22 @@ var awsStandaloneCPManagedClusterTemplateBytes []byte
 //go:embed resources/aws-hosted-cp.yaml.tpl
 var awsHostedCPManagedClusterTemplateBytes []byte
 
+//go:embed resources/azure-standalone-cp.yaml.tpl
+var azureStandaloneCPManagedClusterTemplateBytes []byte
+
+//go:embed resources/azure-hosted-cp.yaml.tpl
+var azureHostedCPManagedClusterTemplateBytes []byte
+
 func GetProviderLabel(provider ProviderType) string {
 	return fmt.Sprintf("%s=%s", providerLabel, provider)
 }
 
 // GetUnstructured returns an unstructured ManagedCluster object based on the
 // provider and template.
-func GetUnstructured(provider ProviderType, templateName Template) *unstructured.Unstructured {
+func GetUnstructured(provider ProviderType, templateName Template, namespace string) *unstructured.Unstructured {
 	GinkgoHelper()
 
-	generatedName := uuid.New().String()[:8] + "-e2e-test"
+	generatedName := "e2etest-" + uuid.New().String()[:8]
 	_, _ = fmt.Fprintf(GinkgoWriter, "Generated cluster name: %q\n", generatedName)
 
 	switch provider {
@@ -74,6 +82,30 @@ func GetUnstructured(provider ProviderType, templateName Template) *unstructured
 			managedClusterTemplateBytes = awsHostedCPManagedClusterTemplateBytes
 		default:
 			Fail(fmt.Sprintf("unsupported AWS template: %s", templateName))
+		}
+
+		managedClusterConfigBytes, err := envsubst.Bytes(managedClusterTemplateBytes)
+		Expect(err).NotTo(HaveOccurred(), "failed to substitute environment variables")
+
+		var managedClusterConfig map[string]interface{}
+
+		err = yaml.Unmarshal(managedClusterConfigBytes, &managedClusterConfig)
+		Expect(err).NotTo(HaveOccurred(), "failed to unmarshal deployment config")
+
+		return &unstructured.Unstructured{Object: managedClusterConfig}
+
+	case ProviderAzure:
+		Expect(os.Setenv("MANAGED_CLUSTER_NAME", generatedName)).NotTo(HaveOccurred())
+		Expect(os.Setenv("NAMESPACE", namespace)).NotTo(HaveOccurred())
+
+		var managedClusterTemplateBytes []byte
+		switch templateName {
+		case TemplateAzureHostedCP:
+			managedClusterTemplateBytes = azureHostedCPManagedClusterTemplateBytes
+		case TemplateAzureStandaloneCP:
+			managedClusterTemplateBytes = azureStandaloneCPManagedClusterTemplateBytes
+		default:
+			Fail(fmt.Sprintf("unsupported Azure template: %s", templateName))
 		}
 
 		managedClusterConfigBytes, err := envsubst.Bytes(managedClusterTemplateBytes)

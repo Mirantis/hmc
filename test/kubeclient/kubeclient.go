@@ -15,13 +15,17 @@
 package kubeclient
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 
 	"github.com/Mirantis/hmc/test/utils"
+	"github.com/a8m/envsubst"
 	. "github.com/onsi/ginkgo/v2"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
@@ -29,9 +33,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
+	yamlutil "k8s.io/apimachinery/pkg/util/yaml"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/restmapper"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
@@ -121,6 +129,75 @@ func new(configBytes []byte, namespace string) (*KubeClient, error) {
 		ExtendedClient: extendedClientSet,
 		Config:         config,
 	}, nil
+}
+
+func (kc *KubeClient) CreateAzureCredentialsKubeSecret(ctx context.Context) error {
+	serializer := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
+	yamlFile, err := os.ReadFile("./config/dev/azure-credentials.yaml")
+
+	if err != nil {
+		return fmt.Errorf("failed to read azure credential file: %w", err)
+	}
+
+	yamlFile, err = envsubst.Bytes(yamlFile)
+	if err != nil {
+		return fmt.Errorf("failed to process azure credential file: %w", err)
+	}
+
+	c := discovery.NewDiscoveryClientForConfigOrDie(kc.Config)
+	groupResources, err := restmapper.GetAPIGroupResources(c)
+	if err != nil {
+		return fmt.Errorf("failed to fetch group resources: %w", err)
+	}
+
+	yamlReader := yamlutil.NewYAMLReader(bufio.NewReader(bytes.NewReader(yamlFile)))
+	for {
+		yamlDoc, err := yamlReader.Read()
+
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return fmt.Errorf("failed to process azure credential file: %w", err)
+
+		}
+
+		credentialResource := &unstructured.Unstructured{}
+		_, _, err = serializer.Decode(yamlDoc, nil, credentialResource)
+		if err != nil {
+			return fmt.Errorf("failed to deserialize azure credential object: %w", err)
+		}
+
+		mapper := restmapper.NewDiscoveryRESTMapper(groupResources)
+		mapping, err := mapper.RESTMapping(credentialResource.GroupVersionKind().GroupKind())
+
+		if err != nil {
+			return fmt.Errorf("failed to create rest mapper: %w", err)
+		}
+
+		dc, err := kc.GetDynamicClient(schema.GroupVersionResource{
+			Group:    credentialResource.GroupVersionKind().Group,
+			Version:  credentialResource.GroupVersionKind().Version,
+			Resource: mapping.Resource.Resource,
+		})
+
+		if err != nil {
+			return fmt.Errorf("failed to create dynamic client: %w", err)
+		}
+
+		exists, err := dc.Get(ctx, credentialResource.GetName(), metav1.GetOptions{})
+		if err != nil && !apierrors.IsNotFound(err) {
+			return fmt.Errorf("failed to check for existing credential: %w", err)
+		}
+
+		if exists == nil {
+			if _, err = dc.Create(ctx, credentialResource, metav1.CreateOptions{}); err != nil {
+				return fmt.Errorf("failed to create azure credentials: %w", err)
+			}
+		}
+	}
+
+	return nil
 }
 
 // CreateAWSCredentialsKubeSecret uses clusterawsadm to encode existing AWS
