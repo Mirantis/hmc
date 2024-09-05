@@ -59,18 +59,31 @@ func GetProviderLabel(provider ProviderType) string {
 func GetUnstructured(provider ProviderType, templateName Template) *unstructured.Unstructured {
 	GinkgoHelper()
 
-	generatedName := uuid.New().String()[:8] + "-e2e-test"
-	_, _ = fmt.Fprintf(GinkgoWriter, "Generated cluster name: %q\n", generatedName)
+	generatedName := os.Getenv(EnvVarManagedClusterName)
+	if generatedName == "" {
+		generatedName = uuid.New().String()[:8] + "-e2e-test"
+		_, _ = fmt.Fprintf(GinkgoWriter, "Generated cluster name: %q\n", generatedName)
+	} else {
+		_, _ = fmt.Fprintf(GinkgoWriter, "Using configured cluster name: %q\n", generatedName)
+		GinkgoT().Setenv(EnvVarManagedClusterName, generatedName)
+	}
 
 	switch provider {
 	case ProviderAWS:
-		Expect(os.Setenv("MANAGED_CLUSTER_NAME", generatedName)).NotTo(HaveOccurred())
-
 		var managedClusterTemplateBytes []byte
 		switch templateName {
 		case TemplateAWSStandaloneCP:
 			managedClusterTemplateBytes = awsStandaloneCPManagedClusterTemplateBytes
 		case TemplateAWSHostedCP:
+			GinkgoT().Setenv(EnvVarHostedManagedClusterName, generatedName+"-hosted")
+			// Validate environment vars that do not have defaults are populated.
+			validateDeploymentVars([]string{
+				EnvVarAWSVPCID,
+				EnvVarAWSSubnetID,
+				EnvVarAWSSubnetAvailabilityZone,
+				EnvVarAWSSecurityGroupID,
+			})
+
 			managedClusterTemplateBytes = awsHostedCPManagedClusterTemplateBytes
 		default:
 			Fail(fmt.Sprintf("unsupported AWS template: %s", templateName))
@@ -90,4 +103,12 @@ func GetUnstructured(provider ProviderType, templateName Template) *unstructured
 	}
 
 	return nil
+}
+
+func validateDeploymentVars(v []string) {
+	GinkgoHelper()
+
+	for _, envVar := range v {
+		Expect(os.Getenv(envVar)).NotTo(BeEmpty(), envVar+" must be set")
+	}
 }

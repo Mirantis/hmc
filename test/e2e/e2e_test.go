@@ -32,6 +32,7 @@ import (
 
 	"github.com/Mirantis/hmc/test/kubeclient"
 	"github.com/Mirantis/hmc/test/managedcluster"
+	"github.com/Mirantis/hmc/test/managedcluster/aws"
 	"github.com/Mirantis/hmc/test/utils"
 )
 
@@ -57,9 +58,8 @@ var _ = Describe("controller", Ordered, func() {
 
 	Context("Operator", func() {
 		It("should run successfully", func() {
-			kc, err := kubeclient.NewFromLocal(namespace)
-			ExpectWithOffset(1, err).NotTo(HaveOccurred())
-			ExpectWithOffset(1, kc.CreateAWSCredentialsKubeSecret(context.Background())).To(Succeed())
+			kc := kubeclient.NewFromLocal(namespace)
+			aws.CreateCredentialSecret(context.Background(), kc)
 
 			By("validating that the hmc-controller and capi provider controllers are running")
 			verifyControllersUp := func() error {
@@ -94,17 +94,18 @@ var _ = Describe("controller", Ordered, func() {
 
 	Context("AWS Templates", func() {
 		var (
-			kc          *kubeclient.KubeClient
-			deleteFunc  func() error
-			clusterName string
-			err         error
+			kc                   *kubeclient.KubeClient
+			standaloneDeleteFunc func() error
+			hostedDeleteFunc     func() error
+			kubecfgDeleteFunc    func() error
+			clusterName          string
+			err                  error
 		)
 
 		BeforeAll(func() {
 			By("ensuring AWS credentials are set")
-			kc, err = kubeclient.NewFromLocal(namespace)
-			ExpectWithOffset(2, err).NotTo(HaveOccurred())
-			ExpectWithOffset(2, kc.CreateAWSCredentialsKubeSecret(context.Background())).To(Succeed())
+			kc = kubeclient.NewFromLocal(namespace)
+			aws.CreateCredentialSecret(context.Background(), kc)
 		})
 
 		AfterEach(func() {
@@ -113,57 +114,117 @@ var _ = Describe("controller", Ordered, func() {
 			if CurrentSpecReport().Failed() {
 				By("collecting failure logs from controllers")
 				collectLogArtifacts(kc, clusterName, managedcluster.ProviderAWS, managedcluster.ProviderCAPI)
-			}
 
-			// Delete the deployments if they were created.
-			if deleteFunc != nil {
-				By("deleting the deployment")
-				err = deleteFunc()
-				Expect(err).NotTo(HaveOccurred())
+				By("deleting resources after failure")
+				for _, deleteFunc := range []func() error{
+					kubecfgDeleteFunc,
+					hostedDeleteFunc,
+					standaloneDeleteFunc,
+				} {
+					if deleteFunc != nil {
+						err := deleteFunc()
+						Expect(err).NotTo(HaveOccurred())
+					}
+				}
 			}
 
 			// Purge the AWS resources, the AfterAll for the controller will
 			// clean up the management cluster.
 			By("nuking remaining AWS resources")
-			err = os.Setenv("CLUSTER_NAME", clusterName)
-			Expect(err).NotTo(HaveOccurred())
-			cmd := exec.Command("make", "dev-aws-nuke")
-			_, err := utils.Run(cmd)
-			ExpectWithOffset(2, err).NotTo(HaveOccurred())
+			if clusterName != "" {
+				// The nuke config will identify resources based on cluster name
+				// so it should nuke hosted and standalone resources since they
+				// are based on the same cluster name.
+				GinkgoT().Setenv("CLUSTER_NAME", clusterName)
+				Expect(err).NotTo(HaveOccurred())
+				cmd := exec.Command("make", "dev-aws-nuke")
+				err := utils.Wait(cmd)
+				ExpectWithOffset(2, err).NotTo(HaveOccurred())
+			}
 		})
 
-		for _, template := range []managedcluster.Template{
-			managedcluster.TemplateAWSStandaloneCP,
-			managedcluster.TemplateAWSHostedCP,
-		} {
-			It(fmt.Sprintf("should work with an AWS provider and %s template", template), func() {
-				if template == managedcluster.TemplateAWSHostedCP {
-					// TODO: Create AWS resources for hosted control plane.
-					Skip("AWS hosted control plane not yet implemented")
-				}
+		It("should work with an AWS provider", func() {
+			// Deploy a standalone cluster and verify it is running/ready.
+			GinkgoT().Setenv(managedcluster.EnvVarAWSInstanceType, "t3.xlarge")
+			templateBy(managedcluster.TemplateAWSStandaloneCP, "creating a deployment")
+			sd := managedcluster.GetUnstructured(managedcluster.ProviderAWS, managedcluster.TemplateAWSStandaloneCP)
+			sdName := sd.GetName()
 
-				By("creating a Deployment")
-				d := managedcluster.GetUnstructured(managedcluster.ProviderAWS, template)
-				clusterName = d.GetName()
+			standaloneDeleteFunc := kc.CreateManagedCluster(context.Background(), sd)
 
-				deleteFunc, err = kc.CreateManagedCluster(context.Background(), d)
-				Expect(err).NotTo(HaveOccurred())
+			templateBy(managedcluster.TemplateAWSStandaloneCP, "waiting for infrastructure to deploy successfully")
+			Eventually(func() error {
+				return managedcluster.VerifyProviderDeployed(context.Background(), kc, sdName)
+			}).WithTimeout(30 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
 
-				By("waiting for infrastructure providers to deploy successfully")
-				Eventually(func() error {
-					return managedcluster.VerifyProviderDeployed(context.Background(), kc, clusterName)
-				}).WithTimeout(30 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
+			templateBy(managedcluster.TemplateAWSHostedCP, "installing controller and templates")
 
-				By("verify the deployment deletes successfully")
-				err = deleteFunc()
-				Expect(err).NotTo(HaveOccurred())
-				Eventually(func() error {
-					return managedcluster.VerifyProviderDeleted(context.Background(), kc, clusterName)
-				}).WithTimeout(10 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
-			})
-		}
+			// Get a new kubeclient from the standalone cluster that has been
+			// deployed to use as the basis for the hosted cluster.
+			var kubeCfgPath string
+
+			standaloneClient := kc.NewFromCluster(context.Background(), namespace, sdName)
+			kubeCfgPath, kubecfgDeleteFunc = standaloneClient.WriteKubeconfig(context.Background(), sdName)
+
+			GinkgoT().Setenv("KUBECONFIG", kubeCfgPath)
+			cmd := exec.Command("make", "dev-deploy")
+			_, err := utils.Run(cmd)
+			Expect(err).NotTo(HaveOccurred())
+			cmd = exec.Command("make", "dev-templates")
+			_, err = utils.Run(cmd)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Populate the environment variables required for the hosted
+			// cluster.
+			aws.PopulateHostedTemplateVars(context.Background(), kc)
+
+			templateBy(managedcluster.TemplateAWSHostedCP, "creating a deployment")
+			hd := managedcluster.GetUnstructured(managedcluster.ProviderAWS, managedcluster.TemplateAWSHostedCP)
+			hdName := hd.GetName()
+
+			// Ensure AWS credentials are set in the standalone cluster.
+			aws.CreateCredentialSecret(context.Background(), standaloneClient)
+
+			// Deploy the hosted cluster.
+			hostedDeleteFunc = standaloneClient.CreateManagedCluster(context.Background(), hd)
+
+			// Patch the AWSCluster resource as Ready, see:
+			// https://docs.k0smotron.io/stable/capi-aws/#prepare-the-aws-infra-provider
+			aws.PatchAWSClusterReady(context.Background(), kc, hd.GetName())
+
+			// Verify the hosted cluster is running/ready.
+			templateBy(managedcluster.TemplateAWSHostedCP, "waiting for infrastructure to deploy successfully")
+			Eventually(func() error {
+				return managedcluster.VerifyProviderDeployed(context.Background(), standaloneClient, hdName)
+			}).WithTimeout(30 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
+
+			// Delete the hosted deployment and verify it is removed.
+			templateBy(managedcluster.TemplateAWSHostedCP, "deleting the deployment")
+			err = hostedDeleteFunc()
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(func() error {
+				return managedcluster.VerifyProviderDeleted(context.Background(), standaloneClient, hdName)
+			}).WithTimeout(10 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
+
+			// Now delete the standalone template and verify it is removed, it
+			// is deleted last since it is the basis for the hosted cluster.
+			templateBy(managedcluster.TemplateAWSStandaloneCP, "deleting the deployment")
+			err = standaloneDeleteFunc()
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(func() error {
+				return managedcluster.VerifyProviderDeleted(context.Background(), kc, sdName)
+			}).WithTimeout(10 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
+		})
 	})
 })
+
+// templateBy wraps a Ginkgo By with a block describing the template being
+// tested.
+func templateBy(t managedcluster.Template, description string) {
+	GinkgoHelper()
+
+	By(fmt.Sprintf("[%s] %s", t, description))
+}
 
 func verifyControllerUp(kc *kubeclient.KubeClient, labelSelector string, name string) error {
 	deployList, err := kc.Client.AppsV1().Deployments(kc.Namespace).List(context.Background(), metav1.ListOptions{

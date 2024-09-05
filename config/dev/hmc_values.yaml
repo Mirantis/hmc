@@ -1,5 +1,6 @@
 image:
   repository: hmc/controller
+  tag: latest
 controller:
   defaultOCIRegistry: oci://hmc-local-registry:5000/charts
   insecureRegistry: true

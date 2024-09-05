@@ -83,10 +83,7 @@ func verifyProviderAction(
 }
 
 func validateCluster(ctx context.Context, kc *kubeclient.KubeClient, clusterName string) error {
-	cluster, err := kc.GetCluster(ctx, clusterName)
-	if err != nil {
-		return err
-	}
+	cluster := kc.GetCluster(ctx, clusterName)
 
 	phase, _, err := unstructured.NestedString(cluster.Object, "status", "phase")
 	if err != nil {
@@ -109,10 +106,7 @@ func validateCluster(ctx context.Context, kc *kubeclient.KubeClient, clusterName
 }
 
 func validateMachines(ctx context.Context, kc *kubeclient.KubeClient, clusterName string) error {
-	machines, err := kc.ListMachines(ctx, clusterName)
-	if err != nil {
-		return fmt.Errorf("failed to list machines: %w", err)
-	}
+	machines := kc.ListMachines(ctx, clusterName)
 
 	for _, machine := range machines {
 		if err := utils.ValidateObjectNamePrefix(&machine, clusterName); err != nil {
@@ -128,10 +122,7 @@ func validateMachines(ctx context.Context, kc *kubeclient.KubeClient, clusterNam
 }
 
 func validateK0sControlPlanes(ctx context.Context, kc *kubeclient.KubeClient, clusterName string) error {
-	controlPlanes, err := kc.ListK0sControlPlanes(ctx, clusterName)
-	if err != nil {
-		return fmt.Errorf("failed to list K0sControlPlanes: %w", err)
-	}
+	controlPlanes := kc.ListK0sControlPlanes(ctx, clusterName)
 
 	for _, controlPlane := range controlPlanes {
 		if err := utils.ValidateObjectNamePrefix(&controlPlane, clusterName); err != nil {
@@ -171,14 +162,11 @@ func validateK0sControlPlanes(ctx context.Context, kc *kubeclient.KubeClient, cl
 // validateCSIDriver validates that the provider CSI driver is functioning
 // by creating a PVC and verifying it enters "Bound" status.
 func validateCSIDriver(ctx context.Context, kc *kubeclient.KubeClient, clusterName string) error {
-	clusterKC, err := kc.NewFromCluster(ctx, "default", clusterName)
-	if err != nil {
-		Fail(fmt.Sprintf("failed to create KubeClient for managed cluster %s: %v", clusterName, err))
-	}
+	clusterKC := kc.NewFromCluster(ctx, "default", clusterName)
 
 	pvcName := clusterName + "-csi-test-pvc"
 
-	_, err = clusterKC.Client.CoreV1().PersistentVolumeClaims(clusterKC.Namespace).
+	_, err := clusterKC.Client.CoreV1().PersistentVolumeClaims(clusterKC.Namespace).
 		Create(ctx, &corev1.PersistentVolumeClaim{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: pvcName,
@@ -261,14 +249,11 @@ func validateCSIDriver(ctx context.Context, kc *kubeclient.KubeClient, clusterNa
 // functional by creating a LoadBalancer service and verifying it is assigned
 // an external IP.
 func validateCCM(ctx context.Context, kc *kubeclient.KubeClient, clusterName string) error {
-	clusterKC, err := kc.NewFromCluster(ctx, "default", clusterName)
-	if err != nil {
-		Fail(fmt.Sprintf("failed to create KubeClient for managed cluster %s: %v", clusterName, err))
-	}
+	clusterKC := kc.NewFromCluster(ctx, "default", clusterName)
 
 	createdServiceName := "loadbalancer-" + clusterName
 
-	_, err = clusterKC.Client.CoreV1().Services(clusterKC.Namespace).Create(ctx, &corev1.Service{
+	_, err := clusterKC.Client.CoreV1().Services(clusterKC.Namespace).Create(ctx, &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: createdServiceName,
 		},

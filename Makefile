@@ -2,6 +2,8 @@ NAMESPACE ?= hmc-system
 VERSION ?= $(shell git describe --tags --always)
 # Image URL to use all building/pushing image targets
 IMG ?= hmc/controller:latest
+IMG_REPO = $(shell echo $(IMG) | cut -d: -f1)
+IMG_TAG = $(shell echo $(IMG) | cut -d: -f2)
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.29.0
 
@@ -190,7 +192,7 @@ KIND_CLUSTER_NAME ?= hmc-dev
 KIND_NETWORK ?= kind
 REGISTRY_NAME ?= hmc-local-registry
 REGISTRY_PORT ?= 5001
-REGISTRY_REPO ?= oci://127.0.0.1:$(REGISTRY_PORT)/charts
+REGISTRY_REPO ?= oci://$(REGISTRY_NAME):5000/charts
 DEV_PROVIDER ?= aws
 REGISTRY_IS_OCI = $(shell echo $(REGISTRY_REPO) | grep -q oci && echo true || echo false)
 CLUSTER_NAME ?= $(shell $(YQ) '.metadata.name' ./config/dev/deployment.yaml)
@@ -236,6 +238,9 @@ hmc-deploy: helm
 
 .PHONY: dev-deploy
 dev-deploy: ## Deploy HMC helm chart to the K8s cluster specified in ~/.kube/config.
+	$(YQ) eval -i '.image.repository = "$(IMG_REPO)"' config/dev/hmc_values.yaml
+	$(YQ) eval -i '.image.tag = "$(IMG_TAG)"' config/dev/hmc_values.yaml
+	$(YQ) eval -i '.controller.defaultOCIRegistry = "$(REGISTRY_REPO)"' config/dev/hmc_values.yaml
 	$(MAKE) hmc-deploy HMC_VALUES=config/dev/hmc_values.yaml
 	$(KUBECTL) rollout restart -n $(NAMESPACE) deployment/hmc-controller-manager
 
