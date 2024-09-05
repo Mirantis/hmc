@@ -30,8 +30,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
-	"github.com/Mirantis/hmc/test/deployment"
 	"github.com/Mirantis/hmc/test/kubeclient"
+	"github.com/Mirantis/hmc/test/managedcluster"
 	"github.com/Mirantis/hmc/test/utils"
 )
 
@@ -67,13 +67,13 @@ var _ = Describe("controller", Ordered, func() {
 					return err
 				}
 
-				for _, provider := range []deployment.ProviderType{
-					deployment.ProviderCAPI,
-					deployment.ProviderAWS,
-					deployment.ProviderAzure,
+				for _, provider := range []managedcluster.ProviderType{
+					managedcluster.ProviderCAPI,
+					managedcluster.ProviderAWS,
+					managedcluster.ProviderAzure,
 				} {
 					// Ensure only one controller pod is running.
-					if err := verifyControllerUp(kc, deployment.GetProviderLabel(provider), string(provider)); err != nil {
+					if err := verifyControllerUp(kc, managedcluster.GetProviderLabel(provider), string(provider)); err != nil {
 						return err
 					}
 				}
@@ -112,7 +112,7 @@ var _ = Describe("controller", Ordered, func() {
 			// as well as the output of clusterctl to store as artifacts.
 			if CurrentSpecReport().Failed() {
 				By("collecting failure logs from controllers")
-				collectLogArtifacts(kc, clusterName, deployment.ProviderAWS, deployment.ProviderCAPI)
+				collectLogArtifacts(kc, clusterName, managedcluster.ProviderAWS, managedcluster.ProviderCAPI)
 			}
 
 			// Delete the deployments if they were created.
@@ -132,15 +132,18 @@ var _ = Describe("controller", Ordered, func() {
 			ExpectWithOffset(2, err).NotTo(HaveOccurred())
 		})
 
-		for _, template := range []deployment.Template{deployment.TemplateAWSStandaloneCP, deployment.TemplateAWSHostedCP} {
+		for _, template := range []managedcluster.Template{
+			managedcluster.TemplateAWSStandaloneCP,
+			managedcluster.TemplateAWSHostedCP,
+		} {
 			It(fmt.Sprintf("should work with an AWS provider and %s template", template), func() {
-				if template == deployment.TemplateAWSHostedCP {
+				if template == managedcluster.TemplateAWSHostedCP {
 					// TODO: Create AWS resources for hosted control plane.
 					Skip("AWS hosted control plane not yet implemented")
 				}
 
 				By("creating a Deployment")
-				d := deployment.GetUnstructuredDeployment(deployment.ProviderAWS, template)
+				d := managedcluster.GetUnstructured(managedcluster.ProviderAWS, template)
 				clusterName = d.GetName()
 
 				deleteFunc, err = kc.CreateDeployment(context.Background(), d)
@@ -148,14 +151,14 @@ var _ = Describe("controller", Ordered, func() {
 
 				By("waiting for infrastructure providers to deploy successfully")
 				Eventually(func() error {
-					return deployment.VerifyProviderDeployed(context.Background(), kc, clusterName)
+					return managedcluster.VerifyProviderDeployed(context.Background(), kc, clusterName)
 				}).WithTimeout(30 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
 
 				By("verify the deployment deletes successfully")
 				err = deleteFunc()
 				Expect(err).NotTo(HaveOccurred())
 				Eventually(func() error {
-					return deployment.VerifyProviderDeleted(context.Background(), kc, clusterName)
+					return managedcluster.VerifyProviderDeleted(context.Background(), kc, clusterName)
 				}).WithTimeout(10 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
 			})
 		}
@@ -197,13 +200,13 @@ func verifyControllerUp(kc *kubeclient.KubeClient, labelSelector string, name st
 // CAPI controller and the provider controller(s) as well as output from clusterctl
 // and stores them in the test/e2e directory as artifacts.  If it fails it
 // produces a warning message to the GinkgoWriter, but does not fail the test.
-func collectLogArtifacts(kc *kubeclient.KubeClient, clusterName string, providerTypes ...deployment.ProviderType) {
+func collectLogArtifacts(kc *kubeclient.KubeClient, clusterName string, providerTypes ...managedcluster.ProviderType) {
 	GinkgoHelper()
 
 	filterLabels := []string{hmcControllerLabel}
 
 	for _, providerType := range providerTypes {
-		filterLabels = append(filterLabels, deployment.GetProviderLabel(providerType))
+		filterLabels = append(filterLabels, managedcluster.GetProviderLabel(providerType))
 	}
 
 	for _, label := range filterLabels {
@@ -217,14 +220,14 @@ func collectLogArtifacts(kc *kubeclient.KubeClient, clusterName string, provider
 			})
 			podLogs, err := req.Stream(context.Background())
 			if err != nil {
-				warnError(fmt.Errorf("failed to get log stream for pod %s: %w", pod.Name, err))
+				utils.WarnError(fmt.Errorf("failed to get log stream for pod %s: %w", pod.Name, err))
 				continue
 			}
 			defer podLogs.Close() //nolint:errcheck
 
 			output, err := os.Create(fmt.Sprintf("./test/e2e/%s.log", pod.Name))
 			if err != nil {
-				warnError(fmt.Errorf("failed to create log file for pod %s: %w", pod.Name, err))
+				utils.WarnError(fmt.Errorf("failed to create log file for pod %s: %w", pod.Name, err))
 				continue
 			}
 			defer output.Close() //nolint:errcheck
@@ -232,7 +235,7 @@ func collectLogArtifacts(kc *kubeclient.KubeClient, clusterName string, provider
 			r := bufio.NewReader(podLogs)
 			_, err = r.WriteTo(output)
 			if err != nil {
-				warnError(fmt.Errorf("failed to write log file for pod %s: %w", pod.Name, err))
+				utils.WarnError(fmt.Errorf("failed to write log file for pod %s: %w", pod.Name, err))
 			}
 		}
 	}
@@ -241,16 +244,12 @@ func collectLogArtifacts(kc *kubeclient.KubeClient, clusterName string, provider
 		"describe", "cluster", clusterName, "--namespace", namespace, "--show-conditions=all")
 	output, err := utils.Run(cmd)
 	if err != nil {
-		warnError(fmt.Errorf("failed to get clusterctl log: %w", err))
+		utils.WarnError(fmt.Errorf("failed to get clusterctl log: %w", err))
 		return
 	}
 
 	err = os.WriteFile(filepath.Join("test/e2e", "clusterctl.log"), output, 0644)
 	if err != nil {
-		warnError(fmt.Errorf("failed to write clusterctl log: %w", err))
+		utils.WarnError(fmt.Errorf("failed to write clusterctl log: %w", err))
 	}
-}
-
-func warnError(err error) {
-	_, _ = fmt.Fprintf(GinkgoWriter, "Warning: %v\n", err)
 }

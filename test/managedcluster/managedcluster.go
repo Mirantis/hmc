@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package deployment
+package managedcluster
 
 import (
 	_ "embed"
@@ -45,18 +45,18 @@ const (
 )
 
 //go:embed resources/aws-standalone-cp.yaml.tpl
-var awsStandaloneCPDeploymentTemplateBytes []byte
+var awsStandaloneCPManagedClusterTemplateBytes []byte
 
 //go:embed resources/aws-hosted-cp.yaml.tpl
-var awsHostedCPDeploymentTemplateBytes []byte
+var awsHostedCPManagedClusterTemplateBytes []byte
 
 func GetProviderLabel(provider ProviderType) string {
 	return fmt.Sprintf("%s=%s", providerLabel, provider)
 }
 
-// GetUnstructuredDeployment returns an unstructured deployment object based on
-// the provider and template.
-func GetUnstructuredDeployment(provider ProviderType, templateName Template) *unstructured.Unstructured {
+// GetUnstructured returns an unstructured ManagedCluster object based on the
+// provider and template.
+func GetUnstructured(provider ProviderType, templateName Template) *unstructured.Unstructured {
 	GinkgoHelper()
 
 	generatedName := uuid.New().String()[:8] + "-e2e-test"
@@ -64,27 +64,27 @@ func GetUnstructuredDeployment(provider ProviderType, templateName Template) *un
 
 	switch provider {
 	case ProviderAWS:
-		Expect(os.Setenv("DEPLOYMENT_NAME", generatedName)).NotTo(HaveOccurred())
+		Expect(os.Setenv("MANAGED_CLUSTER_NAME", generatedName)).NotTo(HaveOccurred())
 
-		var deploymentTemplateBytes []byte
+		var managedClusterTemplateBytes []byte
 		switch templateName {
 		case TemplateAWSStandaloneCP:
-			deploymentTemplateBytes = awsStandaloneCPDeploymentTemplateBytes
+			managedClusterTemplateBytes = awsStandaloneCPManagedClusterTemplateBytes
 		case TemplateAWSHostedCP:
-			deploymentTemplateBytes = awsHostedCPDeploymentTemplateBytes
+			managedClusterTemplateBytes = awsHostedCPManagedClusterTemplateBytes
 		default:
 			Fail(fmt.Sprintf("unsupported AWS template: %s", templateName))
 		}
 
-		deploymentConfigBytes, err := envsubst.Bytes(deploymentTemplateBytes)
+		managedClusterConfigBytes, err := envsubst.Bytes(managedClusterTemplateBytes)
 		Expect(err).NotTo(HaveOccurred(), "failed to substitute environment variables")
 
-		var deploymentConfig map[string]interface{}
+		var managedClusterConfig map[string]interface{}
 
-		err = yaml.Unmarshal(deploymentConfigBytes, &deploymentConfig)
+		err = yaml.Unmarshal(managedClusterConfigBytes, &managedClusterConfig)
 		Expect(err).NotTo(HaveOccurred(), "failed to unmarshal deployment config")
 
-		return &unstructured.Unstructured{Object: deploymentConfig}
+		return &unstructured.Unstructured{Object: managedClusterConfig}
 	default:
 		Fail(fmt.Sprintf("unsupported provider: %s", provider))
 	}

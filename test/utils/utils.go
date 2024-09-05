@@ -178,3 +178,7 @@ func ValidateObjectNamePrefix(unstrObj *unstructured.Unstructured, clusterName s
 func ObjKindName(unstrObj *unstructured.Unstructured) (string, string) {
 	return unstrObj.GetKind(), unstrObj.GetName()
 }
+
+func WarnError(err error) {
+	_, _ = fmt.Fprintf(GinkgoWriter, "Warning: %v\n", err)
+}
