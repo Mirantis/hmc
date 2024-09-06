@@ -13,11 +13,6 @@ clusterNetwork:
 # Azure cluster parameters
 location: ""
 subscriptionID: ""
-# k0sproject/k0smotron#692 workaround
-tenantID: ""
-clientID: ""
-clientSecret: ""
-###
 bastion:
   enabled: false
   bastionSpec:

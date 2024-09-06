@@ -12,4 +12,7 @@ spec:
       files:
         - path: "/etc/kubernetes/azure.json"
           permissions: "0644"
-          content: {{ include "azure.json.worker" . | toJson }}
+          contentFrom:
+            secretRef:
+              key: worker-node-azure.json
+              name: {{ include "azuremachinetemplate.worker.name" . }}-azure-json

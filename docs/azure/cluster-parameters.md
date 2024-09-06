@@ -80,19 +80,3 @@ These objects then should be referenced in the `ManagedCluster` object in the
 Subscription ID which was used to create service principal should be the
 same that will be used in the `.spec.config.subscriptionID` field of the
 `ManagedCluster` object.
-
-### Cloud controller manager note
-
-In order for CCM to work on Azure it requires `azure.json` file to be located on
-all nodes.
-
-Because of a limitation (k0sproject/k0smotron#692) it's not currently possible
-to automatically pass credentials to all nodes.
-
-To mitigate that you should pass cluster identity data once again in the
-following fields of a `ManagedCluster` object:
-
-- `.spec.config.tenantID` - value of the `tenant` field of a service principal
-- `.spec.config.clientID` - value of the `appId` field of a service principal
-- `.spec.config.clientSecret` - value of the `password` field of a service
-  principal

@@ -14,7 +14,10 @@ spec:
     files:
       - path: "/etc/kubernetes/azure.json"
         permissions: "0644"
-        content: {{ include "azure.json.controller" . | toJson }}
+        contentFrom:
+          secretRef:
+            key: control-plane-azure.json
+            name: {{ include "k0scontrolplane.name" . }}-0-azure-json
     k0s:
       apiVersion: k0s.k0sproject.io/v1beta1
       kind: ClusterConfig
