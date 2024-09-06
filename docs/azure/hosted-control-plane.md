@@ -2,9 +2,9 @@
 
 ## Prerequisites
 
--   Management Kubernetes cluster (v1.28+) deployed on Azure with HMC installed
+- Management Kubernetes cluster (v1.28+) deployed on Azure with HMC installed
     on it
--   Default storage class configured on the management cluster
+- Default storage class configured on the management cluster
 
 Keep in mind that all control plane components for all managed clusters will
 reside in the management cluster.
@@ -60,8 +60,6 @@ kubectl get azurecluster <cluster name> -o go-template='{{(index .spec.networkSp
 ```bash
 kubectl get azurecluster <cluster name> -o go-template='{{(index .spec.networkSpec.subnets 1).securityGroup.name}}'
 ```
-
-
 
 ## HMC ManagedCluster manifest
 

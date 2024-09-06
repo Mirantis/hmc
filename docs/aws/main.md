@@ -3,7 +3,7 @@
 ## Software prerequisites
 
 1. `kubectl` CLI installed locally.
-2. `clusterawsadm` CLI installed locally.
+1. `clusterawsadm` CLI installed locally.
 
 ## Configure AWS IAM
 

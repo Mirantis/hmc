@@ -3,7 +3,7 @@
 ## Software prerequisites
 
 1. `clusterawsadm` CLI installed locally.
-2. `AWS_B64ENCODED_CREDENTIALS` environment variable to be exported.
+1. `AWS_B64ENCODED_CREDENTIALS` environment variable to be exported.
 See [AWS credentials](credentials.md#aws-credentials-configuration) (p. 1-3)
 
 ## AWS AMI

@@ -7,7 +7,7 @@ a managed cluster on AWS with k0s for testing. The kind cluster acts as manageme
 
 ### Clone HMC repository
 
-```
+```bash
 git clone https://github.com/Mirantis/hmc.git && cd hmc
 ```
 
@@ -15,7 +15,7 @@ git clone https://github.com/Mirantis/hmc.git && cd hmc
 
 Run:
 
-```
+```bash
 make cli-install
 ```
 
@@ -47,39 +47,40 @@ running make (e.g. `export DEV_PROVIDER=azure`).
 1. Configure your cluster parameters in provider specific file
    (for example `config/dev/aws-managedcluster.yaml` in case of AWS):
 
-    * Configure the `name` of the ManagedCluster
-    * Change instance type or size for control plane and worker machines
-    * Specify the number of control plane and worker machines, etc
+    - Configure the `name` of the ManagedCluster
+    - Change instance type or size for control plane and worker machines
+    - Specify the number of control plane and worker machines, etc
 
-2. Run `make dev-apply` to deploy and configure management cluster.
+1. Run `make dev-apply` to deploy and configure management cluster.
 
-3. Wait a couple of minutes for management components to be up and running.
+1. Wait a couple of minutes for management components to be up and running.
 
-4. Apply credentials for your provider by executing `make dev-creds-apply`.
+1. Apply credentials for your provider by executing `make dev-creds-apply`.
 
-5. Run `make dev-provider-apply` to deploy managed cluster on provider of your
+1. Run `make dev-provider-apply` to deploy managed cluster on provider of your
    choice with default configuration.
 
-6. Wait for infrastructure to be provisioned and the cluster to be deployed. You
+1. Wait for infrastructure to be provisioned and the cluster to be deployed. You
    may watch the process with the `./bin/clusterctl describe` command. Example:
 
-```
-export KUBECONFIG=~/.kube/config
+   ```bash
+   export KUBECONFIG=~/.kube/config
 
-./bin/clusterctl describe cluster <managedcluster-name> -n hmc-system --show-conditions all
-```
+   ./bin/clusterctl describe cluster <managedcluster-name> -n hmc-system --show-conditions all
+   ```
 
-> [!NOTE]
-> If you encounter any errors in the output of `clusterctl describe cluster` inspect the logs of the
-> `capa-controller-manager` with:
-> ```
-> kubectl logs -n hmc-system deploy/capa-controller-manager
-> ```
-> This may help identify any potential issues with deployment of the AWS infrastructure.
+   > [!NOTE]
+   > If you encounter any errors in the output of `clusterctl describe cluster` inspect the logs of the
+   > `capa-controller-manager` with:
+   >
+   > ```bash
+   > kubectl logs -n hmc-system deploy/capa-controller-manager
+   > ```
+   >
+   > This may help identify any potential issues with deployment of the AWS infrastructure.
 
-7. Retrieve the `kubeconfig` of your managed cluster:
+1. Retrieve the `kubeconfig` of your managed cluster:
 
-```
-kubectl --kubeconfig ~/.kube/config get secret -n hmc-system <managedcluster-name>-kubeconfig -o=jsonpath={.data.value} | base64 -d > kubeconfig
-```
-
+   ```bash
+   kubectl --kubeconfig ~/.kube/config get secret -n hmc-system <managedcluster-name>-kubeconfig -o go-template='{{.data.value | base64decode}}' > kubeconfig
+   ```

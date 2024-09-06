@@ -12,9 +12,9 @@ Here are the instructions on how to bring your own Template to HMC:
 
 1. Create a [HelmRepository](https://fluxcd.io/flux/components/source/helmrepositories/) object containing the URL to the
 external Helm repository. Label it with `hmc.mirantis.com/managed: "true"`.
-2. Create a [HelmChart](https://fluxcd.io/flux/components/source/helmcharts/) object referencing the `HelmRepository` as a
+1. Create a [HelmChart](https://fluxcd.io/flux/components/source/helmcharts/) object referencing the `HelmRepository` as a
 `sourceRef`, specifying the name and version of your Helm chart. Label it with `hmc.mirantis.com/managed: "true"`.
-3. Create a `Template` object in `hmc-system` namespace referencing this helm chart in `spec.helm.chartRef`.
+1. Create a `Template` object in `hmc-system` namespace referencing this helm chart in `spec.helm.chartRef`.
 `chartRef` is a field of the
 [CrossNamespaceSourceReference](https://fluxcd.io/flux/components/helm/api/v2/#helm.toolkit.fluxcd.io/v2.CrossNamespaceSourceReference) kind.
 
@@ -77,9 +77,10 @@ spec:
 ```
 
 The `Template` should follow the rules mentioned below:
+
 1. `spec.type` should be `deployment` (as an alternative, the referenced helm chart may contain the
 `hmc.mirantis.com/type: deployment` annotation in `Chart.yaml`).
-2. `spec.providers` should contain the list of required Cluster API providers: `infrastructure`, `bootstrap` and
+1. `spec.providers` should contain the list of required Cluster API providers: `infrastructure`, `bootstrap` and
 `controlPlane`. As an alternative, the referenced helm chart may contain the specific annotations in the
 `Chart.yaml` (value is a list of providers divided by comma). These fields are only used for validation. For example:
 
@@ -111,22 +112,22 @@ If you need to limit the cluster templates that exist in your HMC installation, 
 
 1. Get the list of `deployment` Templates shipped with HMC:
 
-```bash
-kubectl get templates -n hmc-system -l helm.toolkit.fluxcd.io/name=hmc-templates  | grep deployment
-```
+    ```bash
+    kubectl get templates -n hmc-system -l helm.toolkit.fluxcd.io/name=hmc-templates  | grep deployment
+    ```
 
-Example output:
-```bash
-aws-hosted-cp              deployment   true
-aws-standalone-cp          deployment   true
-```
+    Example output:
 
-2. Remove the templates from the list:
+    ```bash
+    aws-hosted-cp              deployment   true
+    aws-standalone-cp          deployment   true
+    ```
 
-```bash
-kubectl delete template -n hmc-system <template-name>
+1. Remove the templates from the list:
 
-```
+    ```bash
+    kubectl delete template -n hmc-system <template-name>
+    ```
 <!---
 TODO: document `--create-template=false` controller flag once the templates are limited to deployment templates only.
 -->

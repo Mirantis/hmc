@@ -2,11 +2,11 @@
 
 ## Prerequisites
 
--   Management Kubernetes cluster (v1.28+) deployed on AWS with HMC installed on it
--   Default storage class configured on the management cluster
--   VPC id for the worker nodes
--   Subnet ID which will be used along with AZ information
--   AMI id which will be used to deploy worker nodes
+- Management Kubernetes cluster (v1.28+) deployed on AWS with HMC installed on it
+- Default storage class configured on the management cluster
+- VPC id for the worker nodes
+- Subnet ID which will be used along with AZ information
+- AMI id which will be used to deploy worker nodes
 
 Keep in mind that all control plane components for all managed clusters will
 reside in the management cluster.
@@ -19,40 +19,40 @@ reused with a management cluster.
 If you deployed your AWS Kubernetes cluster using Cluster API Provider AWS (CAPA)
 you can obtain all the necessary data with the commands below or use the
 template found below in the
-[HMC ManagedCluster manifest generation](#hmc-managed-cluster-manifest-generation) section.
+[HMC ManagedCluster manifest generation](#hmc-managedcluster-manifest-generation) section.
 
 **VPC ID**
 
 ```bash
-    kubectl get awscluster <cluster name> -o go-template='{{.spec.network.vpc.id}}'
+kubectl get awscluster <cluster name> -o go-template='{{.spec.network.vpc.id}}'
 ```
 
 **Subnet ID**
 
 ```bash
-    kubectl get awscluster <cluster name> -o go-template='{{(index .spec.network.subnets 0).resourceID}}'
+kubectl get awscluster <cluster name> -o go-template='{{(index .spec.network.subnets 0).resourceID}}'
 ```
 
 **Availability zone**
 
 ```bash
-    kubectl get awscluster <cluster name> -o go-template='{{(index .spec.network.subnets 0).availabilityZone}}'
+kubectl get awscluster <cluster name> -o go-template='{{(index .spec.network.subnets 0).availabilityZone}}'
 ```
 
 **Security group**
+
 ```bash
-    kubectl get awscluster <cluster name> -o go-template='{{.status.networkStatus.securityGroups.node.id}}'
+kubectl get awscluster <cluster name> -o go-template='{{.status.networkStatus.securityGroups.node.id}}'
 ```
 
 **AMI id**
 
 ```bash
-    kubectl get awsmachinetemplate <cluster name>-worker-mt -o go-template='{{.spec.template.spec.ami.id}}'
+kubectl get awsmachinetemplate <cluster name>-worker-mt -o go-template='{{.spec.template.spec.ami.id}}'
 ```
 
 If you want to use different VPCs/regions for your management or managed clusters
 you should setup additional connectivity rules like [VPC peering](https://docs.aws.amazon.com/whitepapers/latest/building-scalable-secure-multi-vpc-network-infrastructure/vpc-peering.html).
-
 
 ## HMC ManagedCluster manifest
 
@@ -106,6 +106,6 @@ spec:
 
 Then run the following command to create the `managedcluster.yaml`:
 
-```
+```bash
 kubectl get awscluster cluster -o go-template="$(cat managedcluster.yaml.tpl)" > managedcluster.yaml
 ```

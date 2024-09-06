@@ -3,8 +3,8 @@
 ## Prerequisites
 
 1. `kubectl` CLI installed locally.
-2. `az` CLI utility installed (part of `azure-cli`).
-3. Azure account with the required resource providers registered.
+1. `az` CLI utility installed (part of `azure-cli`).
+1. Azure account with the required resource providers registered.
 
 ## Resource providers registration
 

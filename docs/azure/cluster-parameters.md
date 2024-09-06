@@ -10,7 +10,6 @@
 To provide credentials for CAPI Azure provider (CAPZ) the `AzureClusterIdentity`
 resource must be created. This should be done before provisioning any clusters.
 
-
 To create the `AzureClusterIdentity` you should first get the desired
 `SubscriptionID` by executing `az account list -o table` which will return list
 of subscriptions available to user.
@@ -27,10 +26,10 @@ will look like this:
 
 ```json
 {
-	"appId": "29a3a125-7848-4ce6-9be9-a4b3eecca0ff",
-	"displayName": "azure-cli",
-	"password": "u_RANDOMHASH",
-	"tenant": "2f10bc28-959b-481f-b094-eb043a87570a",
+  "appId": "29a3a125-7848-4ce6-9be9-a4b3eecca0ff",
+  "displayName": "azure-cli",
+  "password": "u_RANDOMHASH",
+  "tenant": "2f10bc28-959b-481f-b094-eb043a87570a",
 }
 ```
 
