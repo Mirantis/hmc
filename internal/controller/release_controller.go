@@ -57,7 +57,12 @@ type Poller struct {
 	CreateManagement bool
 	CreateTemplates  bool
 
-	DefaultOCIRegistry        string
+	// DefaultRepoType is the type specified by default in HelmRepository
+	// objects.  Valid types are 'default' for http/https repositories, and
+	// 'oci' for OCI repositories.  The RepositoryType is set in main based on
+	// the URI scheme of the DefaultRegistryURL.
+	DefaultRepoType           string
+	DefaultRegistryURL        string
 	RegistryCredentialsSecret string
 	InsecureRegistry          bool
 	HMCTemplatesChartName     string
@@ -179,10 +184,11 @@ func (p *Poller) reconcileDefaultHelmRepo(ctx context.Context) error {
 		if helmRepo.Labels == nil {
 			helmRepo.Labels = make(map[string]string)
 		}
+
 		helmRepo.Labels[hmc.HMCManagedLabelKey] = hmc.HMCManagedLabelValue
 		helmRepo.Spec = sourcev1.HelmRepositorySpec{
-			Type:     defaultRepoType,
-			URL:      p.DefaultOCIRegistry,
+			Type:     p.DefaultRepoType,
+			URL:      p.DefaultRegistryURL,
 			Interval: metav1.Duration{Duration: defaultReconcileInterval},
 			Insecure: p.InsecureRegistry,
 		}

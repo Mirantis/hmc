@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
       - args:
-        - --default-oci-registry={{ .Values.controller.defaultOCIRegistry }}
+        - --default-registry-url={{ .Values.controller.defaultRegistryURL }}
         - --insecure-registry={{ .Values.controller.insecureRegistry }}
         {{- if .Values.controller.registryCredsSecret }}
         - --registry-creds-secret={{ .Values.controller.registryCredsSecret }}

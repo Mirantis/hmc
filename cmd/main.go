@@ -21,6 +21,7 @@ import (
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
+
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	hcv2 "github.com/fluxcd/helm-controller/api/v2"
@@ -38,6 +39,7 @@ import (
 	hmcmirantiscomv1alpha1 "github.com/Mirantis/hmc/api/v1alpha1"
 	"github.com/Mirantis/hmc/internal/controller"
 	"github.com/Mirantis/hmc/internal/telemetry"
+	"github.com/Mirantis/hmc/internal/utils"
 	hmcwebhook "github.com/Mirantis/hmc/internal/webhook"
 	//+kubebuilder:scaffold:imports
 )
@@ -57,20 +59,22 @@ func init() {
 }
 
 func main() {
-	var metricsAddr string
-	var probeAddr string
-	var secureMetrics bool
-	var enableHTTP2 bool
-	var defaultOCIRegistry string
-	var insecureRegistry bool
-	var registryCredentialsSecret string
-	var createManagement bool
-	var createTemplates bool
-	var hmcTemplatesChartName string
-	var enableTelemetry bool
-	var enableWebhook bool
-	var webhookPort int
-	var webhookCertDir string
+	var (
+		metricsAddr               string
+		probeAddr                 string
+		secureMetrics             bool
+		enableHTTP2               bool
+		defaultRegistryURL        string
+		insecureRegistry          bool
+		registryCredentialsSecret string
+		createManagement          bool
+		createTemplates           bool
+		hmcTemplatesChartName     string
+		enableTelemetry           bool
+		enableWebhook             bool
+		webhookPort               int
+		webhookCertDir            string
+	)
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
@@ -78,8 +82,8 @@ func main() {
 		"If set the metrics endpoint is served securely")
 	flag.BoolVar(&enableHTTP2, "enable-http2", false,
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
-	flag.StringVar(&defaultOCIRegistry, "default-oci-registry", "oci://ghcr.io/mirantis/hmc/charts",
-		"The default OCI registry to download Helm charts from.")
+	flag.StringVar(&defaultRegistryURL, "default-registry-url", "oci://ghcr.io/mirantis/hmc/charts",
+		"The default registry to download Helm charts from, prefix with oci:// for OCI registries.")
 	flag.StringVar(&registryCredentialsSecret, "registry-creds-secret", "",
 		"Secret containing authentication credentials for the registry.")
 	flag.BoolVar(&insecureRegistry, "insecure-registry", false, "Allow connecting to an HTTP registry.")
@@ -99,6 +103,12 @@ func main() {
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+
+	determinedRepositoryType, err := utils.DetermineDefaultRepositoryType(defaultRegistryURL)
+	if err != nil {
+		setupLog.Error(err, "failed to determine default repository type")
+		os.Exit(1)
+	}
 
 	// if the enable-http2 flag is false (the default), http/2 should be disabled
 	// due to its vulnerabilities. More specifically, disabling http/2 will
@@ -188,7 +198,8 @@ func main() {
 		Config:                    mgr.GetConfig(),
 		CreateManagement:          createManagement,
 		CreateTemplates:           createTemplates,
-		DefaultOCIRegistry:        defaultOCIRegistry,
+		DefaultRegistryURL:        defaultRegistryURL,
+		DefaultRepoType:           determinedRepositoryType,
 		RegistryCredentialsSecret: registryCredentialsSecret,
 		InsecureRegistry:          insecureRegistry,
 		HMCTemplatesChartName:     hmcTemplatesChartName,

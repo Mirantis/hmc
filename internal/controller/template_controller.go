@@ -39,9 +39,7 @@ import (
 )
 
 const (
-	defaultRepoName = "hmc-templates"
-	defaultRepoType = "oci"
-
+	defaultRepoName          = "hmc-templates"
 	defaultReconcileInterval = 10 * time.Minute
 )
 
