@@ -30,8 +30,7 @@ const (
         }
 	}`
 
-	ManagementName      = "hmc"
-	ManagementNamespace = "hmc-system"
+	ManagementName = "hmc"
 
 	ManagementFinalizer = "hmc.mirantis.com/management"
 )

@@ -30,6 +30,8 @@ import (
 
 type Tracker struct {
 	crclient.Client
+
+	SystemNamespace string
 }
 
 const interval = 10 * time.Minute
@@ -69,7 +71,7 @@ func (t *Tracker) trackManagedClusterHeartbeat(ctx context.Context) error {
 
 	templates := make(map[string]v1alpha1.Template)
 	templatesList := &v1alpha1.TemplateList{}
-	err = t.List(ctx, templatesList, crclient.InNamespace(v1alpha1.TemplatesNamespace))
+	err = t.List(ctx, templatesList, crclient.InNamespace(t.SystemNamespace))
 	if err != nil {
 		return err
 	}

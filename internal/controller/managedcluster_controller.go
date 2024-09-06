@@ -53,9 +53,10 @@ import (
 // ManagedClusterReconciler reconciles a ManagedCluster object
 type ManagedClusterReconciler struct {
 	client.Client
-	Scheme        *runtime.Scheme
-	Config        *rest.Config
-	DynamicClient *dynamic.DynamicClient
+	Scheme          *runtime.Scheme
+	Config          *rest.Config
+	DynamicClient   *dynamic.DynamicClient
+	SystemNamespace string
 }
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
@@ -167,7 +168,7 @@ func (r *ManagedClusterReconciler) Update(ctx context.Context, l logr.Logger, ma
 	}()
 
 	template := &hmc.Template{}
-	templateRef := types.NamespacedName{Name: managedCluster.Spec.Template, Namespace: hmc.TemplatesNamespace}
+	templateRef := types.NamespacedName{Name: managedCluster.Spec.Template, Namespace: r.SystemNamespace}
 	if err := r.Get(ctx, templateRef, template); err != nil {
 		l.Error(err, "Failed to get Template")
 		errMsg := fmt.Sprintf("failed to get provided template: %s", err)
