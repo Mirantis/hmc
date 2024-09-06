@@ -21,8 +21,7 @@ import (
 )
 
 const (
-	DefaultName      = "hmc"
-	DefaultNamespace = "hmc-system"
+	DefaultName = "hmc"
 )
 
 type Opt func(management *v1alpha1.Management)
@@ -30,8 +29,7 @@ type Opt func(management *v1alpha1.Management)
 func NewManagement(opts ...Opt) *v1alpha1.Management {
 	p := &v1alpha1.Management{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      DefaultName,
-			Namespace: DefaultNamespace,
+			Name: DefaultName,
 		},
 	}
 
@@ -44,12 +42,6 @@ func NewManagement(opts ...Opt) *v1alpha1.Management {
 func WithName(name string) Opt {
 	return func(p *v1alpha1.Management) {
 		p.Name = name
-	}
-}
-
-func WithNamespace(namespace string) Opt {
-	return func(p *v1alpha1.Management) {
-		p.Namespace = namespace
 	}
 }
 

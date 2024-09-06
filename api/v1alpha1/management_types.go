@@ -131,7 +131,7 @@ type ComponentStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
-// +kubebuilder:resource:shortName=hmc-mgmt;mgmt
+// +kubebuilder:resource:shortName=hmc-mgmt;mgmt,scope=Cluster
 
 // Management is the Schema for the managements API
 type Management struct {

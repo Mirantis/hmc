@@ -80,7 +80,7 @@ func (r *ManagedClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	if managedCluster.Status.ObservedGeneration == 0 {
 		mgmt := &hmc.Management{}
-		mgmtRef := types.NamespacedName{Namespace: hmc.ManagementNamespace, Name: hmc.ManagementName}
+		mgmtRef := types.NamespacedName{Name: hmc.ManagementName}
 		if err := r.Get(ctx, mgmtRef, mgmt); err != nil {
 			l.Error(err, "Failed to get Management object")
 			return ctrl.Result{}, err

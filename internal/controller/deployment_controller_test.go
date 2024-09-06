@@ -97,8 +97,7 @@ var _ = Describe("ManagedCluster Controller", func() {
 			if err != nil && errors.IsNotFound(err) {
 				management = &hmc.Management{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      hmc.ManagementName,
-						Namespace: hmc.ManagementNamespace,
+						Name: hmc.ManagementName,
 					},
 					Spec: hmc.ManagementSpec{},
 				}
