@@ -145,7 +145,7 @@ func (v *ManagedClusterValidator) isTemplateValid(ctx context.Context, template 
 func (v *ManagedClusterValidator) verifyProviders(ctx context.Context, template *v1alpha1.Template) error {
 	requiredProviders := template.Status.Providers
 	management := &v1alpha1.Management{}
-	managementRef := types.NamespacedName{Name: v1alpha1.ManagementName, Namespace: v1alpha1.ManagementNamespace}
+	managementRef := types.NamespacedName{Name: v1alpha1.ManagementName}
 	if err := v.Get(ctx, managementRef, management); err != nil {
 		return err
 	}

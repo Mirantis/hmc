@@ -75,7 +75,7 @@ func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Manag
 	finalizersUpdated := controllerutil.AddFinalizer(management, hmc.ManagementFinalizer)
 	if finalizersUpdated {
 		if err := r.Client.Update(ctx, management); err != nil {
-			return ctrl.Result{}, fmt.Errorf("failed to update Management %s/%s: %w", management.Namespace, management.Name, err)
+			return ctrl.Result{}, fmt.Errorf("failed to update Management %s: %w", management.Name, err)
 		}
 		return ctrl.Result{}, nil
 	}
@@ -117,10 +117,10 @@ func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Manag
 			continue
 		}
 
-		_, _, err = helm.ReconcileHelmRelease(ctx, r.Client, component.HelmReleaseName(), management.Namespace, component.Config,
+		_, _, err = helm.ReconcileHelmRelease(ctx, r.Client, component.HelmReleaseName(), hmc.ManagementNamespace, component.Config,
 			nil, template.Status.ChartRef, defaultReconcileInterval, component.dependsOn)
 		if err != nil {
-			errMsg := fmt.Sprintf("error reconciling HelmRelease %s/%s: %s", management.Namespace, component.Template, err)
+			errMsg := fmt.Sprintf("error reconciling HelmRelease %s/%s: %s", hmc.ManagementNamespace, component.Template, err)
 			updateComponentsStatus(detectedComponents, &detectedProviders, component.Template, template.Status, errMsg)
 			errs = errors.Join(errs, errors.New(errMsg))
 			continue
@@ -132,8 +132,8 @@ func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Manag
 	management.Status.AvailableProviders = detectedProviders
 	management.Status.Components = detectedComponents
 	if err := r.Status().Update(ctx, management); err != nil {
-		errs = errors.Join(errs, fmt.Errorf("failed to update status for Management %s/%s: %w",
-			management.Namespace, management.Name, err))
+		errs = errors.Join(errs, fmt.Errorf("failed to update status for Management %s: %w",
+			management.Name, err))
 	}
 	if errs != nil {
 		l.Error(errs, "Multiple errors during Management reconciliation")

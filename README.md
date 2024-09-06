@@ -57,7 +57,6 @@ apiVersion: hmc.mirantis.com/v1alpha1
 kind: Management
 metadata:
   name: hmc
-  namespace: hmc-system
 spec:
   core:
     capi:
@@ -76,7 +75,7 @@ There are two options to override the default management configuration of HMC:
 
 1. Update the `Management` object after the HMC installation using `kubectl`:
 
-    `kubectl --kubeconfig <path-to-management-kubeconfig> -n hmc-system edit management`
+    `kubectl --kubeconfig <path-to-management-kubeconfig> edit management`
 
 2. Deploy HMC skipping the default `Management` object creation and provide your own `Management`
 configuration:
@@ -90,9 +89,9 @@ configuration:
 
     `--set="controller.createManagement=false"`
 
-   * Create `hmc-system/hmc` `Management` object after HMC installation:
+   * Create `hmc` `Management` object after HMC installation:
 
-    `kubectl --kubeconfig <path-to-management-kubeconfig> -n hmc-system create -f management.yaml`
+    `kubectl --kubeconfig <path-to-management-kubeconfig> create -f management.yaml`
 
 ## Deploy a managed cluster
 
@@ -243,7 +242,7 @@ spec:
 
 1. Remove the Management object:
   
-`kubectl delete management.hmc hmc -n hmc-system`
+`kubectl delete management.hmc hmc`
 
 > Note: make sure you have no HMC ManagedCluster objects left in the cluster prior to Management deletion
 

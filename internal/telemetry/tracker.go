@@ -61,7 +61,7 @@ func (t *Tracker) Tick(ctx context.Context) {
 
 func (t *Tracker) trackManagedClusterHeartbeat(ctx context.Context) error {
 	mgmt := &v1alpha1.Management{}
-	mgmtRef := types.NamespacedName{Namespace: v1alpha1.ManagementNamespace, Name: v1alpha1.ManagementName}
+	mgmtRef := types.NamespacedName{Name: v1alpha1.ManagementName}
 	err := t.Get(ctx, mgmtRef, mgmt)
 	if err != nil {
 		return err

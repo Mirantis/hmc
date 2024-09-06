@@ -112,13 +112,11 @@ func (p *Poller) ensureManagement(ctx context.Context) error {
 	mgmtObj := &hmc.Management{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:       hmc.ManagementName,
-			Namespace:  hmc.ManagementNamespace,
 			Finalizers: []string{hmc.ManagementFinalizer},
 		},
 	}
 	err := p.Get(ctx, client.ObjectKey{
-		Name:      hmc.ManagementName,
-		Namespace: hmc.ManagementNamespace,
+		Name: hmc.ManagementName,
 	}, mgmtObj)
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
