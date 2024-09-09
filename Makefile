@@ -300,7 +300,7 @@ dev-provider-apply: envsubst
 	@if [ $(DEV_PROVIDER) = "aws" ]; then \
 		$(MAKE) dev-aws-creds; \
 	fi
-	@NAMESPACE=$(NAMESPACE) $(ENVSUBST) -no-unset -i config/dev/$(DEV_PROVIDER)-deployment.yaml | $(KUBECTL) apply -f -
+	@NAMESPACE=$(NAMESPACE) $(ENVSUBST) -no-unset -i config/dev/$(DEV_PROVIDER)-managedcluster.yaml | $(KUBECTL) apply -f -
 
 .PHONY: dev-provider-delete
 dev-provider-delete: envsubst
