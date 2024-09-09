@@ -1,0 +1,86 @@
+apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+kind: K0smotronControlPlane
+metadata:
+  name: {{ include "k0smotroncontrolplane.name" . }}
+spec:
+  replicas: {{ .Values.controlPlaneNumber }}
+  version: {{ .Values.k0s.version | replace "+" "-" }}
+  {{- with .Values.k0smotron.service }}
+  service:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  controllerPlaneFlags:
+  - "--enable-cloud-provider=true"
+  - "--debug=true"
+  k0sConfig:
+    apiVersion: k0s.k0sproject.io/v1beta1
+    kind: ClusterConfig
+    metadata:
+      name: k0s
+    spec:
+      network:
+        provider: calico
+        calico:
+          mode: vxlan
+      extensions:
+        helm:
+          repositories:
+          - name: vsphere-cpi
+            url: https://kubernetes.github.io/cloud-provider-vsphere
+          - name: mirantis
+            url: https://charts.mirantis.com
+          charts:
+          - name: vsphere-cpi
+            chartname: vsphere-cpi/vsphere-cpi
+            version: 1.31.0
+            order: 1
+            namespace: kube-system
+            values: |
+              config:
+                enabled: true
+                vcenter: {{ .Values.vsphere.server }}
+                datacenter: {{ .Values.vsphere.datacenter }}
+                username: "{{ .Values.vsphere.username }}"
+                password: "{{ .Values.vsphere.password }}"
+              daemonset:
+                affinity: null
+                tolerations:
+                  - effect: NoSchedule
+                    key: node.cloudprovider.kubernetes.io/uninitialized
+                    value: "true"
+                  - effect: NoSchedule
+                    key: node-role.kubernetes.io/master
+                    operator: Exists
+                  - effect: NoSchedule
+                    key: node-role.kubernetes.io/control-plane
+                    operator: Exists
+                  - effect: NoSchedule
+                    key: node.kubernetes.io/not-ready
+                    operator: Exists
+                  - key: CriticalAddonsOnly
+                    effect: NoExecute
+                    operator: Exists
+          - name: vsphere-csi
+            chartname: mirantis/vsphere-csi-driver
+            version: 0.0.1
+            order: 2
+            namespace: kube-system
+            values: |
+              vcenterConfig:
+                enabled: true
+                clusterID: {{ include "cluster.name" . }}
+                vcenter: {{ .Values.vsphere.server }}
+                user: "{{ .Values.vsphere.username }}"
+                password: "{{ .Values.vsphere.password }}"
+                datacenters: {{ .Values.vsphere.datacenter }}
+              controller:
+                nodeAffinity: null
+              node:
+                kubeletPath: /var/lib/k0s/kubelet
+              defaultStorageClass:
+                enabled: true
+              images:
+                driver:
+                  tag: v3.1.2
+                syncer:
+                  tag: v3.1.2
