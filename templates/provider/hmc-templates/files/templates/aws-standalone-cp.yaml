@@ -1,8 +1,8 @@
 apiVersion: hmc.mirantis.com/v1alpha1
-kind: Template
+kind: ClusterTemplate
 metadata:
-  name: aws-hosted-cp
+  name: aws-standalone-cp
 spec:
   helm:
-    chartName: aws-hosted-cp
+    chartName: aws-standalone-cp
     chartVersion: 0.1.2

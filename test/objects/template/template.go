@@ -26,73 +26,99 @@ const (
 	DefaultNamespace = "hmc-system"
 )
 
-type Opt func(template *v1alpha1.Template)
+type Template struct {
+	metav1.ObjectMeta `json:",inline"`
+	Spec              v1alpha1.TemplateSpecMixin   `json:"spec"`
+	Status            v1alpha1.TemplateStatusMixin `json:"status"`
+}
 
-func NewTemplate(opts ...Opt) *v1alpha1.Template {
-	p := &v1alpha1.Template{
+type Opt func(template *Template)
+
+func NewClusterTemplate(opts ...Opt) *v1alpha1.ClusterTemplate {
+	templateState := NewTemplate(opts...)
+	return &v1alpha1.ClusterTemplate{
+		ObjectMeta: templateState.ObjectMeta,
+		Spec:       v1alpha1.ClusterTemplateSpec{TemplateSpecMixin: templateState.Spec},
+		Status:     v1alpha1.ClusterTemplateStatus{TemplateStatusMixin: templateState.Status},
+	}
+}
+
+func NewServiceTemplate(opts ...Opt) *v1alpha1.ServiceTemplate {
+	templateState := NewTemplate(opts...)
+	return &v1alpha1.ServiceTemplate{
+		ObjectMeta: templateState.ObjectMeta,
+		Spec:       v1alpha1.ServiceTemplateSpec{TemplateSpecMixin: templateState.Spec},
+		Status:     v1alpha1.ServiceTemplateStatus{TemplateStatusMixin: templateState.Status},
+	}
+}
+
+func NewProviderTemplate(opts ...Opt) *v1alpha1.ProviderTemplate {
+	templateState := NewTemplate(opts...)
+	return &v1alpha1.ProviderTemplate{
+		ObjectMeta: templateState.ObjectMeta,
+		Spec:       v1alpha1.ProviderTemplateSpec{TemplateSpecMixin: templateState.Spec},
+		Status:     v1alpha1.ProviderTemplateStatus{TemplateStatusMixin: templateState.Status},
+	}
+}
+
+func NewTemplate(opts ...Opt) *Template {
+	template := &Template{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      DefaultName,
 			Namespace: DefaultNamespace,
 		},
 	}
-
 	for _, opt := range opts {
-		opt(p)
+		opt(template)
 	}
-	return p
+	return template
 }
 
 func WithName(name string) Opt {
-	return func(p *v1alpha1.Template) {
-		p.Name = name
+	return func(t *Template) {
+		t.Name = name
 	}
 }
 
 func WithNamespace(namespace string) Opt {
-	return func(p *v1alpha1.Template) {
-		p.Namespace = namespace
+	return func(t *Template) {
+		t.Namespace = namespace
 	}
 }
 
 func WithHelmSpec(helmSpec v1alpha1.HelmSpec) Opt {
-	return func(p *v1alpha1.Template) {
-		p.Spec.Helm = helmSpec
-	}
-}
-
-func WithType(templateType v1alpha1.TemplateType) Opt {
-	return func(p *v1alpha1.Template) {
-		p.Spec.Type = templateType
+	return func(t *Template) {
+		t.Spec.Helm = helmSpec
 	}
 }
 
 func WithProviders(providers v1alpha1.Providers) Opt {
-	return func(p *v1alpha1.Template) {
-		p.Spec.Providers = providers
+	return func(t *Template) {
+		t.Spec.Providers = providers
 	}
 }
 
 func WithTypeStatus(templateType v1alpha1.TemplateType) Opt {
-	return func(p *v1alpha1.Template) {
-		p.Status.Type = templateType
+	return func(t *Template) {
+		t.Status.Type = templateType
 	}
 }
 
 func WithValidationStatus(validationStatus v1alpha1.TemplateValidationStatus) Opt {
-	return func(p *v1alpha1.Template) {
-		p.Status.TemplateValidationStatus = validationStatus
+	return func(t *Template) {
+		t.Status.TemplateValidationStatus = validationStatus
 	}
 }
 
 func WithProvidersStatus(providers v1alpha1.Providers) Opt {
-	return func(p *v1alpha1.Template) {
-		p.Status.Providers = providers
+	return func(t *Template) {
+		t.Status.Providers = providers
 	}
 }
 
 func WithConfigStatus(config string) Opt {
-	return func(p *v1alpha1.Template) {
-		p.Status.Config = &apiextensionsv1.JSON{
+	return func(t *Template) {
+		t.Status.Config = &apiextensionsv1.JSON{
 			Raw: []byte(config),
 		}
 	}

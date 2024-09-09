@@ -167,7 +167,7 @@ func (r *ManagedClusterReconciler) Update(ctx context.Context, l logr.Logger, ma
 		err = errors.Join(err, r.updateStatus(ctx, managedCluster))
 	}()
 
-	template := &hmc.Template{}
+	template := &hmc.ClusterTemplate{}
 	templateRef := types.NamespacedName{Name: managedCluster.Spec.Template, Namespace: r.SystemNamespace}
 	if err := r.Get(ctx, templateRef, template); err != nil {
 		l.Error(err, "Failed to get Template")

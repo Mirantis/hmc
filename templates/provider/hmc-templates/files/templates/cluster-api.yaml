@@ -1,8 +1,8 @@
 apiVersion: hmc.mirantis.com/v1alpha1
-kind: Template
+kind: ProviderTemplate
 metadata:
-  name: azure-hosted-cp
+  name: cluster-api
 spec:
   helm:
-    chartName: azure-hosted-cp
+    chartName: cluster-api
     chartVersion: 0.1.1

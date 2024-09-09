@@ -100,19 +100,18 @@ func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Manag
 
 	components := wrappedComponents(management)
 	for _, component := range components {
-		template := &hmc.Template{}
+		template := &hmc.ProviderTemplate{}
 		err := r.Get(ctx, types.NamespacedName{
-			Namespace: r.SystemNamespace,
-			Name:      component.Template,
+			Name: component.Template,
 		}, template)
 		if err != nil {
-			errMsg := fmt.Sprintf("Failed to get Template %s/%s: %s", r.SystemNamespace, component.Template, err)
+			errMsg := fmt.Sprintf("Failed to get ProviderTemplate %s: %s", component.Template, err)
 			updateComponentsStatus(detectedComponents, &detectedProviders, component.Template, template.Status, errMsg)
 			errs = errors.Join(errs, errors.New(errMsg))
 			continue
 		}
 		if !template.Status.Valid {
-			errMsg := fmt.Sprintf("Template %s/%s is not marked as valid", r.SystemNamespace, component.Template)
+			errMsg := fmt.Sprintf("Template %s is not marked as valid", component.Template)
 			updateComponentsStatus(detectedComponents, &detectedProviders, component.Template, template.Status, errMsg)
 			errs = errors.Join(errs, errors.New(errMsg))
 			continue
@@ -283,7 +282,7 @@ func updateComponentsStatus(
 	components map[string]hmc.ComponentStatus,
 	providers *hmc.Providers,
 	componentName string,
-	templateStatus hmc.TemplateStatus,
+	templateStatus hmc.ProviderTemplateStatus,
 	err string,
 ) {
 	components[componentName] = hmc.ComponentStatus{

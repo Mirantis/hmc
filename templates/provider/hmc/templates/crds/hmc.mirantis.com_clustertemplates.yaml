@@ -4,17 +4,16 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.14.0
-  name: templates.hmc.mirantis.com
+  name: clustertemplates.hmc.mirantis.com
 spec:
   group: hmc.mirantis.com
   names:
-    kind: Template
-    listKind: TemplateList
-    plural: templates
+    kind: ClusterTemplate
+    listKind: ClusterTemplateList
+    plural: clustertemplates
     shortNames:
-    - hmc-tmpl
-    - tmpl
-    singular: template
+    - clustertmpl
+    singular: clustertemplate
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
@@ -39,7 +38,7 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: Template is the Schema for the templates API
+        description: ClusterTemplate is the Schema for the cluster templates API
         properties:
           apiVersion:
             description: |-
@@ -59,7 +58,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: TemplateSpec defines the desired state of Template
+            description: ClusterTemplateSpec defines the desired state of ClusterTemplate
             properties:
               helm:
                 description: Helm holds a reference to a Helm chart representing the
@@ -145,7 +144,7 @@ spec:
             - helm
             type: object
           status:
-            description: TemplateStatus defines the observed state of Template
+            description: ClusterTemplateStatus defines the observed state of ClusterTemplate
             properties:
               chartRef:
                 description: |-

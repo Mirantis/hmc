@@ -121,8 +121,8 @@ func (v *ManagedClusterValidator) Default(ctx context.Context, obj runtime.Objec
 	return nil
 }
 
-func (v *ManagedClusterValidator) getManagedClusterTemplate(ctx context.Context, templateName string) (*v1alpha1.Template, error) {
-	template := &v1alpha1.Template{}
+func (v *ManagedClusterValidator) getManagedClusterTemplate(ctx context.Context, templateName string) (*v1alpha1.ClusterTemplate, error) {
+	template := &v1alpha1.ClusterTemplate{}
 	templateRef := types.NamespacedName{Name: templateName, Namespace: v.SystemNamespace}
 	if err := v.Get(ctx, templateRef, template); err != nil {
 		return nil, err
@@ -130,7 +130,7 @@ func (v *ManagedClusterValidator) getManagedClusterTemplate(ctx context.Context,
 	return template, nil
 }
 
-func (v *ManagedClusterValidator) isTemplateValid(ctx context.Context, template *v1alpha1.Template) error {
+func (v *ManagedClusterValidator) isTemplateValid(ctx context.Context, template *v1alpha1.ClusterTemplate) error {
 	if template.Status.Type != v1alpha1.TemplateTypeDeployment {
 		return fmt.Errorf("the template should be of the deployment type. Current: %s", template.Status.Type)
 	}
@@ -144,7 +144,7 @@ func (v *ManagedClusterValidator) isTemplateValid(ctx context.Context, template 
 	return nil
 }
 
-func (v *ManagedClusterValidator) verifyProviders(ctx context.Context, template *v1alpha1.Template) error {
+func (v *ManagedClusterValidator) verifyProviders(ctx context.Context, template *v1alpha1.ClusterTemplate) error {
 	requiredProviders := template.Status.Providers
 	management := &v1alpha1.Management{}
 	managementRef := types.NamespacedName{Name: v1alpha1.ManagementName}

@@ -19,22 +19,26 @@ set -eu
 # Directory containing HMC templates
 TEMPLATES_DIR=${TEMPLATES_DIR:-templates}
 # Output directory for the generated Template manifests
-TEMPLATES_OUTPUT_DIR=${TEMPLATES_OUTPUT_DIR:-templates/hmc-templates/files/templates}
+TEMPLATES_OUTPUT_DIR=${TEMPLATES_OUTPUT_DIR:-templates/provider/hmc-templates/files/templates}
 # The name of the HMC templates helm chart
 HMC_TEMPLATES_CHART_NAME='hmc-templates'
 
 mkdir -p $TEMPLATES_OUTPUT_DIR
-rm $TEMPLATES_OUTPUT_DIR/*.yaml
+rm -f $TEMPLATES_OUTPUT_DIR/*.yaml
 
-for chart in $TEMPLATES_DIR/*; do
-    if [ -d "$chart" ]; then
-        name=$(grep '^name:' $chart/Chart.yaml | awk '{print $2}')
-        if [ "$name" = "$HMC_TEMPLATES_CHART_NAME" ]; then continue; fi
-        version=$(grep '^version:' $chart/Chart.yaml | awk '{print $2}')
+for type in "$TEMPLATES_DIR"/*; do
+    kind="$(echo "${type#*/}Template" | awk '{$1=toupper(substr($1,0,1))substr($1,2)}1')"
+    for chart in "$type"/*; do
+        if [ -d "$chart" ]; then
+            name=$(grep '^name:' $chart/Chart.yaml | awk '{print $2}')
+            if [ "$name" = "$HMC_TEMPLATES_CHART_NAME" ]; then continue; fi
+            version=$(grep '^version:' $chart/Chart.yaml | awk '{print $2}')
 
-        cat <<EOF > $TEMPLATES_OUTPUT_DIR/$name.yaml
+            cat <<EOF > $TEMPLATES_OUTPUT_DIR/$name.yaml
 apiVersion: hmc.mirantis.com/v1alpha1
-kind: Template
+kind: $kind
+EOF
+            cat <<EOF >> $TEMPLATES_OUTPUT_DIR/$name.yaml
 metadata:
   name: $name
 spec:
@@ -43,6 +47,7 @@ spec:
     chartVersion: $version
 EOF
 
-        echo "Generated $TEMPLATES_OUTPUT_DIR/$name.yaml"
-    fi
+            echo "Generated $TEMPLATES_OUTPUT_DIR/$name.yaml"
+        fi
+    done
 done

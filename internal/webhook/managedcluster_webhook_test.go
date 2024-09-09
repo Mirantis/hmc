@@ -53,35 +53,35 @@ var (
 		{
 			name:           "should fail if the template is unset",
 			managedCluster: managedcluster.NewManagedCluster(),
-			err:            "the ManagedCluster is invalid: templates.hmc.mirantis.com \"\" not found",
+			err:            "the ManagedCluster is invalid: clustertemplates.hmc.mirantis.com \"\" not found",
 		},
 		{
-			name:           "should fail if the template is not found in hmc-system namespace",
+			name:           "should fail if the cluster template is not found in hmc-system namespace",
 			managedCluster: managedcluster.NewManagedCluster(managedcluster.WithTemplate(testTemplateName)),
 			existingObjects: []runtime.Object{
 				mgmt,
-				template.NewTemplate(
+				template.NewClusterTemplate(
 					template.WithName(testTemplateName),
 					template.WithNamespace("default"),
 				),
 			},
-			err: fmt.Sprintf("the ManagedCluster is invalid: templates.hmc.mirantis.com \"%s\" not found", testTemplateName),
+			err: fmt.Sprintf("the ManagedCluster is invalid: clustertemplates.hmc.mirantis.com \"%s\" not found", testTemplateName),
 		},
 		{
-			name:           "should fail if the template was found but is invalid (type is unset)",
+			name:           "should fail if the cluster template was found but is invalid (type is unset)",
 			managedCluster: managedcluster.NewManagedCluster(managedcluster.WithTemplate(testTemplateName)),
 			existingObjects: []runtime.Object{
 				mgmt,
-				template.NewTemplate(template.WithName(testTemplateName)),
+				template.NewClusterTemplate(template.WithName(testTemplateName)),
 			},
 			err: "the ManagedCluster is invalid: the template should be of the deployment type. Current: ",
 		},
 		{
-			name:           "should fail if the template was found but is invalid (some validation error)",
+			name:           "should fail if the cluster template was found but is invalid (some validation error)",
 			managedCluster: managedcluster.NewManagedCluster(managedcluster.WithTemplate(testTemplateName)),
 			existingObjects: []runtime.Object{
 				mgmt,
-				template.NewTemplate(
+				template.NewClusterTemplate(
 					template.WithName(testTemplateName),
 					template.WithTypeStatus(v1alpha1.TemplateTypeDeployment),
 					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{
@@ -102,7 +102,7 @@ var (
 						BootstrapProviders:      []string{"k0s"},
 					}),
 				),
-				template.NewTemplate(
+				template.NewClusterTemplate(
 					template.WithName(testTemplateName),
 					template.WithTypeStatus(v1alpha1.TemplateTypeDeployment),
 					template.WithProvidersStatus(v1alpha1.Providers{
@@ -120,7 +120,7 @@ var (
 			managedCluster: managedcluster.NewManagedCluster(managedcluster.WithTemplate(testTemplateName)),
 			existingObjects: []runtime.Object{
 				mgmt,
-				template.NewTemplate(
+				template.NewClusterTemplate(
 					template.WithName(testTemplateName),
 					template.WithTypeStatus(v1alpha1.TemplateTypeDeployment),
 					template.WithProvidersStatus(v1alpha1.Providers{
@@ -212,7 +212,7 @@ func TestManagedClusterDefault(t *testing.T) {
 			output: managedcluster.NewManagedCluster(managedcluster.WithTemplate(testTemplateName)),
 			existingObjects: []runtime.Object{
 				mgmt,
-				template.NewTemplate(
+				template.NewClusterTemplate(
 					template.WithName(testTemplateName),
 					template.WithTypeStatus(v1alpha1.TemplateTypeDeployment),
 					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{
@@ -229,7 +229,7 @@ func TestManagedClusterDefault(t *testing.T) {
 			output: managedcluster.NewManagedCluster(managedcluster.WithTemplate(testTemplateName)),
 			existingObjects: []runtime.Object{
 				mgmt,
-				template.NewTemplate(
+				template.NewClusterTemplate(
 					template.WithName(testTemplateName),
 					template.WithTypeStatus(v1alpha1.TemplateTypeDeployment),
 					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
@@ -246,7 +246,7 @@ func TestManagedClusterDefault(t *testing.T) {
 			),
 			existingObjects: []runtime.Object{
 				mgmt,
-				template.NewTemplate(
+				template.NewClusterTemplate(
 					template.WithName(testTemplateName),
 					template.WithTypeStatus(v1alpha1.TemplateTypeDeployment),
 					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),

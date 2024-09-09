@@ -15,18 +15,11 @@
 package v1alpha1
 
 import (
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	helmcontrollerv2 "github.com/fluxcd/helm-controller/api/v2"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 )
 
 const (
-	// ManagementKind is the string representation of a Management.
-	ManagementKind = "Management"
-	// TemplateKind is the string representation of a Template.
-	TemplateKind = "Template"
-
 	// ChartAnnotationType is an annotation containing the type of Template.
 	ChartAnnotationType = "hmc.mirantis.com/type"
 	// ChartAnnotationInfraProviders is an annotation containing the CAPI infrastructure providers associated with Template.
@@ -50,8 +43,8 @@ const (
 	TemplateTypeCore TemplateType = "core"
 )
 
-// TemplateSpec defines the desired state of Template
-type TemplateSpec struct {
+// TemplateSpecMixin is a Template configuration common for all Template types
+type TemplateSpecMixin struct {
 	// Helm holds a reference to a Helm chart representing the HMC template
 	// +kubebuilder:validation:Required
 	Helm HelmSpec `json:"helm"`
@@ -80,8 +73,8 @@ type HelmSpec struct {
 	ChartRef *helmcontrollerv2.CrossNamespaceSourceReference `json:"chartRef,omitempty"`
 }
 
-// TemplateStatus defines the observed state of Template
-type TemplateStatus struct {
+// TemplateStatusMixin defines the observed state of Template common for all Template types
+type TemplateStatusMixin struct {
 	TemplateValidationStatus `json:",inline"`
 	// Description contains information about the template.
 	// +optional
@@ -112,32 +105,8 @@ type TemplateValidationStatus struct {
 	ValidationError string `json:"validationError,omitempty"`
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
-// +kubebuilder:resource:shortName=hmc-tmpl;tmpl
-// +kubebuilder:printcolumn:name="type",type="string",JSONPath=".status.type",description="Type",priority=0
-// +kubebuilder:printcolumn:name="valid",type="boolean",JSONPath=".status.valid",description="Valid",priority=0
-// +kubebuilder:printcolumn:name="validationError",type="string",JSONPath=".status.validationError",description="Validation Error",priority=1
-// +kubebuilder:printcolumn:name="description",type="string",JSONPath=".status.description",description="Description",priority=1
-
-// Template is the Schema for the templates API
-type Template struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-
-	Spec   TemplateSpec   `json:"spec,omitempty"`
-	Status TemplateStatus `json:"status,omitempty"`
-}
-
-//+kubebuilder:object:root=true
-
-// TemplateList contains a list of Template
-type TemplateList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Template `json:"items"`
-}
-
 func init() {
-	SchemeBuilder.Register(&Template{}, &TemplateList{})
+	SchemeBuilder.Register(&ClusterTemplate{}, &ClusterTemplateList{})
+	SchemeBuilder.Register(&ServiceTemplate{}, &ServiceTemplateList{})
+	SchemeBuilder.Register(&ProviderTemplate{}, &ProviderTemplateList{})
 }

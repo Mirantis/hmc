@@ -79,7 +79,9 @@ rules:
 - apiGroups:
   - hmc.mirantis.com
   resources:
-  - templates
+  - clustertemplates
+  - servicetemplates
+  - providertemplates
   verbs:
   - create
   - delete
@@ -91,13 +93,17 @@ rules:
 - apiGroups:
   - hmc.mirantis.com
   resources:
-  - templates/finalizers
+  - clustertemplates/finalizers
+  - servicetemplates/finalizers
+  - providertemplates/finalizers
   verbs:
   - update
 - apiGroups:
   - hmc.mirantis.com
   resources:
-  - templates/status
+  - clustertemplates/status
+  - servicetemplates/status
+  - providertemplates/status
   verbs:
   - get
   - patch

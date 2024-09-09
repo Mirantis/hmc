@@ -57,10 +57,10 @@ webhooks:
       service:
         name: {{ include "hmc.webhook.serviceName" . }}
         namespace: {{ include "hmc.webhook.serviceNamespace" . }}
-        path: /mutate-hmc-mirantis-com-v1alpha1-template
+        path: /mutate-hmc-mirantis-com-v1alpha1-clustertemplate
     failurePolicy: Fail
     matchPolicy: Equivalent
-    name: mutation.template.hmc.mirantis.com
+    name: mutation.clustertemplate.hmc.mirantis.com
     rules:
       - apiGroups:
           - hmc.mirantis.com
@@ -70,7 +70,51 @@ webhooks:
           - CREATE
           - UPDATE
         resources:
-          - templates
+          - clustertemplates
+    sideEffects: None
+  - admissionReviewVersions:
+      - v1
+      - v1beta1
+    clientConfig:
+      service:
+        name: {{ include "hmc.webhook.serviceName" . }}
+        namespace: {{ include "hmc.webhook.serviceNamespace" . }}
+        path: /mutate-hmc-mirantis-com-v1alpha1-servicetemplate
+    failurePolicy: Fail
+    matchPolicy: Equivalent
+    name: mutation.servicetemplate.hmc.mirantis.com
+    rules:
+      - apiGroups:
+          - hmc.mirantis.com
+        apiVersions:
+          - v1alpha1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - servicetemplates
+    sideEffects: None
+  - admissionReviewVersions:
+      - v1
+      - v1beta1
+    clientConfig:
+      service:
+        name: {{ include "hmc.webhook.serviceName" . }}
+        namespace: {{ include "hmc.webhook.serviceNamespace" . }}
+        path: /mutate-hmc-mirantis-com-v1alpha1-providertemplate
+    failurePolicy: Fail
+    matchPolicy: Equivalent
+    name: mutation.providertemplate.hmc.mirantis.com
+    rules:
+      - apiGroups:
+          - hmc.mirantis.com
+        apiVersions:
+          - v1alpha1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - providertemplates
     sideEffects: None
 ---
 apiVersion: admissionregistration.k8s.io/v1
@@ -133,10 +177,10 @@ webhooks:
       service:
         name: {{ include "hmc.webhook.serviceName" . }}
         namespace: {{ include "hmc.webhook.serviceNamespace" . }}
-        path: /validate-hmc-mirantis-com-v1alpha1-template
+        path: /validate-hmc-mirantis-com-v1alpha1-clustertemplate
     failurePolicy: Fail
     matchPolicy: Equivalent
-    name: validation.template.hmc.mirantis.com
+    name: validation.clustertemplate.hmc.mirantis.com
     rules:
       - apiGroups:
           - hmc.mirantis.com
@@ -147,6 +191,52 @@ webhooks:
           - UPDATE
           - DELETE
         resources:
-          - templates
+          - clustertemplates
+    sideEffects: None
+  - admissionReviewVersions:
+      - v1
+      - v1beta1
+    clientConfig:
+      service:
+        name: {{ include "hmc.webhook.serviceName" . }}
+        namespace: {{ include "hmc.webhook.serviceNamespace" . }}
+        path: /validate-hmc-mirantis-com-v1alpha1-servicetemplate
+    failurePolicy: Fail
+    matchPolicy: Equivalent
+    name: validation.servicetemplate.hmc.mirantis.com
+    rules:
+      - apiGroups:
+          - hmc.mirantis.com
+        apiVersions:
+          - v1alpha1
+        operations:
+          - CREATE
+          - UPDATE
+          - DELETE
+        resources:
+          - servicetemplates
+    sideEffects: None
+  - admissionReviewVersions:
+      - v1
+      - v1beta1
+    clientConfig:
+      service:
+        name: {{ include "hmc.webhook.serviceName" . }}
+        namespace: {{ include "hmc.webhook.serviceNamespace" . }}
+        path: /validate-hmc-mirantis-com-v1alpha1-providertemplate
+    failurePolicy: Fail
+    matchPolicy: Equivalent
+    name: validation.providertemplate.hmc.mirantis.com
+    rules:
+      - apiGroups:
+          - hmc.mirantis.com
+        apiVersions:
+          - v1alpha1
+        operations:
+          - CREATE
+          - UPDATE
+          - DELETE
+        resources:
+          - providertemplates
     sideEffects: None
 {{- end }}

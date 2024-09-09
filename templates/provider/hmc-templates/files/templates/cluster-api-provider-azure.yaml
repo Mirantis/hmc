@@ -1,5 +1,5 @@
 apiVersion: hmc.mirantis.com/v1alpha1
-kind: Template
+kind: ProviderTemplate
 metadata:
   name: cluster-api-provider-azure
 spec:
