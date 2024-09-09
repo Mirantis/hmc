@@ -43,8 +43,9 @@ import (
 // ManagementReconciler reconciles a Management object
 type ManagementReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
-	Config *rest.Config
+	Scheme          *runtime.Scheme
+	Config          *rest.Config
+	SystemNamespace string
 }
 
 func (r *ManagementReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -101,26 +102,26 @@ func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Manag
 	for _, component := range components {
 		template := &hmc.Template{}
 		err := r.Get(ctx, types.NamespacedName{
-			Namespace: hmc.TemplatesNamespace,
+			Namespace: r.SystemNamespace,
 			Name:      component.Template,
 		}, template)
 		if err != nil {
-			errMsg := fmt.Sprintf("Failed to get Template %s/%s: %s", hmc.TemplatesNamespace, component.Template, err)
+			errMsg := fmt.Sprintf("Failed to get Template %s/%s: %s", r.SystemNamespace, component.Template, err)
 			updateComponentsStatus(detectedComponents, &detectedProviders, component.Template, template.Status, errMsg)
 			errs = errors.Join(errs, errors.New(errMsg))
 			continue
 		}
 		if !template.Status.Valid {
-			errMsg := fmt.Sprintf("Template %s/%s is not marked as valid", hmc.TemplatesNamespace, component.Template)
+			errMsg := fmt.Sprintf("Template %s/%s is not marked as valid", r.SystemNamespace, component.Template)
 			updateComponentsStatus(detectedComponents, &detectedProviders, component.Template, template.Status, errMsg)
 			errs = errors.Join(errs, errors.New(errMsg))
 			continue
 		}
 
-		_, _, err = helm.ReconcileHelmRelease(ctx, r.Client, component.HelmReleaseName(), hmc.ManagementNamespace, component.Config,
+		_, _, err = helm.ReconcileHelmRelease(ctx, r.Client, component.HelmReleaseName(), r.SystemNamespace, component.Config,
 			nil, template.Status.ChartRef, defaultReconcileInterval, component.dependsOn)
 		if err != nil {
-			errMsg := fmt.Sprintf("error reconciling HelmRelease %s/%s: %s", hmc.ManagementNamespace, component.Template, err)
+			errMsg := fmt.Sprintf("error reconciling HelmRelease %s/%s: %s", r.SystemNamespace, component.Template, err)
 			updateComponentsStatus(detectedComponents, &detectedProviders, component.Template, template.Status, errMsg)
 			errs = errors.Join(errs, errors.New(errMsg))
 			continue
@@ -169,7 +170,7 @@ func (r *ManagementReconciler) removeHelmReleases(ctx context.Context, hmcReleas
 	l := log.FromContext(ctx)
 	l.Info("Suspending HMC Helm Release reconciles")
 	hmcRelease := &fluxv2.HelmRelease{}
-	err := r.Client.Get(ctx, types.NamespacedName{Namespace: hmc.ManagementNamespace, Name: hmcReleaseName}, hmcRelease)
+	err := r.Client.Get(ctx, types.NamespacedName{Namespace: r.SystemNamespace, Name: hmcReleaseName}, hmcRelease)
 	if err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
@@ -251,7 +252,7 @@ func (r *ManagementReconciler) enableAdditionalComponents(ctx context.Context, m
 		capiOperatorValues = config["cluster-api-operator"].(map[string]interface{})
 	}
 
-	err := certmanager.VerifyAPI(ctx, r.Config, r.Scheme, hmc.ManagementNamespace)
+	err := certmanager.VerifyAPI(ctx, r.Config, r.Scheme, r.SystemNamespace)
 	if err != nil {
 		return fmt.Errorf("failed to check in the cert-manager API is installed: %v", err)
 	}

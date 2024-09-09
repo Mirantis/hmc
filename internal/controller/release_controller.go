@@ -66,6 +66,7 @@ type Poller struct {
 	RegistryCredentialsSecret string
 	InsecureRegistry          bool
 	HMCTemplatesChartName     string
+	SystemNamespace           string
 }
 
 func (p *Poller) Start(ctx context.Context) error {
@@ -125,13 +126,13 @@ func (p *Poller) ensureManagement(ctx context.Context) error {
 	}, mgmtObj)
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
-			return fmt.Errorf("failed to get %s/%s Management object", hmc.ManagementNamespace, hmc.ManagementName)
+			return fmt.Errorf("failed to get %s Management object", hmc.ManagementName)
 		}
 		mgmtObj.Spec.SetProvidersDefaults()
 
 		getter := helm.NewMemoryRESTClientGetter(p.Config, p.RESTMapper())
 		actionConfig := new(action.Configuration)
-		err = actionConfig.Init(getter, hmc.TemplatesNamespace, "secret", l.Info)
+		err = actionConfig.Init(getter, p.SystemNamespace, "secret", l.Info)
 		if err != nil {
 			return err
 		}
@@ -165,7 +166,7 @@ func (p *Poller) ensureManagement(ctx context.Context) error {
 
 		err = p.Create(ctx, mgmtObj)
 		if err != nil {
-			return fmt.Errorf("failed to create %s/%s Management object: %s", hmc.ManagementNamespace, hmc.ManagementName, err)
+			return fmt.Errorf("failed to create %s Management object: %s", hmc.ManagementName, err)
 		}
 		l.Info("Successfully created Management object with default configuration")
 	}
@@ -177,7 +178,7 @@ func (p *Poller) reconcileDefaultHelmRepo(ctx context.Context) error {
 	helmRepo := &sourcev1.HelmRepository{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      defaultRepoName,
-			Namespace: hmc.TemplatesNamespace,
+			Namespace: p.SystemNamespace,
 		},
 	}
 	operation, err := ctrl.CreateOrUpdate(ctx, p.Client, helmRepo, func() error {
@@ -203,7 +204,7 @@ func (p *Poller) reconcileDefaultHelmRepo(ctx context.Context) error {
 		return err
 	}
 	if operation == controllerutil.OperationResultCreated || operation == controllerutil.OperationResultUpdated {
-		l.Info(fmt.Sprintf("Successfully %s %s/%s HelmRepository", operation, hmc.TemplatesNamespace, defaultRepoName))
+		l.Info(fmt.Sprintf("Successfully %s %s/%s HelmRepository", operation, p.SystemNamespace, defaultRepoName))
 	}
 	return nil
 }
@@ -217,7 +218,7 @@ func (p *Poller) reconcileHMCTemplates(ctx context.Context) error {
 	helmChart := &sourcev1.HelmChart{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      p.HMCTemplatesChartName,
-			Namespace: hmc.TemplatesNamespace,
+			Namespace: p.SystemNamespace,
 		},
 	}
 
@@ -241,12 +242,12 @@ func (p *Poller) reconcileHMCTemplates(ctx context.Context) error {
 		return err
 	}
 	if operation == controllerutil.OperationResultCreated || operation == controllerutil.OperationResultUpdated {
-		l.Info(fmt.Sprintf("Successfully %s %s/%s HelmChart", operation, hmc.TemplatesNamespace, p.HMCTemplatesChartName))
+		l.Info(fmt.Sprintf("Successfully %s %s/%s HelmChart", operation, p.SystemNamespace, p.HMCTemplatesChartName))
 	}
 
 	err, _ = helm.ArtifactReady(helmChart)
 	if err != nil {
-		return fmt.Errorf("HelmChart %s/%s Artifact is not ready: %w", hmc.TemplatesNamespace, p.HMCTemplatesChartName, err)
+		return fmt.Errorf("HelmChart %s/%s Artifact is not ready: %w", p.SystemNamespace, p.HMCTemplatesChartName, err)
 	}
 
 	chartRef := &hcv2.CrossNamespaceSourceReference{
@@ -254,12 +255,12 @@ func (p *Poller) reconcileHMCTemplates(ctx context.Context) error {
 		Name:      helmChart.Name,
 		Namespace: helmChart.Namespace,
 	}
-	_, operation, err = helm.ReconcileHelmRelease(ctx, p.Client, hmcTemplatesReleaseName, hmc.TemplatesNamespace, nil, nil, chartRef, defaultReconcileInterval, nil)
+	_, operation, err = helm.ReconcileHelmRelease(ctx, p.Client, hmcTemplatesReleaseName, p.SystemNamespace, nil, nil, chartRef, defaultReconcileInterval, nil)
 	if err != nil {
 		return err
 	}
 	if operation == controllerutil.OperationResultCreated || operation == controllerutil.OperationResultUpdated {
-		l.Info(fmt.Sprintf("Successfully %s %s/%s HelmRelease", operation, hmc.TemplatesNamespace, hmcTemplatesReleaseName))
+		l.Info(fmt.Sprintf("Successfully %s %s/%s HelmRelease", operation, p.SystemNamespace, hmcTemplatesReleaseName))
 	}
 	return nil
 }

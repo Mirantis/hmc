@@ -18,11 +18,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+const (
+	DefaultSystemNamespace = "hmc-system"
 )
 
 func EnsureDeleteAllOf(ctx context.Context, cl client.Client, gvk schema.GroupVersionKind, opts *client.ListOptions) error {
@@ -42,4 +47,16 @@ func EnsureDeleteAllOf(ctx context.Context, cl client.Client, gvk schema.GroupVe
 		errs = errors.Join(errs, fmt.Errorf("waiting for %s %s/%s removal", gvk.Kind, item.Namespace, item.Name))
 	}
 	return errs
+}
+
+func CurrentNamespace() string {
+	ns, found := os.LookupEnv("POD_NAMESPACE")
+	if found {
+		return ns
+	}
+	nsb, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
+	if err == nil && len(nsb) > 0 {
+		return string(nsb)
+	}
+	return DefaultSystemNamespace
 }

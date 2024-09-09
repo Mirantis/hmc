@@ -30,6 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
+	"github.com/Mirantis/hmc/internal/utils"
 )
 
 var _ = Describe("ManagedCluster Controller", func() {
@@ -50,11 +51,11 @@ var _ = Describe("ManagedCluster Controller", func() {
 
 		BeforeEach(func() {
 			By("creating hmc-system namespace")
-			err := k8sClient.Get(ctx, types.NamespacedName{Name: hmc.ManagementNamespace}, namespace)
+			err := k8sClient.Get(ctx, types.NamespacedName{Name: utils.DefaultSystemNamespace}, namespace)
 			if err != nil && errors.IsNotFound(err) {
 				namespace = &v1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: hmc.ManagementNamespace,
+						Name: utils.DefaultSystemNamespace,
 					},
 				}
 				Expect(k8sClient.Create(ctx, namespace)).To(Succeed())
@@ -66,7 +67,7 @@ var _ = Describe("ManagedCluster Controller", func() {
 				template = &hmc.Template{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      templateName,
-						Namespace: hmc.TemplatesNamespace,
+						Namespace: utils.DefaultSystemNamespace,
 					},
 					Spec: hmc.TemplateSpec{
 						Helm: hmc.HelmSpec{
@@ -123,8 +124,9 @@ var _ = Describe("ManagedCluster Controller", func() {
 			By("Cleanup")
 
 			controllerReconciler := &ManagedClusterReconciler{
-				Client: k8sClient,
-				Scheme: k8sClient.Scheme(),
+				Client:          k8sClient,
+				Scheme:          k8sClient.Scheme(),
+				SystemNamespace: utils.DefaultSystemNamespace,
 			}
 
 			Expect(k8sClient.Delete(ctx, managedCluster)).To(Succeed())
@@ -141,9 +143,10 @@ var _ = Describe("ManagedCluster Controller", func() {
 		It("should successfully reconcile the resource", func() {
 			By("Reconciling the created resource")
 			controllerReconciler := &ManagedClusterReconciler{
-				Client: k8sClient,
-				Scheme: k8sClient.Scheme(),
-				Config: &rest.Config{},
+				Client:          k8sClient,
+				Scheme:          k8sClient.Scheme(),
+				Config:          &rest.Config{},
+				SystemNamespace: utils.DefaultSystemNamespace,
 			}
 
 			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{

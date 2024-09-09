@@ -35,6 +35,8 @@ import (
 
 type ManagedClusterValidator struct {
 	client.Client
+
+	SystemNamespace string
 }
 
 var InvalidManagedClusterErr = errors.New("the ManagedCluster is invalid")
@@ -121,7 +123,7 @@ func (v *ManagedClusterValidator) Default(ctx context.Context, obj runtime.Objec
 
 func (v *ManagedClusterValidator) getManagedClusterTemplate(ctx context.Context, templateName string) (*v1alpha1.Template, error) {
 	template := &v1alpha1.Template{}
-	templateRef := types.NamespacedName{Name: templateName, Namespace: v1alpha1.TemplatesNamespace}
+	templateRef := types.NamespacedName{Name: templateName, Namespace: v.SystemNamespace}
 	if err := v.Get(ctx, templateRef, template); err != nil {
 		return nil, err
 	}

@@ -54,9 +54,6 @@ cert-manager:
   crds:
     enabled: true
     keep: false
-  global:
-    leaderElection:
-      namespace: hmc-system
 
 flux2:
   enabled: true

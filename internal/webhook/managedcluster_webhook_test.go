@@ -25,6 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/Mirantis/hmc/api/v1alpha1"
+	"github.com/Mirantis/hmc/internal/utils"
 	"github.com/Mirantis/hmc/test/objects/managedcluster"
 	"github.com/Mirantis/hmc/test/objects/management"
 	"github.com/Mirantis/hmc/test/objects/template"
@@ -141,7 +142,7 @@ func TestManagedClusterValidateCreate(t *testing.T) {
 	for _, tt := range createAndUpdateTests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(tt.existingObjects...).Build()
-			validator := &ManagedClusterValidator{Client: c}
+			validator := &ManagedClusterValidator{Client: c, SystemNamespace: utils.DefaultSystemNamespace}
 			warn, err := validator.ValidateCreate(ctx, tt.managedCluster)
 			if tt.err != "" {
 				g.Expect(err).To(HaveOccurred())
@@ -167,7 +168,7 @@ func TestManagedClusterValidateUpdate(t *testing.T) {
 	for _, tt := range createAndUpdateTests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(tt.existingObjects...).Build()
-			validator := &ManagedClusterValidator{Client: c}
+			validator := &ManagedClusterValidator{Client: c, SystemNamespace: utils.DefaultSystemNamespace}
 			warn, err := validator.ValidateUpdate(ctx, managedcluster.NewManagedCluster(), tt.managedCluster)
 			if tt.err != "" {
 				g.Expect(err).To(HaveOccurred())
@@ -258,7 +259,7 @@ func TestManagedClusterDefault(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(tt.existingObjects...).Build()
-			validator := &ManagedClusterValidator{Client: c}
+			validator := &ManagedClusterValidator{Client: c, SystemNamespace: utils.DefaultSystemNamespace}
 			err := validator.Default(ctx, tt.input)
 			if tt.err != "" {
 				g.Expect(err).To(HaveOccurred())

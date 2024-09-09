@@ -169,6 +169,8 @@ func main() {
 		os.Exit(1)
 	}
 
+	currentNamespace := utils.CurrentNamespace()
+
 	if err = (&controller.TemplateReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
@@ -177,18 +179,20 @@ func main() {
 		os.Exit(1)
 	}
 	if err = (&controller.ManagedClusterReconciler{
-		Client:        mgr.GetClient(),
-		Scheme:        mgr.GetScheme(),
-		Config:        mgr.GetConfig(),
-		DynamicClient: dc,
+		Client:          mgr.GetClient(),
+		Scheme:          mgr.GetScheme(),
+		Config:          mgr.GetConfig(),
+		DynamicClient:   dc,
+		SystemNamespace: currentNamespace,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ManagedCluster")
 		os.Exit(1)
 	}
 	if err = (&controller.ManagementReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-		Config: mgr.GetConfig(),
+		Client:          mgr.GetClient(),
+		Scheme:          mgr.GetScheme(),
+		Config:          mgr.GetConfig(),
+		SystemNamespace: currentNamespace,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Management")
 		os.Exit(1)
@@ -203,6 +207,7 @@ func main() {
 		RegistryCredentialsSecret: registryCredentialsSecret,
 		InsecureRegistry:          insecureRegistry,
 		HMCTemplatesChartName:     hmcTemplatesChartName,
+		SystemNamespace:           currentNamespace,
 	}); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ReleaseController")
 		os.Exit(1)
@@ -210,7 +215,8 @@ func main() {
 
 	if enableTelemetry {
 		if err = mgr.Add(&telemetry.Tracker{
-			Client: mgr.GetClient(),
+			Client:          mgr.GetClient(),
+			SystemNamespace: currentNamespace,
 		}); err != nil {
 			setupLog.Error(err, "unable to create telemetry tracker")
 			os.Exit(1)
@@ -229,7 +235,9 @@ func main() {
 	}
 
 	if enableWebhook {
-		if err := (&hmcwebhook.ManagedClusterValidator{}).SetupWebhookWithManager(mgr); err != nil {
+		if err := (&hmcwebhook.ManagedClusterValidator{
+			SystemNamespace: currentNamespace,
+		}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "ManagedCluster")
 			os.Exit(1)
 		}
