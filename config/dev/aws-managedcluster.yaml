@@ -13,4 +13,5 @@ spec:
     worker:
       instanceType: t3.small
     workersNumber: 1
+    installBeachHeadServices: false
   template: aws-standalone-cp
