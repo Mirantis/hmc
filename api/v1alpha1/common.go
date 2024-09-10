@@ -23,3 +23,35 @@ type Providers struct {
 	// ControlPlaneProviders is the list of CAPI control plane providers
 	ControlPlaneProviders []string `json:"controlPlane,omitempty"`
 }
+
+const (
+	// Provider CAPA
+	ProviderCAPAName       = "cluster-api-provider-aws"
+	ProviderCAPASecretName = "aws-variables"
+	// Provider Azure
+	ProviderAzureName = "cluster-api-provider-azure"
+	// Provider K0smotron
+	ProviderK0smotronName = "k0smotron"
+	// Provider Sveltos
+	ProviderSveltosName            = "projectsveltos"
+	ProviderSveltosTargetNamespace = "projectsveltos"
+	ProviderSveltosCreateNamespace = true
+)
+
+var (
+	// DefaultProviders is a map of providers that are
+	// installed by default, each with its default config.
+	DefaultProviders = map[string]map[string]interface{}{
+		ProviderCAPAName: {
+			"configSecret": map[string]interface{}{
+				"name": ProviderCAPASecretName,
+			},
+		},
+		ProviderAzureName:     nil,
+		ProviderK0smotronName: nil,
+		ProviderSveltosName: {
+			"targetNamespace": ProviderSveltosTargetNamespace,
+			"createNamespace": ProviderSveltosCreateNamespace,
+		},
+	}
+)

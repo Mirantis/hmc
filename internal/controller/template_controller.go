@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
-	"time"
 
 	helmcontrollerv2 "github.com/fluxcd/helm-controller/api/v2"
 	v2 "github.com/fluxcd/helm-controller/api/v2"
@@ -39,8 +38,7 @@ import (
 )
 
 const (
-	defaultRepoName          = "hmc-templates"
-	defaultReconcileInterval = 10 * time.Minute
+	defaultRepoName = "hmc-templates"
 )
 
 // TemplateReconciler reconciles a Template object
@@ -291,7 +289,7 @@ func (r *TemplateReconciler) reconcileHelmChart(ctx context.Context, template Te
 				Kind: sourcev1.HelmRepositoryKind,
 				Name: defaultRepoName,
 			},
-			Interval: metav1.Duration{Duration: defaultReconcileInterval},
+			Interval: metav1.Duration{Duration: helm.DefaultReconcileInterval},
 		}
 		return nil
 	})

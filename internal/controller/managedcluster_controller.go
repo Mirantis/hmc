@@ -248,15 +248,16 @@ func (r *ManagedClusterReconciler) Update(ctx context.Context, l logr.Logger, ma
 	})
 
 	if !managedCluster.Spec.DryRun {
-		ownerRef := &metav1.OwnerReference{
-			APIVersion: hmc.GroupVersion.String(),
-			Kind:       hmc.ManagedClusterKind,
-			Name:       managedCluster.Name,
-			UID:        managedCluster.UID,
-		}
-
-		hr, _, err := helm.ReconcileHelmRelease(ctx, r.Client, managedCluster.Name, managedCluster.Namespace, managedCluster.Spec.Config,
-			ownerRef, template.Status.ChartRef, defaultReconcileInterval, nil)
+		hr, _, err := helm.ReconcileHelmRelease(ctx, r.Client, managedCluster.Name, managedCluster.Namespace, helm.ReconcileHelmReleaseOpts{
+			Values: managedCluster.Spec.Config,
+			OwnerReference: &metav1.OwnerReference{
+				APIVersion: hmc.GroupVersion.String(),
+				Kind:       hmc.ManagedClusterKind,
+				Name:       managedCluster.Name,
+				UID:        managedCluster.UID,
+			},
+			ChartRef: template.Status.ChartRef,
+		})
 		if err != nil {
 			apimeta.SetStatusCondition(managedCluster.GetConditions(), metav1.Condition{
 				Type:    hmc.HelmReleaseReadyCondition,

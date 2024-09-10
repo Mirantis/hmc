@@ -29,45 +29,64 @@ import (
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
 )
 
-func ReconcileHelmRelease(
-	ctx context.Context,
+const (
+	DefaultReconcileInterval = 10 * time.Minute
+)
+
+type ReconcileHelmReleaseOpts struct {
+	Values            *apiextensionsv1.JSON
+	OwnerReference    *metav1.OwnerReference
+	ChartRef          *hcv2.CrossNamespaceSourceReference
+	ReconcileInterval *time.Duration
+	DependsOn         []meta.NamespacedObjectReference
+	TargetNamespace   string
+	CreateNamespace   bool
+}
+
+func ReconcileHelmRelease(ctx context.Context,
 	cl client.Client,
 	name string,
 	namespace string,
-	values *apiextensionsv1.JSON,
-	ownerReference *metav1.OwnerReference,
-	chartRef *hcv2.CrossNamespaceSourceReference,
-	reconcileInterval time.Duration,
-	dependsOn []meta.NamespacedObjectReference,
+	opts ReconcileHelmReleaseOpts,
 ) (*hcv2.HelmRelease, controllerutil.OperationResult, error) {
-	helmRelease := &hcv2.HelmRelease{
+	hr := &hcv2.HelmRelease{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 		},
 	}
 
-	operation, err := ctrl.CreateOrUpdate(ctx, cl, helmRelease, func() error {
-		if helmRelease.Labels == nil {
-			helmRelease.Labels = make(map[string]string)
+	operation, err := ctrl.CreateOrUpdate(ctx, cl, hr, func() error {
+		if hr.Labels == nil {
+			hr.Labels = make(map[string]string)
 		}
-		helmRelease.Labels[hmc.HMCManagedLabelKey] = hmc.HMCManagedLabelValue
-		if ownerReference != nil {
-			helmRelease.OwnerReferences = []metav1.OwnerReference{*ownerReference}
+		hr.Labels[hmc.HMCManagedLabelKey] = hmc.HMCManagedLabelValue
+		if opts.OwnerReference != nil {
+			hr.OwnerReferences = []metav1.OwnerReference{*opts.OwnerReference}
 		}
-		helmRelease.Spec = hcv2.HelmReleaseSpec{
-			ChartRef:    chartRef,
-			Interval:    metav1.Duration{Duration: reconcileInterval},
-			ReleaseName: name,
-			Values:      values,
-			DependsOn:   dependsOn,
+		hr.Spec = hcv2.HelmReleaseSpec{
+			ChartRef: opts.ChartRef,
+			Interval: metav1.Duration{Duration: func() time.Duration {
+				if opts.ReconcileInterval != nil {
+					return *opts.ReconcileInterval
+				}
+				return DefaultReconcileInterval
+			}()},
+			ReleaseName:     name,
+			Values:          opts.Values,
+			DependsOn:       opts.DependsOn,
+			TargetNamespace: opts.TargetNamespace,
+			Install: &hcv2.Install{
+				CreateNamespace: opts.CreateNamespace,
+			},
 		}
 		return nil
 	})
 	if err != nil {
 		return nil, operation, err
 	}
-	return helmRelease, operation, nil
+
+	return hr, operation, nil
 }
 
 func DeleteHelmRelease(ctx context.Context, cl client.Client, name string, namespace string) error {

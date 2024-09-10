@@ -117,8 +117,13 @@ func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Manag
 			continue
 		}
 
-		_, _, err = helm.ReconcileHelmRelease(ctx, r.Client, component.HelmReleaseName(), r.SystemNamespace, component.Config,
-			nil, template.Status.ChartRef, defaultReconcileInterval, component.dependsOn)
+		_, _, err = helm.ReconcileHelmRelease(ctx, r.Client, component.HelmReleaseName(), r.SystemNamespace, helm.ReconcileHelmReleaseOpts{
+			Values:          component.Config,
+			ChartRef:        template.Status.ChartRef,
+			DependsOn:       component.dependsOn,
+			TargetNamespace: component.targetNamespace,
+			CreateNamespace: component.createNamespace,
+		})
 		if err != nil {
 			errMsg := fmt.Sprintf("error reconciling HelmRelease %s/%s: %s", r.SystemNamespace, component.Template, err)
 			updateComponentsStatus(detectedComponents, &detectedProviders, component.Template, template.Status, errMsg)
@@ -213,18 +218,29 @@ func (r *ManagementReconciler) removeHelmRepositories(ctx context.Context, opts 
 type component struct {
 	hmc.Component
 	// helm release dependencies
-	dependsOn []meta.NamespacedObjectReference
+	dependsOn       []meta.NamespacedObjectReference
+	targetNamespace string
+	createNamespace bool
 }
 
 func wrappedComponents(mgmt *hmc.Management) (components []component) {
 	if mgmt.Spec.Core == nil {
 		return
 	}
+
 	components = append(components, component{Component: mgmt.Spec.Core.HMC})
 	components = append(components, component{Component: mgmt.Spec.Core.CAPI, dependsOn: []meta.NamespacedObjectReference{{Name: mgmt.Spec.Core.HMC.Template}}})
-	for provider := range mgmt.Spec.Providers {
-		components = append(components, component{Component: mgmt.Spec.Providers[provider], dependsOn: []meta.NamespacedObjectReference{{Name: mgmt.Spec.Core.CAPI.Template}}})
+
+	for i := range mgmt.Spec.Providers {
+		c := component{Component: mgmt.Spec.Providers[i], dependsOn: []meta.NamespacedObjectReference{{Name: mgmt.Spec.Core.CAPI.Template}}}
+
+		if mgmt.Spec.Providers[i].Template == hmc.ProviderSveltosName {
+			c.targetNamespace = hmc.ProviderSveltosTargetNamespace
+			c.createNamespace = hmc.ProviderSveltosCreateNamespace
+		}
+		components = append(components, c)
 	}
+
 	return
 }
 
