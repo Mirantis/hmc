@@ -98,12 +98,6 @@ func WithProviders(providers v1alpha1.Providers) Opt {
 	}
 }
 
-func WithTypeStatus(templateType v1alpha1.TemplateType) Opt {
-	return func(t *Template) {
-		t.Status.Type = templateType
-	}
-}
-
 func WithValidationStatus(validationStatus v1alpha1.TemplateValidationStatus) Opt {
 	return func(t *Template) {
 		t.Status.TemplateValidationStatus = validationStatus

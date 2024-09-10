@@ -68,22 +68,12 @@ var (
 			err: fmt.Sprintf("the ManagedCluster is invalid: clustertemplates.hmc.mirantis.com \"%s\" not found", testTemplateName),
 		},
 		{
-			name:           "should fail if the cluster template was found but is invalid (type is unset)",
-			managedCluster: managedcluster.NewManagedCluster(managedcluster.WithTemplate(testTemplateName)),
-			existingObjects: []runtime.Object{
-				mgmt,
-				template.NewClusterTemplate(template.WithName(testTemplateName)),
-			},
-			err: "the ManagedCluster is invalid: the template should be of the deployment type. Current: ",
-		},
-		{
 			name:           "should fail if the cluster template was found but is invalid (some validation error)",
 			managedCluster: managedcluster.NewManagedCluster(managedcluster.WithTemplate(testTemplateName)),
 			existingObjects: []runtime.Object{
 				mgmt,
 				template.NewClusterTemplate(
 					template.WithName(testTemplateName),
-					template.WithTypeStatus(v1alpha1.TemplateTypeDeployment),
 					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{
 						Valid:           false,
 						ValidationError: "validation error example",
@@ -104,7 +94,6 @@ var (
 				),
 				template.NewClusterTemplate(
 					template.WithName(testTemplateName),
-					template.WithTypeStatus(v1alpha1.TemplateTypeDeployment),
 					template.WithProvidersStatus(v1alpha1.Providers{
 						InfrastructureProviders: []string{"azure"},
 						BootstrapProviders:      []string{"k0s"},
@@ -122,7 +111,6 @@ var (
 				mgmt,
 				template.NewClusterTemplate(
 					template.WithName(testTemplateName),
-					template.WithTypeStatus(v1alpha1.TemplateTypeDeployment),
 					template.WithProvidersStatus(v1alpha1.Providers{
 						InfrastructureProviders: []string{"aws"},
 						BootstrapProviders:      []string{"k0s"},
@@ -214,7 +202,6 @@ func TestManagedClusterDefault(t *testing.T) {
 				mgmt,
 				template.NewClusterTemplate(
 					template.WithName(testTemplateName),
-					template.WithTypeStatus(v1alpha1.TemplateTypeDeployment),
 					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{
 						Valid:           false,
 						ValidationError: "validation error example",
@@ -231,7 +218,6 @@ func TestManagedClusterDefault(t *testing.T) {
 				mgmt,
 				template.NewClusterTemplate(
 					template.WithName(testTemplateName),
-					template.WithTypeStatus(v1alpha1.TemplateTypeDeployment),
 					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
 				),
 			},
@@ -248,7 +234,6 @@ func TestManagedClusterDefault(t *testing.T) {
 				mgmt,
 				template.NewClusterTemplate(
 					template.WithName(testTemplateName),
-					template.WithTypeStatus(v1alpha1.TemplateTypeDeployment),
 					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
 					template.WithConfigStatus(managedClusterConfig),
 				),

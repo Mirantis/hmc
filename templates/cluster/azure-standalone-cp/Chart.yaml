@@ -13,7 +13,6 @@ version: 0.1.1
 # It is recommended to use it with quotes.
 appVersion: "1.30.4+k0s.0"
 annotations:
-  hmc.mirantis.com/type: deployment
   hmc.mirantis.com/infrastructure-providers: azure
   hmc.mirantis.com/controlplane-providers: k0s
   hmc.mirantis.com/bootstrap-providers: k0s

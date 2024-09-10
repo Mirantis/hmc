@@ -68,7 +68,6 @@ var _ = Describe("Template Controller", func() {
 					Namespace: helmRepoNamespace,
 				},
 			},
-			Type: hmcmirantiscomv1alpha1.TemplateTypeDeployment,
 		}
 
 		BeforeEach(func() {

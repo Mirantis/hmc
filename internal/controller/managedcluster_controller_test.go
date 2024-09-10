@@ -78,14 +78,12 @@ var _ = Describe("ManagedCluster Controller", func() {
 									Namespace: "default",
 								},
 							},
-							Type: hmc.TemplateTypeDeployment,
 						},
 					},
 				}
 				Expect(k8sClient.Create(ctx, template)).To(Succeed())
 				template.Status = hmc.ClusterTemplateStatus{
 					TemplateStatusMixin: hmc.TemplateStatusMixin{
-						Type: hmc.TemplateTypeDeployment,
 						TemplateValidationStatus: hmc.TemplateValidationStatus{
 							Valid: true,
 						},

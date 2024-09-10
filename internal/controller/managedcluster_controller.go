@@ -183,17 +183,6 @@ func (r *ManagedClusterReconciler) Update(ctx context.Context, l logr.Logger, ma
 		})
 		return ctrl.Result{}, err
 	}
-	templateType := template.Status.Type
-	if templateType != hmc.TemplateTypeDeployment {
-		errMsg := "only templates of 'managedCluster' type are supported"
-		apimeta.SetStatusCondition(managedCluster.GetConditions(), metav1.Condition{
-			Type:    hmc.TemplateReadyCondition,
-			Status:  metav1.ConditionFalse,
-			Reason:  hmc.FailedReason,
-			Message: errMsg,
-		})
-		return ctrl.Result{}, errors.New(errMsg)
-	}
 	if !template.Status.Valid {
 		errMsg := "provided template is not marked as valid"
 		apimeta.SetStatusCondition(managedCluster.GetConditions(), metav1.Condition{

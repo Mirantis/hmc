@@ -43,11 +43,6 @@ const (
 	defaultReconcileInterval = 10 * time.Minute
 )
 
-var (
-	errNoProviderType = fmt.Errorf("template type is not supported: %s chart annotation must be one of [%s/%s/%s]",
-		hmc.ChartAnnotationType, hmc.TemplateTypeDeployment, hmc.TemplateTypeProvider, hmc.TemplateTypeCore)
-)
-
 // TemplateReconciler reconciles a Template object
 type TemplateReconciler struct {
 	client.Client
@@ -217,18 +212,6 @@ func (r *TemplateReconciler) parseChartMetadata(template Template, chart *chart.
 	}
 	spec := template.GetSpec()
 	status := template.GetStatus()
-
-	// the value in spec has higher priority
-	templateType := spec.Type
-	if templateType == "" {
-		templateType = hmc.TemplateType(chart.Metadata.Annotations[hmc.ChartAnnotationType])
-		switch templateType {
-		case hmc.TemplateTypeDeployment, hmc.TemplateTypeProvider, hmc.TemplateTypeCore:
-		default:
-			return errNoProviderType
-		}
-	}
-	status.Type = templateType
 
 	// the value in spec has higher priority
 	if len(spec.Providers.InfrastructureProviders) > 0 {

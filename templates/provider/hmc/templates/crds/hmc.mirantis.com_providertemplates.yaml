@@ -17,10 +17,6 @@ spec:
   scope: Cluster
   versions:
   - additionalPrinterColumns:
-    - description: Type
-      jsonPath: .status.type
-      name: type
-      type: string
     - description: Valid
       jsonPath: .status.valid
       name: valid
@@ -131,15 +127,6 @@ spec:
                       type: string
                     type: array
                 type: object
-              type:
-                description: |-
-                  Type specifies the type of the provided template.
-                  Should be set if not present in the Helm chart metadata.
-                enum:
-                - deployment
-                - provider
-                - core
-                type: string
             required:
             - helm
             type: object
@@ -211,14 +198,6 @@ spec:
                       type: string
                     type: array
                 type: object
-              type:
-                description: Type specifies the type of the provided template, as
-                  discovered from the Helm chart metadata.
-                enum:
-                - deployment
-                - provider
-                - core
-                type: string
               valid:
                 description: Valid indicates whether the template passed validation
                   or not.

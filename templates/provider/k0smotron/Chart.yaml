@@ -20,7 +20,6 @@ version: 0.1.3
 # It is recommended to use it with quotes.
 appVersion: "1.0.4"
 annotations:
-  hmc.mirantis.com/type: provider
   hmc.mirantis.com/infrastructure-providers: k0smotron
   hmc.mirantis.com/bootstrap-providers: k0s
   hmc.mirantis.com/control-plane-providers: k0s,k0smotron

@@ -20,8 +20,6 @@ import (
 )
 
 const (
-	// ChartAnnotationType is an annotation containing the type of Template.
-	ChartAnnotationType = "hmc.mirantis.com/type"
 	// ChartAnnotationInfraProviders is an annotation containing the CAPI infrastructure providers associated with Template.
 	ChartAnnotationInfraProviders = "hmc.mirantis.com/infrastructure-providers"
 	// ChartAnnotationBootstrapProviders is an annotation containing the CAPI bootstrap providers associated with Template.
@@ -30,28 +28,11 @@ const (
 	ChartAnnotationControlPlaneProviders = "hmc.mirantis.com/control-plane-providers"
 )
 
-// TemplateType specifies the type of template packaged as a helm chart.
-// Should be provided in the chart Annotations.
-type TemplateType string
-
-const (
-	// TemplateTypeDeployment is the type used for creating HMC ManagedCluster objects
-	TemplateTypeDeployment TemplateType = "deployment"
-	// TemplateTypeProvider is the type used for adding CAPI providers in the HMC Management object.
-	TemplateTypeProvider TemplateType = "provider"
-	// TemplateTypeCore is the type used for HMC and CAPI core components
-	TemplateTypeCore TemplateType = "core"
-)
-
 // TemplateSpecMixin is a Template configuration common for all Template types
 type TemplateSpecMixin struct {
 	// Helm holds a reference to a Helm chart representing the HMC template
 	// +kubebuilder:validation:Required
 	Helm HelmSpec `json:"helm"`
-	// Type specifies the type of the provided template.
-	// Should be set if not present in the Helm chart metadata.
-	// +kubebuilder:validation:Enum=deployment;provider;core
-	Type TemplateType `json:"type,omitempty"`
 	// Providers represent required/exposed CAPI providers depending on the template type.
 	// Should be set if not present in the Helm chart metadata.
 	Providers Providers `json:"providers,omitempty"`
@@ -87,9 +68,6 @@ type TemplateStatusMixin struct {
 	// Helm chart representing the template.
 	// +optional
 	ChartRef *helmcontrollerv2.CrossNamespaceSourceReference `json:"chartRef,omitempty"`
-	// Type specifies the type of the provided template, as discovered from the Helm chart metadata.
-	// +kubebuilder:validation:Enum=deployment;provider;core
-	Type TemplateType `json:"type,omitempty"`
 	// Providers represent required/exposed CAPI providers depending on the template type.
 	Providers Providers `json:"providers,omitempty"`
 	// ObservedGeneration is the last observed generation.

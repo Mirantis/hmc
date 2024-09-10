@@ -131,9 +131,6 @@ func (v *ManagedClusterValidator) getManagedClusterTemplate(ctx context.Context,
 }
 
 func (v *ManagedClusterValidator) isTemplateValid(ctx context.Context, template *v1alpha1.ClusterTemplate) error {
-	if template.Status.Type != v1alpha1.TemplateTypeDeployment {
-		return fmt.Errorf("the template should be of the deployment type. Current: %s", template.Status.Type)
-	}
 	if !template.Status.Valid {
 		return fmt.Errorf("the template is not valid: %s", template.Status.ValidationError)
 	}

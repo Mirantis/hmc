@@ -20,5 +20,4 @@ version: 0.0.1
 # It is recommended to use it with quotes.
 appVersion: "1.16.0"
 annotations:
-  hmc.mirantis.com/type: provider
   hmc.mirantis.com/infrastructure-providers: azure
