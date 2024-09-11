@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Mirantis/hmc/internal/utils/status"
 	"github.com/Mirantis/hmc/test/e2e/kubeclient"
 	"github.com/Mirantis/hmc/test/utils"
 	. "github.com/onsi/ginkgo/v2"
@@ -107,12 +108,12 @@ func validateK0sControlPlanes(ctx context.Context, kc *kubeclient.KubeClient, cl
 			Fail(err.Error())
 		}
 
-		objKind, objName := utils.ObjKindName(&controlPlane)
+		objKind, objName := status.ObjKindName(&controlPlane)
 
 		// k0s does not use the metav1.Condition type for status.conditions,
 		// instead it uses a custom type so we can't use
 		// ValidateConditionsTrue here, instead we'll check for "ready: true".
-		status, found, err := unstructured.NestedFieldCopy(controlPlane.Object, "status")
+		objStatus, found, err := unstructured.NestedFieldCopy(controlPlane.Object, "status")
 		if !found {
 			return fmt.Errorf("no status found for %s: %s", objKind, objName)
 		}
@@ -120,9 +121,9 @@ func validateK0sControlPlanes(ctx context.Context, kc *kubeclient.KubeClient, cl
 			return fmt.Errorf("failed to get status conditions for %s: %s: %w", objKind, objName, err)
 		}
 
-		st, ok := status.(map[string]any)
+		st, ok := objStatus.(map[string]any)
 		if !ok {
-			return fmt.Errorf("expected K0sControlPlane condition to be type map[string]any, got: %T", status)
+			return fmt.Errorf("expected K0sControlPlane condition to be type map[string]any, got: %T", objStatus)
 		}
 
 		if _, ok := st["ready"]; !ok {

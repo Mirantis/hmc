@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/Mirantis/hmc/internal/utils/status"
 	"github.com/Mirantis/hmc/test/e2e/kubeclient"
 	"github.com/Mirantis/hmc/test/utils"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -43,7 +44,7 @@ func validateClusterDeleted(ctx context.Context, kc *kubeclient.KubeClient, clus
 			return fmt.Errorf("cluster: %q exists, but is not in 'Deleting' phase", clusterName)
 		}
 
-		conditions, err := utils.GetConditionsFromUnstructured(cluster)
+		conditions, err := status.ConditionsFromUnstructured(cluster)
 		if err != nil {
 			return fmt.Errorf("failed to get conditions from unstructured object: %w", err)
 		}
