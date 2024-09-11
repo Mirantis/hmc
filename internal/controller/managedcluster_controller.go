@@ -34,9 +34,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
@@ -52,6 +50,7 @@ import (
 	"github.com/Mirantis/hmc/internal/helm"
 	"github.com/Mirantis/hmc/internal/telemetry"
 	"github.com/Mirantis/hmc/internal/utils"
+	"github.com/Mirantis/hmc/internal/utils/status"
 )
 
 const (
@@ -118,57 +117,33 @@ func (r *ManagedClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			l.Error(err, "Failed to get Management object")
 			return ctrl.Result{}, err
 		}
-		if err := telemetry.TrackManagedClusterCreate(string(mgmt.UID), string(managedCluster.UID), managedCluster.Spec.Template, managedCluster.Spec.DryRun); err != nil {
+		if err := telemetry.TrackManagedClusterCreate(
+			string(mgmt.UID), string(managedCluster.UID), managedCluster.Spec.Template, managedCluster.Spec.DryRun); err != nil {
 			l.Error(err, "Failed to track ManagedCluster creation")
 		}
 	}
 	return r.Update(ctx, l, managedCluster)
 }
 
-func (r *ManagedClusterReconciler) setStatusFromClusterStatus(ctx context.Context, l logr.Logger, managedCluster *hmc.ManagedCluster) (bool, error) {
-	resourceID := schema.GroupVersionResource{
+func (r *ManagedClusterReconciler) setStatusFromClusterStatus(
+	ctx context.Context, l logr.Logger, managedCluster *hmc.ManagedCluster,
+) (bool, error) {
+	_, _, conditions, err := status.ConditionsFromResource(ctx, r.DynamicClient, schema.GroupVersionResource{
 		Group:    "cluster.x-k8s.io",
 		Version:  "v1beta1",
 		Resource: "clusters",
-	}
-
-	list, err := r.DynamicClient.Resource(resourceID).Namespace(managedCluster.Namespace).List(ctx, metav1.ListOptions{
-		LabelSelector: labels.SelectorFromSet(map[string]string{hmc.FluxHelmChartNameKey: managedCluster.Name}).String(),
-	})
-
-	if apierrors.IsNotFound(err) || len(list.Items) == 0 {
-		l.Info("Clusters not found, ignoring since object must be deleted or not yet created")
-		return true, nil
-	}
-
+	}, labels.SelectorFromSet(map[string]string{hmc.FluxHelmChartNameKey: managedCluster.Name}).String())
 	if err != nil {
-		return true, fmt.Errorf("failed to get cluster information for managedCluster %s in namespace: %s: %w",
-			managedCluster.Namespace, managedCluster.Name, err)
-	}
-	conditions, found, err := unstructured.NestedSlice(list.Items[0].Object, "status", "conditions")
-	if err != nil {
-		return true, fmt.Errorf("failed to get cluster information for managedCluster %s in namespace: %s: %w",
-			managedCluster.Namespace, managedCluster.Name, err)
-	}
-	if !found {
-		return true, fmt.Errorf("failed to get cluster information for managedCluster %s in namespace: %s: status.conditions not found",
-			managedCluster.Namespace, managedCluster.Name)
+		notFoundErr := status.ResourceNotFoundError{}
+		if errors.As(err, &notFoundErr) {
+			l.Info(err.Error())
+			return true, nil
+		}
+		return false, fmt.Errorf("failed to get conditions: %w", err)
 	}
 
 	allConditionsComplete := true
-	for _, condition := range conditions {
-		conditionMap, ok := condition.(map[string]any)
-		if !ok {
-			return true, fmt.Errorf("failed to cast condition to map[string]any for managedCluster: %s in namespace: %s: %w",
-				managedCluster.Namespace, managedCluster.Name, err)
-		}
-
-		var metaCondition metav1.Condition
-		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(conditionMap, &metaCondition); err != nil {
-			return true, fmt.Errorf("failed to convert unstructured conditions to metav1.Condition for managedCluster %s in namespace: %s: %w",
-				managedCluster.Namespace, managedCluster.Name, err)
-		}
-
+	for _, metaCondition := range conditions {
 		if metaCondition.Status != "True" {
 			allConditionsComplete = false
 		}

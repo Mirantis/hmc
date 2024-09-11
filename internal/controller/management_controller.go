@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	fluxv2 "github.com/fluxcd/helm-controller/api/v2"
 	"github.com/fluxcd/pkg/apis/meta"
@@ -29,6 +30,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -38,6 +41,7 @@ import (
 	"github.com/Mirantis/hmc/internal/certmanager"
 	"github.com/Mirantis/hmc/internal/helm"
 	"github.com/Mirantis/hmc/internal/utils"
+	"github.com/Mirantis/hmc/internal/utils/status"
 )
 
 // Those are only needed for the initial installation
@@ -55,6 +59,7 @@ type ManagementReconciler struct {
 	Scheme                   *runtime.Scheme
 	Config                   *rest.Config
 	SystemNamespace          string
+	DynamicClient            *dynamic.DynamicClient
 	CreateTemplateManagement bool
 }
 
@@ -150,6 +155,16 @@ func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Manag
 			errs = errors.Join(errs, errors.New(errMsg))
 			continue
 		}
+
+		if component.Template != hmc.CoreHMCName {
+			if err := r.checkProviderStatus(ctx, component.Template); err != nil {
+				errMsg := err.Error()
+				updateComponentsStatus(detectedComponents, &detectedProviders, component.helmReleaseName, component.Template, template.Status.Providers, errMsg)
+				errs = errors.Join(errs, errors.New(errMsg))
+				continue
+			}
+		}
+
 		updateComponentsStatus(detectedComponents, &detectedProviders, component.helmReleaseName, component.Template, template.Status.Providers, "")
 	}
 
@@ -201,6 +216,58 @@ func (r *ManagementReconciler) ensureTemplateManagement(ctx context.Context, mgm
 		return fmt.Errorf("failed to create %s TemplateManagement object: %w", hmc.TemplateManagementName, err)
 	}
 	l.Info("Successfully created TemplateManagement object")
+
+	return nil
+}
+
+// checkProviderStatus checks the status of a provider associated with a given
+// ProviderTemplate name.  Since there's no way to determine resource Kind from
+// the given template iterate over all possible provider types.
+func (r *ManagementReconciler) checkProviderStatus(ctx context.Context, providerTemplateName string) error {
+	var errs error
+
+	for _, resourceType := range []string{
+		"coreproviders",
+		"infrastructureproviders",
+		"controlplaneproviders",
+		"bootstrapproviders",
+	} {
+		gvr := schema.GroupVersionResource{
+			Group:    "operator.cluster.x-k8s.io",
+			Version:  "v1alpha2",
+			Resource: resourceType,
+		}
+
+		name, kind, conditions, err := status.ConditionsFromResource(ctx, r.DynamicClient, gvr,
+			labels.SelectorFromSet(map[string]string{hmc.FluxHelmChartNameKey: providerTemplateName}).String(),
+		)
+		if err != nil {
+			notFoundErr := status.ResourceNotFoundError{}
+			if errors.As(err, &notFoundErr) {
+				// Check the next resource type.
+				continue
+			}
+
+			return fmt.Errorf("failed to get status for template: %s: %w", providerTemplateName, err)
+		}
+
+		var falseConditionTypes []string
+		for _, condition := range conditions {
+			if condition.Status != metav1.ConditionTrue {
+				falseConditionTypes = append(falseConditionTypes, condition.Type)
+			}
+		}
+
+		if len(falseConditionTypes) > 0 {
+			errs = errors.Join(fmt.Errorf("%s: %s is not yet ready, has false conditions: %s",
+				name, kind, strings.Join(falseConditionTypes, ", ")))
+		}
+	}
+
+	if errs != nil {
+		return errs
+	}
+
 	return nil
 }
 

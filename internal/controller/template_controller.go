@@ -283,6 +283,7 @@ func (r *TemplateReconciler) reconcileHelmChart(ctx context.Context, template Te
 		if helmChart.Labels == nil {
 			helmChart.Labels = make(map[string]string)
 		}
+
 		helmChart.Labels[hmc.HMCManagedLabelKey] = hmc.HMCManagedLabelValue
 		helmChart.OwnerReferences = []metav1.OwnerReference{
 			{
