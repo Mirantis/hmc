@@ -47,4 +47,4 @@ k0s:
 
 # Optionally install applications defined under 
 # templates/beachheadservices into target cluster
-installBeachHeadServices: true
+installBeachHeadServices: false
