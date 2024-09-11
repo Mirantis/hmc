@@ -226,6 +226,7 @@ func main() {
 		Client:                   mgr.GetClient(),
 		Scheme:                   mgr.GetScheme(),
 		Config:                   mgr.GetConfig(),
+		DynamicClient:            dc,
 		SystemNamespace:          currentNamespace,
 		CreateTemplateManagement: createTemplateManagement,
 	}).SetupWithManager(mgr); err != nil {
