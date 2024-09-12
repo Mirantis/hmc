@@ -1,0 +1,19 @@
+apiVersion: v2
+name: azure-hosted-cp
+description: |
+  An HMC template to deploy a k8s cluster on Azure with control plane components
+  within the management cluster.
+type: application
+# This is the chart version. This version number should be incremented each time you make changes
+# to the chart and its templates, including the app version.
+# Versions are expected to follow Semantic Versioning (https://semver.org/)
+version: 0.1.1
+# This is the version number of the application being deployed. This version number should be
+# incremented each time you make changes to the application. Versions are not expected to
+# follow Semantic Versioning. They should reflect the version the application is using.
+# It is recommended to use it with quotes.
+appVersion: "1.30.4+k0s.0"
+annotations:
+  hmc.mirantis.com/infrastructure-providers: azure
+  hmc.mirantis.com/controlplane-providers: k0s
+  hmc.mirantis.com/bootstrap-providers: k0s

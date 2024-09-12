@@ -45,7 +45,7 @@ var _ = Describe("ManagedCluster Controller", func() {
 			Namespace: "default",
 		}
 		managedCluster := &hmc.ManagedCluster{}
-		template := &hmc.Template{}
+		template := &hmc.ClusterTemplate{}
 		management := &hmc.Management{}
 		namespace := &v1.Namespace{}
 
@@ -64,30 +64,32 @@ var _ = Describe("ManagedCluster Controller", func() {
 			By("creating the custom resource for the Kind Template")
 			err = k8sClient.Get(ctx, typeNamespacedName, template)
 			if err != nil && errors.IsNotFound(err) {
-				template = &hmc.Template{
+				template = &hmc.ClusterTemplate{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      templateName,
 						Namespace: utils.DefaultSystemNamespace,
 					},
-					Spec: hmc.TemplateSpec{
-						Helm: hmc.HelmSpec{
-							ChartRef: &hcv2.CrossNamespaceSourceReference{
-								Kind:      "HelmChart",
-								Name:      "ref-test",
-								Namespace: "default",
+					Spec: hmc.ClusterTemplateSpec{
+						TemplateSpecMixin: hmc.TemplateSpecMixin{
+							Helm: hmc.HelmSpec{
+								ChartRef: &hcv2.CrossNamespaceSourceReference{
+									Kind:      "HelmChart",
+									Name:      "ref-test",
+									Namespace: "default",
+								},
 							},
 						},
-						Type: hmc.TemplateTypeDeployment,
 					},
 				}
 				Expect(k8sClient.Create(ctx, template)).To(Succeed())
-				template.Status = hmc.TemplateStatus{
-					Type: hmc.TemplateTypeDeployment,
-					TemplateValidationStatus: hmc.TemplateValidationStatus{
-						Valid: true,
-					},
-					Config: &apiextensionsv1.JSON{
-						Raw: []byte(`{"foo":"bar"}`),
+				template.Status = hmc.ClusterTemplateStatus{
+					TemplateStatusMixin: hmc.TemplateStatusMixin{
+						TemplateValidationStatus: hmc.TemplateValidationStatus{
+							Valid: true,
+						},
+						Config: &apiextensionsv1.JSON{
+							Raw: []byte(`{"foo":"bar"}`),
+						},
 					},
 				}
 				Expect(k8sClient.Status().Update(ctx, template)).To(Succeed())

@@ -1,8 +1,0 @@
-apiVersion: hmc.mirantis.com/v1alpha1
-kind: Template
-metadata:
-  name: aws-standalone-cp
-spec:
-  helm:
-    chartName: aws-standalone-cp
-    chartVersion: 0.1.2

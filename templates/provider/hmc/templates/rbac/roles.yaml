@@ -1,0 +1,145 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "hmc.fullname" . }}-manager-role
+  labels:
+  {{- include "hmc.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+    - cluster.x-k8s.io
+  resources:
+    - clusters
+  verbs:
+    - get
+    - list
+- apiGroups:
+  - helm.toolkit.fluxcd.io
+  resources:
+  - helmreleases
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - hmc.mirantis.com
+  resources:
+  - managedclusters
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - hmc.mirantis.com
+  resources:
+  - managedclusters/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - hmc.mirantis.com
+  resources:
+  - managedclusters/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - hmc.mirantis.com
+  resources:
+  - managements
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - hmc.mirantis.com
+  resources:
+  - managements/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - hmc.mirantis.com
+  resources:
+  - managements/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - hmc.mirantis.com
+  resources:
+  - clustertemplates
+  - servicetemplates
+  - providertemplates
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - hmc.mirantis.com
+  resources:
+  - clustertemplates/finalizers
+  - servicetemplates/finalizers
+  - providertemplates/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - hmc.mirantis.com
+  resources:
+  - clustertemplates/status
+  - servicetemplates/status
+  - providertemplates/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - source.toolkit.fluxcd.io
+  resources:
+  - helmcharts
+  - helmrepositories
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - cert-manager.io
+  resources:
+  - certificates
+  verbs:
+  - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "hmc.fullname" . }}-manager-secrets-reader-role
+  namespace: {{ .Release.Namespace }}
+  labels:
+  {{- include "hmc.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list

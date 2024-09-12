@@ -69,8 +69,8 @@ func (t *Tracker) trackManagedClusterHeartbeat(ctx context.Context) error {
 		return err
 	}
 
-	templates := make(map[string]v1alpha1.Template)
-	templatesList := &v1alpha1.TemplateList{}
+	templates := make(map[string]v1alpha1.ClusterTemplate)
+	templatesList := &v1alpha1.ClusterTemplateList{}
 	err = t.List(ctx, templatesList, crclient.InNamespace(t.SystemNamespace))
 	if err != nil {
 		return err

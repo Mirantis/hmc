@@ -55,7 +55,7 @@ help: ## Display this help.
 
 .PHONY: manifests
 manifests: controller-gen ## Generate CustomResourceDefinition objects.
-	$(CONTROLLER_GEN) crd paths="./..." output:crd:artifacts:config=templates/hmc/templates/crds
+	$(CONTROLLER_GEN) crd paths="./..." output:crd:artifacts:config=$(PROVIDER_TEMPLATES_DIR)/hmc/templates/crds
 
 .PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
@@ -63,9 +63,9 @@ generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and
 
 .PHONY: set-hmc-version
 set-hmc-version: yq
-	$(YQ) eval '.version = "$(VERSION)"' -i templates/hmc/Chart.yaml
-	$(YQ) eval '.version = "$(VERSION)"' -i templates/hmc-templates/Chart.yaml
-	$(YQ) eval '.image.tag = "$(VERSION)"' -i templates/hmc/values.yaml
+	$(YQ) eval '.version = "$(VERSION)"' -i $(PROVIDER_TEMPLATES_DIR)/hmc/Chart.yaml
+	$(YQ) eval '.version = "$(VERSION)"' -i $(PROVIDER_TEMPLATES_DIR)/hmc-templates/Chart.yaml
+	$(YQ) eval '.image.tag = "$(VERSION)"' -i $(PROVIDER_TEMPLATES_DIR)/hmc/values.yaml
 
 .PHONY: hmc-chart-release
 hmc-chart-release: set-hmc-version templates-generate ## Generate hmc helm chart
@@ -74,7 +74,7 @@ hmc-chart-release: set-hmc-version templates-generate ## Generate hmc helm chart
 hmc-dist-release: $(HELM) $(YQ)
 	@mkdir -p dist
 	@printf "apiVersion: v1\nkind: Namespace\nmetadata:\n  name: $(NAMESPACE)\n" > dist/install.yaml
-	$(HELM) template -n $(NAMESPACE) hmc templates/hmc >> dist/install.yaml
+	$(HELM) template -n $(NAMESPACE) hmc $(PROVIDER_TEMPLATES_DIR)/hmc >> dist/install.yaml
 	$(YQ) eval -i '.metadata.namespace = "hmc-system"' dist/install.yaml
 	$(YQ) eval -i '.metadata.annotations."meta.helm.sh/release-name" = "hmc"' dist/install.yaml
 	$(YQ) eval -i '.metadata.annotations."meta.helm.sh/release-namespace" = "hmc-system"' dist/install.yaml
@@ -123,23 +123,27 @@ add-license: addlicense
 ##@ Build
 
 TEMPLATES_DIR := templates
+PROVIDER_TEMPLATES_DIR := $(TEMPLATES_DIR)/provider
 CHARTS_PACKAGE_DIR ?= $(LOCALBIN)/charts
 $(CHARTS_PACKAGE_DIR): | $(LOCALBIN)
 	rm -rf $(CHARTS_PACKAGE_DIR)
 	mkdir -p $(CHARTS_PACKAGE_DIR)
 
-CHARTS = $(patsubst $(TEMPLATES_DIR)/%,%,$(wildcard $(TEMPLATES_DIR)/*))
+TEMPLATE_FOLDERS = $(patsubst $(TEMPLATES_DIR)/%,%,$(wildcard $(TEMPLATES_DIR)/*))
 
 .PHONY: helm-package
-helm-package: helm
-	@make $(patsubst %,package-chart-%,$(CHARTS))
+helm-package: $(CHARTS_PACKAGE_DIR) helm
+	@make $(patsubst %,package-%-templates,$(TEMPLATE_FOLDERS))
+
+package-%-templates:
+	@make TEMPLATES_SUBDIR=$(TEMPLATES_DIR)/$* $(patsubst %,package-chart-%,$(shell ls $(TEMPLATES_DIR)/$*))
 
 lint-chart-%:
-	$(HELM) dependency update $(TEMPLATES_DIR)/$*
-	$(HELM) lint --strict $(TEMPLATES_DIR)/$*
+	$(HELM) dependency update $(TEMPLATES_SUBDIR)/$*
+	$(HELM) lint --strict $(TEMPLATES_SUBDIR)/$*
 
-package-chart-%: $(CHARTS_PACKAGE_DIR) lint-chart-%
-	$(HELM) package --destination $(CHARTS_PACKAGE_DIR) $(TEMPLATES_DIR)/$*
+package-chart-%: lint-chart-%
+	$(HELM) package --destination $(CHARTS_PACKAGE_DIR) $(TEMPLATES_SUBDIR)/$*
 
 LD_FLAGS?= -s -w
 LD_FLAGS += -X github.com/Mirantis/hmc/internal/build.Version=$(VERSION)
@@ -232,7 +236,7 @@ registry-undeploy:
 
 .PHONY: hmc-deploy
 hmc-deploy: helm
-	$(HELM) upgrade --values $(HMC_VALUES) --reuse-values --install --create-namespace hmc templates/hmc -n $(NAMESPACE)
+	$(HELM) upgrade --values $(HMC_VALUES) --reuse-values --install --create-namespace hmc $(PROVIDER_TEMPLATES_DIR)/hmc -n $(NAMESPACE)
 
 .PHONY: dev-deploy
 dev-deploy: ## Deploy HMC helm chart to the K8s cluster specified in ~/.kube/config.
@@ -279,7 +283,7 @@ dev-push: docker-build helm-push
 
 .PHONY: dev-templates
 dev-templates: templates-generate
-	$(KUBECTL) -n $(NAMESPACE) apply -f templates/hmc-templates/files/templates
+	$(KUBECTL) -n $(NAMESPACE) apply -f $(PROVIDER_TEMPLATES_DIR)/hmc-templates/files/templates
 
 .PHONY: dev-aws-creds
 dev-aws-creds: yq

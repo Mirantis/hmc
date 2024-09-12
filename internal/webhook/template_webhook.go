@@ -17,48 +17,125 @@ package webhook // nolint:dupl
 import (
 	"context"
 
-	"github.com/Mirantis/hmc/api/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	"github.com/Mirantis/hmc/api/v1alpha1"
 )
 
-type TemplateValidator struct {
+type ClusterTemplateValidator struct {
 	client.Client
 }
 
-func (in *TemplateValidator) SetupWebhookWithManager(mgr ctrl.Manager) error {
+func (in *ClusterTemplateValidator) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	in.Client = mgr.GetClient()
 	return ctrl.NewWebhookManagedBy(mgr).
-		For(&v1alpha1.Template{}).
+		For(&v1alpha1.ClusterTemplate{}).
 		WithValidator(in).
 		WithDefaulter(in).
 		Complete()
 }
 
 var (
-	_ webhook.CustomValidator = &TemplateValidator{}
-	_ webhook.CustomDefaulter = &TemplateValidator{}
+	_ webhook.CustomValidator = &ClusterTemplateValidator{}
+	_ webhook.CustomDefaulter = &ClusterTemplateValidator{}
 )
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type.
-func (*TemplateValidator) ValidateCreate(_ context.Context, _ runtime.Object) (admission.Warnings, error) {
+func (*ClusterTemplateValidator) ValidateCreate(_ context.Context, _ runtime.Object) (admission.Warnings, error) {
 	return nil, nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type.
-func (*TemplateValidator) ValidateUpdate(_ context.Context, _ runtime.Object, _ runtime.Object) (admission.Warnings, error) {
+func (*ClusterTemplateValidator) ValidateUpdate(_ context.Context, _ runtime.Object, _ runtime.Object) (admission.Warnings, error) {
 	return nil, nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
-func (*TemplateValidator) ValidateDelete(_ context.Context, _ runtime.Object) (admission.Warnings, error) {
+func (*ClusterTemplateValidator) ValidateDelete(_ context.Context, _ runtime.Object) (admission.Warnings, error) {
 	return nil, nil
 }
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type.
-func (*TemplateValidator) Default(_ context.Context, _ runtime.Object) error {
+func (*ClusterTemplateValidator) Default(_ context.Context, _ runtime.Object) error {
+	return nil
+}
+
+type ServiceTemplateValidator struct {
+	client.Client
+}
+
+func (in *ServiceTemplateValidator) SetupWebhookWithManager(mgr ctrl.Manager) error {
+	in.Client = mgr.GetClient()
+	return ctrl.NewWebhookManagedBy(mgr).
+		For(&v1alpha1.ServiceTemplate{}).
+		WithValidator(in).
+		WithDefaulter(in).
+		Complete()
+}
+
+var (
+	_ webhook.CustomValidator = &ServiceTemplateValidator{}
+	_ webhook.CustomDefaulter = &ServiceTemplateValidator{}
+)
+
+// ValidateCreate implements webhook.Validator so a webhook will be registered for the type.
+func (*ServiceTemplateValidator) ValidateCreate(_ context.Context, _ runtime.Object) (admission.Warnings, error) {
+	return nil, nil
+}
+
+// ValidateUpdate implements webhook.Validator so a webhook will be registered for the type.
+func (*ServiceTemplateValidator) ValidateUpdate(_ context.Context, _ runtime.Object, _ runtime.Object) (admission.Warnings, error) {
+	return nil, nil
+}
+
+// ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
+func (*ServiceTemplateValidator) ValidateDelete(_ context.Context, _ runtime.Object) (admission.Warnings, error) {
+	return nil, nil
+}
+
+// Default implements webhook.Defaulter so a webhook will be registered for the type.
+func (*ServiceTemplateValidator) Default(_ context.Context, _ runtime.Object) error {
+	return nil
+}
+
+type ProviderTemplateValidator struct {
+	client.Client
+}
+
+func (in *ProviderTemplateValidator) SetupWebhookWithManager(mgr ctrl.Manager) error {
+	in.Client = mgr.GetClient()
+	return ctrl.NewWebhookManagedBy(mgr).
+		For(&v1alpha1.ProviderTemplate{}).
+		WithValidator(in).
+		WithDefaulter(in).
+		Complete()
+}
+
+var (
+	_ webhook.CustomValidator = &ProviderTemplateValidator{}
+	_ webhook.CustomDefaulter = &ProviderTemplateValidator{}
+)
+
+// ValidateCreate implements webhook.Validator so a webhook will be registered for the type.
+func (*ProviderTemplateValidator) ValidateCreate(_ context.Context, _ runtime.Object) (admission.Warnings, error) {
+	return nil, nil
+}
+
+// ValidateUpdate implements webhook.Validator so a webhook will be registered for the type.
+func (*ProviderTemplateValidator) ValidateUpdate(_ context.Context, _ runtime.Object, _ runtime.Object) (admission.Warnings, error) {
+	return nil, nil
+}
+
+// ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
+func (*ProviderTemplateValidator) ValidateDelete(_ context.Context, _ runtime.Object) (admission.Warnings, error) {
+	return nil, nil
+}
+
+// Default implements webhook.Defaulter so a webhook will be registered for the type.
+func (*ProviderTemplateValidator) Default(_ context.Context, _ runtime.Object) error {
 	return nil
 }

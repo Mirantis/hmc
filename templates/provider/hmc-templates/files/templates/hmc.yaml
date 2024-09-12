@@ -1,0 +1,8 @@
+apiVersion: hmc.mirantis.com/v1alpha1
+kind: ProviderTemplate
+metadata:
+  name: hmc
+spec:
+  helm:
+    chartName: hmc
+    chartVersion: 0.1.0

@@ -76,12 +76,14 @@ var _ = BeforeSuite(func() {
 
 	ctx, cancel = context.WithCancel(context.TODO())
 
-	validatingWebhooks, mutatingWebhooks, err := loadWebhooks(filepath.Join("..", "..", "templates", "hmc", "templates", "webhooks.yaml"))
+	validatingWebhooks, mutatingWebhooks, err := loadWebhooks(
+		filepath.Join("..", "..", "templates", "provider", "hmc", "templates", "webhooks.yaml"),
+	)
 	Expect(err).NotTo(HaveOccurred())
 
 	testEnv = &envtest.Environment{
 		CRDDirectoryPaths: []string{
-			filepath.Join("..", "..", "templates", "hmc", "templates", "crds"),
+			filepath.Join("..", "..", "templates", "provider", "hmc", "templates", "crds"),
 			filepath.Join("..", "..", "bin", "crd")},
 		ErrorIfCRDPathMissing: true,
 
@@ -139,7 +141,13 @@ var _ = BeforeSuite(func() {
 	err = (&hmcwebhook.ManagementValidator{}).SetupWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
-	err = (&hmcwebhook.TemplateValidator{}).SetupWebhookWithManager(mgr)
+	err = (&hmcwebhook.ClusterTemplateValidator{}).SetupWebhookWithManager(mgr)
+	Expect(err).NotTo(HaveOccurred())
+
+	err = (&hmcwebhook.ServiceTemplateValidator{}).SetupWebhookWithManager(mgr)
+	Expect(err).NotTo(HaveOccurred())
+
+	err = (&hmcwebhook.ProviderTemplateValidator{}).SetupWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
 	go func() {
