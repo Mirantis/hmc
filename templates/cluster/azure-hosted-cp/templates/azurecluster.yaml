@@ -4,6 +4,8 @@ metadata:
   name: {{ include "cluster.name" . }}
   annotations:
     cluster.x-k8s.io/managed-by: k0smotron
+  finalizers:
+  - hmc.mirantis.com/cleanup
 spec:
   identityRef:
     kind: AzureClusterIdentity
