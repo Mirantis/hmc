@@ -45,9 +45,16 @@ var resourceValidators = map[string]resourceValidationFunc{
 // VerifyProviderDeployed is a provider-agnostic verification that checks
 // to ensure generic resources managed by the provider have been deleted.
 // It is intended to be used in conjunction with an Eventually block.
-func VerifyProviderDeployed(ctx context.Context, kc *kubeclient.KubeClient, clusterName string) error {
-	return verifyProviderAction(ctx, kc, clusterName, resourceValidators,
-		[]string{"clusters", "machines", "control-planes", "csi-driver", "ccm"})
+func VerifyProviderDeployed(
+	ctx context.Context, kc *kubeclient.KubeClient, clusterName string,
+	providerType ProviderType) error {
+	if providerType == ProviderVSphere {
+		return verifyProviderAction(ctx, kc, clusterName, resourceValidators,
+			[]string{"clusters", "machines", "control-planes", "csi-driver"})
+	} else {
+		return verifyProviderAction(ctx, kc, clusterName, resourceValidators,
+			[]string{"clusters", "machines", "control-planes", "csi-driver", "ccm"})
+	}
 }
 
 // verifyProviderAction is a provider-agnostic verification that checks for

@@ -33,6 +33,7 @@ import (
 	"github.com/Mirantis/hmc/test/kubeclient"
 	"github.com/Mirantis/hmc/test/managedcluster"
 	"github.com/Mirantis/hmc/test/utils"
+	vsphereutils "github.com/Mirantis/hmc/test/utils/vsphere"
 )
 
 const (
@@ -43,14 +44,14 @@ const (
 var _ = Describe("controller", Ordered, func() {
 	BeforeAll(func() {
 		By("building and deploying the controller-manager")
-		cmd := exec.Command("make", "test-apply")
+		cmd := exec.Command("make", "dev-apply")
 		_, err := utils.Run(cmd)
 		Expect(err).NotTo(HaveOccurred())
 	})
 
 	AfterAll(func() {
 		By("removing the controller-manager")
-		cmd := exec.Command("make", "test-destroy")
+		cmd := exec.Command("make", "dev-destroy")
 		_, err := utils.Run(cmd)
 		Expect(err).NotTo(HaveOccurred())
 	})
@@ -71,6 +72,7 @@ var _ = Describe("controller", Ordered, func() {
 					managedcluster.ProviderCAPI,
 					managedcluster.ProviderAWS,
 					managedcluster.ProviderAzure,
+					managedcluster.ProviderVSphere,
 				} {
 					// Ensure only one controller pod is running.
 					if err := verifyControllerUp(kc, managedcluster.GetProviderLabel(provider), string(provider)); err != nil {
@@ -143,7 +145,7 @@ var _ = Describe("controller", Ordered, func() {
 				}
 
 				By("creating a Deployment")
-				d := managedcluster.GetUnstructured(managedcluster.ProviderAWS, template)
+				d := managedcluster.GetUnstructured(template)
 				clusterName = d.GetName()
 
 				deleteFunc, err = kc.CreateManagedCluster(context.Background(), d)
@@ -151,7 +153,7 @@ var _ = Describe("controller", Ordered, func() {
 
 				By("waiting for infrastructure providers to deploy successfully")
 				Eventually(func() error {
-					return managedcluster.VerifyProviderDeployed(context.Background(), kc, clusterName)
+					return managedcluster.VerifyProviderDeployed(context.Background(), kc, clusterName, managedcluster.ProviderAWS)
 				}).WithTimeout(30 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
 
 				By("verify the deployment deletes successfully")
@@ -163,6 +165,74 @@ var _ = Describe("controller", Ordered, func() {
 			})
 		}
 	})
+
+	Context("vSphere templates", func() {
+		var (
+			kc          *kubeclient.KubeClient
+			deleteFunc  func() error
+			clusterName string
+			err         error
+		)
+
+		BeforeAll(func() {
+			// Set here to skip CI runs for now
+			_, testVsphere := os.LookupEnv("TEST_VSPHERE")
+			if !testVsphere {
+				Skip("Skipping vSphere tests")
+			}
+
+			By("ensuring that env vars are set correctly")
+			Expect(vsphereutils.CheckEnv()).Should(Succeed())
+			By("creating kube client")
+			kc, err = kubeclient.NewFromLocal(namespace)
+			Expect(err).NotTo(HaveOccurred())
+			By("providing cluster identity")
+			credSecretName := "vsphere-cluster-identity-secret-e2e"
+			clusterIdentityName := "vsphere-cluster-identity-e2e"
+			Expect(kc.CreateVSphereSecret(credSecretName)).Should(Succeed())
+			Expect(kc.CreateVSphereClusterIdentity(credSecretName, clusterIdentityName)).Should(Succeed())
+			By("setting VSPHERE_CLUSTER_IDENTITY env variable")
+			Expect(os.Setenv("VSPHERE_CLUSTER_IDENTITY", clusterIdentityName)).Should(Succeed())
+		})
+
+		AfterEach(func() {
+			// If we failed collect logs from each of the affiliated controllers
+			// as well as the output of clusterctl to store as artifacts.
+			if CurrentSpecReport().Failed() {
+				By("collecting failure logs from controllers")
+				collectLogArtifacts(kc, clusterName, managedcluster.ProviderVSphere, managedcluster.ProviderCAPI)
+			}
+
+			if deleteFunc != nil {
+				By("deleting the deployment")
+				err = deleteFunc()
+				Expect(err).NotTo(HaveOccurred())
+			}
+
+		})
+
+		It("should deploy standalone managed cluster", func() {
+			By("creating a managed cluster")
+			d := managedcluster.GetUnstructured(managedcluster.TemplateVSphereStandaloneCP)
+			clusterName = d.GetName()
+
+			deleteFunc, err = kc.CreateManagedCluster(context.Background(), d)
+			Expect(err).NotTo(HaveOccurred())
+
+			By("waiting for infrastructure providers to deploy successfully")
+			Eventually(func() error {
+				return managedcluster.VerifyProviderDeployed(context.Background(), kc, clusterName, managedcluster.ProviderVSphere)
+			}).WithTimeout(30 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
+
+			By("verify the deployment deletes successfully")
+			err = deleteFunc()
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(func() error {
+				return managedcluster.VerifyProviderDeleted(context.Background(), kc, clusterName)
+			}).WithTimeout(10 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
+		})
+	})
+
 })
 
 func verifyControllerUp(kc *kubeclient.KubeClient, labelSelector string, name string) error {
