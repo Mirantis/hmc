@@ -20,8 +20,6 @@ import (
 	"fmt"
 	"time"
 
-	"k8s.io/apimachinery/pkg/labels"
-
 	hcv2 "github.com/fluxcd/helm-controller/api/v2"
 	fluxmeta "github.com/fluxcd/pkg/apis/meta"
 	fluxconditions "github.com/fluxcd/pkg/runtime/conditions"
@@ -33,6 +31,7 @@ import (
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -58,6 +57,30 @@ type ManagedClusterReconciler struct {
 	DynamicClient   *dynamic.DynamicClient
 	SystemNamespace string
 }
+
+type providerSchema struct {
+	machine, cluster schema.GroupVersionKind
+}
+
+var (
+	gvkAWSCluster = schema.GroupVersionKind{
+		Group:   "infrastructure.cluster.x-k8s.io",
+		Version: "v1beta2",
+		Kind:    "awscluster",
+	}
+
+	gvkAzureCluster = schema.GroupVersionKind{
+		Group:   "infrastructure.cluster.x-k8s.io",
+		Version: "v1beta1",
+		Kind:    "azurecluster",
+	}
+
+	gvkMachine = schema.GroupVersionKind{
+		Group:   "cluster.x-k8s.io",
+		Version: "v1beta1",
+		Kind:    "machine",
+	}
+)
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -386,12 +409,109 @@ func (r *ManagedClusterReconciler) Delete(ctx context.Context, l logr.Logger, ma
 		}
 		return ctrl.Result{}, err
 	}
+
 	err = helm.DeleteHelmRelease(ctx, r.Client, managedCluster.Name, managedCluster.Namespace)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
+
+	err = r.releaseCluster(ctx, managedCluster.Namespace, managedCluster.Name, managedCluster.Spec.Template)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
 	l.Info("HelmRelease still exists, retrying")
 	return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
+}
+
+func (r *ManagedClusterReconciler) releaseCluster(ctx context.Context, namespace, name, templateName string) error {
+	providers, err := r.getProviders(ctx, templateName)
+	if err != nil {
+		return err
+	}
+
+	providerGVKs := map[string]providerSchema{
+		"aws":   {machine: gvkMachine, cluster: gvkAWSCluster},
+		"azure": {machine: gvkMachine, cluster: gvkAzureCluster},
+	}
+
+	// Associate the provider with it's GVK
+	for _, provider := range providers {
+		gvk, ok := providerGVKs[provider]
+		if !ok {
+			continue
+		}
+
+		cluster, err := r.getCluster(ctx, namespace, name, gvk.cluster)
+		if err != nil {
+			return err
+		}
+
+		found, err := r.machinesAvailable(ctx, namespace, cluster.Name, gvk.machine)
+		if err != nil {
+			return err
+		}
+
+		if !found {
+			return r.removeClusterFinalizer(ctx, cluster)
+		}
+	}
+
+	return nil
+}
+
+func (r *ManagedClusterReconciler) getProviders(ctx context.Context, templateName string) ([]string, error) {
+	template := &hmc.ClusterTemplate{}
+	templateRef := types.NamespacedName{Name: templateName, Namespace: r.SystemNamespace}
+	if err := r.Get(ctx, templateRef, template); err != nil {
+		log.FromContext(ctx).Error(err, "Failed to get Template", "templateName", templateName)
+		return nil, err
+	}
+	return template.Status.Providers.InfrastructureProviders, nil
+}
+
+func (r *ManagedClusterReconciler) getCluster(ctx context.Context, namespace, name string, gvk schema.GroupVersionKind) (*metav1.PartialObjectMetadata, error) {
+	opts := &client.ListOptions{
+		LabelSelector: labels.SelectorFromSet(map[string]string{hmc.FluxHelmChartNameKey: name}),
+		Namespace:     namespace,
+	}
+	itemsList := &metav1.PartialObjectMetadataList{}
+	itemsList.SetGroupVersionKind(gvk)
+	if err := r.Client.List(ctx, itemsList, opts); err != nil {
+		return nil, err
+	}
+	if len(itemsList.Items) == 0 {
+		return nil, fmt.Errorf("%s with name %s was not found", gvk.Kind, name)
+	}
+
+	return &itemsList.Items[0], nil
+}
+
+func (r *ManagedClusterReconciler) removeClusterFinalizer(ctx context.Context, cluster *metav1.PartialObjectMetadata) error {
+	originalCluster := *cluster
+	finalizersUpdated := controllerutil.RemoveFinalizer(cluster, hmc.BlockingFinalizer)
+	if finalizersUpdated {
+		log.FromContext(ctx).Info("Allow to stop cluster", "finalizer", hmc.BlockingFinalizer)
+		if err := r.Client.Patch(ctx, cluster, client.MergeFrom(&originalCluster)); err != nil {
+			return fmt.Errorf("failed to patch cluster %s/%s: %w", cluster.Namespace, cluster.Name, err)
+		}
+	}
+
+	return nil
+}
+
+func (r *ManagedClusterReconciler) machinesAvailable(ctx context.Context, namespace, clusterName string, gvk schema.GroupVersionKind) (bool, error) {
+	opts := &client.ListOptions{
+		LabelSelector: labels.SelectorFromSet(map[string]string{hmc.ClusterNameLabelKey: clusterName}),
+		Namespace:     namespace,
+		Limit:         1,
+	}
+	itemsList := &metav1.PartialObjectMetadataList{}
+	itemsList.SetGroupVersionKind(gvk)
+	if err := r.Client.List(ctx, itemsList, opts); err != nil {
+		return false, err
+	}
+	return len(itemsList.Items) != 0, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

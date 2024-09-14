@@ -22,11 +22,14 @@ import (
 )
 
 const (
+	BlockingFinalizer       = "hmc.mirantis.com/cleanup"
 	ManagedClusterFinalizer = "hmc.mirantis.com/managed-cluster"
 
 	FluxHelmChartNameKey = "helm.toolkit.fluxcd.io/name"
 	HMCManagedLabelKey   = "hmc.mirantis.com/managed"
 	HMCManagedLabelValue = "true"
+
+	ClusterNameLabelKey = "cluster.x-k8s.io/cluster-name"
 )
 
 const (

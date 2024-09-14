@@ -25,3 +25,6 @@ test/e2e/*.log
 *.swp
 *.swo
 *~
+
+# Vendoring directory
+vendor
