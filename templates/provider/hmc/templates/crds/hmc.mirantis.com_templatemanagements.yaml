@@ -71,14 +71,16 @@ spec:
                         Templates will be distributed to all namespaces if unset.
                       properties:
                         list:
-                          description: List is the list of namespaces to select.
+                          description: |-
+                            List is the list of namespaces to select.
+                            Mutually exclusive with StringSelector and Selector.
                           items:
                             type: string
                           type: array
                         selector:
                           description: |-
                             Selector is a structured label query to select namespaces.
-                            Mutually exclusive with StringSelector.
+                            Mutually exclusive with StringSelector and List.
                           properties:
                             matchExpressions:
                               description: matchExpressions is a list of label selector
@@ -126,12 +128,12 @@ spec:
                         stringSelector:
                           description: |-
                             StringSelector is a label query to select namespaces.
-                            Mutually exclusive with Selector.
+                            Mutually exclusive with Selector and List.
                           type: string
                       type: object
                       x-kubernetes-validations:
                       - message: only one of spec.targetNamespaces.selector or spec.targetNamespaces.stringSelector
-                          spec.targetNamespaces.list can be specified
+                          or spec.targetNamespaces.list can be specified
                         rule: '((has(self.stringSelector) ? 1 : 0) + (has(self.selector)
                           ? 1 : 0) + (has(self.list) ? 1 : 0)) <= 1'
                   type: object
@@ -167,14 +169,16 @@ spec:
                         Templates will be distributed to all namespaces if unset.
                       properties:
                         list:
-                          description: List is the list of namespaces to select.
+                          description: |-
+                            List is the list of namespaces to select.
+                            Mutually exclusive with StringSelector and Selector.
                           items:
                             type: string
                           type: array
                         selector:
                           description: |-
                             Selector is a structured label query to select namespaces.
-                            Mutually exclusive with StringSelector.
+                            Mutually exclusive with StringSelector and List.
                           properties:
                             matchExpressions:
                               description: matchExpressions is a list of label selector
@@ -222,12 +226,12 @@ spec:
                         stringSelector:
                           description: |-
                             StringSelector is a label query to select namespaces.
-                            Mutually exclusive with Selector.
+                            Mutually exclusive with Selector and List.
                           type: string
                       type: object
                       x-kubernetes-validations:
                       - message: only one of spec.targetNamespaces.selector or spec.targetNamespaces.stringSelector
-                          spec.targetNamespaces.list can be specified
+                          or spec.targetNamespaces.list can be specified
                         rule: '((has(self.stringSelector) ? 1 : 0) + (has(self.selector)
                           ? 1 : 0) + (has(self.list) ? 1 : 0)) <= 1'
                   type: object
