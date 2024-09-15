@@ -236,6 +236,10 @@ spec:
                           ? 1 : 0) + (has(self.list) ? 1 : 0)) <= 1'
                   type: object
                 type: array
+              error:
+                description: Error is the error message occurred during the reconciliation
+                  (if any)
+                type: string
               observedGeneration:
                 description: ObservedGeneration is the last observed generation.
                 format: int64

@@ -89,6 +89,8 @@ type TemplateManagementStatus struct {
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 	// Current reflects the applied access rules configuration.
 	Current []AccessRule `json:"current,omitempty"`
+	// Error is the error message occurred during the reconciliation (if any)
+	Error string `json:"error,omitempty"`
 }
 
 func init() {
