@@ -29,7 +29,8 @@ const (
 	ProviderCAPAName       = "cluster-api-provider-aws"
 	ProviderCAPASecretName = "aws-variables"
 	// Provider Azure
-	ProviderAzureName = "cluster-api-provider-azure"
+	ProviderAzureName   = "cluster-api-provider-azure"
+	ProviderVSphereName = "cluster-api-provider-vsphere"
 	// Provider K0smotron
 	ProviderK0smotronName = "k0smotron"
 	// Provider Sveltos
@@ -49,6 +50,7 @@ var (
 		},
 		ProviderAzureName:     nil,
 		ProviderK0smotronName: nil,
+		ProviderVSphereName:   nil,
 		ProviderSveltosName: {
 			"targetNamespace": ProviderSveltosTargetNamespace,
 			"createNamespace": ProviderSveltosCreateNamespace,
