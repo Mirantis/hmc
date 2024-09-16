@@ -6,7 +6,7 @@ require (
 	github.com/a8m/envsubst v1.4.2
 	github.com/cert-manager/cert-manager v1.15.3
 	github.com/fluxcd/helm-controller/api v1.0.1
-	github.com/fluxcd/pkg/apis/meta v1.6.0
+	github.com/fluxcd/pkg/apis/meta v1.6.1
 	github.com/fluxcd/pkg/runtime v0.49.0
 	github.com/fluxcd/source-controller/api v1.3.0
 	github.com/go-logr/logr v1.4.2
@@ -20,7 +20,7 @@ require (
 	helm.sh/helm/v3 v3.16.1
 	k8s.io/api v0.31.0
 	k8s.io/apiextensions-apiserver v0.31.0
-	k8s.io/apimachinery v0.31.0
+	k8s.io/apimachinery v0.31.1
 	k8s.io/client-go v0.31.0
 	k8s.io/utils v0.0.0-20240711033017-18e509b52bc8
 	sigs.k8s.io/cluster-api v1.8.3
