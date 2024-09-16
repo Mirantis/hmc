@@ -30,9 +30,10 @@ import (
 type ProviderType string
 
 const (
-	ProviderCAPI  ProviderType = "cluster-api"
-	ProviderAWS   ProviderType = "infrastructure-aws"
-	ProviderAzure ProviderType = "infrastructure-azure"
+	ProviderCAPI    ProviderType = "cluster-api"
+	ProviderAWS     ProviderType = "infrastructure-aws"
+	ProviderAzure   ProviderType = "infrastructure-azure"
+	ProviderVSphere ProviderType = "infrastructure-vsphere"
 
 	providerLabel = "cluster.x-k8s.io/provider"
 )
@@ -40,8 +41,10 @@ const (
 type Template string
 
 const (
-	TemplateAWSStandaloneCP Template = "aws-standalone-cp"
-	TemplateAWSHostedCP     Template = "aws-hosted-cp"
+	TemplateAWSStandaloneCP     Template = "aws-standalone-cp"
+	TemplateAWSHostedCP         Template = "aws-hosted-cp"
+	TemplateVSphereStandaloneCP Template = "vsphere-standalone-cp"
+	TemplateVSphereHostedCP     Template = "vsphere-hosted-cp"
 )
 
 //go:embed resources/aws-standalone-cp.yaml.tpl
@@ -50,44 +53,47 @@ var awsStandaloneCPManagedClusterTemplateBytes []byte
 //go:embed resources/aws-hosted-cp.yaml.tpl
 var awsHostedCPManagedClusterTemplateBytes []byte
 
+//go:embed resources/vsphere-standalone-cp.yaml.tpl
+var vsphereStandaloneCPManagedClusterTemplateBytes []byte
+
+//go:embed resources/vsphere-hosted-cp.yaml.tpl
+var vsphereHostedCPManagedClusterTemplateBytes []byte
+
 func GetProviderLabel(provider ProviderType) string {
 	return fmt.Sprintf("%s=%s", providerLabel, provider)
 }
 
 // GetUnstructured returns an unstructured ManagedCluster object based on the
 // provider and template.
-func GetUnstructured(provider ProviderType, templateName Template) *unstructured.Unstructured {
+func GetUnstructured(templateName Template) *unstructured.Unstructured {
 	GinkgoHelper()
 
 	generatedName := uuid.New().String()[:8] + "-e2e-test"
 	_, _ = fmt.Fprintf(GinkgoWriter, "Generated cluster name: %q\n", generatedName)
 
-	switch provider {
-	case ProviderAWS:
-		Expect(os.Setenv("MANAGED_CLUSTER_NAME", generatedName)).NotTo(HaveOccurred())
+	Expect(os.Setenv("MANAGED_CLUSTER_NAME", generatedName)).NotTo(HaveOccurred())
 
-		var managedClusterTemplateBytes []byte
-		switch templateName {
-		case TemplateAWSStandaloneCP:
-			managedClusterTemplateBytes = awsStandaloneCPManagedClusterTemplateBytes
-		case TemplateAWSHostedCP:
-			managedClusterTemplateBytes = awsHostedCPManagedClusterTemplateBytes
-		default:
-			Fail(fmt.Sprintf("unsupported AWS template: %s", templateName))
-		}
-
-		managedClusterConfigBytes, err := envsubst.Bytes(managedClusterTemplateBytes)
-		Expect(err).NotTo(HaveOccurred(), "failed to substitute environment variables")
-
-		var managedClusterConfig map[string]interface{}
-
-		err = yaml.Unmarshal(managedClusterConfigBytes, &managedClusterConfig)
-		Expect(err).NotTo(HaveOccurred(), "failed to unmarshal deployment config")
-
-		return &unstructured.Unstructured{Object: managedClusterConfig}
+	var managedClusterTemplateBytes []byte
+	switch templateName {
+	case TemplateAWSStandaloneCP:
+		managedClusterTemplateBytes = awsStandaloneCPManagedClusterTemplateBytes
+	case TemplateAWSHostedCP:
+		managedClusterTemplateBytes = awsHostedCPManagedClusterTemplateBytes
+	case TemplateVSphereStandaloneCP:
+		managedClusterTemplateBytes = vsphereStandaloneCPManagedClusterTemplateBytes
+	case TemplateVSphereHostedCP:
+		managedClusterTemplateBytes = vsphereHostedCPManagedClusterTemplateBytes
 	default:
-		Fail(fmt.Sprintf("unsupported provider: %s", provider))
+		Fail(fmt.Sprintf("unsupported template type: %s", templateName))
 	}
 
-	return nil
+	managedClusterConfigBytes, err := envsubst.Bytes(managedClusterTemplateBytes)
+	Expect(err).NotTo(HaveOccurred(), "failed to substitute environment variables")
+
+	var managedClusterConfig map[string]interface{}
+
+	err = yaml.Unmarshal(managedClusterConfigBytes, &managedClusterConfig)
+	Expect(err).NotTo(HaveOccurred(), "failed to unmarshal deployment config")
+
+	return &unstructured.Unstructured{Object: managedClusterConfig}
 }

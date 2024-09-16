@@ -38,6 +38,30 @@ be set before running deployment:
 More detailed description of these parameters can be found
 [here](azure/cluster-parameters.md).
 
+### vSphere Provider Setup
+
+Follow the instruction on how to configure [vSphere Provider](vsphere/main.md).
+
+To properly deploy dev cluster you need to have the following variables set:
+
+- `VSPHERE_USER`
+- `VSPHERE_PASSWORD`
+- `VSPHERE_SERVER`
+- `VSPHERE_THUMBPRINT`
+- `VSPHERE_DATACENTER`
+- `VSPHERE_DATASTORE`
+- `VSPHERE_RESOURCEPOOL`
+- `VSPHERE_FOLDER`
+- `VSPHERE_CONTROL_PLANE_ENDPOINT`
+- `VSPHERE_VM_TEMPLATE`
+- `VSPHERE_NETWORK`
+- `VSPHERE_SSH_KEY`
+
+Naming of the variables duplicates parameters in `ManagementCluster`. To get
+full explanation for each parameter visit
+[vSphere cluster parameters](cluster-parameters.md) and
+[vSphere machine parameters](machine-parameters.md).
+
 ## Deploy HMC
 
 Default provider which will be used to deploy cluster is AWS, if you want to use
@@ -57,7 +81,7 @@ running make (e.g. `export DEV_PROVIDER=azure`).
 
 4. Apply credentials for your provider by executing `make dev-creds-apply`.
 
-5. Run `make dev-provider-apply` to deploy managed cluster on provider of your
+5. Run `make dev-mcluster-apply` to deploy managed cluster on provider of your
    choice with default configuration.
 
 6. Wait for infrastructure to be provisioned and the cluster to be deployed. You

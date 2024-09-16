@@ -154,6 +154,75 @@ func (kc *KubeClient) CreateAWSCredentialsKubeSecret(ctx context.Context) error 
 	return nil
 }
 
+func (kc *KubeClient) CreateVSphereSecret(secretName string) error {
+	ctx := context.Background()
+	_, err := kc.Client.CoreV1().Secrets(kc.Namespace).Get(ctx, secretName, metav1.GetOptions{})
+
+	if !apierrors.IsNotFound(err) {
+		return nil
+	}
+	username := os.Getenv("VSPHERE_USER")
+	password := os.Getenv("VSPHERE_PASSWORD")
+
+	_, err = kc.Client.CoreV1().Secrets(kc.Namespace).Create(ctx, &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: secretName,
+		},
+		StringData: map[string]string{
+			"username": username,
+			"password": password,
+		},
+		Type: corev1.SecretTypeOpaque,
+	}, metav1.CreateOptions{})
+
+	if err != nil {
+		return fmt.Errorf("failed to create vSphere credentials secret: %w", err)
+	}
+
+	return nil
+}
+
+func (kc *KubeClient) CreateVSphereClusterIdentity(secretName string, identityName string) error {
+	ctx := context.Background()
+	client, err := dynamic.NewForConfig(kc.Config)
+
+	if err != nil {
+		return fmt.Errorf("failed to create dynamic client: %w", err)
+	}
+
+	gvr := schema.GroupVersionResource{
+		Group:    "infrastructure.cluster.x-k8s.io",
+		Version:  "v1beta1",
+		Resource: "vsphereclusteridentities",
+	}
+
+	clusterIdentity := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "infrastructure.cluster.x-k8s.io/v1beta1",
+			"kind":       "VSphereClusterIdentity",
+			"metadata": map[string]interface{}{
+				"name": identityName,
+			},
+			"spec": map[string]interface{}{
+				"secretName": secretName,
+				"allowedNamespaces": map[string]interface{}{
+					"selector": map[string]interface{}{
+						"matchLabels": map[string]interface{}{},
+					},
+				},
+			},
+		},
+	}
+
+	result, err := client.Resource(gvr).Create(ctx, clusterIdentity, metav1.CreateOptions{})
+	if err != nil {
+		fmt.Printf("%+v", result)
+		return fmt.Errorf("Failed to create vsphereclusteridentity: %w", err)
+	}
+
+	return nil
+}
+
 // GetDynamicClient returns a dynamic client for the given GroupVersionResource.
 func (kc *KubeClient) GetDynamicClient(gvr schema.GroupVersionResource) (dynamic.ResourceInterface, error) {
 	client, err := dynamic.NewForConfig(kc.Config)

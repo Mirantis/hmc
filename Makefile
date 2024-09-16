@@ -293,21 +293,25 @@ dev-aws-creds: yq
 dev-azure-creds: envsubst
 	@NAMESPACE=$(NAMESPACE) $(ENVSUBST) -no-unset -i config/dev/azure-credentials.yaml | $(KUBECTL) apply -f -
 
+.PHONY: dev-vsphere-creds
+dev-vsphere-creds: envsubst
+	@NAMESPACE=$(NAMESPACE) $(ENVSUBST) -no-unset -i config/dev/vsphere-credentials.yaml | $(KUBECTL) apply -f -
+
 .PHONY: dev-apply
 dev-apply: kind-deploy registry-deploy dev-push dev-deploy dev-templates
 
 .PHONY: dev-destroy
 dev-destroy: kind-undeploy registry-undeploy ## Destroy the development environment by deleting the kind cluster and local registry.
 
-.PHONY: dev-provider-apply
-dev-provider-apply: envsubst
+.PHONY: dev-mcluster-apply
+dev-mcluster-apply: envsubst
 	@if [ $(DEV_PROVIDER) = "aws" ]; then \
 		$(MAKE) dev-aws-creds; \
 	fi
 	@NAMESPACE=$(NAMESPACE) $(ENVSUBST) -no-unset -i config/dev/$(DEV_PROVIDER)-managedcluster.yaml | $(KUBECTL) apply -f -
 
-.PHONY: dev-provider-delete
-dev-provider-delete: envsubst
+.PHONY: dev-mcluster-delete
+dev-mcluster-delete: envsubst
 	@NAMESPACE=$(NAMESPACE) $(ENVSUBST) -no-unset -i config/dev/$(DEV_PROVIDER)-managedcluster.yaml | $(KUBECTL) delete -f -
 
 .PHONY: dev-creds-apply
@@ -319,12 +323,6 @@ dev-aws-nuke: ## Warning: Destructive! Nuke all AWS resources deployed by 'DEV_P
 	DISABLE_TELEMETRY=true $(CLOUDNUKE) aws --region $$AWS_REGION --force --config config/dev/cloud_nuke.yaml --resource-type vpc,eip,nat-gateway,ec2-subnet,elb,elbv2,internet-gateway,network-interface,security-group
 	@rm config/dev/cloud_nuke.yaml
 	@CLUSTER_NAME=$(CLUSTER_NAME) YQ=$(YQ) AWSCLI=$(AWSCLI) bash -c ./scripts/aws-nuke-ccm.sh
-
-.PHONY: test-apply
-test-apply: kind-deploy registry-deploy dev-push dev-deploy dev-templates
-
-.PHONY: test-destroy
-test-destroy: kind-undeploy registry-undeploy
 
 .PHONY: cli-install
 cli-install: clusterawsadm clusterctl cloud-nuke yq awscli ## Install the necessary CLI tools for deployment, development and testing.
