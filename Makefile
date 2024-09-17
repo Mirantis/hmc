@@ -313,9 +313,6 @@ dev-apply: kind-deploy registry-deploy dev-push dev-deploy dev-templates
 .PHONY: dev-destroy
 dev-destroy: kind-undeploy registry-undeploy ## Destroy the development environment by deleting the kind cluster and local registry.
 
-.PHONY: test-apply
-test-apply: kind-deploy dev-deploy dev-templates
-
 .PHONY: dev-mcluster-apply
 dev-mcluster-apply: envsubst
 	@if [ $(DEV_PROVIDER) = "aws" ]; then \
@@ -466,7 +463,7 @@ awscli: $(AWSCLI)
 $(AWSCLI): | $(LOCALBIN)
 	@if [ $(OS) == "linux" ]; then \
 		curl "https://awscli.amazonaws.com/awscli-exe-linux-$(shell uname -m)-$(AWSCLI_VERSION).zip" -o "/tmp/awscliv2.zip"; \
-		unzip /tmp/awscliv2.zip -d /tmp; \
+		unzip -qq /tmp/awscliv2.zip -d /tmp; \
 		/tmp/aws/install -i $(LOCALBIN)/aws-cli -b $(LOCALBIN) --update; \
 	fi; \
 	if [ $(OS) == "darwin" ]; then \

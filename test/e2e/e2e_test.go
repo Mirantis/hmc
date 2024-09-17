@@ -231,6 +231,8 @@ var _ = Describe("controller", Ordered, func() {
 			// removed, it is deleted last since it is the basis for the hosted
 			// cluster.
 			/*
+				FIXME(#339): This is currently disabled as the deletion of the
+				standalone cluster is failing due to outstanding issues.
 				templateBy(managedcluster.TemplateAWSStandaloneCP, "deleting the ManagedCluster")
 				err = standaloneDeleteFunc()
 				Expect(err).NotTo(HaveOccurred())
