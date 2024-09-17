@@ -92,3 +92,19 @@ The name of the webhook port. Must be no more than 15 characters
 {{- define "hmc.webhook.portName" -}}
 hmc-webhook
 {{- end }}
+
+{{- define "rbac.editorVerbs" -}}
+- create
+- delete
+- get
+- list
+- patch
+- update
+- watch
+{{- end -}}
+
+{{- define "rbac.viewerVerbs" -}}
+- get
+- list
+- watch
+{{- end -}}

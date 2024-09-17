@@ -1,0 +1,18 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "hmc.fullname" . }}-templates-creator-role
+rules:
+  - apiGroups:
+      - hmc.mirantis.com
+    resources:
+      - clustertemplates
+      - servicetemplates
+    verbs: {{ include "rbac.viewerVerbs" . | nindent 6 }}
+      - create
+  - apiGroups:
+      - helm.toolkit.fluxcd.io
+    resources:
+      - helmcharts
+      - helmrepositories
+    verbs: {{ include "rbac.editorVerbs" . | nindent 6 }}
