@@ -9,33 +9,17 @@ rules:
   - cluster.x-k8s.io
   resources:
   - clusters
-  verbs:
-  - get
-  - list
+  verbs: {{ include "rbac.viewerVerbs" . | nindent 4 }}
 - apiGroups:
   - helm.toolkit.fluxcd.io
   resources:
   - helmreleases
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
+  verbs: {{ include "rbac.editorVerbs" . | nindent 4 }}
 - apiGroups:
   - hmc.mirantis.com
   resources:
   - managedclusters
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
+  verbs: {{ include "rbac.editorVerbs" . | nindent 4 }}
 - apiGroups:
   - hmc.mirantis.com
   resources:
@@ -54,14 +38,7 @@ rules:
   - hmc.mirantis.com
   resources:
   - managements
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
+  verbs: {{ include "rbac.editorVerbs" . | nindent 4 }}
 - apiGroups:
   - hmc.mirantis.com
   resources:
@@ -124,14 +101,7 @@ rules:
   resources:
   - helmcharts
   - helmrepositories
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
+  verbs: {{ include "rbac.editorVerbs" . | nindent 4 }}
 - apiGroups:
   - cert-manager.io
   resources:
@@ -152,10 +122,7 @@ rules:
   - cluster.x-k8s.io
   resources:
   - machines
-  verbs:
-  - get
-  - list
-  - watch
+  verbs: {{ include "rbac.viewerVerbs" . | nindent 4 }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role

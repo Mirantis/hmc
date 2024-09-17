@@ -9,26 +9,12 @@ rules:
   - ""
   resources:
   - configmaps
-  verbs:
-  - get
-  - list
-  - watch
-  - create
-  - update
-  - patch
-  - delete
+  verbs: {{ include "rbac.editorVerbs" . | nindent 4 }}
 - apiGroups:
   - coordination.k8s.io
   resources:
   - leases
-  verbs:
-  - get
-  - list
-  - watch
-  - create
-  - update
-  - patch
-  - delete
+  verbs: {{ include "rbac.editorVerbs" . | nindent 4 }}
 - apiGroups:
   - ""
   resources:
