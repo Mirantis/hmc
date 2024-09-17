@@ -5,41 +5,41 @@ workersNumber: 2
 clusterNetwork:
   pods:
     cidrBlocks:
-      - '10.244.0.0/16'
+      - "10.244.0.0/16"
   services:
     cidrBlocks:
-      - '10.96.0.0/12'
+      - "10.96.0.0/12"
 
 # AWS cluster parameters
-region: ''
-sshKeyName: ''
+region: ""
+sshKeyName: ""
 publicIP: false
 bastion:
   enabled: false
   disableIngressRules: false
   allowedCIDRBlocks: []
   instanceType: t2.micro
-  ami: ''
+  ami: ""
 # AWS machines parameters
 controlPlane:
-  amiID: ''
+  amiID: ""
   iamInstanceProfile: control-plane.cluster-api-provider-aws.sigs.k8s.io
-  instanceType: ''
+  instanceType: ""
   rootVolumeSize: 8
   imageLookup:
-    format: 'amzn2-ami-hvm*-gp2'
-    org: '137112412989'
-    baseOS: ''
+    format: "amzn2-ami-hvm*-gp2"
+    org: "137112412989"
+    baseOS: ""
 
 worker:
-  amiID: ''
+  amiID: ""
   iamInstanceProfile: control-plane.cluster-api-provider-aws.sigs.k8s.io
-  instanceType: ''
+  instanceType: ""
   rootVolumeSize: 8
   imageLookup:
-    format: 'amzn2-ami-hvm*-gp2'
-    org: '137112412989'
-    baseOS: ''
+    format: "amzn2-ami-hvm*-gp2"
+    org: "137112412989"
+    baseOS: ""
 
 # K0s parameters
 k0s:

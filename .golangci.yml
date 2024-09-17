@@ -9,10 +9,10 @@ issues:
   # restore some of the defaults
   # (fill in the rest as needed)
   exclude-rules:
-    - path: 'api/*'
+    - path: "api/*"
       linters:
         - lll
-    - path: 'internal/*'
+    - path: "internal/*"
       linters:
         - dupl
         - lll
