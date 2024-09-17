@@ -141,7 +141,7 @@ var _ = BeforeSuite(func() {
 	err = (&hmcwebhook.ManagementValidator{}).SetupWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
-	err = hmcwebhook.SetupTemplateIndex(ctx, mgr)
+	err = (&hmcwebhook.TemplateManagementValidator{}).SetupWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
 	err = (&hmcwebhook.ClusterTemplateValidator{}).SetupWebhookWithManager(mgr)
@@ -151,6 +151,9 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	err = (&hmcwebhook.ProviderTemplateValidator{}).SetupWebhookWithManager(mgr)
+	Expect(err).NotTo(HaveOccurred())
+
+	err = hmcwebhook.SetupTemplateIndex(ctx, mgr)
 	Expect(err).NotTo(HaveOccurred())
 
 	go func() {

@@ -127,4 +127,27 @@ webhooks:
         resources:
           - clustertemplates
     sideEffects: None
+  - admissionReviewVersions:
+      - v1
+      - v1beta1
+    clientConfig:
+      service:
+        name: {{ include "hmc.webhook.serviceName" . }}
+        namespace: {{ include "hmc.webhook.serviceNamespace" . }}
+        path: /validate-hmc-mirantis-com-v1alpha1-templatemanagement
+    failurePolicy: Fail
+    matchPolicy: Equivalent
+    name: validation.templatemanagement.hmc.mirantis.com
+    rules:
+      - apiGroups:
+          - hmc.mirantis.com
+        apiVersions:
+          - v1alpha1
+        operations:
+          - CREATE
+          - UPDATE
+          - DELETE
+        resources:
+          - templatemanagements
+    sideEffects: None
 {{- end }}
