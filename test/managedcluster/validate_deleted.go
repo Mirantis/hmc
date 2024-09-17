@@ -24,20 +24,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-var deletionValidators = map[string]resourceValidationFunc{
-	"clusters":           validateClusterDeleted,
-	"machinedeployments": validateMachineDeploymentsDeleted,
-	"control-planes":     validateK0sControlPlanesDeleted,
-}
-
-// VerifyProviderDeleted is a provider-agnostic verification that checks
-// to ensure generic resources managed by the provider have been deleted.
-// It is intended to be used in conjunction with an Eventually block.
-func VerifyProviderDeleted(ctx context.Context, kc *kubeclient.KubeClient, clusterName string) error {
-	return verifyProviderAction(ctx, kc, clusterName, deletionValidators,
-		[]string{"clusters", "machinedeployments", "control-planes"})
-}
-
 // validateClusterDeleted validates that the Cluster resource has been deleted.
 func validateClusterDeleted(ctx context.Context, kc *kubeclient.KubeClient, clusterName string) error {
 	// Validate that the Cluster resource has been deleted
@@ -53,7 +39,7 @@ func validateClusterDeleted(ctx context.Context, kc *kubeclient.KubeClient, clus
 			// like this, we probably don't want to wait the full Eventually
 			// for something like this, but we can't immediately fail the test
 			// either.
-			return fmt.Errorf("cluster %q exists, but is not in 'Deleting' phase", clusterName)
+			return fmt.Errorf("cluster: %q exists, but is not in 'Deleting' phase", clusterName)
 		}
 
 		conditions, err := utils.GetConditionsFromUnstructured(cluster)

@@ -5,10 +5,10 @@ workersNumber: 2
 clusterNetwork:
   pods:
     cidrBlocks:
-    - "10.244.0.0/16"
+      - "10.244.0.0/16"
   services:
     cidrBlocks:
-    - "10.96.0.0/12"
+      - "10.96.0.0/12"
 
 # AWS cluster parameters
 region: ""
@@ -43,8 +43,8 @@ worker:
 
 # K0s parameters
 k0s:
-  version: v1.30.2+k0s.0
+  version: v1.30.4+k0s.0
 
-# Optionally install applications defined under 
+# Optionally install applications defined under
 # templates/beachheadservices into target cluster
 installBeachHeadServices: false

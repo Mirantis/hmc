@@ -27,8 +27,31 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// Run executes the provided command within this context
+// Run executes the provided command within this context and returns it's
+// output. Run does not wait for the command to finish, use Wait instead.
 func Run(cmd *exec.Cmd) ([]byte, error) {
+	command := prepareCmd(cmd)
+	_, _ = fmt.Fprintf(GinkgoWriter, "running: %s\n", command)
+
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, handleCmdError(err, command)
+	}
+
+	return output, nil
+}
+
+func handleCmdError(err error, command string) error {
+	var exitError *exec.ExitError
+
+	if errors.As(err, &exitError) {
+		return fmt.Errorf("%s failed with error: (%v): %s", command, err, string(exitError.Stderr))
+	}
+
+	return fmt.Errorf("%s failed with error: %w", command, err)
+}
+
+func prepareCmd(cmd *exec.Cmd) string {
 	dir, _ := GetProjectDir()
 	cmd.Dir = dir
 
@@ -37,19 +60,7 @@ func Run(cmd *exec.Cmd) ([]byte, error) {
 	}
 
 	cmd.Env = append(os.Environ(), "GO111MODULE=on")
-	command := strings.Join(cmd.Args, " ")
-	_, _ = fmt.Fprintf(GinkgoWriter, "running: %s\n", command)
-
-	output, err := cmd.Output()
-	if err != nil {
-		var exitError *exec.ExitError
-
-		if errors.As(err, &exitError) {
-			return output, fmt.Errorf("%s failed with error: (%v): %s", command, err, string(exitError.Stderr))
-		}
-	}
-
-	return output, nil
+	return strings.Join(cmd.Args, " ")
 }
 
 // LoadImageToKindCluster loads a local docker image to the kind cluster

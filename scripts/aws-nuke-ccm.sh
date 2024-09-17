@@ -33,28 +33,30 @@ if [ -z $AWSCLI ]; then
     exit 1
 fi
 
-echo "Checking for ELB with 'kubernetes.io/cluster/$CLUSTER_NAME' tag"
-for LOADBALANCER in $($AWSCLI elb describe-load-balancers --output yaml | $YQ '.LoadBalancerDescriptions[].LoadBalancerName');
-do
-    echo "Checking ELB: $LOADBALANCER for 'kubernetes.io/cluster/$CLUSTER_NAME tag"
-    DESCRIBE_TAGS=$($AWSCLI elb describe-tags \
-        --load-balancer-names $LOADBALANCER \
-        --output yaml | $YQ '.TagDescriptions[].Tags.[]' | grep 'kubernetes.io/cluster/$CLUSTER_NAME')
-    if [ ! -z "${DESCRIBE_TAGS}" ]; then
-        echo "Deleting ELB: $LOADBALANCER"
-        $AWSCLI elb delete-load-balancer --load-balancer-name $LOADBALANCER
-    fi
-done
+if [ "$1" == "elb" ]; then
+    echo "Checking for ELB with '$CLUSTER_NAME' tag"
+    for LOADBALANCER in $($AWSCLI elb describe-load-balancers --output yaml | $YQ '.LoadBalancerDescriptions[].LoadBalancerName');
+    do
+        echo "Checking ELB: $LOADBALANCER for tag"
+        DESCRIBE_TAGS=$($AWSCLI elb describe-tags --load-balancer-names $LOADBALANCER --output yaml | $YQ '.TagDescriptions[]' | grep $CLUSTER_NAME)
+        if [ ! -z "${DESCRIBE_TAGS}" ]; then
+            echo "Deleting ELB: $LOADBALANCER"
+            $AWSCLI elb delete-load-balancer --load-balancer-name $LOADBALANCER
+        fi
+    done
+fi
 
-echo "Checking for EBS Volumes with $CLUSTER_NAME within the 'kubernetes.io/created-for/pvc/name' tag"
-for VOLUME in $($AWSCLI  ec2 describe-volumes --output yaml | $YQ '.Volumes[].VolumeId');
-do
-    echo "Checking EBS Volume: $VOLUME for $CLUSTER_NAME claim"
-    DESCRIBE_VOLUMES=$($AWSCLI ec2 describe-volumes \
-        --volume-id $VOLUME \
-        --output yaml | $YQ '.Volumes | to_entries[] | .value.Tags[] | select(.Key == "kubernetes.io/created-for/pvc/name")' | grep $CLUSTER_NAME)
-    if [ ! -z "${DESCRIBE_VOLUMES}" ]; then
-        echo "Deleting EBS Volume: $VOLUME"
-        $AWSCLI ec2 delete-volume --volume-id $VOLUME
-    fi
-done
+if [ "$1" == "ebs" ]; then
+    echo "Checking for EBS Volumes with '$CLUSTER_NAME' within the 'kubernetes.io/created-for/pvc/name' tag"
+    for VOLUME in $($AWSCLI  ec2 describe-volumes --output yaml | $YQ '.Volumes[].VolumeId');
+    do
+        echo "Checking EBS Volume: $VOLUME for $CLUSTER_NAME claim"
+        DESCRIBE_VOLUMES=$($AWSCLI ec2 describe-volumes \
+            --volume-id $VOLUME \
+            --output yaml | $YQ '.Volumes | to_entries[] | .value.Tags[] | select(.Key == "kubernetes.io/created-for/pvc/name")' | grep $CLUSTER_NAME)
+        if [ ! -z "${DESCRIBE_VOLUMES}" ]; then
+            echo "Deleting EBS Volume: $VOLUME"
+            $AWSCLI ec2 delete-volume --volume-id $VOLUME
+        fi
+    done
+fi

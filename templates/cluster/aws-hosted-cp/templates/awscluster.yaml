@@ -4,6 +4,7 @@ metadata:
   name: {{ include "cluster.name" . }}
   annotations:
     cluster.x-k8s.io/managed-by: k0smotron
+    aws.cluster.x-k8s.io/external-resource-gc: "true"
   finalizers:
   - hmc.mirantis.com/cleanup
 spec:

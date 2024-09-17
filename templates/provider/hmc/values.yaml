@@ -8,7 +8,6 @@ admissionWebhook:
 
 controller:
   defaultRegistryURL: "oci://ghcr.io/mirantis/hmc/charts"
-  defaultRepoType: "oci"
   registryCredsSecret: ""
   insecureRegistry: false
   createManagement: true

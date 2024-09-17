@@ -34,61 +34,6 @@ import (
 // resource.
 type resourceValidationFunc func(context.Context, *kubeclient.KubeClient, string) error
 
-var resourceValidators = map[string]resourceValidationFunc{
-	"clusters":       validateCluster,
-	"machines":       validateMachines,
-	"control-planes": validateK0sControlPlanes,
-	"csi-driver":     validateCSIDriver,
-	"ccm":            validateCCM,
-}
-
-// VerifyProviderDeployed is a provider-agnostic verification that checks
-// to ensure generic resources managed by the provider have been deleted.
-// It is intended to be used in conjunction with an Eventually block.
-func VerifyProviderDeployed(
-	ctx context.Context, kc *kubeclient.KubeClient, clusterName string,
-	providerType ProviderType) error {
-	if providerType == ProviderVSphere {
-		return verifyProviderAction(ctx, kc, clusterName, resourceValidators,
-			[]string{"clusters", "machines", "control-planes", "csi-driver"})
-	} else {
-		return verifyProviderAction(ctx, kc, clusterName, resourceValidators,
-			[]string{"clusters", "machines", "control-planes", "csi-driver", "ccm"})
-	}
-}
-
-// verifyProviderAction is a provider-agnostic verification that checks for
-// a specific set of resources and either validates their readiness or
-// their deletion depending on the passed map of resourceValidationFuncs and
-// desired order.
-// It is meant to be used in conjunction with an Eventually block.
-// In some cases it may be necessary to end the Eventually block early if the
-// resource will never reach a ready state, in these instances Ginkgo's Fail
-// should be used to end the spec early.
-func verifyProviderAction(
-	ctx context.Context, kc *kubeclient.KubeClient, clusterName string,
-	resourcesToValidate map[string]resourceValidationFunc, order []string) error {
-	// Sequentially validate each resource type, only returning the first error
-	// as to not move on to the next resource type until the first is resolved.
-	// We use []string here since order is important.
-	for _, name := range order {
-		validator, ok := resourcesToValidate[name]
-		if !ok {
-			continue
-		}
-
-		if err := validator(ctx, kc, clusterName); err != nil {
-			_, _ = fmt.Fprintf(GinkgoWriter, "[%s] validation error: %v\n", name, err)
-			return err
-		}
-
-		_, _ = fmt.Fprintf(GinkgoWriter, "[%s] validation succeeded\n", name)
-		delete(resourcesToValidate, name)
-	}
-
-	return nil
-}
-
 func validateCluster(ctx context.Context, kc *kubeclient.KubeClient, clusterName string) error {
 	cluster, err := kc.GetCluster(ctx, clusterName)
 	if err != nil {
@@ -118,7 +63,7 @@ func validateCluster(ctx context.Context, kc *kubeclient.KubeClient, clusterName
 func validateMachines(ctx context.Context, kc *kubeclient.KubeClient, clusterName string) error {
 	machines, err := kc.ListMachines(ctx, clusterName)
 	if err != nil {
-		return fmt.Errorf("failed to list machines: %w", err)
+		return err
 	}
 
 	for _, machine := range machines {
@@ -137,7 +82,7 @@ func validateMachines(ctx context.Context, kc *kubeclient.KubeClient, clusterNam
 func validateK0sControlPlanes(ctx context.Context, kc *kubeclient.KubeClient, clusterName string) error {
 	controlPlanes, err := kc.ListK0sControlPlanes(ctx, clusterName)
 	if err != nil {
-		return fmt.Errorf("failed to list K0sControlPlanes: %w", err)
+		return err
 	}
 
 	for _, controlPlane := range controlPlanes {
@@ -178,14 +123,11 @@ func validateK0sControlPlanes(ctx context.Context, kc *kubeclient.KubeClient, cl
 // validateCSIDriver validates that the provider CSI driver is functioning
 // by creating a PVC and verifying it enters "Bound" status.
 func validateCSIDriver(ctx context.Context, kc *kubeclient.KubeClient, clusterName string) error {
-	clusterKC, err := kc.NewFromCluster(ctx, "default", clusterName)
-	if err != nil {
-		Fail(fmt.Sprintf("failed to create KubeClient for managed cluster %s: %v", clusterName, err))
-	}
+	clusterKC := kc.NewFromCluster(ctx, "default", clusterName)
 
 	pvcName := clusterName + "-csi-test-pvc"
 
-	_, err = clusterKC.Client.CoreV1().PersistentVolumeClaims(clusterKC.Namespace).
+	_, err := clusterKC.Client.CoreV1().PersistentVolumeClaims(clusterKC.Namespace).
 		Create(ctx, &corev1.PersistentVolumeClaim{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: pvcName,
@@ -268,14 +210,11 @@ func validateCSIDriver(ctx context.Context, kc *kubeclient.KubeClient, clusterNa
 // functional by creating a LoadBalancer service and verifying it is assigned
 // an external IP.
 func validateCCM(ctx context.Context, kc *kubeclient.KubeClient, clusterName string) error {
-	clusterKC, err := kc.NewFromCluster(ctx, "default", clusterName)
-	if err != nil {
-		Fail(fmt.Sprintf("failed to create KubeClient for managed cluster %s: %v", clusterName, err))
-	}
+	clusterKC := kc.NewFromCluster(ctx, "default", clusterName)
 
 	createdServiceName := "loadbalancer-" + clusterName
 
-	_, err = clusterKC.Client.CoreV1().Services(clusterKC.Namespace).Create(ctx, &corev1.Service{
+	_, err := clusterKC.Client.CoreV1().Services(clusterKC.Namespace).Create(ctx, &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: createdServiceName,
 		},
