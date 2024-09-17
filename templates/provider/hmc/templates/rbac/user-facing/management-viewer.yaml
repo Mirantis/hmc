@@ -1,0 +1,11 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "hmc.fullname" . }}-management-viewer-role
+rules:
+  - apiGroups:
+      - hmc.mirantis.com
+    resources:
+      - management
+      - providertemplates
+    verbs: {{ include "rbac.viewerVerbs" . | nindent 6 }}
