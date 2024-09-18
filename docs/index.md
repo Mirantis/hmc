@@ -3,7 +3,7 @@
 
 # Introduction
 
-The HMC is part of Mirantis Project 2A and is focused and developing a consitent 
+HMC is part of Mirantis Project 2A and is focused and developing a consistent 
 way to deploy and manage kubernetes clusters at scale. More informaiton can be 
 found [here](./introduction.md) 
 
