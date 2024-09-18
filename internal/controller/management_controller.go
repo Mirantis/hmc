@@ -117,7 +117,7 @@ func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Manag
 			continue
 		}
 
-		_, _, err = helm.ReconcileHelmRelease(ctx, r.Client, component.HelmReleaseName(), r.SystemNamespace, helm.ReconcileHelmReleaseOpts{
+		_, _, err = helm.ReconcileHelmRelease(ctx, r.Client, component.helmReleaseName, r.SystemNamespace, helm.ReconcileHelmReleaseOpts{
 			Values:          component.Config,
 			ChartRef:        template.Status.ChartRef,
 			DependsOn:       component.dependsOn,
@@ -152,7 +152,7 @@ func (r *ManagementReconciler) Delete(ctx context.Context, management *hmc.Manag
 	listOpts := &client.ListOptions{
 		LabelSelector: labels.SelectorFromSet(map[string]string{hmc.HMCManagedLabelKey: hmc.HMCManagedLabelValue}),
 	}
-	if err := r.removeHelmReleases(ctx, management.Spec.Core.HMC.HelmReleaseName(), listOpts); err != nil {
+	if err := r.removeHelmReleases(ctx, hmc.CoreHMCName, listOpts); err != nil {
 		return ctrl.Result{}, err
 	}
 	if err := r.removeHelmCharts(ctx, listOpts); err != nil {
@@ -217,6 +217,8 @@ func (r *ManagementReconciler) removeHelmRepositories(ctx context.Context, opts 
 
 type component struct {
 	hmc.Component
+
+	helmReleaseName string
 	// helm release dependencies
 	dependsOn       []meta.NamespacedObjectReference
 	targetNamespace string
@@ -228,11 +230,13 @@ func wrappedComponents(mgmt *hmc.Management) (components []component) {
 		return
 	}
 
-	components = append(components, component{Component: mgmt.Spec.Core.HMC})
-	components = append(components, component{Component: mgmt.Spec.Core.CAPI, dependsOn: []meta.NamespacedObjectReference{{Name: mgmt.Spec.Core.HMC.Template}}})
+	components = append(components, component{Component: mgmt.Spec.Core.HMC, helmReleaseName: hmc.CoreHMCName})
+	components = append(components, component{Component: mgmt.Spec.Core.CAPI, helmReleaseName: hmc.CoreCAPIName,
+		dependsOn: []meta.NamespacedObjectReference{{Name: mgmt.Spec.Core.HMC.Template}}})
 
 	for i := range mgmt.Spec.Providers {
-		c := component{Component: mgmt.Spec.Providers[i], dependsOn: []meta.NamespacedObjectReference{{Name: mgmt.Spec.Core.CAPI.Template}}}
+		c := component{Component: mgmt.Spec.Providers[i].Component, helmReleaseName: mgmt.Spec.Providers[i].Name,
+			dependsOn: []meta.NamespacedObjectReference{{Name: mgmt.Spec.Core.CAPI.Template}}}
 
 		if mgmt.Spec.Providers[i].Template == hmc.ProviderSveltosName {
 			c.targetNamespace = hmc.ProviderSveltosTargetNamespace

@@ -88,7 +88,6 @@ spec:
               providers:
                 description: Providers is the list of supported CAPI providers.
                 items:
-                  description: Component represents HMC management component
                   properties:
                     config:
                       description: |-
@@ -96,11 +95,15 @@ spec:
                         If no Config provided, the field will be populated with the default
                         values for the template.
                       x-kubernetes-preserve-unknown-fields: true
+                    name:
+                      description: Name of the provider.
+                      type: string
                     template:
                       description: Template is the name of the Template associated
                         with this component.
                       type: string
                   required:
+                  - name
                   - template
                   type: object
                 type: array

@@ -24,7 +24,10 @@ import (
 )
 
 const (
-	DefaultCoreHMCTemplate  = "hmc"
+	CoreHMCName            = "hmc"
+	DefaultCoreHMCTemplate = "hmc"
+
+	CoreCAPIName            = "capi"
 	DefaultCoreCAPITemplate = "cluster-api"
 
 	ManagementName      = "hmc"
@@ -47,7 +50,7 @@ type ManagementSpec struct {
 	Core *Core `json:"core,omitempty"`
 
 	// Providers is the list of supported CAPI providers.
-	Providers []Component `json:"providers,omitempty"`
+	Providers []Provider `json:"providers,omitempty"`
 }
 
 // Core represents a structure describing core Management components.
@@ -69,15 +72,17 @@ type Component struct {
 	Config *apiextensionsv1.JSON `json:"config,omitempty"`
 }
 
+type Provider struct {
+	Component `json:",inline"`
+	// Name of the provider.
+	Name string `json:"name"`
+}
+
 func (in *Component) HelmValues() (values map[string]interface{}, err error) {
 	if in.Config != nil {
 		err = yaml.Unmarshal(in.Config.Raw, &values)
 	}
 	return values, err
-}
-
-func (in *Component) HelmReleaseName() string {
-	return in.Template
 }
 
 func (m *ManagementSpec) SetDefaults() bool {
@@ -89,11 +94,14 @@ func (m *ManagementSpec) SetDefaults() bool {
 }
 
 func (m *ManagementSpec) SetProvidersDefaults() error {
-	providers := []Component{}
+	providers := []Provider{}
 
 	for name, cfg := range DefaultProviders {
-		c := Component{
-			Template: name,
+		c := Provider{
+			Name: name,
+			Component: Component{
+				Template: name,
+			},
 		}
 
 		if len(cfg) > 0 {
