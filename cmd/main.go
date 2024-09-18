@@ -171,12 +171,18 @@ func main() {
 
 	currentNamespace := utils.CurrentNamespace()
 
+	templateReconciler := controller.TemplateReconciler{
+		Client:                    mgr.GetClient(),
+		Scheme:                    mgr.GetScheme(),
+		SystemNamespace:           currentNamespace,
+		DefaultRegistryURL:        defaultRegistryURL,
+		DefaultRepoType:           determinedRepositoryType,
+		RegistryCredentialsSecret: registryCredentialsSecret,
+		InsecureRegistry:          insecureRegistry,
+	}
+
 	if err = (&controller.ClusterTemplateReconciler{
-		TemplateReconciler: controller.TemplateReconciler{
-			Client:          mgr.GetClient(),
-			Scheme:          mgr.GetScheme(),
-			SystemNamespace: currentNamespace,
-		},
+		TemplateReconciler: templateReconciler,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ClusterTemplate")
 		os.Exit(1)
@@ -189,21 +195,13 @@ func main() {
 	}
 
 	if err = (&controller.ServiceTemplateReconciler{
-		TemplateReconciler: controller.TemplateReconciler{
-			Client:          mgr.GetClient(),
-			Scheme:          mgr.GetScheme(),
-			SystemNamespace: currentNamespace,
-		},
+		TemplateReconciler: templateReconciler,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ServiceTemplate")
 		os.Exit(1)
 	}
 	if err = (&controller.ProviderTemplateReconciler{
-		TemplateReconciler: controller.TemplateReconciler{
-			Client:          mgr.GetClient(),
-			Scheme:          mgr.GetScheme(),
-			SystemNamespace: currentNamespace,
-		},
+		TemplateReconciler: templateReconciler,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ProviderTemplate")
 		os.Exit(1)
@@ -237,16 +235,12 @@ func main() {
 		os.Exit(1)
 	}
 	if err = mgr.Add(&controller.Poller{
-		Client:                    mgr.GetClient(),
-		Config:                    mgr.GetConfig(),
-		CreateManagement:          createManagement,
-		CreateTemplates:           createTemplates,
-		DefaultRegistryURL:        defaultRegistryURL,
-		DefaultRepoType:           determinedRepositoryType,
-		RegistryCredentialsSecret: registryCredentialsSecret,
-		InsecureRegistry:          insecureRegistry,
-		HMCTemplatesChartName:     hmcTemplatesChartName,
-		SystemNamespace:           currentNamespace,
+		Client:                mgr.GetClient(),
+		Config:                mgr.GetConfig(),
+		CreateManagement:      createManagement,
+		CreateTemplates:       createTemplates,
+		HMCTemplatesChartName: hmcTemplatesChartName,
+		SystemNamespace:       currentNamespace,
 	}); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ReleaseController")
 		os.Exit(1)
