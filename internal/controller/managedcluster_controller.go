@@ -16,6 +16,7 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -27,6 +28,8 @@ import (
 	"github.com/go-logr/logr"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
+	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -269,9 +272,47 @@ func (r *ManagedClusterReconciler) Update(ctx context.Context, l logr.Logger, ma
 		Message: "Helm chart is valid",
 	})
 
+	cred := &hmc.Credential{}
+	err = r.Client.Get(ctx, client.ObjectKey{
+		Name:      managedCluster.Spec.Credential,
+		Namespace: managedCluster.Namespace,
+	}, cred)
+	if err != nil {
+		apimeta.SetStatusCondition(managedCluster.GetConditions(), metav1.Condition{
+			Type:    hmc.CredentialReadyCondition,
+			Status:  metav1.ConditionFalse,
+			Reason:  hmc.FailedReason,
+			Message: fmt.Sprintf("Failed to get Credential: %s", err),
+		})
+		return ctrl.Result{}, err
+	}
+
+	if cred.Status.State != hmc.CredentialReady {
+		apimeta.SetStatusCondition(managedCluster.GetConditions(), metav1.Condition{
+			Type:    hmc.CredentialReadyCondition,
+			Status:  metav1.ConditionFalse,
+			Reason:  hmc.FailedReason,
+			Message: "Credential is not in Ready state",
+		})
+		return ctrl.Result{},
+			fmt.Errorf("credential is not in Ready state")
+	}
+
+	apimeta.SetStatusCondition(managedCluster.GetConditions(), metav1.Condition{
+		Type:    hmc.CredentialReadyCondition,
+		Status:  metav1.ConditionTrue,
+		Reason:  hmc.SucceededReason,
+		Message: "Credential is Ready",
+	})
+
 	if !managedCluster.Spec.DryRun {
+		helmValues, err := setIdentityHelmValues(managedCluster.Spec.Config, cred.Spec.IdentityRef)
+		if err != nil {
+			return ctrl.Result{},
+				fmt.Errorf("error setting identity values: %s", err)
+		}
 		hr, _, err := helm.ReconcileHelmRelease(ctx, r.Client, managedCluster.Name, managedCluster.Namespace, helm.ReconcileHelmReleaseOpts{
-			Values: managedCluster.Spec.Config,
+			Values: helmValues,
 			OwnerReference: &metav1.OwnerReference{
 				APIVersion: hmc.GroupVersion.String(),
 				Kind:       hmc.ManagedClusterKind,
@@ -512,6 +553,24 @@ func (r *ManagedClusterReconciler) machinesAvailable(ctx context.Context, namesp
 		return false, err
 	}
 	return len(itemsList.Items) != 0, nil
+}
+
+func setIdentityHelmValues(values *apiextensionsv1.JSON, idRef *corev1.ObjectReference) (*apiextensionsv1.JSON, error) {
+	var valuesJSON map[string]any
+	err := json.Unmarshal(values.Raw, &valuesJSON)
+	if err != nil {
+		return nil, fmt.Errorf("error unmarshalling values: %s", err)
+	}
+
+	valuesJSON["clusterIdentity"] = idRef
+	valuesRaw, err := json.Marshal(valuesJSON)
+	if err != nil {
+		return nil, fmt.Errorf("error marshalling values: %s", err)
+	}
+
+	return &apiextensionsv1.JSON{
+		Raw: valuesRaw,
+	}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
