@@ -141,6 +141,9 @@ var _ = BeforeSuite(func() {
 	err = (&hmcwebhook.ManagementValidator{}).SetupWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
+	err = hmcwebhook.SetupTemplateIndex(ctx, mgr)
+	Expect(err).NotTo(HaveOccurred())
+
 	err = (&hmcwebhook.ClusterTemplateValidator{}).SetupWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
