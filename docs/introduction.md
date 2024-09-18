@@ -11,7 +11,7 @@ erDiagram
     HMC ||--o{ CAPI : connects
     CAPI ||--|{ CAPV : provider
     CAPI ||--|{ CAPA : povider
-    CAPI ||--|{ CAPZ : provder
+    CAPI ||--|{ CAPZ : provider
     CAPI ||--|{ K0smotron : Bootstrap
     K0smotron |o..o| CAPV : uses
     K0smotron |o..o| CAPA : uses
