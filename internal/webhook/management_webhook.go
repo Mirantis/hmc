@@ -34,7 +34,7 @@ type ManagementValidator struct {
 }
 
 var (
-	ManagementDeletionForbidden = errors.New("management deletion is forbidden")
+	ErrManagementDeletionForbidden = errors.New("management deletion is forbidden")
 )
 
 func (in *ManagementValidator) SetupWebhookWithManager(mgr ctrl.Manager) error {
@@ -69,7 +69,7 @@ func (v *ManagementValidator) ValidateDelete(ctx context.Context, _ runtime.Obje
 		return nil, err
 	}
 	if len(managedClusters.Items) > 0 {
-		return admission.Warnings{"The Management object can't be removed if ManagedCluster objects still exist"}, ManagementDeletionForbidden
+		return admission.Warnings{"The Management object can't be removed if ManagedCluster objects still exist"}, ErrManagementDeletionForbidden
 	}
 	return nil, nil
 }

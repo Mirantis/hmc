@@ -16,7 +16,11 @@ package webhook // nolint:dupl
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -29,6 +33,12 @@ import (
 type ClusterTemplateValidator struct {
 	client.Client
 }
+
+const TemplateKey = ".spec.template"
+
+var (
+	ErrTemplateDeletionForbidden = errors.New("template deletion is forbidden")
+)
 
 func (in *ClusterTemplateValidator) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	in.Client = mgr.GetClient()
@@ -55,7 +65,26 @@ func (*ClusterTemplateValidator) ValidateUpdate(_ context.Context, _ runtime.Obj
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
-func (*ClusterTemplateValidator) ValidateDelete(_ context.Context, _ runtime.Object) (admission.Warnings, error) {
+func (v *ClusterTemplateValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+	template, ok := obj.(*v1alpha1.ClusterTemplate)
+	if !ok {
+		return admission.Warnings{"Wrong object"}, apierrors.NewBadRequest(fmt.Sprintf("expected ClusterTemplate but got a %T", obj))
+	}
+
+	managedClusters := &v1alpha1.ManagedClusterList{}
+	listOptions := client.ListOptions{
+		FieldSelector: fields.SelectorFromSet(fields.Set{TemplateKey: template.Name}),
+		Limit:         1,
+	}
+	err := v.Client.List(ctx, managedClusters, &listOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(managedClusters.Items) > 0 {
+		return admission.Warnings{"The ClusterTemplate object can't be removed if ManagedCluster objects referencing it still exist"}, ErrTemplateDeletionForbidden
+	}
+
 	return nil, nil
 }
 
@@ -137,5 +166,25 @@ func (*ProviderTemplateValidator) ValidateDelete(_ context.Context, _ runtime.Ob
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type.
 func (*ProviderTemplateValidator) Default(_ context.Context, _ runtime.Object) error {
+	return nil
+}
+
+func ExtractTemplateName(rawObj client.Object) []string {
+	cluster, ok := rawObj.(*v1alpha1.ManagedCluster)
+	if !ok {
+		return nil
+	}
+	if cluster.Spec.Template == "" {
+		return []string{}
+	}
+	return []string{cluster.Spec.Template}
+}
+
+func SetupTemplateIndex(ctx context.Context, mgr ctrl.Manager) error {
+	if err := mgr.GetFieldIndexer().
+		IndexField(ctx, &v1alpha1.ManagedCluster{}, TemplateKey, ExtractTemplateName); err != nil {
+		return err
+	}
+
 	return nil
 }
