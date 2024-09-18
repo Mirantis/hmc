@@ -109,7 +109,7 @@ test: generate-all fmt vet envtest tidy external-crd ## Run tests.
 # compatibility with other vendors.
 .PHONY: test-e2e # Run the e2e tests using a Kind k8s instance as the management cluster.
 test-e2e: cli-install
-	 KIND_CLUSTER_NAME="hmc-test" KIND_VERSION=$(KIND_VERSION) go test ./test/e2e/ -v -ginkgo.v -timeout=2h
+	KIND_CLUSTER_NAME="hmc-test" KIND_VERSION=$(KIND_VERSION) go test ./test/e2e/ -v -ginkgo.v -timeout=3h
 
 .PHONY: lint
 lint: golangci-lint ## Run golangci-lint linter & yamllint

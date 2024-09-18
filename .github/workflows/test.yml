@@ -18,6 +18,11 @@ env:
   AWS_REGION: us-west-2
   AWS_ACCESS_KEY_ID: ${{ secrets.CI_AWS_ACCESS_KEY_ID }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.CI_AWS_SECRET_ACCESS_KEY }}
+  AZURE_SUBSCRIPTION_ID: ${{ secrets.CI_AZURE_SUBSCRIPTION_ID }}
+  AZURE_TENANT_ID: ${{ secrets.CI_AZURE_TENANT_ID }}
+  AZURE_CLIENT_ID: ${{ secrets.CI_AZURE_CLIENT_ID }}
+  AZURE_CLIENT_SECRET: ${{ secrets.CI_AZURE_CLIENT_SECRET }}
+  NAMESPACE: hmc-system
 
 jobs:
   e2etest:
