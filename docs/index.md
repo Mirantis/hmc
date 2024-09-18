@@ -9,7 +9,7 @@ found [here](./introduction.md)
 
 
 ## Providers
-HMC leverage the Cluster API provider ecosystem, the following providers have 
+HMC leverages the Cluster API provider ecosystem, the following providers have 
 had templates created and validated
 
 
