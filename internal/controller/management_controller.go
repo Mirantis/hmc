@@ -232,11 +232,11 @@ func wrappedComponents(mgmt *hmc.Management) (components []component) {
 
 	components = append(components, component{Component: mgmt.Spec.Core.HMC, helmReleaseName: hmc.CoreHMCName})
 	components = append(components, component{Component: mgmt.Spec.Core.CAPI, helmReleaseName: hmc.CoreCAPIName,
-		dependsOn: []meta.NamespacedObjectReference{{Name: mgmt.Spec.Core.HMC.Template}}})
+		dependsOn: []meta.NamespacedObjectReference{{Name: hmc.CoreHMCName}}})
 
 	for i := range mgmt.Spec.Providers {
 		c := component{Component: mgmt.Spec.Providers[i].Component, helmReleaseName: mgmt.Spec.Providers[i].Name,
-			dependsOn: []meta.NamespacedObjectReference{{Name: mgmt.Spec.Core.CAPI.Template}}}
+			dependsOn: []meta.NamespacedObjectReference{{Name: hmc.CoreCAPIName}}}
 
 		if mgmt.Spec.Providers[i].Template == hmc.ProviderSveltosName {
 			c.targetNamespace = hmc.ProviderSveltosTargetNamespace
