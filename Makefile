@@ -111,7 +111,7 @@ test: generate-all fmt vet envtest tidy external-crd ## Run tests.
 # compatibility with other vendors.
 .PHONY: test-e2e # Run the e2e tests using a Kind k8s instance as the management cluster.
 test-e2e: cli-install
-	 KIND_CLUSTER_NAME="hmc-test" KIND_VERSION=$(KIND_VERSION) go test ./test/e2e/ -v -ginkgo.v -timeout=2h
+	KIND_CLUSTER_NAME="hmc-test" KIND_VERSION=$(KIND_VERSION) go test ./test/e2e/ -v -ginkgo.v -timeout=3h
 
 .PHONY: lint
 lint: golangci-lint ## Run golangci-lint linter & yamllint
@@ -269,7 +269,11 @@ helm-push: helm-package
 		chart_version=$$(echo $$base | grep -o "v\{0,1\}[0-9]\+\.[0-9]\+\.[0-9].*"); \
 		chart_name="$${base%-"$$chart_version"}"; \
 		echo "Verifying if chart $$chart_name, version $$chart_version already exists in $(REGISTRY_REPO)"; \
-		chart_exists=$$($(HELM) pull $$repo_flag $(REGISTRY_REPO) $$chart_name --version $$chart_version --destination /tmp 2>&1 | grep "not found" || true); \
+		if $(REGISTRY_IS_OCI); then \
+			chart_exists=$$($(HELM) pull $$repo_flag $(REGISTRY_REPO)/$$chart_name --version $$chart_version --destination /tmp 2>&1 | grep "not found" || true); \
+		else \
+			chart_exists=$$($(HELM) pull $$repo_flag $(REGISTRY_REPO) $$chart_name --version $$chart_version --destination /tmp 2>&1 | grep "not found" || true); \
+		fi; \
 		if [ -z "$$chart_exists" ]; then \
 			echo "Chart $$chart_name version $$chart_version already exists in the repository."; \
 		else \
@@ -303,7 +307,7 @@ dev-release:
 
 .PHONY: dev-aws-creds
 dev-aws-creds: envsubst
-	@NAMESPACE=$(NAMESPACE) $(ENVSUBST) -no-unset -i config/dev/aws-credentials.yaml | $(KUBECTL) apply -f -
+	@NAMESPACE=$(NAMESPACE) $(ENVSUBST) -i config/dev/aws-credentials.yaml | $(KUBECTL) apply -f -
 
 .PHONY: dev-azure-creds
 dev-azure-creds: envsubst

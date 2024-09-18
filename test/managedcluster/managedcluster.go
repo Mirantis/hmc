@@ -26,6 +26,8 @@ import (
 	. "github.com/onsi/gomega"
 	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/Mirantis/hmc/internal/utils"
 )
 
 type ProviderType string
@@ -44,6 +46,8 @@ type Template string
 const (
 	TemplateAWSStandaloneCP     Template = "aws-standalone-cp"
 	TemplateAWSHostedCP         Template = "aws-hosted-cp"
+	TemplateAzureHostedCP       Template = "azure-hosted-cp"
+	TemplateAzureStandaloneCP   Template = "azure-standalone-cp"
 	TemplateVSphereStandaloneCP Template = "vsphere-standalone-cp"
 	TemplateVSphereHostedCP     Template = "vsphere-hosted-cp"
 )
@@ -53,6 +57,12 @@ var awsStandaloneCPManagedClusterTemplateBytes []byte
 
 //go:embed resources/aws-hosted-cp.yaml.tpl
 var awsHostedCPManagedClusterTemplateBytes []byte
+
+//go:embed resources/azure-standalone-cp.yaml.tpl
+var azureStandaloneCPManagedClusterTemplateBytes []byte
+
+//go:embed resources/azure-hosted-cp.yaml.tpl
+var azureHostedCPManagedClusterTemplateBytes []byte
 
 //go:embed resources/vsphere-standalone-cp.yaml.tpl
 var vsphereStandaloneCPManagedClusterTemplateBytes []byte
@@ -71,7 +81,7 @@ func GetUnstructured(templateName Template) *unstructured.Unstructured {
 
 	generatedName := os.Getenv(EnvVarManagedClusterName)
 	if generatedName == "" {
-		generatedName = uuid.New().String()[:8] + "-e2e-test"
+		generatedName = "e2e-test-" + uuid.New().String()[:8]
 		_, _ = fmt.Fprintf(GinkgoWriter, "Generated cluster name: %q\n", generatedName)
 		GinkgoT().Setenv(EnvVarManagedClusterName, generatedName)
 	} else {
@@ -104,10 +114,15 @@ func GetUnstructured(templateName Template) *unstructured.Unstructured {
 		managedClusterTemplateBytes = vsphereStandaloneCPManagedClusterTemplateBytes
 	case TemplateVSphereHostedCP:
 		managedClusterTemplateBytes = vsphereHostedCPManagedClusterTemplateBytes
+	case TemplateAzureHostedCP:
+		managedClusterTemplateBytes = azureHostedCPManagedClusterTemplateBytes
+	case TemplateAzureStandaloneCP:
+		managedClusterTemplateBytes = azureStandaloneCPManagedClusterTemplateBytes
 	default:
-		Fail(fmt.Sprintf("unsupported AWS template: %s", templateName))
+		Fail(fmt.Sprintf("unsupported template: %s", templateName))
 	}
 
+	Expect(os.Setenv("NAMESPACE", utils.DefaultSystemNamespace)).NotTo(HaveOccurred())
 	managedClusterConfigBytes, err := envsubst.Bytes(managedClusterTemplateBytes)
 	Expect(err).NotTo(HaveOccurred(), "failed to substitute environment variables")
 
