@@ -4,13 +4,13 @@ docs_dir: ./docs
 repo_name: GitHub
 repo_url: https://github.com/mirantis/hmc
 copyright:
-  '© 2005 - 2023 Mirantis, Inc. All rights reserved. "Mirantis" and "FUEL" are registered trademarks of Mirantis, Inc. All other trademarks are the property of their respective owners.'
+  '© 2005 - 2024 Mirantis, Inc. All rights reserved. “Mirantis” and “FUEL” are registered trademarks of Mirantis, Inc. All other trademarks are the property of their respective owners.'
 nav:
   - Home: index.md
   - Introduction: introduction.md
   - Quick Start: quick-start.md
   - Developer Guide: dev.md
- 
+
 
 
 theme:
@@ -18,12 +18,12 @@ theme:
   font:
     text: overpass
     code: Roboto Mono
-  palette: 
+  palette:
     # Palette toggle for light mode
     - scheme: default
       primary: custom
       toggle:
-        icon: material/brightness-7 
+        icon: material/brightness-7
         name: Switch to dark mode
 
     # Palette toggle for dark mode
@@ -32,11 +32,11 @@ theme:
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
-  
+
   icon: assets/mirantis-logo-inverted-horizontal-one-color.svg
   logo: assets/mirantis-logo-inverted-horizontal-one-color.svg
   favicon: assets/favicon.ico
-  
+
   search: true
   search_index_only: true
   features:
