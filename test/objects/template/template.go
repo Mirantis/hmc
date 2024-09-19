@@ -113,6 +113,12 @@ func WithLabels(labels map[string]string) Opt {
 	}
 }
 
+func WithOwnerReference(ownerRef []metav1.OwnerReference) Opt {
+	return func(t Template) {
+		t.SetOwnerReferences(ownerRef)
+	}
+}
+
 func ManagedByHMC() Opt {
 	return func(template Template) {
 		labels := template.GetLabels()

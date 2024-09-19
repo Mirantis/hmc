@@ -171,7 +171,7 @@ var _ = Describe("Template Controller", func() {
 			err = k8sClient.Get(ctx, typeNamespacedName, providerTemplateResource)
 			Expect(err).NotTo(HaveOccurred())
 
-			By("Cleanup the specific resource instance ClusterTemplate")
+			By("Cleanup the specific resource instance ProviderTemplate")
 			Expect(k8sClient.Delete(ctx, providerTemplateResource)).To(Succeed())
 		})
 

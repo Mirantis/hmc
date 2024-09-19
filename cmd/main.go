@@ -352,15 +352,19 @@ func setupWebhooks(mgr ctrl.Manager, currentNamespace string) error {
 		setupLog.Error(err, "unable to create webhook", "webhook", "ServiceTemplateChain")
 		return err
 	}
-	if err := (&hmcwebhook.ClusterTemplateValidator{}).SetupWebhookWithManager(mgr); err != nil {
+
+	templateValidator := hmcwebhook.TemplateValidator{
+		SystemNamespace: currentNamespace,
+	}
+	if err := (&hmcwebhook.ClusterTemplateValidator{TemplateValidator: templateValidator}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "ClusterTemplate")
 		return err
 	}
-	if err := (&hmcwebhook.ServiceTemplateValidator{SystemNamespace: currentNamespace}).SetupWebhookWithManager(mgr); err != nil {
+	if err := (&hmcwebhook.ServiceTemplateValidator{TemplateValidator: templateValidator}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "ServiceTemplate")
 		return err
 	}
-	if err := (&hmcwebhook.ProviderTemplateValidator{}).SetupWebhookWithManager(mgr); err != nil {
+	if err := (&hmcwebhook.ProviderTemplateValidator{TemplateValidator: templateValidator}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "ProviderTemplate")
 		return err
 	}

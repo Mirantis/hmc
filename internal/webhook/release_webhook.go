@@ -16,6 +16,7 @@ package webhook
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -29,6 +30,8 @@ import (
 
 	hmcv1alpha1 "github.com/Mirantis/hmc/api/v1alpha1"
 )
+
+var errManagementIsNotFound = errors.New("no Management object found")
 
 type ReleaseValidator struct {
 	client.Client
@@ -61,18 +64,14 @@ func (v *ReleaseValidator) ValidateDelete(ctx context.Context, obj runtime.Objec
 	if !ok {
 		return admission.Warnings{"Wrong object"}, apierrors.NewBadRequest(fmt.Sprintf("expected Release but got a %T", obj))
 	}
-	mgmtList := &hmcv1alpha1.ManagementList{}
-	if err := v.List(ctx, mgmtList); err != nil {
+
+	mgmt, err := getManagement(ctx, v.Client)
+	if err != nil {
+		if errors.Is(err, errManagementIsNotFound) {
+			return nil, nil
+		}
 		return nil, err
 	}
-	if len(mgmtList.Items) == 0 {
-		return nil, nil
-	}
-	if len(mgmtList.Items) > 1 {
-		return nil, fmt.Errorf("expected 1 Management object, got %d", len(mgmtList.Items))
-	}
-
-	mgmt := mgmtList.Items[0]
 	if mgmt.Spec.Release == release.Name {
 		return nil, fmt.Errorf("release %s is still in use", release.Name)
 	}
@@ -88,4 +87,18 @@ func (v *ReleaseValidator) ValidateDelete(ctx context.Context, obj runtime.Objec
 		return nil, fmt.Errorf("the following ProviderTemplates associated with the Release are still in use: %s", strings.Join(templatesInUse, ", "))
 	}
 	return nil, nil
+}
+
+func getManagement(ctx context.Context, cl client.Client) (*hmcv1alpha1.Management, error) {
+	mgmtList := &hmcv1alpha1.ManagementList{}
+	if err := cl.List(ctx, mgmtList); err != nil {
+		return nil, err
+	}
+	if len(mgmtList.Items) == 0 {
+		return nil, errManagementIsNotFound
+	}
+	if len(mgmtList.Items) > 1 {
+		return nil, fmt.Errorf("expected 1 Management object, got %d", len(mgmtList.Items))
+	}
+	return &mgmtList.Items[0], nil
 }

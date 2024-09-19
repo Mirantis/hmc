@@ -16,65 +16,204 @@ package webhook
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	. "github.com/onsi/gomega"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/Mirantis/hmc/api/v1alpha1"
 	"github.com/Mirantis/hmc/test/objects/managedcluster"
+	"github.com/Mirantis/hmc/test/objects/management"
 	"github.com/Mirantis/hmc/test/objects/multiclusterservice"
+	"github.com/Mirantis/hmc/test/objects/release"
 	"github.com/Mirantis/hmc/test/objects/template"
+	tc "github.com/Mirantis/hmc/test/objects/templatechain"
 	"github.com/Mirantis/hmc/test/scheme"
 )
 
-func TestClusterTemplateValidateDelete(t *testing.T) {
+func TestProviderTemplateValidateDelete(t *testing.T) {
 	ctx := context.Background()
-	namespace := "test"
-	tpl := template.NewClusterTemplate(template.WithName("testTemplateFail"), template.WithNamespace(namespace))
-	tplTest := template.NewClusterTemplate(template.WithName("testTemplate"), template.WithNamespace(namespace))
+
+	const (
+		templateName = "mytemplate"
+	)
+	tmpl := template.NewProviderTemplate(template.WithName(templateName))
+
+	releaseName := "hmc-0-0-3"
 
 	tests := []struct {
-		name            string
+		title           string
+		template        *v1alpha1.ProviderTemplate
+		existingObjects []runtime.Object
+		warnings        admission.Warnings
+		err             string
+	}{
+		{
+			title:    "should fail if the core ProviderTemplate defined in the Management spec is removed",
+			template: tmpl,
+			existingObjects: []runtime.Object{
+				management.NewManagement(management.WithRelease(releaseName), management.WithCoreComponents(&v1alpha1.Core{
+					HMC: v1alpha1.Component{
+						Template: templateName,
+					},
+				})),
+				release.New(release.WithName(releaseName)),
+			},
+			warnings: admission.Warnings{fmt.Sprintf("The ProviderTemplate %s cannot be removed while it is used in the Management spec", templateName)},
+			err:      errTemplateDeletionForbidden.Error(),
+		},
+		{
+			title: "should fail if the template is part of one of the existing Releases",
+			template: template.NewProviderTemplate(
+				template.WithName(templateName),
+				template.WithOwnerReference([]metav1.OwnerReference{
+					{
+						Kind: v1alpha1.ReleaseKind,
+						Name: "hmc-0-0-3",
+					},
+					{
+						Kind: v1alpha1.ReleaseKind,
+						Name: "hmc-0-0-4",
+					},
+				}),
+			),
+			existingObjects: []runtime.Object{
+				management.NewManagement(management.WithRelease(releaseName)),
+				release.New(release.WithName("hmc-0-0-3")),
+				release.New(release.WithName("hmc-0-0-4")),
+			},
+			warnings: admission.Warnings{fmt.Sprintf("The ProviderTemplate %s cannot be removed while it is part of existing Releases: hmc-0-0-3, hmc-0-0-4", templateName)},
+			err:      errTemplateDeletionForbidden.Error(),
+		},
+		{
+			title:    "should succeed if the provider is not enabled in Management spec and is not a part of one of the existing Release",
+			template: tmpl,
+			existingObjects: []runtime.Object{
+				management.NewManagement(
+					management.WithRelease(releaseName),
+					management.WithCoreComponents(&v1alpha1.Core{}),
+					management.WithProviders(v1alpha1.Provider{
+						Name: "cluster-api-provider-aws",
+						Component: v1alpha1.Component{
+							Template: "cluster-api-provider-aws-0-0-2",
+						},
+					},
+					)),
+				release.New(release.WithName(releaseName)),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.title, func(t *testing.T) {
+			g := NewWithT(t)
+
+			c := fake.
+				NewClientBuilder().
+				WithScheme(scheme.Scheme).
+				WithRuntimeObjects(tt.existingObjects...).
+				WithIndex(&v1alpha1.ManagedCluster{}, v1alpha1.ManagedClusterServiceTemplatesIndexKey, v1alpha1.ExtractServiceTemplateNamesFromManagedCluster).
+				Build()
+
+			validator := &ProviderTemplateValidator{
+				TemplateValidator{
+					Client:          c,
+					SystemNamespace: testSystemNamespace,
+					templateKind:    v1alpha1.ProviderTemplateKind,
+				},
+			}
+
+			warn, err := validator.ValidateDelete(ctx, tt.template)
+			if tt.err != "" {
+				g.Expect(err).To(MatchError(tt.err))
+			} else {
+				g.Expect(err).To(Succeed())
+			}
+
+			if len(tt.warnings) > 0 {
+				g.Expect(warn).To(Equal(tt.warnings))
+			} else {
+				g.Expect(warn).To(BeEmpty())
+			}
+		})
+	}
+}
+
+func TestClusterTemplateValidateDelete(t *testing.T) {
+	ctx := context.Background()
+
+	const (
+		templateName      = "mytemplate"
+		templateNamespace = "mynamespace"
+	)
+
+	tpl := template.NewClusterTemplate(template.WithName(templateName), template.WithNamespace(templateNamespace))
+
+	tests := []struct {
+		title           string
 		template        *v1alpha1.ClusterTemplate
 		existingObjects []runtime.Object
 		err             string
 		warnings        admission.Warnings
 	}{
 		{
-			name:     "should fail if ManagedCluster objects exist in the same namespace",
+			title:    "should fail if ManagedCluster object referencing the template exists in the same namespace",
 			template: tpl,
 			existingObjects: []runtime.Object{managedcluster.NewManagedCluster(
-				managedcluster.WithNamespace(namespace),
-				managedcluster.WithClusterTemplate(tpl.Name),
+				managedcluster.WithNamespace(templateNamespace),
+				managedcluster.WithClusterTemplate(templateName),
 			)},
 			warnings: admission.Warnings{"The ClusterTemplate object can't be removed if ManagedCluster objects referencing it still exist"},
 			err:      "template deletion is forbidden",
 		},
 		{
-			name:     "should succeed if some ManagedCluster from another namespace references the template",
+			title: "should fail if the template is owned by one or more ClusterTemplateChains",
+			template: template.NewClusterTemplate(
+				template.WithName(templateName),
+				template.WithNamespace(templateNamespace),
+				template.WithOwnerReference([]metav1.OwnerReference{
+					{
+						Kind: v1alpha1.ClusterTemplateChainKind,
+						Name: "test-chain",
+					},
+				}),
+			),
+			existingObjects: []runtime.Object{
+				tc.NewClusterTemplateChain(
+					tc.WithName("test-chain"),
+					tc.WithNamespace(templateNamespace),
+					tc.WithSupportedTemplates(
+						[]v1alpha1.SupportedTemplate{
+							{
+								Name: templateName,
+							},
+						}),
+				),
+			},
+			warnings: admission.Warnings{"The ClusterTemplate object can't be removed if it is managed by ClusterTemplateChain: test-chain"},
+			err:      "template deletion is forbidden",
+		},
+		{
+			title:    "should succeed if some ManagedCluster from another namespace references the template with the same name",
 			template: tpl,
 			existingObjects: []runtime.Object{managedcluster.NewManagedCluster(
 				managedcluster.WithNamespace("new"),
-				managedcluster.WithClusterTemplate(tpl.Name),
+				managedcluster.WithClusterTemplate(templateName),
 			)},
 		},
 		{
-			name:            "should be OK because of a different cluster",
+			title:           "should succeed because no ManagedCluster or ClusterTemplateChain references the template",
 			template:        tpl,
 			existingObjects: []runtime.Object{managedcluster.NewManagedCluster()},
-		},
-		{
-			name:            "should succeed",
-			template:        template.NewClusterTemplate(),
-			existingObjects: []runtime.Object{managedcluster.NewManagedCluster(managedcluster.WithClusterTemplate(tplTest.Name))},
 		},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+		t.Run(tt.title, func(t *testing.T) {
 			g := NewWithT(t)
 
 			c := fake.NewClientBuilder().
@@ -82,7 +221,15 @@ func TestClusterTemplateValidateDelete(t *testing.T) {
 				WithRuntimeObjects(tt.existingObjects...).
 				WithIndex(&v1alpha1.ManagedCluster{}, v1alpha1.ManagedClusterTemplateIndexKey, v1alpha1.ExtractTemplateNameFromManagedCluster).
 				Build()
-			validator := &ClusterTemplateValidator{Client: c}
+			validator := &ClusterTemplateValidator{
+				TemplateValidator: TemplateValidator{
+					Client:            c,
+					SystemNamespace:   testSystemNamespace,
+					templateKind:      v1alpha1.ClusterTemplateKind,
+					templateChainKind: v1alpha1.ClusterTemplateChainKind,
+				},
+			}
+
 			warn, err := validator.ValidateDelete(ctx, tt.template)
 			if tt.err != "" {
 				g.Expect(err).To(MatchError(tt.err))
@@ -101,7 +248,12 @@ func TestClusterTemplateValidateDelete(t *testing.T) {
 
 func TestServiceTemplateValidateDelete(t *testing.T) {
 	ctx := context.Background()
-	tmpl := template.NewServiceTemplate(template.WithNamespace("mynamespace"), template.WithName("mytemplate"))
+
+	const (
+		templateName      = "mytemplate"
+		templateNamespace = "mynamespace"
+	)
+	tmpl := template.NewServiceTemplate(template.WithNamespace(templateNamespace), template.WithName(templateName))
 
 	tests := []struct {
 		title           string
@@ -115,12 +267,39 @@ func TestServiceTemplateValidateDelete(t *testing.T) {
 			template: tmpl,
 			existingObjects: []runtime.Object{
 				managedcluster.NewManagedCluster(
-					managedcluster.WithNamespace(tmpl.Namespace),
-					managedcluster.WithServiceTemplate(tmpl.Name),
+					managedcluster.WithNamespace(templateNamespace),
+					managedcluster.WithServiceTemplate(templateName),
 				),
 			},
 			warnings: admission.Warnings{"The ServiceTemplate object can't be removed if ManagedCluster objects referencing it still exist"},
 			err:      errTemplateDeletionForbidden.Error(),
+		},
+		{
+			title: "should fail if the template is owned by one or more ServiceTemplateChains",
+			template: template.NewServiceTemplate(
+				template.WithName(templateName),
+				template.WithNamespace(templateNamespace),
+				template.WithOwnerReference([]metav1.OwnerReference{
+					{
+						Kind: v1alpha1.ServiceTemplateChainKind,
+						Name: "test-chain",
+					},
+				}),
+			),
+			existingObjects: []runtime.Object{
+				tc.NewClusterTemplateChain(
+					tc.WithName("test-chain"),
+					tc.WithNamespace(templateNamespace),
+					tc.WithSupportedTemplates(
+						[]v1alpha1.SupportedTemplate{
+							{
+								Name: templateName,
+							},
+						}),
+				),
+			},
+			warnings: admission.Warnings{"The ServiceTemplate object can't be removed if it is managed by ServiceTemplateChain: test-chain"},
+			err:      "template deletion is forbidden",
 		},
 		{
 			title:    "should succeed if managedCluster referencing ServiceTemplate is another namespace",
@@ -128,22 +307,22 @@ func TestServiceTemplateValidateDelete(t *testing.T) {
 			existingObjects: []runtime.Object{
 				managedcluster.NewManagedCluster(
 					managedcluster.WithNamespace("someothernamespace"),
-					managedcluster.WithServiceTemplate(tmpl.Name),
+					managedcluster.WithServiceTemplate(templateName),
 				),
 			},
 		},
 		{
-			title:           "should be OK because of a different cluster",
+			title:           "should succeed because no cluster references the template",
 			template:        tmpl,
 			existingObjects: []runtime.Object{managedcluster.NewManagedCluster()},
 		},
 		{
 			title:    "should fail if a MultiClusterService is referencing serviceTemplate in system namespace",
-			template: template.NewServiceTemplate(template.WithNamespace(testSystemNamespace), template.WithName(tmpl.Name)),
+			template: template.NewServiceTemplate(template.WithNamespace(testSystemNamespace), template.WithName(templateName)),
 			existingObjects: []runtime.Object{
 				multiclusterservice.NewMultiClusterService(
 					multiclusterservice.WithName("mymulticlusterservice"),
-					multiclusterservice.WithServiceTemplate(tmpl.Name),
+					multiclusterservice.WithServiceTemplate(templateName),
 				),
 			},
 			warnings: admission.Warnings{"The ServiceTemplate object can't be removed if MultiClusterService objects referencing it still exist"},
@@ -162,7 +341,16 @@ func TestServiceTemplateValidateDelete(t *testing.T) {
 				WithIndex(&v1alpha1.ManagedCluster{}, v1alpha1.ManagedClusterServiceTemplatesIndexKey, v1alpha1.ExtractServiceTemplateNamesFromManagedCluster).
 				WithIndex(&v1alpha1.MultiClusterService{}, v1alpha1.MultiClusterServiceTemplatesIndexKey, v1alpha1.ExtractServiceTemplateNamesFromMultiClusterService).
 				Build()
-			validator := &ServiceTemplateValidator{Client: c, SystemNamespace: testSystemNamespace}
+
+			validator := &ServiceTemplateValidator{
+				TemplateValidator{
+					Client:            c,
+					SystemNamespace:   testSystemNamespace,
+					templateKind:      v1alpha1.ServiceTemplateKind,
+					templateChainKind: v1alpha1.ServiceTemplateChainKind,
+				},
+			}
+
 			warn, err := validator.ValidateDelete(ctx, tt.template)
 			if tt.err != "" {
 				g.Expect(err).To(MatchError(tt.err))
