@@ -10,7 +10,7 @@ erDiagram
     Template ||--o{ HMC : "used by"
     HMC ||--o{ CAPI : connects
     CAPI ||--|{ CAPV : provider
-    CAPI ||--|{ CAPA : povider
+    CAPI ||--|{ CAPA : provider
     CAPI ||--|{ CAPZ : provider
     CAPI ||--|{ K0smotron : Bootstrap
     K0smotron |o..o| CAPV : uses
