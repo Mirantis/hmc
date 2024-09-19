@@ -12,7 +12,7 @@
 
 ## Setting up MKdocs and dependancies
 
-1. setup python Virtual Environment 
+1. Setup python Virtual Environment 
 
     `python3  -m venv ./mkdocs`
     `source ./mkdocs/bin/activate`
