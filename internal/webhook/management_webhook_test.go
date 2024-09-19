@@ -16,9 +16,11 @@ package webhook
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	. "github.com/onsi/gomega"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -71,6 +73,81 @@ func TestManagementValidateDelete(t *testing.T) {
 				g.Expect(warn).To(Equal(tt.warnings))
 			} else {
 				g.Expect(warn).To(BeEmpty())
+			}
+		})
+	}
+}
+
+func getManagementObjWithCreateFlag(flag bool) (*v1alpha1.Management, error) {
+	hmcConfig := map[string]interface{}{
+		"controller": map[string]interface{}{
+			"createManagement": flag,
+		},
+	}
+
+	rawConfig, err := json.Marshal(hmcConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	mgmtObj := &v1alpha1.Management{
+		Spec: v1alpha1.ManagementSpec{
+			Core: &v1alpha1.Core{
+				HMC: v1alpha1.Component{
+					Config: &apiextensionsv1.JSON{
+						Raw: rawConfig,
+					},
+				},
+			},
+		},
+	}
+
+	return mgmtObj, nil
+}
+
+func TestManagementValidateUpdate(t *testing.T) {
+	g := NewWithT(t)
+
+	ctx := context.Background()
+
+	objToFail, err := getManagementObjWithCreateFlag(true)
+	g.Expect(err).To(Succeed())
+
+	objToSucceed, err := getManagementObjWithCreateFlag(false)
+	g.Expect(err).To(Succeed())
+
+	tests := []struct {
+		name       string
+		management *v1alpha1.Management
+		err        string
+	}{
+		{
+			name:       "should fail if Management object has controller.createManagement=true",
+			management: objToFail,
+			err:        "reenabling of the createManagement parameter is forbidden",
+		},
+		{
+			name:       "should succeed for controller.createManagement=false",
+			management: objToSucceed,
+		},
+		{
+			name:       "should succeed",
+			management: management.NewManagement(),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+			validator := &ManagementValidator{Client: c}
+			_, err := validator.ValidateUpdate(ctx, management.NewManagement(), tt.management)
+			if tt.err != "" {
+				g.Expect(err).To(HaveOccurred())
+				if err.Error() != tt.err {
+					t.Fatalf("expected error '%s', got error: %s", tt.err, err.Error())
+				}
+			} else {
+				g.Expect(err).To(Succeed())
 			}
 		})
 	}
