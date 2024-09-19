@@ -34,7 +34,8 @@ type ManagementValidator struct {
 }
 
 var (
-	ErrManagementDeletionForbidden = errors.New("management deletion is forbidden")
+	ErrManagementDeletionForbidden         = errors.New("management deletion is forbidden")
+	ErrCreateManagementReenablingForbidden = errors.New("reenabling of the createManagement parameter is forbidden")
 )
 
 func (in *ManagementValidator) SetupWebhookWithManager(mgr ctrl.Manager) error {
@@ -57,7 +58,35 @@ func (*ManagementValidator) ValidateCreate(_ context.Context, _ runtime.Object) 
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type.
-func (*ManagementValidator) ValidateUpdate(_ context.Context, _ runtime.Object, _ runtime.Object) (admission.Warnings, error) {
+func (*ManagementValidator) ValidateUpdate(_ context.Context, _ runtime.Object, newObj runtime.Object) (admission.Warnings, error) {
+	// Ensure the newObj is of the expected type.
+	newManagement, ok := newObj.(*v1alpha1.Management)
+	if !ok {
+		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected Management but got a %T", newObj))
+	}
+
+	// without Core, no further validation is needed.
+	if newManagement.Spec.Core == nil {
+		return nil, nil
+	}
+
+	// Retrieve Helm values.
+	vals, err := newManagement.Spec.Core.HMC.HelmValues()
+	if err != nil {
+		return nil, apierrors.NewBadRequest(fmt.Sprintf("cannot retrieve helm values: %v", err))
+	}
+
+	// Check if the 'controller' field exists and is a map.
+	controller, ok := vals["controller"].(map[string]interface{})
+	if !ok {
+		return nil, nil
+	}
+
+	// Check if 'createManagement' exists and is true.
+	if createManagement, ok := controller["createManagement"].(bool); ok && createManagement {
+		return nil, ErrCreateManagementReenablingForbidden
+	}
+
 	return nil, nil
 }
 
