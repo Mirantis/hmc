@@ -28,3 +28,6 @@ test/e2e/*.log
 
 # Vendoring directory
 vendor
+
+# mkdocs folder
+mkdocs
