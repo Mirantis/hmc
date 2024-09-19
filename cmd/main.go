@@ -281,6 +281,13 @@ func main() {
 			SystemNamespace: currentNamespace,
 		}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "TemplateManagement")
+		}
+		if err := (&hmcwebhook.ClusterTemplateChainValidator{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "ClusterTemplateChain")
+			os.Exit(1)
+		}
+		if err := (&hmcwebhook.ServiceTemplateChainValidator{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "ServiceTemplateChain")
 			os.Exit(1)
 		}
 		if err := (&hmcwebhook.ClusterTemplateValidator{}).SetupWebhookWithManager(mgr); err != nil {
