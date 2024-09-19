@@ -18,8 +18,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -29,11 +31,18 @@ import (
 	"github.com/Mirantis/hmc/api/v1alpha1"
 )
 
-type ClusterTemplateValidator struct {
+var errTemplateDeletionForbidden = errors.New("template deletion is forbidden")
+
+type TemplateValidator struct {
 	client.Client
+
+	SystemNamespace string
+	InjectUserInfo  func(*admission.Request)
 }
 
-var errTemplateDeletionForbidden = errors.New("template deletion is forbidden")
+type ClusterTemplateValidator struct {
+	TemplateValidator
+}
 
 func (v *ClusterTemplateValidator) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	v.Client = mgr.GetClient()
@@ -65,12 +74,22 @@ func (v *ClusterTemplateValidator) ValidateDelete(ctx context.Context, obj runti
 	if !ok {
 		return admission.Warnings{"Wrong object"}, apierrors.NewBadRequest(fmt.Sprintf("expected ClusterTemplate but got a %T", obj))
 	}
+	deletionAllowed, err := v.isTemplateDeletionAllowed(ctx, template)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check if the ClusterTemplate %s/%s is allowed to be deleted: %v", template.Namespace, template.Name, err)
+	}
+	if !deletionAllowed {
+		return nil, errTemplateDeletionForbidden
+	}
 
 	managedClusters := &v1alpha1.ManagedClusterList{}
-	if err := v.Client.List(ctx, managedClusters,
-		client.InNamespace(template.Namespace),
-		client.MatchingFields{v1alpha1.TemplateKey: template.Name},
-		client.Limit(1)); err != nil {
+	listOptions := client.ListOptions{
+		FieldSelector: fields.SelectorFromSet(fields.Set{v1alpha1.TemplateKey: template.Name}),
+		Limit:         1,
+		Namespace:     template.Namespace,
+	}
+	err = v.Client.List(ctx, managedClusters, &listOptions)
+	if err != nil {
 		return nil, err
 	}
 
@@ -87,7 +106,7 @@ func (*ClusterTemplateValidator) Default(context.Context, runtime.Object) error 
 }
 
 type ServiceTemplateValidator struct {
-	client.Client
+	TemplateValidator
 }
 
 func (v *ServiceTemplateValidator) SetupWebhookWithManager(mgr ctrl.Manager) error {
@@ -116,15 +135,15 @@ func (*ServiceTemplateValidator) ValidateUpdate(_ context.Context, _ runtime.Obj
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
 func (v *ServiceTemplateValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	tmpl, ok := obj.(*v1alpha1.ServiceTemplate)
+	template, ok := obj.(*v1alpha1.ServiceTemplate)
 	if !ok {
 		return admission.Warnings{"Wrong object"}, apierrors.NewBadRequest(fmt.Sprintf("expected ServiceTemplate but got a %T", obj))
 	}
 
 	managedClusters := &v1alpha1.ManagedClusterList{}
 	if err := v.Client.List(ctx, managedClusters,
-		client.InNamespace(tmpl.Namespace),
-		client.MatchingFields{v1alpha1.ServicesTemplateKey: tmpl.Name},
+		client.InNamespace(template.Namespace),
+		client.MatchingFields{v1alpha1.ServicesTemplateKey: template.Name},
 		client.Limit(1)); err != nil {
 		return nil, err
 	}
@@ -133,6 +152,13 @@ func (v *ServiceTemplateValidator) ValidateDelete(ctx context.Context, obj runti
 		return admission.Warnings{"The ServiceTemplate object can't be removed if ManagedCluster objects referencing it still exist"}, errTemplateDeletionForbidden
 	}
 
+	deletionAllowed, err := v.isTemplateDeletionAllowed(ctx, template)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check if the ServiceTemplate %s/%s is allowed to be deleted: %v", template.Namespace, template.Name, err)
+	}
+	if !deletionAllowed {
+		return nil, errTemplateDeletionForbidden
+	}
 	return nil, nil
 }
 
@@ -142,7 +168,7 @@ func (*ServiceTemplateValidator) Default(_ context.Context, _ runtime.Object) er
 }
 
 type ProviderTemplateValidator struct {
-	client.Client
+	TemplateValidator
 }
 
 func (v *ProviderTemplateValidator) SetupWebhookWithManager(mgr ctrl.Manager) error {
@@ -170,11 +196,50 @@ func (*ProviderTemplateValidator) ValidateUpdate(_ context.Context, _ runtime.Ob
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
-func (*ProviderTemplateValidator) ValidateDelete(_ context.Context, _ runtime.Object) (admission.Warnings, error) {
+func (v *ProviderTemplateValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+	template, ok := obj.(*v1alpha1.ProviderTemplate)
+	if !ok {
+		return admission.Warnings{"Wrong object"}, apierrors.NewBadRequest(fmt.Sprintf("expected ProviderTemplate but got a %T", obj))
+	}
+	deletionAllowed, err := v.isTemplateDeletionAllowed(ctx, template)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check if the ProviderTemplate %s is allowed to be deleted: %v", template.Name, err)
+	}
+	if !deletionAllowed {
+		return nil, errTemplateDeletionForbidden
+	}
 	return nil, nil
 }
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type.
 func (*ProviderTemplateValidator) Default(_ context.Context, _ runtime.Object) error {
 	return nil
+}
+
+func (v TemplateValidator) isTemplateDeletionAllowed(ctx context.Context, template client.Object) (bool, error) {
+	req, err := admission.RequestFromContext(ctx)
+	if err != nil {
+		return false, err
+	}
+	if v.InjectUserInfo != nil {
+		v.InjectUserInfo(&req)
+	}
+	// Allow all templates' deletion by the HMC controller
+	if serviceAccountIsEqual(req, os.Getenv(ServiceAccountEnvName)) {
+		return true, nil
+	}
+	// ProviderTemplates and Templates from the system namespace are not allowed to be deleted
+	kind := template.GetObjectKind().GroupVersionKind().Kind
+	if kind == v1alpha1.ProviderTemplateKind || template.GetNamespace() == v.SystemNamespace {
+		return false, nil
+	}
+	// Forbid template deletion if the template is managed by the TemplateManagement
+	if templateManagedByHMC(template) {
+		return false, nil
+	}
+	return true, nil
+}
+
+func templateManagedByHMC(template client.Object) bool {
+	return template.GetLabels()[v1alpha1.HMCManagedLabelKey] == v1alpha1.HMCManagedLabelValue
 }
