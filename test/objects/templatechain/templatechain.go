@@ -34,6 +34,10 @@ type Opt func(tc *TemplateChain)
 func NewClusterTemplateChain(opts ...Opt) *v1alpha1.ClusterTemplateChain {
 	tc := NewTemplateChain(opts...)
 	return &v1alpha1.ClusterTemplateChain{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: v1alpha1.GroupVersion.String(),
+			Kind:       v1alpha1.ClusterTemplateChainKind,
+		},
 		ObjectMeta: tc.ObjectMeta,
 		Spec:       tc.Spec,
 	}
@@ -42,6 +46,10 @@ func NewClusterTemplateChain(opts ...Opt) *v1alpha1.ClusterTemplateChain {
 func NewServiceTemplateChain(opts ...Opt) *v1alpha1.ServiceTemplateChain {
 	tc := NewTemplateChain(opts...)
 	return &v1alpha1.ServiceTemplateChain{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: v1alpha1.GroupVersion.String(),
+			Kind:       v1alpha1.ServiceTemplateChainKind,
+		},
 		ObjectMeta: tc.ObjectMeta,
 		Spec:       tc.Spec,
 	}
