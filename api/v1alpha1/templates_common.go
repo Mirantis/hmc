@@ -30,6 +30,9 @@ const (
 	ChartAnnotationBootstrapProviders = "hmc.mirantis.com/bootstrap-providers"
 	// ChartAnnotationControlPlaneProviders is an annotation containing the CAPI control plane providers associated with Template.
 	ChartAnnotationControlPlaneProviders = "hmc.mirantis.com/control-plane-providers"
+
+	// HMCReleaseLabelKey is the label key used to identify the release name
+	HMCReleaseLabelKey = "hmc.mirantis.com/release"
 )
 
 // +kubebuilder:validation:XValidation:rule="(has(self.chartName) && !has(self.chartRef)) || (!has(self.chartName) && has(self.chartRef))", message="either chartName or chartRef must be set"

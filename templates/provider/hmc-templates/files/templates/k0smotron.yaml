@@ -2,6 +2,8 @@ apiVersion: hmc.mirantis.com/v1alpha1
 kind: ProviderTemplate
 metadata:
   name: k0smotron-0-0-2
+  labels:
+    hmc.mirantis.com/release: hmc-0-0-3
   annotations:
     helm.sh/resource-policy: keep
 spec:

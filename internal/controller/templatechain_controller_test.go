@@ -213,19 +213,6 @@ var _ = Describe("Template Chain Controller", func() {
 		})
 
 		AfterEach(func() {
-			for _, template := range []*hmcmirantiscomv1alpha1.ClusterTemplate{
-				ctTemplates["test"], ctTemplates["ct0"], ctTemplates["ct1"], ctTemplates["ct2"],
-			} {
-				err := k8sClient.Delete(ctx, template)
-				Expect(crclient.IgnoreNotFound(err)).To(Succeed())
-			}
-			for _, template := range []*hmcmirantiscomv1alpha1.ServiceTemplate{
-				stTemplates["test"], stTemplates["st0"], stTemplates["st1"], stTemplates["st2"],
-			} {
-				err := k8sClient.Delete(ctx, template)
-				Expect(crclient.IgnoreNotFound(err)).To(Succeed())
-			}
-
 			for _, chain := range ctChainNames {
 				clusterTemplateChainResource := &hmcmirantiscomv1alpha1.ClusterTemplateChain{}
 				err := k8sClient.Get(ctx, chain, clusterTemplateChainResource)
@@ -241,6 +228,19 @@ var _ = Describe("Template Chain Controller", func() {
 
 				By("Cleanup the specific resource instance ServiceTemplateChain")
 				Expect(k8sClient.Delete(ctx, serviceTemplateChainResource)).To(Succeed())
+			}
+
+			for _, template := range []*hmcmirantiscomv1alpha1.ClusterTemplate{
+				ctTemplates["test"], ctTemplates["ct0"], ctTemplates["ct1"], ctTemplates["ct2"],
+			} {
+				err := k8sClient.Delete(ctx, template)
+				Expect(crclient.IgnoreNotFound(err)).To(Succeed())
+			}
+			for _, template := range []*hmcmirantiscomv1alpha1.ServiceTemplate{
+				stTemplates["test"], stTemplates["st0"], stTemplates["st1"], stTemplates["st2"],
+			} {
+				err := k8sClient.Delete(ctx, template)
+				Expect(crclient.IgnoreNotFound(err)).To(Succeed())
 			}
 
 			By("Cleanup the namespace")

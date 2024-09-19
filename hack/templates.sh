@@ -20,11 +20,15 @@ set -eu
 TEMPLATES_DIR=${TEMPLATES_DIR:-templates}
 # Output directory for the generated Template manifests
 TEMPLATES_OUTPUT_DIR=${TEMPLATES_OUTPUT_DIR:-templates/provider/hmc-templates/files/templates}
+# The file name of the Release object
+RELEASE_OUTPUT_FILE=${RELEASE_OUTPUT_FILE:-templates/provider/hmc-templates/files/release.yaml}
 # The name of the HMC templates helm chart
 HMC_TEMPLATES_CHART_NAME='hmc-templates'
 
 mkdir -p $TEMPLATES_OUTPUT_DIR
 rm -f $TEMPLATES_OUTPUT_DIR/*.yaml
+
+release_name=$(awk '/metadata:/ {f=1} f && /name:/ {gsub(" ", "", $1); print $2; exit}' "$RELEASE_OUTPUT_FILE")
 
 for type in "$TEMPLATES_DIR"/*; do
     kind="$(echo "${type#*/}Template" | awk '{$1=toupper(substr($1,0,1))substr($1,2)}1')"
@@ -43,6 +47,8 @@ EOF
             cat <<EOF >> $TEMPLATES_OUTPUT_DIR/$file_name.yaml
 metadata:
   name: $template_name
+  labels:
+    hmc.mirantis.com/release: $release_name
   annotations:
     helm.sh/resource-policy: keep
 spec:
@@ -51,7 +57,7 @@ spec:
     chartVersion: $version
 EOF
 
-            echo "Generated $TEMPLATES_OUTPUT_DIR/$name.yaml"
+            echo "Generated $TEMPLATES_OUTPUT_DIR/$file_name.yaml"
         fi
     done
 done
