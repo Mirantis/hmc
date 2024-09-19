@@ -130,6 +130,9 @@ spec:
             required:
             - helm
             type: object
+            x-kubernetes-validations:
+            - message: Spec is immutable
+              rule: self == oldSelf
           status:
             description: ProviderTemplateStatus defines the observed state of ProviderTemplate
             properties:

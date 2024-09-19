@@ -30,6 +30,7 @@ type ClusterTemplate struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Spec is immutable"
 	Spec   ClusterTemplateSpec   `json:"spec,omitempty"`
 	Status ClusterTemplateStatus `json:"status,omitempty"`
 }
