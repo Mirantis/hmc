@@ -148,9 +148,12 @@ func (p *Poller) ensureManagement(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		mgmtObj.Spec.Core = &hmc.DefaultCoreConfiguration
-		mgmtObj.Spec.Core.HMC.Config = &apiextensionsv1.JSON{
-			Raw: rawConfig,
+		mgmtObj.Spec.Core = &hmc.Core{
+			HMC: hmc.Component{
+				Config: &apiextensionsv1.JSON{
+					Raw: rawConfig,
+				},
+			},
 		}
 
 		err = p.Create(ctx, mgmtObj)

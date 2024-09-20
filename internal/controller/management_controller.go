@@ -81,13 +81,6 @@ func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Manag
 		return ctrl.Result{}, nil
 	}
 
-	// TODO: this is also implemented in admission but we have to keep it in controller as well
-	// to set defaults before the admission is started
-	if changed := management.Spec.SetDefaults(); changed {
-		l.Info("Applying default core configuration")
-		return ctrl.Result{}, r.Client.Update(ctx, management)
-	}
-
 	var errs error
 	detectedProviders := hmc.Providers{}
 	detectedComponents := make(map[string]hmc.ComponentStatus)

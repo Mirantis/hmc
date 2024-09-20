@@ -58,11 +58,10 @@ spec:
                           values for the template.
                         x-kubernetes-preserve-unknown-fields: true
                       template:
-                        description: Template is the name of the Template associated
-                          with this component.
+                        description: |-
+                          Template is the name of the Template associated with this component.
+                          If not specified, will be taken from the Release object.
                         type: string
-                    required:
-                    - template
                     type: object
                   hmc:
                     description: HMC represents the core HMC component and references
@@ -75,15 +74,11 @@ spec:
                           values for the template.
                         x-kubernetes-preserve-unknown-fields: true
                       template:
-                        description: Template is the name of the Template associated
-                          with this component.
+                        description: |-
+                          Template is the name of the Template associated with this component.
+                          If not specified, will be taken from the Release object.
                         type: string
-                    required:
-                    - template
                     type: object
-                required:
-                - capi
-                - hmc
                 type: object
               providers:
                 description: Providers is the list of supported CAPI providers.
@@ -99,14 +94,19 @@ spec:
                       description: Name of the provider.
                       type: string
                     template:
-                      description: Template is the name of the Template associated
-                        with this component.
+                      description: |-
+                        Template is the name of the Template associated with this component.
+                        If not specified, will be taken from the Release object.
                       type: string
                   required:
                   - name
-                  - template
                   type: object
                 type: array
+              release:
+                description: Release references the Release object.
+                type: string
+            required:
+            - release
             type: object
           status:
             description: ManagementStatus defines the observed state of Management
@@ -147,6 +147,10 @@ spec:
                       description: Success represents if a component installation
                         was successful
                       type: boolean
+                    template:
+                      description: Template is the name of the Template associated
+                        with this component.
+                      type: string
                   type: object
                 description: Components indicates the status of installed HMC components
                   and CAPI providers.

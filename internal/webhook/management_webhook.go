@@ -104,11 +104,6 @@ func (v *ManagementValidator) ValidateDelete(ctx context.Context, _ runtime.Obje
 }
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type.
-func (*ManagementValidator) Default(_ context.Context, obj runtime.Object) error {
-	management, ok := obj.(*v1alpha1.Management)
-	if !ok {
-		return apierrors.NewBadRequest(fmt.Sprintf("expected Management but got a %T", obj))
-	}
-	management.Spec.SetDefaults()
+func (*ManagementValidator) Default(_ context.Context, _ runtime.Object) error {
 	return nil
 }

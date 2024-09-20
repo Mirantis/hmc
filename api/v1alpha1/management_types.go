@@ -15,36 +15,24 @@
 package v1alpha1
 
 import (
-	"encoding/json"
-	"fmt"
-
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/yaml"
 )
 
 const (
-	CoreHMCName            = "hmc"
-	DefaultCoreHMCTemplate = "hmc"
+	CoreHMCName = "hmc"
 
-	CoreCAPIName            = "capi"
-	DefaultCoreCAPITemplate = "cluster-api"
+	CoreCAPIName = "capi"
 
 	ManagementName      = "hmc"
 	ManagementFinalizer = "hmc.mirantis.com/management"
 )
 
-var DefaultCoreConfiguration = Core{
-	HMC: Component{
-		Template: DefaultCoreHMCTemplate,
-	},
-	CAPI: Component{
-		Template: DefaultCoreCAPITemplate,
-	},
-}
-
 // ManagementSpec defines the desired state of Management
 type ManagementSpec struct {
+	// Release references the Release object.
+	Release string `json:"release"`
 	// Core holds the core Management components that are mandatory.
 	// If not specified, will be populated with the default values.
 	Core *Core `json:"core,omitempty"`
@@ -56,15 +44,16 @@ type ManagementSpec struct {
 // Core represents a structure describing core Management components.
 type Core struct {
 	// HMC represents the core HMC component and references the HMC template.
-	HMC Component `json:"hmc"`
+	HMC Component `json:"hmc,omitempty"`
 	// CAPI represents the core Cluster API component and references the Cluster API template.
-	CAPI Component `json:"capi"`
+	CAPI Component `json:"capi,omitempty"`
 }
 
 // Component represents HMC management component
 type Component struct {
 	// Template is the name of the Template associated with this component.
-	Template string `json:"template"`
+	// If not specified, will be taken from the Release object.
+	Template string `json:"template,omitempty"`
 	// Config allows to provide parameters for management component customization.
 	// If no Config provided, the field will be populated with the default
 	// values for the template.
@@ -85,38 +74,14 @@ func (in *Component) HelmValues() (values map[string]interface{}, err error) {
 	return values, err
 }
 
-func (m *ManagementSpec) SetDefaults() bool {
-	if m.Core != nil {
-		return false
-	}
-	m.Core = &DefaultCoreConfiguration
-	return true
-}
-
 func (m *ManagementSpec) SetProvidersDefaults() error {
-	providers := []Provider{}
-
-	for name, cfg := range DefaultProviders {
-		c := Provider{
-			Name: name,
-			Component: Component{
-				Template: name,
-			},
-		}
-
-		if len(cfg) > 0 {
-			b, err := json.Marshal(cfg)
-			if err != nil {
-				return fmt.Errorf("failed to marshal config for %s provider: %w", name, err)
-			}
-
-			c.Config = &apiextensionsv1.JSON{Raw: b}
-		}
-
-		providers = append(providers, c)
+	m.Providers = []Provider{
+		{Name: ProviderK0smotronName},
+		{Name: ProviderCAPAName},
+		{Name: ProviderAzureName},
+		{Name: ProviderVSphereName},
+		{Name: ProviderSveltosName},
 	}
-
-	m.Providers = providers
 	return nil
 }
 
@@ -133,6 +98,8 @@ type ManagementStatus struct {
 
 // ComponentStatus is the status of Management component installation
 type ComponentStatus struct {
+	// Template is the name of the Template associated with this component.
+	Template string `json:"template,omitempty"`
 	// Success represents if a component installation was successful
 	Success bool `json:"success,omitempty"`
 	// Error stores as error message in case of failed installation
