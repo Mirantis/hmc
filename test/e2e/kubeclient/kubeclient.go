@@ -16,10 +16,12 @@ package kubeclient
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 
+	"github.com/Mirantis/hmc/test/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
@@ -74,7 +76,13 @@ func (kc *KubeClient) WriteKubeconfig(ctx context.Context, clusterName string) (
 		To(Succeed())
 
 	deleteFunc := func() error {
-		return os.Remove(filepath.Join(dir, path))
+		if err = os.Remove(filepath.Join(dir, path)); err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				return nil
+			}
+			return err
+		}
+		return nil
 	}
 
 	return path, deleteFunc
@@ -135,13 +143,39 @@ func newKubeClient(configBytes []byte, namespace string) *KubeClient {
 }
 
 // GetDynamicClient returns a dynamic client for the given GroupVersionResource.
-func (kc *KubeClient) GetDynamicClient(gvr schema.GroupVersionResource) dynamic.ResourceInterface {
+//
+//nolint:revive
+func (kc *KubeClient) GetDynamicClient(gvr schema.GroupVersionResource, namespaced bool) dynamic.ResourceInterface {
 	GinkgoHelper()
 
 	client, err := dynamic.NewForConfig(kc.Config)
-	Expect(err).NotTo(HaveOccurred(), "failed to create dynamic client")
+	Expect(err).NotTo(HaveOccurred(), "failed to create dynamic client for resource: %s", gvr.String())
+
+	if !namespaced {
+		return client.Resource(gvr)
+	}
 
 	return client.Resource(gvr).Namespace(kc.Namespace)
+}
+
+func (kc *KubeClient) CreateOrUpdateUnstructuredObject(gvr schema.GroupVersionResource, obj *unstructured.Unstructured, namespaced bool) {
+	GinkgoHelper()
+
+	client := kc.GetDynamicClient(gvr, namespaced)
+
+	kind, name := utils.ObjKindName(obj)
+
+	resp, err := client.Get(context.Background(), name, metav1.GetOptions{})
+	if apierrors.IsNotFound(err) {
+		_, err = client.Create(context.Background(), obj, metav1.CreateOptions{})
+		Expect(err).NotTo(HaveOccurred(), "failed to create %s: %s", kind, name)
+	} else {
+		Expect(err).NotTo(HaveOccurred(), "failed to get existing %s: %s", kind, name)
+
+		obj.SetResourceVersion(resp.GetResourceVersion())
+		_, err = client.Update(context.Background(), obj, metav1.UpdateOptions{})
+		Expect(err).NotTo(HaveOccurred(), "failed to update existing %s: %s", kind, name)
+	}
 }
 
 // CreateManagedCluster creates a managedcluster.hmc.mirantis.com in the given
@@ -159,7 +193,7 @@ func (kc *KubeClient) CreateManagedCluster(
 		Group:    "hmc.mirantis.com",
 		Version:  "v1alpha1",
 		Resource: "managedclusters",
-	})
+	}, true)
 
 	_, err := client.Create(ctx, managedcluster, metav1.CreateOptions{})
 	if !apierrors.IsAlreadyExists(err) {
@@ -183,7 +217,7 @@ func (kc *KubeClient) GetCluster(ctx context.Context, clusterName string) (*unst
 		Resource: "clusters",
 	}
 
-	client := kc.GetDynamicClient(gvr)
+	client := kc.GetDynamicClient(gvr, true)
 
 	cluster, err := client.Get(ctx, clusterName, metav1.GetOptions{})
 	if err != nil {
@@ -198,7 +232,7 @@ func (kc *KubeClient) GetCluster(ctx context.Context, clusterName string) (*unst
 func (kc *KubeClient) listResource(
 	ctx context.Context, gvr schema.GroupVersionResource, clusterName string,
 ) ([]unstructured.Unstructured, error) {
-	client := kc.GetDynamicClient(gvr)
+	client := kc.GetDynamicClient(gvr, true)
 
 	resources, err := client.List(ctx, metav1.ListOptions{
 		LabelSelector: "cluster.x-k8s.io/cluster-name=" + clusterName,

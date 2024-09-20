@@ -1,12 +1,13 @@
 apiVersion: hmc.mirantis.com/v1alpha1
 kind: ManagedCluster
 metadata:
-  name: ${HOSTED_MANAGED_CLUSTER_NAME}
+  name: ${MANAGED_CLUSTER_NAME}
 spec:
-  template: aws-hosted-cp
+  template: aws-hosted-cp-0-0-1
+  credential: ${AWS_CLUSTER_IDENTITY}-cred
   config:
     clusterIdentity:
-      name: aws-cluster-identity
+      name: ${AWS_CLUSTER_IDENTITY}
       namespace: ${NAMESPACE}
     vpcID: ${AWS_VPC_ID}
     region: ${AWS_REGION}
