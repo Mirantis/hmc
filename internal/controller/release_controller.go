@@ -116,7 +116,7 @@ func (p *Poller) ensureManagement(ctx context.Context) error {
 			return fmt.Errorf("failed to get %s Management object", hmc.ManagementName)
 		}
 
-		mgmtObj.Spec.Release, err = p.gerCurrentReleaseName(ctx)
+		mgmtObj.Spec.Release, err = p.getCurrentReleaseName(ctx)
 		if err != nil {
 			return err
 		}
@@ -227,7 +227,7 @@ func (p *Poller) reconcileHMCTemplates(ctx context.Context) error {
 	}
 	return nil
 }
-func (p *Poller) gerCurrentReleaseName(ctx context.Context) (string, error) {
+func (p *Poller) getCurrentReleaseName(ctx context.Context) (string, error) {
 	releases := &hmc.ReleaseList{}
 	listOptions := client.ListOptions{
 		FieldSelector: fields.SelectorFromSet(fields.Set{hmc.VersionKey: build.Version}),
