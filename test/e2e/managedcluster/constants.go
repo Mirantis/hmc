@@ -16,21 +16,35 @@ package managedcluster
 
 const (
 	// Common
-	EnvVarManagedClusterName       = "MANAGED_CLUSTER_NAME"
-	EnvVarHostedManagedClusterName = "HOSTED_MANAGED_CLUSTER_NAME"
-	EnvVarControlPlaneNumber       = "CONTROL_PLANE_NUMBER"
-	EnvVarWorkerNumber             = "WORKER_NUMBER"
-	EnvVarNamespace                = "NAMESPACE"
+	EnvVarManagedClusterName = "MANAGED_CLUSTER_NAME"
+	EnvVarControlPlaneNumber = "CONTROL_PLANE_NUMBER"
+	EnvVarWorkerNumber       = "WORKER_NUMBER"
+	EnvVarNamespace          = "NAMESPACE"
 	// EnvVarNoCleanup disables After* cleanup in provider specs to allow for
 	// debugging of test failures.
 	EnvVarNoCleanup = "NO_CLEANUP"
 
 	// AWS
+	EnvVarAWSAccessKeyID            = "AWS_ACCESS_KEY_ID"
+	EnvVarAWSSecretAccessKey        = "AWS_SECRET_ACCESS_KEY"
 	EnvVarAWSVPCID                  = "AWS_VPC_ID"
 	EnvVarAWSSubnetID               = "AWS_SUBNET_ID"
 	EnvVarAWSSubnetAvailabilityZone = "AWS_SUBNET_AVAILABILITY_ZONE"
 	EnvVarAWSInstanceType           = "AWS_INSTANCE_TYPE"
 	EnvVarAWSSecurityGroupID        = "AWS_SG_ID"
+	EnvVarAWSClusterIdentity        = "AWS_CLUSTER_IDENTITY"
 	EnvVarPublicIP                  = "AWS_PUBLIC_IP"
-	AWSCredentialsSecretName        = "aws-variables"
+
+	// VSphere
+	EnvVarVSphereUser            = "VSPHERE_USER"
+	EnvVarVSpherePassword        = "VSPHERE_PASSWORD"
+	EnvVarVSphereClusterIdentity = "VSPHERE_CLUSTER_IDENTITY"
+
+	// Azure
+	EnvVarAzureClientSecret    = "AZURE_CLIENT_SECRET"
+	EnvVarAzureClientID        = "AZURE_CLIENT_ID"
+	EnvVarAzureTenantID        = "AZURE_TENANT_ID"
+	EnvVarAzureSubscription    = "AZURE_SUBSCRIPTION"
+	EnvVarAzureClusterIdentity = "AZURE_CLUSTER_IDENTITY"
+	EnvVarAzureRegion          = "AZURE_REGION"
 )

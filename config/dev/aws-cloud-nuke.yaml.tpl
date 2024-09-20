@@ -1,14 +1,13 @@
 # This config file is used by cloud-nuke to clean up named resources associated
 # with a specific managed cluster across an AWS account. CLUSTER_NAME is
-# typically the metadata.name of the Deployment.
+# typically the metadata.name of the ManagedCluster.
 # The resources listed here are ALL of the potential resources that can be
 # filtered by cloud-nuke, except for IAM resources since we'll never touch those.
 # See: https://github.com/gruntwork-io/cloud-nuke?tab=readme-ov-file#whats-supported
 #
 # Usage:
-# - 'make aws-dev-nuke' will nuke resources affiliated with config/dev/deployment.yaml
-# - 'CLUSTER_NAME=foo make aws-dev-nuke' will nuke resources affiliated with an AWS cluster named 'foo'
-# Check cluster names with 'kubectl get clusters -n hmc-system'
+# - 'CLUSTER_NAME=foo make dev-aws-nuke' will nuke resources affiliated with an AWS cluster named 'foo'
+# Check cluster names with 'kubectl get managedcluster.hmc.mirantis.com -n hmc-system'
 
 ACM:
   include:

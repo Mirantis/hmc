@@ -1,16 +1,17 @@
 apiVersion: hmc.mirantis.com/v1alpha1
 kind: ManagedCluster
 metadata:
-  name: ${MANAGED_CLUSTER_NAME}-azure
+  name: ${MANAGED_CLUSTER_NAME}
   namespace: ${NAMESPACE}
 spec:
-  template: azure-hosted-cp
+  template: azure-hosted-cp-0-0-1
+  credential: ${AZURE_CLUSTER_IDENTITY}-cred
   config:
-    location: "westus"
+    location: "${AZURE_REGION}"
     subscriptionID: "${AZURE_SUBSCRIPTION_ID}"
     vmSize: Standard_A4_v2
     clusterIdentity:
-      name: azure-cluster-identity
+      name: ${AZURE_CLUSTER_IDENTITY}
       namespace: hmc-system
     resourceGroup: "${AZURE_RESOURCE_GROUP}"
     network:

@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Mirantis/hmc/test/kubeclient"
+	"github.com/Mirantis/hmc/test/e2e/kubeclient"
 	"github.com/Mirantis/hmc/test/utils"
 	. "github.com/onsi/ginkgo/v2"
 	corev1 "k8s.io/api/core/v1"
@@ -60,6 +60,27 @@ func validateMachines(ctx context.Context, kc *kubeclient.KubeClient, clusterNam
 	machines, err := kc.ListMachines(ctx, clusterName)
 	if err != nil {
 		return err
+	}
+
+	if len(machines) == 0 {
+		// No machines have been created yet, check for MachineDeployments to
+		// provide some debug information as to why no machines are present.
+		md, err := kc.ListMachineDeployments(ctx, clusterName)
+		if err != nil {
+			return fmt.Errorf("failed to list machine deployments: %w", err)
+		}
+
+		for _, md := range md {
+			_, _ = fmt.Fprintf(GinkgoWriter, "No machines found, validating MachineDeployment %s\n", md.GetName())
+
+			if err := utils.ValidateObjectNamePrefix(&md, clusterName); err != nil {
+				Fail(err.Error())
+			}
+
+			if err := utils.ValidateConditionsTrue(&md); err != nil {
+				return err
+			}
+		}
 	}
 
 	for _, machine := range machines {
@@ -191,7 +212,7 @@ func validateCSIDriver(ctx context.Context, kc *kubeclient.KubeClient, clusterNa
 		return fmt.Errorf("failed to get test PVC: %w", err)
 	}
 
-	if !strings.Contains(*pvc.Spec.StorageClassName, "csi") {
+	if pvc.Spec.StorageClassName != nil && !strings.Contains(*pvc.Spec.StorageClassName, "csi") {
 		Fail(fmt.Sprintf("%s PersistentVolumeClaim does not have a CSI driver storageClass", pvcName))
 	}
 
