@@ -86,6 +86,12 @@ func WithNamespace(namespace string) Opt {
 	}
 }
 
+func WithLabels(labels map[string]string) Opt {
+	return func(t *Template) {
+		t.Labels = labels
+	}
+}
+
 func WithHelmSpec(helmSpec v1alpha1.HelmSpec) Opt {
 	return func(t *Template) {
 		t.Spec.Helm = helmSpec

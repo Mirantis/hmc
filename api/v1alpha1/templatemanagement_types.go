@@ -64,19 +64,20 @@ type AccessRule struct {
 	ServiceTemplateChains []string `json:"serviceTemplateChains,omitempty"`
 }
 
-// +kubebuilder:validation:XValidation:rule="((has(self.stringSelector) ? 1 : 0) + (has(self.selector) ? 1 : 0) + (has(self.list) ? 1 : 0)) <= 1", message="only one of spec.targetNamespaces.selector or spec.targetNamespaces.stringSelector spec.targetNamespaces.list can be specified"
+// +kubebuilder:validation:XValidation:rule="((has(self.stringSelector) ? 1 : 0) + (has(self.selector) ? 1 : 0) + (has(self.list) ? 1 : 0)) <= 1", message="only one of spec.targetNamespaces.selector or spec.targetNamespaces.stringSelector or spec.targetNamespaces.list can be specified"
 
 // TargetNamespaces defines the list of namespaces or the label selector to select namespaces
 type TargetNamespaces struct {
 	// StringSelector is a label query to select namespaces.
-	// Mutually exclusive with Selector.
+	// Mutually exclusive with Selector and List.
 	// +optional
 	StringSelector string `json:"stringSelector,omitempty"`
 	// Selector is a structured label query to select namespaces.
-	// Mutually exclusive with StringSelector.
+	// Mutually exclusive with StringSelector and List.
 	// +optional
-	Selector metav1.LabelSelector `json:"selector,omitempty"`
+	Selector *metav1.LabelSelector `json:"selector,omitempty"`
 	// List is the list of namespaces to select.
+	// Mutually exclusive with StringSelector and Selector.
 	// +optional
 	List []string `json:"list,omitempty"`
 }
@@ -88,6 +89,8 @@ type TemplateManagementStatus struct {
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 	// Current reflects the applied access rules configuration.
 	Current []AccessRule `json:"current,omitempty"`
+	// Error is the error message occurred during the reconciliation (if any)
+	Error string `json:"error,omitempty"`
 }
 
 func init() {

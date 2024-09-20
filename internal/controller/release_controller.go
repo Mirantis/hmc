@@ -22,7 +22,6 @@ import (
 	"time"
 
 	hcv2 "github.com/fluxcd/helm-controller/api/v2"
-	"github.com/fluxcd/pkg/apis/meta"
 	sourcev1 "github.com/fluxcd/source-controller/api/v1"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chartutil"
@@ -57,16 +56,8 @@ type Poller struct {
 	CreateManagement bool
 	CreateTemplates  bool
 
-	// DefaultRepoType is the type specified by default in HelmRepository
-	// objects.  Valid types are 'default' for http/https repositories, and
-	// 'oci' for OCI repositories.  The RepositoryType is set in main based on
-	// the URI scheme of the DefaultRegistryURL.
-	DefaultRepoType           string
-	DefaultRegistryURL        string
-	RegistryCredentialsSecret string
-	InsecureRegistry          bool
-	HMCTemplatesChartName     string
-	SystemNamespace           string
+	HMCTemplatesChartName string
+	SystemNamespace       string
 }
 
 func (p *Poller) Start(ctx context.Context) error {
@@ -92,12 +83,7 @@ func (p *Poller) Tick(ctx context.Context) error {
 	l.Info("Poll is run")
 	defer l.Info("Poll is finished")
 
-	err := p.reconcileDefaultHelmRepo(ctx)
-	if err != nil {
-		l.Error(err, "failed to reconcile default HelmRepository")
-		return err
-	}
-	err = p.reconcileHMCTemplates(ctx)
+	err := p.reconcileHMCTemplates(ctx)
 	if err != nil {
 		l.Error(err, "failed to reconcile HMC Templates")
 		return err
@@ -172,42 +158,6 @@ func (p *Poller) ensureManagement(ctx context.Context) error {
 			return fmt.Errorf("failed to create %s Management object: %s", hmc.ManagementName, err)
 		}
 		l.Info("Successfully created Management object with default configuration")
-	}
-	return nil
-}
-
-func (p *Poller) reconcileDefaultHelmRepo(ctx context.Context) error {
-	l := log.FromContext(ctx)
-	helmRepo := &sourcev1.HelmRepository{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      defaultRepoName,
-			Namespace: p.SystemNamespace,
-		},
-	}
-	operation, err := ctrl.CreateOrUpdate(ctx, p.Client, helmRepo, func() error {
-		if helmRepo.Labels == nil {
-			helmRepo.Labels = make(map[string]string)
-		}
-
-		helmRepo.Labels[hmc.HMCManagedLabelKey] = hmc.HMCManagedLabelValue
-		helmRepo.Spec = sourcev1.HelmRepositorySpec{
-			Type:     p.DefaultRepoType,
-			URL:      p.DefaultRegistryURL,
-			Interval: metav1.Duration{Duration: helm.DefaultReconcileInterval},
-			Insecure: p.InsecureRegistry,
-		}
-		if p.RegistryCredentialsSecret != "" {
-			helmRepo.Spec.SecretRef = &meta.LocalObjectReference{
-				Name: p.RegistryCredentialsSecret,
-			}
-		}
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-	if operation == controllerutil.OperationResultCreated || operation == controllerutil.OperationResultUpdated {
-		l.Info(fmt.Sprintf("Successfully %s %s/%s HelmRepository", operation, p.SystemNamespace, defaultRepoName))
 	}
 	return nil
 }
