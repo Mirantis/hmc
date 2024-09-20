@@ -43,17 +43,10 @@ var (
 	// DefaultProviders is a map of providers that are
 	// installed by default, each with its default config.
 	DefaultProviders = map[string]map[string]interface{}{
-		ProviderCAPAName: {
-			"configSecret": map[string]interface{}{
-				"name": ProviderCAPASecretName,
-			},
-		},
+		ProviderCAPAName:      nil,
 		ProviderAzureName:     nil,
 		ProviderK0smotronName: nil,
 		ProviderVSphereName:   nil,
-		ProviderSveltosName: {
-			"targetNamespace": ProviderSveltosTargetNamespace,
-			"createNamespace": ProviderSveltosCreateNamespace,
-		},
+		ProviderSveltosName:   nil,
 	}
 )
