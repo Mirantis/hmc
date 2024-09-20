@@ -18,7 +18,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Mirantis/hmc/test/kubeclient"
+	"github.com/Mirantis/hmc/test/e2e/kubeclient"
 	. "github.com/onsi/ginkgo/v2"
 )
 
@@ -64,7 +64,7 @@ func NewProviderValidator(template Template, clusterName string, action Validati
 		case TemplateAWSStandaloneCP, TemplateAWSHostedCP:
 			resourcesToValidate["ccm"] = validateCCM
 			resourceOrder = append(resourceOrder, "ccm")
-		case TemplateAzureStandaloneCP, TemplateVSphereHostedCP:
+		case TemplateAzureStandaloneCP, TemplateVSphereStandaloneCP:
 			delete(resourcesToValidate, "csi-driver")
 		}
 	} else {

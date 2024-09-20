@@ -113,7 +113,10 @@ test: generate-all fmt vet envtest tidy external-crd ## Run tests.
 # compatibility with other vendors.
 .PHONY: test-e2e # Run the e2e tests using a Kind k8s instance as the management cluster.
 test-e2e: cli-install
-	KIND_CLUSTER_NAME="hmc-test" KIND_VERSION=$(KIND_VERSION) go test ./test/e2e/ -v -ginkgo.v -timeout=3h
+	@if [ "$$GINKGO_LABEL_FILTER" ]; then \
+		ginkgo_label_flag="-ginkgo.label-filter=$$GINKGO_LABEL_FILTER"; \
+	fi; \
+	KIND_CLUSTER_NAME="hmc-test" KIND_VERSION=$(KIND_VERSION) go test ./test/e2e/ -v -ginkgo.v -ginkgo.timeout=3h -timeout=3h $$ginkgo_label_flag
 
 .PHONY: lint
 lint: golangci-lint ## Run golangci-lint linter & yamllint
@@ -204,8 +207,6 @@ REGISTRY_PORT ?= 5001
 REGISTRY_REPO ?= oci://127.0.0.1:$(REGISTRY_PORT)/charts
 DEV_PROVIDER ?= aws
 REGISTRY_IS_OCI = $(shell echo $(REGISTRY_REPO) | grep -q oci && echo true || echo false)
-CLUSTER_NAME ?= $(shell $(YQ) '.metadata.name' ./config/dev/deployment.yaml)
-
 AWS_CREDENTIALS=${AWS_B64ENCODED_CREDENTIALS}
 
 ifndef ignore-not-found
@@ -301,7 +302,7 @@ dev-push: docker-build helm-push
 
 .PHONY: dev-templates
 dev-templates: templates-generate
-	$(KUBECTL) -n $(NAMESPACE) apply -f $(PROVIDER_TEMPLATES_DIR)/hmc-templates/files/templates
+	$(KUBECTL) -n $(NAMESPACE) apply --force -f $(PROVIDER_TEMPLATES_DIR)/hmc-templates/files/templates
 
 .PHONY: dev-release
 dev-release:
@@ -324,6 +325,9 @@ dev-eks-creds: dev-aws-creds
 .PHONY: dev-apply ## Apply the development environment by deploying the kind cluster, local registry and the HMC helm chart.
 dev-apply: kind-deploy registry-deploy dev-push dev-deploy dev-templates dev-release
 
+.PHONY: test-apply
+test-apply: set-hmc-version helm-package dev-deploy dev-templates dev-release
+
 .PHONY: dev-destroy
 dev-destroy: kind-undeploy registry-undeploy ## Destroy the development environment by deleting the kind cluster and local registry.
 
@@ -339,12 +343,22 @@ dev-mcluster-delete: envsubst
 dev-creds-apply: dev-$(DEV_PROVIDER)-creds
 
 .PHONY: dev-aws-nuke
-dev-aws-nuke: envsubst awscli yq cloud-nuke ## Warning: Destructive! Nuke all AWS resources deployed by 'DEV_PROVIDER=aws dev-provider-apply', prefix with CLUSTER_NAME to nuke a specific cluster.
+dev-aws-nuke: envsubst awscli yq cloud-nuke ## Warning: Destructive! Nuke all AWS resources deployed by 'DEV_PROVIDER=aws dev-mcluster-apply'
 	@CLUSTER_NAME=$(CLUSTER_NAME) YQ=$(YQ) AWSCLI=$(AWSCLI) bash -c "./scripts/aws-nuke-ccm.sh elb"
-	@CLUSTER_NAME=$(CLUSTER_NAME) $(ENVSUBST) < config/dev/cloud_nuke.yaml.tpl > config/dev/cloud_nuke.yaml
-	DISABLE_TELEMETRY=true $(CLOUDNUKE) aws --region $$AWS_REGION --force --config config/dev/cloud_nuke.yaml --resource-type vpc,eip,nat-gateway,ec2,ec2-subnet,elb,elbv2,ebs,internet-gateway,network-interface,security-group
-	@rm config/dev/cloud_nuke.yaml
+	@CLUSTER_NAME=$(CLUSTER_NAME) $(ENVSUBST) < config/dev/aws-cloud-nuke.yaml.tpl > config/dev/aws-cloud-nuke.yaml
+	DISABLE_TELEMETRY=true $(CLOUDNUKE) aws --region $$AWS_REGION --force --config config/dev/aws-cloud-nuke.yaml --resource-type vpc,eip,nat-gateway,ec2,ec2-subnet,elb,elbv2,ebs,internet-gateway,network-interface,security-group
+	@rm config/dev/aws-cloud-nuke.yaml
 	@CLUSTER_NAME=$(CLUSTER_NAME) YQ=$(YQ) AWSCLI=$(AWSCLI) bash -c "./scripts/aws-nuke-ccm.sh ebs"
+
+.PHONY: dev-azure-nuke
+dev-azure-nuke: envsubst azure-nuke ## Warning: Destructive! Nuke all Azure resources deployed by 'DEV_PROVIDER=azure dev-mcluster-apply'
+	@if [ "$(CLUSTER_NAME)" == "" ] || [ "$(AZURE_TENANT_ID)" == "" ] || [ "$(AZURE_REGION)" == "" ]; then \
+		echo "CLUSTER_NAME, AZURE_TENANT_ID and AZURE_REGION must be set"; \
+		exit 1; \
+	fi
+	@CLUSTER_NAME=$(CLUSTER_NAME) $(ENVSUBST) < config/dev/azure-cloud-nuke.yaml.tpl > config/dev/azure-cloud-nuke.yaml
+	$(AZURENUKE) run --config config/dev/azure-cloud-nuke.yaml --force --no-dry-run
+	@rm config/dev/azure-cloud-nuke.yaml
 
 .PHONY: cli-install
 cli-install: clusterawsadm clusterctl cloud-nuke envsubst yq awscli ## Install the necessary CLI tools for deployment, development and testing.
@@ -377,6 +391,7 @@ YQ ?= $(LOCALBIN)/yq-$(YQ_VERSION)
 CLUSTERAWSADM ?= $(LOCALBIN)/clusterawsadm
 CLUSTERCTL ?= $(LOCALBIN)/clusterctl
 CLOUDNUKE ?= $(LOCALBIN)/cloud-nuke
+AZURENUKE ?= $(LOCALBIN)/azure-nuke
 ADDLICENSE ?= $(LOCALBIN)/addlicense-$(ADDLICENSE_VERSION)
 ENVSUBST ?= $(LOCALBIN)/envsubst-$(ENVSUBST_VERSION)
 AWSCLI ?= $(LOCALBIN)/aws
@@ -389,6 +404,7 @@ HELM_VERSION ?= v3.15.1
 KIND_VERSION ?= v0.23.0
 YQ_VERSION ?= v4.44.2
 CLOUDNUKE_VERSION = v0.37.1
+AZURENUKE_VERSION = v1.1.0
 CLUSTERAWSADM_VERSION ?= v2.5.2
 CLUSTERCTL_VERSION ?= v1.7.3
 ADDLICENSE_VERSION ?= v1.1.1
@@ -448,6 +464,12 @@ $(CLOUDNUKE): | $(LOCALBIN)
 	curl -sL https://github.com/gruntwork-io/cloud-nuke/releases/download/$(CLOUDNUKE_VERSION)/cloud-nuke_$(OS)_$(ARCH) -o $(CLOUDNUKE)
 	chmod +x $(CLOUDNUKE)
 
+.PHONY: azure-nuke
+azure-nuke: $(AZURENUKE) ## Download azure-nuke locally if necessary.
+$(AZURENUKE): | $(LOCALBIN)
+	curl -sL https://github.com/ekristen/azure-nuke/releases/download/$(AZURENUKE_VERSION)/azure-nuke-$(AZURENUKE_VERSION)-$(OS)-$(ARCH).tar.gz -o /tmp/azure-nuke.tar.gz
+	tar xvf /tmp/azure-nuke.tar.gz -C $(LOCALBIN) azure-nuke
+
 .PHONY: clusterawsadm
 clusterawsadm: $(CLUSTERAWSADM) ## Download clusterawsadm locally if necessary.
 $(CLUSTERAWSADM): | $(LOCALBIN)
@@ -474,7 +496,7 @@ awscli: $(AWSCLI)
 $(AWSCLI): | $(LOCALBIN)
 	@if [ $(OS) == "linux" ]; then \
 		curl "https://awscli.amazonaws.com/awscli-exe-linux-$(shell uname -m)-$(AWSCLI_VERSION).zip" -o "/tmp/awscliv2.zip"; \
-		unzip -qq /tmp/awscliv2.zip -d /tmp; \
+		unzip -oqq /tmp/awscliv2.zip -d /tmp; \
 		/tmp/aws/install -i $(LOCALBIN)/aws-cli -b $(LOCALBIN) --update; \
 	fi; \
 	if [ $(OS) == "darwin" ]; then \

@@ -15,7 +15,7 @@ go.work
 go.work.sum
 
 # cloud-nuke config
-*cloud_nuke.yaml
+*cloud-nuke.yaml
 
 # Test artifacts
 test/e2e/*.log

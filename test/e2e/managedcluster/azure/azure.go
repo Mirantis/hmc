@@ -15,29 +15,22 @@
 package azure
 
 import (
-	"bufio"
-	"bytes"
 	"context"
-	"errors"
 	"fmt"
-	"io"
-	"os"
 
-	"github.com/a8m/envsubst"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
+	storagev1 "k8s.io/api/storage/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
-	yamlutil "k8s.io/apimachinery/pkg/util/yaml"
-	"k8s.io/client-go/discovery"
-	"k8s.io/client-go/restmapper"
+	"k8s.io/utils/ptr"
 
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
-	"github.com/Mirantis/hmc/test/kubeclient"
+	"github.com/Mirantis/hmc/test/e2e/kubeclient"
 )
 
 func getAzureInfo(ctx context.Context, name string, kc *kubeclient.KubeClient) map[string]any {
@@ -48,7 +41,7 @@ func getAzureInfo(ctx context.Context, name string, kc *kubeclient.KubeClient) m
 		Resource: "azureclusters",
 	}
 
-	dc := kc.GetDynamicClient(resourceID)
+	dc := kc.GetDynamicClient(resourceID, true)
 	list, err := dc.List(ctx, metav1.ListOptions{
 		LabelSelector: labels.SelectorFromSet(map[string]string{hmc.FluxHelmChartNameKey: name}).String(),
 	})
@@ -101,52 +94,38 @@ func SetAzureEnvironmentVariables(clusterName string, kc *kubeclient.KubeClient)
 	GinkgoT().Setenv("AZURE_ROUTE_TABLE", fmt.Sprintf("%s", routeTableName))
 }
 
-func CreateCredentialSecret(ctx context.Context, kc *kubeclient.KubeClient) {
+// CreateDefaultStorageClass configures the default storage class for Azure
+// based on the azure-disk CSI driver that we deploy as part of our templates.
+func CreateDefaultStorageClass(kc *kubeclient.KubeClient) {
 	GinkgoHelper()
-	serializer := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
-	yamlFile, err := os.ReadFile("config/dev/azure-credentials.yaml")
-	Expect(err).NotTo(HaveOccurred())
 
-	yamlFile, err = envsubst.Bytes(yamlFile)
-	Expect(err).NotTo(HaveOccurred())
+	ctx := context.Background()
 
-	c := discovery.NewDiscoveryClientForConfigOrDie(kc.Config)
-	groupResources, err := restmapper.GetAPIGroupResources(c)
-	Expect(err).NotTo(HaveOccurred())
+	azureDiskSC := &storagev1.StorageClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "azure-disk",
+			Annotations: map[string]string{
+				"storageclass.kubernetes.io/is-default-class": "true",
+			},
+		},
+		Provisioner:          "disk.csi.azure.com",
+		ReclaimPolicy:        ptr.To(corev1.PersistentVolumeReclaimDelete),
+		VolumeBindingMode:    ptr.To(storagev1.VolumeBindingWaitForFirstConsumer),
+		AllowVolumeExpansion: ptr.To(true),
+		Parameters: map[string]string{
+			"skuName": "StandardSSD_LRS",
+		},
+	}
 
-	yamlReader := yamlutil.NewYAMLReader(bufio.NewReader(bytes.NewReader(yamlFile)))
-	for {
-		yamlDoc, err := yamlReader.Read()
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				break
-			}
-			Expect(err).NotTo(HaveOccurred(), "failed to read yaml file")
+	sc, err := kc.Client.StorageV1().StorageClasses().Get(ctx, "azure-disk", metav1.GetOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			_, err := kc.Client.StorageV1().StorageClasses().Create(ctx, azureDiskSC, metav1.CreateOptions{})
+			Expect(err).NotTo(HaveOccurred())
 		}
-
-		credentialResource := &unstructured.Unstructured{}
-		_, _, err = serializer.Decode(yamlDoc, nil, credentialResource)
-		Expect(err).NotTo(HaveOccurred(), "failed to parse credential resource")
-
-		mapper := restmapper.NewDiscoveryRESTMapper(groupResources)
-		mapping, err := mapper.RESTMapping(credentialResource.GroupVersionKind().GroupKind())
-		Expect(err).NotTo(HaveOccurred(), "failed to get rest mapping")
-
-		dc := kc.GetDynamicClient(schema.GroupVersionResource{
-			Group:    credentialResource.GroupVersionKind().Group,
-			Version:  credentialResource.GroupVersionKind().Version,
-			Resource: mapping.Resource.Resource,
-		})
-
-		exists, err := dc.Get(ctx, credentialResource.GetName(), metav1.GetOptions{})
-		if !apierrors.IsNotFound(err) {
-			Expect(err).NotTo(HaveOccurred(), "failed to get azure credential secret")
-		}
-
-		if exists == nil {
-			if _, createErr := dc.Create(ctx, credentialResource, metav1.CreateOptions{}); err != nil {
-				Expect(createErr).NotTo(HaveOccurred(), "failed to create azure credential secret")
-			}
-		}
+	} else {
+		azureDiskSC.SetResourceVersion(sc.GetResourceVersion())
+		_, err = kc.Client.StorageV1().StorageClasses().Update(ctx, azureDiskSC, metav1.UpdateOptions{})
+		Expect(err).NotTo(HaveOccurred())
 	}
 }

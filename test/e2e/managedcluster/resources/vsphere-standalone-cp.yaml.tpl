@@ -1,9 +1,10 @@
 apiVersion: hmc.mirantis.com/v1alpha1
 kind: ManagedCluster
 metadata:
-  name: ${MANAGED_CLUSTER_NAME}-vsphere
+  name: ${MANAGED_CLUSTER_NAME}
 spec:
-  template: vsphere-standalone-cp
+  template: vsphere-standalone-cp-0-0-1
+  credential: ${VSPHERE_CLUSTER_IDENTITY}-cred
   config:
     controlPlaneNumber: ${CONTROL_PLANE_NUMBER:=1}
     workersNumber: ${WORKERS_NUMBER:=1}

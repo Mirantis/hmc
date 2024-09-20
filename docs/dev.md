@@ -144,6 +144,26 @@ tests that run in CI use names such as `ci-1234567890-e2e-test`.  You can always
 pass `MANAGED_CLUSTER_NAME=` from the get-go to customize the name used by the
 test.
 
+### Filtering test runs
+Provider tests are broken into two types, `onprem` and `cloud`.  For CI,
+`provider:onprem` tests run on self-hosted runners provided by Mirantis.
+`provider:cloud` tests run on GitHub actions runners and interact with cloud
+infrastructure providers such as AWS or Azure.
+
+Each specific provider test also has a label, for example, `provider:aws` can be
+used to run only AWS tests.  To utilize these filters with the `make test-e2e`
+target pass the `GINKGO_LABEL_FILTER` env var, for example:
+
+```
+GINKGO_LABEL_FILTER="provider:cloud" make test-e2e
+```
+
+would run all cloud provider tests.  To see a list of all available labels run:
+
+```
+ginkgo labels ./test/e2e
+```
+
 ### Nuke created resources
 In CI we run `make dev-aws-nuke` to cleanup test resources, you can do so
 manually with:
