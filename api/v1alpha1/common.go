@@ -26,8 +26,7 @@ type Providers struct {
 
 const (
 	// Provider CAPA
-	ProviderCAPAName       = "cluster-api-provider-aws"
-	ProviderCAPASecretName = "aws-variables"
+	ProviderCAPAName = "cluster-api-provider-aws"
 	// Provider Azure
 	ProviderAzureName   = "cluster-api-provider-azure"
 	ProviderVSphereName = "cluster-api-provider-vsphere"
@@ -43,11 +42,7 @@ var (
 	// DefaultProviders is a map of providers that are
 	// installed by default, each with its default config.
 	DefaultProviders = map[string]map[string]interface{}{
-		ProviderCAPAName: {
-			"configSecret": map[string]interface{}{
-				"name": ProviderCAPASecretName,
-			},
-		},
+		ProviderCAPAName:      nil,
 		ProviderAzureName:     nil,
 		ProviderK0smotronName: nil,
 		ProviderVSphereName:   nil,
