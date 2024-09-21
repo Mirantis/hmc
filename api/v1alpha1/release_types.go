@@ -43,6 +43,15 @@ type NamedProviderTemplate struct {
 	Name string `json:"name"`
 }
 
+func (in *Release) ProviderTemplate(name string) string {
+	for _, p := range in.Spec.Providers {
+		if p.Name == name {
+			return p.Template
+		}
+	}
+	return ""
+}
+
 // ReleaseStatus defines the observed state of Release
 type ReleaseStatus struct {
 	// Templates indicates the status of templates associated with the Release.

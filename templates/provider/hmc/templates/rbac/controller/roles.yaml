@@ -38,7 +38,6 @@ rules:
   - hmc.mirantis.com
   resources:
   - managements
-  - releases
   verbs: {{ include "rbac.editorVerbs" . | nindent 4 }}
 - apiGroups:
   - hmc.mirantis.com
@@ -53,6 +52,7 @@ rules:
 - apiGroups:
   - hmc.mirantis.com
   resources:
+  - releases
   - clustertemplatechains
   - servicetemplatechains
   verbs:
