@@ -66,7 +66,7 @@ func TestClusterTemplateValidateDelete(t *testing.T) {
 			c := fake.NewClientBuilder().
 				WithScheme(scheme.Scheme).
 				WithRuntimeObjects(tt.existingObjects...).
-				WithIndex(tt.existingObjects[0], TemplateKey, ExtractTemplateName).
+				WithIndex(tt.existingObjects[0], v1alpha1.TemplateKey, v1alpha1.ExtractTemplateName).
 				Build()
 			validator := &ClusterTemplateValidator{Client: c}
 			warn, err := validator.ValidateDelete(ctx, tt.template)

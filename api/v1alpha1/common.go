@@ -14,6 +14,13 @@
 
 package v1alpha1
 
+import (
+	"context"
+
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+)
+
 // Providers is a structure holding different types of CAPI providers
 type Providers struct {
 	// InfrastructureProviders is the list of CAPI infrastructure providers
@@ -37,3 +44,52 @@ const (
 	ProviderSveltosTargetNamespace = "projectsveltos"
 	ProviderSveltosCreateNamespace = true
 )
+
+func SetupIndexers(ctx context.Context, mgr ctrl.Manager) error {
+	if err := SetupManagedClusterIndexer(ctx, mgr); err != nil {
+		return err
+	}
+	if err := SetupReleaseIndexer(ctx, mgr); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+const TemplateKey = ".spec.template"
+
+func SetupManagedClusterIndexer(ctx context.Context, mgr ctrl.Manager) error {
+	if err := mgr.GetFieldIndexer().
+		IndexField(ctx, &ManagedCluster{}, TemplateKey, ExtractTemplateName); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func ExtractTemplateName(rawObj client.Object) []string {
+	cluster, ok := rawObj.(*ManagedCluster)
+	if !ok {
+		return nil
+	}
+	return []string{cluster.Spec.Template}
+}
+
+const VersionKey = ".spec.version"
+
+func SetupReleaseIndexer(ctx context.Context, mgr ctrl.Manager) error {
+	if err := mgr.GetFieldIndexer().
+		IndexField(ctx, &Release{}, VersionKey, ExtractReleaseVersion); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func ExtractReleaseVersion(rawObj client.Object) []string {
+	release, ok := rawObj.(*Release)
+	if !ok {
+		return nil
+	}
+	return []string{release.Spec.Version}
+}

@@ -133,6 +133,9 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
+	err = hmcmirantiscomv1alpha1.SetupIndexers(ctx, mgr)
+	Expect(err).NotTo(HaveOccurred())
+
 	err = (&hmcwebhook.ManagedClusterValidator{
 		SystemNamespace: utils.DefaultSystemNamespace,
 	}).SetupWebhookWithManager(mgr)
@@ -151,9 +154,6 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	err = (&hmcwebhook.ProviderTemplateValidator{}).SetupWebhookWithManager(mgr)
-	Expect(err).NotTo(HaveOccurred())
-
-	err = hmcwebhook.SetupTemplateIndex(ctx, mgr)
 	Expect(err).NotTo(HaveOccurred())
 
 	go func() {
