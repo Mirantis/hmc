@@ -296,8 +296,8 @@ dev-templates: templates-generate
 	$(KUBECTL) -n $(NAMESPACE) apply -f $(PROVIDER_TEMPLATES_DIR)/hmc-templates/files/templates
 
 .PHONY: dev-aws-creds
-dev-aws-creds: yq
-	@$(YQ) e ".stringData.AWS_B64ENCODED_CREDENTIALS = \"${AWS_CREDENTIALS}\"" config/dev/awscredentials.yaml | $(KUBECTL) -n $(NAMESPACE) apply -f -
+dev-aws-creds: envsubst
+	@NAMESPACE=$(NAMESPACE) $(ENVSUBST) -no-unset -i config/dev/aws-credentials.yaml | $(KUBECTL) apply -f -
 
 .PHONY: dev-azure-creds
 dev-azure-creds: envsubst
@@ -315,9 +315,6 @@ dev-destroy: kind-undeploy registry-undeploy ## Destroy the development environm
 
 .PHONY: dev-mcluster-apply
 dev-mcluster-apply: envsubst
-	@if [ $(DEV_PROVIDER) = "aws" ]; then \
-		$(MAKE) dev-aws-creds; \
-	fi
 	@NAMESPACE=$(NAMESPACE) $(ENVSUBST) -no-unset -i config/dev/$(DEV_PROVIDER)-managedcluster.yaml | $(KUBECTL) apply -f -
 
 .PHONY: dev-mcluster-delete

@@ -23,6 +23,11 @@ make cli-install
 
 Follow the instruction to configure AWS Provider: [AWS Provider Setup](aws/main.md#prepare-the-aws-infra-provider)
 
+The following env variables must be set in order to deploy dev cluster on AWS:
+
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
+
 ### Azure Provider Setup
 
 Follow the instruction on how to configure [Azure Provider](azure/main.md).

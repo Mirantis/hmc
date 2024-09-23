@@ -20,6 +20,9 @@ bastion:
   allowedCIDRBlocks: []
   instanceType: t2.micro
   ami: ""
+clusterIdentity:
+  name: ""
+  kind: "AWSClusterStaticIdentity"
 # AWS machines parameters
 controlPlane:
   amiID: ""

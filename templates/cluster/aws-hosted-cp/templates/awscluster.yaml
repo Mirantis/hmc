@@ -9,9 +9,9 @@ metadata:
   - hmc.mirantis.com/cleanup
 spec:
   region: {{ .Values.region }}
-  # identityRef:
-    # kind: AWSClusterStaticIdentity
-    # name: aws-identity-name
+  identityRef:
+    kind: {{ .Values.clusterIdentity.kind }}
+    name: {{ .Values.clusterIdentity.name }}
   network:
     vpc:
       id: {{ .Values.vpcID }}

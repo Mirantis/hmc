@@ -5,7 +5,8 @@
   "required": [
     "controlPlaneNumber",
     "workersNumber",
-    "region"
+    "region",
+    "clusterIdentity"
   ],
   "properties": {
     "controlPlaneNumber": {
@@ -83,6 +84,24 @@
           "ami": {
               "type": "string"
           }
+      }
+    },
+    "clusterIdentity": {
+      "type": "object",
+      "description": "AWS Cluster Identity object reference",
+      "required": [
+        "name",
+	"kind"
+      ],
+      "properties": {
+        "name": {
+	  "description": "AWS ClusterIdentity object name",
+          "type": "string"
+        },
+        "kind": {
+	  "description": "AWS ClusterIdentity object kind",
+          "type": "string"
+        }
       }
     },
     "controlPlane": {

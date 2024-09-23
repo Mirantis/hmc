@@ -5,6 +5,9 @@ metadata:
   namespace: ${NAMESPACE}
 spec:
   config:
+    clusterIdentity:
+      name: aws-cluster-identity
+      namespace: ${NAMESPACE}
     controlPlane:
       instanceType: t3.small
     controlPlaneNumber: 1

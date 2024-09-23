@@ -26,8 +26,7 @@ type Providers struct {
 
 const (
 	// Provider CAPA
-	ProviderCAPAName       = "cluster-api-provider-aws"
-	ProviderCAPASecretName = "aws-variables"
+	ProviderCAPAName = "cluster-api-provider-aws"
 	// Provider Azure
 	ProviderAzureName   = "cluster-api-provider-azure"
 	ProviderVSphereName = "cluster-api-provider-vsphere"
