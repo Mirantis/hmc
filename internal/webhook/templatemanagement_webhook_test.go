@@ -34,6 +34,56 @@ import (
 	"github.com/Mirantis/hmc/test/scheme"
 )
 
+func TestTemplateManagementValidateCreate(t *testing.T) {
+	g := NewWithT(t)
+
+	ctx := context.Background()
+
+	tests := []struct {
+		name            string
+		tm              *v1alpha1.TemplateManagement
+		existingObjects []runtime.Object
+		err             string
+		warnings        admission.Warnings
+	}{
+		{
+			name:            "should fail if the TemplateManagement object already exists",
+			tm:              tm.NewTemplateManagement(tm.WithName("new")),
+			existingObjects: []runtime.Object{tm.NewTemplateManagement(tm.WithName(v1alpha1.TemplateManagementName))},
+			err:             "TemplateManagement object already exists",
+		},
+		{
+			name: "should succeed",
+			tm:   tm.NewTemplateManagement(tm.WithName("new")),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := fake.NewClientBuilder().
+				WithScheme(scheme.Scheme).
+				WithRuntimeObjects(tt.existingObjects...).
+				WithIndex(&v1alpha1.ManagedCluster{}, v1alpha1.TemplateKey, v1alpha1.ExtractTemplateName).
+				Build()
+			validator := &TemplateManagementValidator{Client: c, SystemNamespace: utils.DefaultSystemNamespace}
+			warn, err := validator.ValidateCreate(ctx, tt.tm)
+			if tt.err != "" {
+				g.Expect(err).To(HaveOccurred())
+				if err.Error() != tt.err {
+					t.Fatalf("expected error '%s', got error: %s", tt.err, err.Error())
+				}
+			} else {
+				g.Expect(err).To(Succeed())
+			}
+			if len(tt.warnings) > 0 {
+				g.Expect(warn).To(Equal(tt.warnings))
+			} else {
+				g.Expect(warn).To(BeEmpty())
+			}
+		})
+	}
+}
+
 func TestTemplateManagementValidateUpdate(t *testing.T) {
 	g := NewWithT(t)
 

@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -51,7 +52,16 @@ var (
 )
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type.
-func (*TemplateManagementValidator) ValidateCreate(_ context.Context, _ runtime.Object) (admission.Warnings, error) {
+func (v *TemplateManagementValidator) ValidateCreate(ctx context.Context, _ runtime.Object) (admission.Warnings, error) {
+	itemsList := &v1.PartialObjectMetadataList{}
+	gvk := v1alpha1.GroupVersion.WithKind(v1alpha1.TemplateManagementKind)
+	itemsList.SetGroupVersionKind(gvk)
+	if err := v.List(ctx, itemsList); err != nil {
+		return nil, err
+	}
+	if len(itemsList.Items) > 0 {
+		return nil, fmt.Errorf("TemplateManagement object already exists")
+	}
 	return nil, nil
 }
 
