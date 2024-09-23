@@ -25,8 +25,9 @@ const (
 
 	CoreCAPIName = "capi"
 
-	ManagementName      = "hmc"
-	ManagementFinalizer = "hmc.mirantis.com/management"
+	ManagementName         = "hmc"
+	ManagementFinalizer    = "hmc.mirantis.com/management"
+	TemplateManagementName = "hmc"
 )
 
 // ManagementSpec defines the desired state of Management

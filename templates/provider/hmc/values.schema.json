@@ -116,6 +116,9 @@
         "createManagement": {
           "type": "boolean"
         },
+        "createTemplateManagement": {
+          "type": "boolean"
+        },
         "createTemplate": {
           "type": "boolean"
         },

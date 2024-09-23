@@ -54,8 +54,9 @@ type Poller struct {
 
 	Config *rest.Config
 
-	CreateManagement bool
-	CreateTemplates  bool
+	CreateManagement         bool
+	CreateTemplateManagement bool
+	CreateTemplates          bool
 
 	HMCTemplatesChartName string
 	SystemNamespace       string
@@ -89,18 +90,20 @@ func (p *Poller) Tick(ctx context.Context) error {
 		l.Error(err, "failed to reconcile HMC Templates")
 		return err
 	}
-	err = p.ensureManagement(ctx)
+	mgmt, err := p.getOrCreateManagement(ctx)
 	if err != nil {
-		l.Error(err, "failed to ensure default Management object")
+		l.Error(err, "failed to get or create Management object")
+		return err
+	}
+	err = p.ensureTemplateManagement(ctx, mgmt)
+	if err != nil {
+		l.Error(err, "failed to ensure default TemplateManagement object")
 		return err
 	}
 	return nil
 }
 
-func (p *Poller) ensureManagement(ctx context.Context) error {
-	if !p.CreateManagement {
-		return nil
-	}
+func (p *Poller) getOrCreateManagement(ctx context.Context) (*hmc.Management, error) {
 	l := log.FromContext(ctx)
 	mgmtObj := &hmc.Management{
 		ObjectMeta: metav1.ObjectMeta{
@@ -113,30 +116,32 @@ func (p *Poller) ensureManagement(ctx context.Context) error {
 	}, mgmtObj)
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
-			return fmt.Errorf("failed to get %s Management object", hmc.ManagementName)
+			return nil, fmt.Errorf("failed to get %s Management object: %w", hmc.ManagementName, err)
 		}
-
+		if !p.CreateManagement {
+			return nil, nil
+		}
 		mgmtObj.Spec.Release, err = p.getCurrentReleaseName(ctx)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		if err := mgmtObj.Spec.SetProvidersDefaults(); err != nil {
-			return err
+			return nil, err
 		}
 
 		getter := helm.NewMemoryRESTClientGetter(p.Config, p.RESTMapper())
 		actionConfig := new(action.Configuration)
 		err = actionConfig.Init(getter, p.SystemNamespace, "secret", l.Info)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		hmcConfig := make(chartutil.Values)
 		release, err := actionConfig.Releases.Last("hmc")
 		if err != nil {
 			if !errors.Is(err, driver.ErrReleaseNotFound) {
-				return err
+				return nil, err
 			}
 		} else {
 			if len(release.Config) > 0 {
@@ -152,7 +157,7 @@ func (p *Poller) ensureManagement(ctx context.Context) error {
 		})
 		rawConfig, err := json.Marshal(hmcConfig)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		mgmtObj.Spec.Core = &hmc.Core{
 			HMC: hmc.Component{
@@ -164,9 +169,46 @@ func (p *Poller) ensureManagement(ctx context.Context) error {
 
 		err = p.Create(ctx, mgmtObj)
 		if err != nil {
-			return fmt.Errorf("failed to create %s Management object: %s", hmc.ManagementName, err)
+			return nil, fmt.Errorf("failed to create %s Management object: %s", hmc.ManagementName, err)
 		}
 		l.Info("Successfully created Management object with default configuration")
+	}
+	return mgmtObj, nil
+}
+
+func (p *Poller) ensureTemplateManagement(ctx context.Context, mgmt *hmc.Management) error {
+	l := log.FromContext(ctx)
+	if !p.CreateTemplateManagement {
+		return nil
+	}
+	if mgmt == nil {
+		return fmt.Errorf("management object is not found")
+	}
+	tmObj := &hmc.TemplateManagement{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: hmc.TemplateManagementName,
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion: hmc.GroupVersion.String(),
+					Kind:       mgmt.Kind,
+					Name:       mgmt.Name,
+					UID:        mgmt.UID,
+				},
+			},
+		},
+	}
+	err := p.Get(ctx, client.ObjectKey{
+		Name: hmc.TemplateManagementName,
+	}, tmObj)
+	if err != nil {
+		if !apierrors.IsNotFound(err) {
+			return fmt.Errorf("failed to get %s TemplateManagement object: %w", hmc.TemplateManagementName, err)
+		}
+		err = p.Create(ctx, tmObj)
+		if err != nil {
+			return fmt.Errorf("failed to create %s TemplateManagement object: %w", hmc.TemplateManagementName, err)
+		}
+		l.Info("Successfully created TemplateManagement object")
 	}
 	return nil
 }
