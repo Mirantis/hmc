@@ -73,6 +73,7 @@ func (v *ClusterTemplateValidator) ValidateDelete(ctx context.Context, obj runti
 	listOptions := client.ListOptions{
 		FieldSelector: fields.SelectorFromSet(fields.Set{v1alpha1.TemplateKey: template.Name}),
 		Limit:         1,
+		Namespace:     template.Namespace,
 	}
 	err := v.Client.List(ctx, managedClusters, &listOptions)
 	if err != nil {

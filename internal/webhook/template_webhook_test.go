@@ -32,8 +32,9 @@ import (
 func TestClusterTemplateValidateDelete(t *testing.T) {
 	g := NewWithT(t)
 	ctx := context.Background()
-	tpl := template.NewClusterTemplate(template.WithName("testTemplateFail"))
-	tplTest := template.NewClusterTemplate(template.WithName("testTemplate"))
+	namespace := "test"
+	tpl := template.NewClusterTemplate(template.WithName("testTemplateFail"), template.WithNamespace(namespace))
+	tplTest := template.NewClusterTemplate(template.WithName("testTemplate"), template.WithNamespace(namespace))
 
 	tests := []struct {
 		name            string
@@ -43,11 +44,22 @@ func TestClusterTemplateValidateDelete(t *testing.T) {
 		warnings        admission.Warnings
 	}{
 		{
-			name:            "should fail if ManagedCluster objects exist",
-			template:        tpl,
-			existingObjects: []runtime.Object{managedcluster.NewManagedCluster(managedcluster.WithTemplate(tpl.Name))},
-			warnings:        admission.Warnings{"The ClusterTemplate object can't be removed if ManagedCluster objects referencing it still exist"},
-			err:             "template deletion is forbidden",
+			name:     "should fail if ManagedCluster objects exist in the same namespace",
+			template: tpl,
+			existingObjects: []runtime.Object{managedcluster.NewManagedCluster(
+				managedcluster.WithNamespace(namespace),
+				managedcluster.WithTemplate(tpl.Name),
+			)},
+			warnings: admission.Warnings{"The ClusterTemplate object can't be removed if ManagedCluster objects referencing it still exist"},
+			err:      "template deletion is forbidden",
+		},
+		{
+			name:     "should succeed if some ManagedCluster from another namespace references the template",
+			template: tpl,
+			existingObjects: []runtime.Object{managedcluster.NewManagedCluster(
+				managedcluster.WithNamespace("new"),
+				managedcluster.WithTemplate(tpl.Name),
+			)},
 		},
 		{
 			name:            "should be OK because of a different cluster",

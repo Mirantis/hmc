@@ -52,10 +52,9 @@ import (
 // ManagedClusterReconciler reconciles a ManagedCluster object
 type ManagedClusterReconciler struct {
 	client.Client
-	Scheme          *runtime.Scheme
-	Config          *rest.Config
-	DynamicClient   *dynamic.DynamicClient
-	SystemNamespace string
+	Scheme        *runtime.Scheme
+	Config        *rest.Config
+	DynamicClient *dynamic.DynamicClient
 }
 
 type providerSchema struct {
@@ -191,7 +190,7 @@ func (r *ManagedClusterReconciler) Update(ctx context.Context, l logr.Logger, ma
 	}()
 
 	template := &hmc.ClusterTemplate{}
-	templateRef := types.NamespacedName{Name: managedCluster.Spec.Template, Namespace: r.SystemNamespace}
+	templateRef := types.NamespacedName{Name: managedCluster.Spec.Template, Namespace: managedCluster.Namespace}
 	if err := r.Get(ctx, templateRef, template); err != nil {
 		l.Error(err, "Failed to get Template")
 		errMsg := fmt.Sprintf("failed to get provided template: %s", err)
@@ -425,7 +424,7 @@ func (r *ManagedClusterReconciler) Delete(ctx context.Context, l logr.Logger, ma
 }
 
 func (r *ManagedClusterReconciler) releaseCluster(ctx context.Context, namespace, name, templateName string) error {
-	providers, err := r.getProviders(ctx, templateName)
+	providers, err := r.getProviders(ctx, namespace, templateName)
 	if err != nil {
 		return err
 	}
@@ -460,11 +459,11 @@ func (r *ManagedClusterReconciler) releaseCluster(ctx context.Context, namespace
 	return nil
 }
 
-func (r *ManagedClusterReconciler) getProviders(ctx context.Context, templateName string) ([]string, error) {
+func (r *ManagedClusterReconciler) getProviders(ctx context.Context, templateNamespace, templateName string) ([]string, error) {
 	template := &hmc.ClusterTemplate{}
-	templateRef := types.NamespacedName{Name: templateName, Namespace: r.SystemNamespace}
+	templateRef := types.NamespacedName{Name: templateName, Namespace: templateNamespace}
 	if err := r.Get(ctx, templateRef, template); err != nil {
-		log.FromContext(ctx).Error(err, "Failed to get Template", "templateName", templateName)
+		log.FromContext(ctx).Error(err, "Failed to get ClusterTemplate", "namespace", templateNamespace, "name", templateName)
 		return nil, err
 	}
 	return template.Status.Providers.InfrastructureProviders, nil

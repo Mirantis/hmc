@@ -25,7 +25,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/Mirantis/hmc/api/v1alpha1"
-	"github.com/Mirantis/hmc/internal/utils"
 	"github.com/Mirantis/hmc/test/objects/managedcluster"
 	"github.com/Mirantis/hmc/test/objects/management"
 	"github.com/Mirantis/hmc/test/objects/template"
@@ -34,6 +33,7 @@ import (
 
 var (
 	testTemplateName = "template-test"
+	testNamespace    = "test"
 
 	mgmt = management.NewManagement(
 		management.WithAvailableProviders(v1alpha1.Providers{
@@ -56,13 +56,13 @@ var (
 			err:            "the ManagedCluster is invalid: clustertemplates.hmc.mirantis.com \"\" not found",
 		},
 		{
-			name:           "should fail if the cluster template is not found in hmc-system namespace",
+			name:           "should fail if the ClusterTemplate is not found in the ManagedCluster's namespace",
 			managedCluster: managedcluster.NewManagedCluster(managedcluster.WithTemplate(testTemplateName)),
 			existingObjects: []runtime.Object{
 				mgmt,
 				template.NewClusterTemplate(
 					template.WithName(testTemplateName),
-					template.WithNamespace("default"),
+					template.WithNamespace(testNamespace),
 				),
 			},
 			err: fmt.Sprintf("the ManagedCluster is invalid: clustertemplates.hmc.mirantis.com \"%s\" not found", testTemplateName),
@@ -130,7 +130,7 @@ func TestManagedClusterValidateCreate(t *testing.T) {
 	for _, tt := range createAndUpdateTests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(tt.existingObjects...).Build()
-			validator := &ManagedClusterValidator{Client: c, SystemNamespace: utils.DefaultSystemNamespace}
+			validator := &ManagedClusterValidator{Client: c}
 			warn, err := validator.ValidateCreate(ctx, tt.managedCluster)
 			if tt.err != "" {
 				g.Expect(err).To(HaveOccurred())
@@ -156,7 +156,7 @@ func TestManagedClusterValidateUpdate(t *testing.T) {
 	for _, tt := range createAndUpdateTests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(tt.existingObjects...).Build()
-			validator := &ManagedClusterValidator{Client: c, SystemNamespace: utils.DefaultSystemNamespace}
+			validator := &ManagedClusterValidator{Client: c}
 			warn, err := validator.ValidateUpdate(ctx, managedcluster.NewManagedCluster(), tt.managedCluster)
 			if tt.err != "" {
 				g.Expect(err).To(HaveOccurred())
@@ -244,7 +244,7 @@ func TestManagedClusterDefault(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(tt.existingObjects...).Build()
-			validator := &ManagedClusterValidator{Client: c, SystemNamespace: utils.DefaultSystemNamespace}
+			validator := &ManagedClusterValidator{Client: c}
 			err := validator.Default(ctx, tt.input)
 			if tt.err != "" {
 				g.Expect(err).To(HaveOccurred())
