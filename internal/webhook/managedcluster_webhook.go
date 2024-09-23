@@ -35,8 +35,6 @@ import (
 
 type ManagedClusterValidator struct {
 	client.Client
-
-	SystemNamespace string
 }
 
 var InvalidManagedClusterErr = errors.New("the ManagedCluster is invalid")
@@ -61,7 +59,7 @@ func (v *ManagedClusterValidator) ValidateCreate(ctx context.Context, obj runtim
 	if !ok {
 		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected ManagedCluster but got a %T", obj))
 	}
-	template, err := v.getManagedClusterTemplate(ctx, managedCluster.Spec.Template)
+	template, err := v.getManagedClusterTemplate(ctx, managedCluster.Namespace, managedCluster.Spec.Template)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %v", InvalidManagedClusterErr, err)
 	}
@@ -78,7 +76,7 @@ func (v *ManagedClusterValidator) ValidateUpdate(ctx context.Context, _ runtime.
 	if !ok {
 		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected ManagedCluster but got a %T", newObj))
 	}
-	template, err := v.getManagedClusterTemplate(ctx, newManagedCluster.Spec.Template)
+	template, err := v.getManagedClusterTemplate(ctx, newManagedCluster.Namespace, newManagedCluster.Spec.Template)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %v", InvalidManagedClusterErr, err)
 	}
@@ -105,7 +103,7 @@ func (v *ManagedClusterValidator) Default(ctx context.Context, obj runtime.Objec
 	if managedCluster.Spec.Config != nil {
 		return nil
 	}
-	template, err := v.getManagedClusterTemplate(ctx, managedCluster.Spec.Template)
+	template, err := v.getManagedClusterTemplate(ctx, managedCluster.Namespace, managedCluster.Spec.Template)
 	if err != nil {
 		return fmt.Errorf("could not get template for the managedcluster: %s", err)
 	}
@@ -121,9 +119,9 @@ func (v *ManagedClusterValidator) Default(ctx context.Context, obj runtime.Objec
 	return nil
 }
 
-func (v *ManagedClusterValidator) getManagedClusterTemplate(ctx context.Context, templateName string) (*v1alpha1.ClusterTemplate, error) {
+func (v *ManagedClusterValidator) getManagedClusterTemplate(ctx context.Context, templateNamespace, templateName string) (*v1alpha1.ClusterTemplate, error) {
 	template := &v1alpha1.ClusterTemplate{}
-	templateRef := types.NamespacedName{Name: templateName, Namespace: v.SystemNamespace}
+	templateRef := types.NamespacedName{Name: templateName, Namespace: templateNamespace}
 	if err := v.Get(ctx, templateRef, template); err != nil {
 		return nil, err
 	}

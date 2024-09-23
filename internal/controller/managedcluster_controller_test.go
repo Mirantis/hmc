@@ -30,19 +30,22 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
-	"github.com/Mirantis/hmc/internal/utils"
 )
 
 var _ = Describe("ManagedCluster Controller", func() {
 	Context("When reconciling a resource", func() {
-		const managedClusterName = "test-managed-cluster"
-		const templateName = "test-template"
+		const (
+			managedClusterName      = "test-managed-cluster"
+			managedClusterNamespace = "test"
+
+			templateName = "test-template"
+		)
 
 		ctx := context.Background()
 
 		typeNamespacedName := types.NamespacedName{
 			Name:      managedClusterName,
-			Namespace: "default",
+			Namespace: managedClusterNamespace,
 		}
 		managedCluster := &hmc.ManagedCluster{}
 		template := &hmc.ClusterTemplate{}
@@ -50,12 +53,12 @@ var _ = Describe("ManagedCluster Controller", func() {
 		namespace := &v1.Namespace{}
 
 		BeforeEach(func() {
-			By("creating hmc-system namespace")
-			err := k8sClient.Get(ctx, types.NamespacedName{Name: utils.DefaultSystemNamespace}, namespace)
+			By("creating ManagedCluster namespace")
+			err := k8sClient.Get(ctx, types.NamespacedName{Name: managedClusterNamespace}, namespace)
 			if err != nil && errors.IsNotFound(err) {
 				namespace = &v1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: utils.DefaultSystemNamespace,
+						Name: managedClusterNamespace,
 					},
 				}
 				Expect(k8sClient.Create(ctx, namespace)).To(Succeed())
@@ -67,7 +70,7 @@ var _ = Describe("ManagedCluster Controller", func() {
 				template = &hmc.ClusterTemplate{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      templateName,
-						Namespace: utils.DefaultSystemNamespace,
+						Namespace: managedClusterNamespace,
 					},
 					Spec: hmc.ClusterTemplateSpec{
 						TemplateSpecMixin: hmc.TemplateSpecMixin{
@@ -112,7 +115,7 @@ var _ = Describe("ManagedCluster Controller", func() {
 				managedCluster = &hmc.ManagedCluster{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      managedClusterName,
-						Namespace: "default",
+						Namespace: managedClusterNamespace,
 					},
 					Spec: hmc.ManagedClusterSpec{
 						Template: templateName,
@@ -126,9 +129,8 @@ var _ = Describe("ManagedCluster Controller", func() {
 			By("Cleanup")
 
 			controllerReconciler := &ManagedClusterReconciler{
-				Client:          k8sClient,
-				Scheme:          k8sClient.Scheme(),
-				SystemNamespace: utils.DefaultSystemNamespace,
+				Client: k8sClient,
+				Scheme: k8sClient.Scheme(),
 			}
 
 			Expect(k8sClient.Delete(ctx, managedCluster)).To(Succeed())
@@ -145,10 +147,9 @@ var _ = Describe("ManagedCluster Controller", func() {
 		It("should successfully reconcile the resource", func() {
 			By("Reconciling the created resource")
 			controllerReconciler := &ManagedClusterReconciler{
-				Client:          k8sClient,
-				Scheme:          k8sClient.Scheme(),
-				Config:          &rest.Config{},
-				SystemNamespace: utils.DefaultSystemNamespace,
+				Client: k8sClient,
+				Scheme: k8sClient.Scheme(),
+				Config: &rest.Config{},
 			}
 
 			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{

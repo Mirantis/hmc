@@ -44,7 +44,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	hmcmirantiscomv1alpha1 "github.com/Mirantis/hmc/api/v1alpha1"
-	"github.com/Mirantis/hmc/internal/utils"
 	hmcwebhook "github.com/Mirantis/hmc/internal/webhook"
 	//+kubebuilder:scaffold:imports
 )
@@ -136,9 +135,7 @@ var _ = BeforeSuite(func() {
 	err = hmcmirantiscomv1alpha1.SetupIndexers(ctx, mgr)
 	Expect(err).NotTo(HaveOccurred())
 
-	err = (&hmcwebhook.ManagedClusterValidator{
-		SystemNamespace: utils.DefaultSystemNamespace,
-	}).SetupWebhookWithManager(mgr)
+	err = (&hmcwebhook.ManagedClusterValidator{}).SetupWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
 	err = (&hmcwebhook.ManagementValidator{}).SetupWebhookWithManager(mgr)

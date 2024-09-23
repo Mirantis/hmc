@@ -23,7 +23,7 @@ import (
 
 const (
 	DefaultName      = "template"
-	DefaultNamespace = "hmc-system"
+	DefaultNamespace = "default"
 )
 
 type Template struct {
