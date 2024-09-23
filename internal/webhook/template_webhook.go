@@ -34,8 +34,6 @@ type ClusterTemplateValidator struct {
 	client.Client
 }
 
-const TemplateKey = ".spec.template"
-
 var (
 	ErrTemplateDeletionForbidden = errors.New("template deletion is forbidden")
 )
@@ -73,7 +71,7 @@ func (v *ClusterTemplateValidator) ValidateDelete(ctx context.Context, obj runti
 
 	managedClusters := &v1alpha1.ManagedClusterList{}
 	listOptions := client.ListOptions{
-		FieldSelector: fields.SelectorFromSet(fields.Set{TemplateKey: template.Name}),
+		FieldSelector: fields.SelectorFromSet(fields.Set{v1alpha1.TemplateKey: template.Name}),
 		Limit:         1,
 	}
 	err := v.Client.List(ctx, managedClusters, &listOptions)
@@ -166,25 +164,5 @@ func (*ProviderTemplateValidator) ValidateDelete(_ context.Context, _ runtime.Ob
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type.
 func (*ProviderTemplateValidator) Default(_ context.Context, _ runtime.Object) error {
-	return nil
-}
-
-func ExtractTemplateName(rawObj client.Object) []string {
-	cluster, ok := rawObj.(*v1alpha1.ManagedCluster)
-	if !ok {
-		return nil
-	}
-	if cluster.Spec.Template == "" {
-		return []string{}
-	}
-	return []string{cluster.Spec.Template}
-}
-
-func SetupTemplateIndex(ctx context.Context, mgr ctrl.Manager) error {
-	if err := mgr.GetFieldIndexer().
-		IndexField(ctx, &v1alpha1.ManagedCluster{}, TemplateKey, ExtractTemplateName); err != nil {
-		return err
-	}
-
 	return nil
 }

@@ -24,8 +24,32 @@ type ReleaseSpec struct {
 	Version string `json:"version"`
 	// UpgradeableVersions contains a list of versions available to upgrade from.
 	UpgradeableVersions []string `json:"upgradeableVersions,omitempty"`
+	// HMC references the HMC template.
+	HMC CoreProviderTemplate `json:"hmc"`
+	// CAPI references the Cluster API template.
+	CAPI CoreProviderTemplate `json:"capi"`
 	// Providers contains a list of Providers associated with the Release.
-	Providers []Provider `json:"providers,omitempty"`
+	Providers []NamedProviderTemplate `json:"providers,omitempty"`
+}
+
+type CoreProviderTemplate struct {
+	// Template references the Template associated with the provider.
+	Template string `json:"template"`
+}
+
+type NamedProviderTemplate struct {
+	CoreProviderTemplate `json:",inline"`
+	// Name of the provider.
+	Name string `json:"name"`
+}
+
+func (in *Release) ProviderTemplate(name string) string {
+	for _, p := range in.Spec.Providers {
+		if p.Name == name {
+			return p.Template
+		}
+	}
+	return ""
 }
 
 // ReleaseStatus defines the observed state of Release

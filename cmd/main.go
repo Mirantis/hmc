@@ -188,8 +188,8 @@ func main() {
 	}
 
 	ctx := ctrl.SetupSignalHandler()
-	if err = hmcwebhook.SetupTemplateIndex(ctx, mgr); err != nil {
-		setupLog.Error(err, "unable to create template index", "index", "ClusterTemplate")
+	if err = hmcmirantiscomv1alpha1.SetupIndexers(ctx, mgr); err != nil {
+		setupLog.Error(err, "unable to setup indexers")
 		os.Exit(1)
 	}
 

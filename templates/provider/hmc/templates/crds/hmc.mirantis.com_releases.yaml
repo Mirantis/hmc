@@ -39,23 +39,37 @@ spec:
           spec:
             description: ReleaseSpec defines the desired state of Release
             properties:
+              capi:
+                description: CAPI references the Cluster API template.
+                properties:
+                  template:
+                    description: Template references the Template associated with
+                      the provider.
+                    type: string
+                required:
+                - template
+                type: object
+              hmc:
+                description: HMC references the HMC template.
+                properties:
+                  template:
+                    description: Template references the Template associated with
+                      the provider.
+                    type: string
+                required:
+                - template
+                type: object
               providers:
                 description: Providers contains a list of Providers associated with
                   the Release.
                 items:
                   properties:
-                    config:
-                      description: |-
-                        Config allows to provide parameters for management component customization.
-                        If no Config provided, the field will be populated with the default
-                        values for the template.
-                      x-kubernetes-preserve-unknown-fields: true
                     name:
                       description: Name of the provider.
                       type: string
                     template:
-                      description: Template is the name of the Template associated
-                        with this component.
+                      description: Template references the Template associated with
+                        the provider.
                       type: string
                   required:
                   - name
@@ -72,6 +86,8 @@ spec:
                 description: Version of the HMC Release in the semver format.
                 type: string
             required:
+            - capi
+            - hmc
             - version
             type: object
           status:
@@ -163,6 +179,10 @@ spec:
                     description: Success represents if a component installation was
                       successful
                     type: boolean
+                  template:
+                    description: Template is the name of the Template associated with
+                      this component.
+                    type: string
                 type: object
             type: object
         type: object

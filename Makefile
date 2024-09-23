@@ -68,6 +68,8 @@ set-hmc-version: yq
 	$(YQ) eval '.version = "$(VERSION)"' -i $(PROVIDER_TEMPLATES_DIR)/hmc/Chart.yaml
 	$(YQ) eval '.version = "$(VERSION)"' -i $(PROVIDER_TEMPLATES_DIR)/hmc-templates/Chart.yaml
 	$(YQ) eval '.image.tag = "$(VERSION)"' -i $(PROVIDER_TEMPLATES_DIR)/hmc/values.yaml
+	$(YQ) eval '.spec.version = "$(VERSION)"' -i $(PROVIDER_TEMPLATES_DIR)/hmc-templates/files/release.yaml
+	$(YQ) eval '.metadata.name = "hmc-$(patsubst v%,%,$(subst .,-, $(VERSION)))"' -i $(PROVIDER_TEMPLATES_DIR)/hmc-templates/files/release.yaml
 
 .PHONY: hmc-chart-release
 hmc-chart-release: set-hmc-version templates-generate ## Generate hmc helm chart
@@ -295,6 +297,10 @@ dev-push: docker-build helm-push
 dev-templates: templates-generate
 	$(KUBECTL) -n $(NAMESPACE) apply -f $(PROVIDER_TEMPLATES_DIR)/hmc-templates/files/templates
 
+.PHONY: dev-release
+dev-release:
+	@$(YQ) e ".spec.version = \"${VERSION}\"" $(PROVIDER_TEMPLATES_DIR)/hmc-templates/files/release.yaml | $(KUBECTL) -n $(NAMESPACE) apply -f -
+
 .PHONY: dev-aws-creds
 dev-aws-creds: envsubst
 	@NAMESPACE=$(NAMESPACE) $(ENVSUBST) -no-unset -i config/dev/aws-credentials.yaml | $(KUBECTL) apply -f -
@@ -308,7 +314,7 @@ dev-vsphere-creds: envsubst
 	@NAMESPACE=$(NAMESPACE) $(ENVSUBST) -no-unset -i config/dev/vsphere-credentials.yaml | $(KUBECTL) apply -f -
 
 .PHONY: dev-apply ## Apply the development environment by deploying the kind cluster, local registry and the HMC helm chart.
-dev-apply: kind-deploy registry-deploy dev-push dev-deploy dev-templates
+dev-apply: kind-deploy registry-deploy dev-push dev-deploy dev-templates dev-release
 
 .PHONY: dev-destroy
 dev-destroy: kind-undeploy registry-undeploy ## Destroy the development environment by deleting the kind cluster and local registry.

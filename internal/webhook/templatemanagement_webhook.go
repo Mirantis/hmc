@@ -104,7 +104,7 @@ func getManagedClustersForTemplate(ctx context.Context, cl client.Client, namesp
 	managedClusters := &v1alpha1.ManagedClusterList{}
 	err := cl.List(ctx, managedClusters,
 		client.InNamespace(namespace),
-		client.MatchingFields{TemplateKey: templateName},
+		client.MatchingFields{v1alpha1.TemplateKey: templateName},
 	)
 	if err != nil {
 		return nil, err

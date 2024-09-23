@@ -185,7 +185,7 @@ func TestTemplateManagementValidateUpdate(t *testing.T) {
 			c := fake.NewClientBuilder().
 				WithScheme(scheme.Scheme).
 				WithRuntimeObjects(append(obj, tt.existingObjects...)...).
-				WithIndex(&v1alpha1.ManagedCluster{}, TemplateKey, ExtractTemplateName).
+				WithIndex(&v1alpha1.ManagedCluster{}, v1alpha1.TemplateKey, v1alpha1.ExtractTemplateName).
 				Build()
 			validator := &TemplateManagementValidator{Client: c, SystemNamespace: utils.DefaultSystemNamespace}
 			warn, err := validator.ValidateUpdate(ctx, tm.NewTemplateManagement(), tt.newTm)

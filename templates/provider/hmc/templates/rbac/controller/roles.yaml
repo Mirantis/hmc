@@ -52,6 +52,7 @@ rules:
 - apiGroups:
   - hmc.mirantis.com
   resources:
+  - releases
   - clustertemplatechains
   - servicetemplatechains
   verbs:

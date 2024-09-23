@@ -81,11 +81,10 @@ func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Manag
 		return ctrl.Result{}, nil
 	}
 
-	// TODO: this is also implemented in admission but we have to keep it in controller as well
-	// to set defaults before the admission is started
-	if changed := management.Spec.SetDefaults(); changed {
-		l.Info("Applying default core configuration")
-		return ctrl.Result{}, r.Client.Update(ctx, management)
+	release := &hmc.Release{}
+	if err := r.Client.Get(ctx, types.NamespacedName{Name: management.Spec.Release}, release); err != nil {
+		l.Error(err, "failed to get Release object")
+		return ctrl.Result{}, err
 	}
 
 	var errs error
@@ -98,7 +97,7 @@ func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Manag
 		return ctrl.Result{}, err
 	}
 
-	components := wrappedComponents(management)
+	components := wrappedComponents(management, release)
 	for _, component := range components {
 		template := &hmc.ProviderTemplate{}
 		err := r.Get(ctx, types.NamespacedName{
@@ -225,27 +224,39 @@ type component struct {
 	createNamespace bool
 }
 
-func wrappedComponents(mgmt *hmc.Management) (components []component) {
+func wrappedComponents(mgmt *hmc.Management, release *hmc.Release) []component {
 	if mgmt.Spec.Core == nil {
-		return
+		return nil
 	}
+	components := make([]component, 0, len(mgmt.Spec.Providers)+2)
+	hmcComp := component{Component: mgmt.Spec.Core.HMC, helmReleaseName: hmc.CoreHMCName}
+	if hmcComp.Template == "" {
+		hmcComp.Template = release.Spec.HMC.Template
+	}
+	components = append(components, hmcComp)
+	capiComp := component{Component: mgmt.Spec.Core.CAPI, helmReleaseName: hmc.CoreCAPIName,
+		dependsOn: []meta.NamespacedObjectReference{{Name: hmc.CoreHMCName}}}
+	if capiComp.Template == "" {
+		capiComp.Template = release.Spec.CAPI.Template
+	}
+	components = append(components, capiComp)
 
-	components = append(components, component{Component: mgmt.Spec.Core.HMC, helmReleaseName: hmc.CoreHMCName})
-	components = append(components, component{Component: mgmt.Spec.Core.CAPI, helmReleaseName: hmc.CoreCAPIName,
-		dependsOn: []meta.NamespacedObjectReference{{Name: hmc.CoreHMCName}}})
-
-	for i := range mgmt.Spec.Providers {
-		c := component{Component: mgmt.Spec.Providers[i].Component, helmReleaseName: mgmt.Spec.Providers[i].Name,
+	for _, p := range mgmt.Spec.Providers {
+		c := component{Component: p.Component, helmReleaseName: p.Name,
 			dependsOn: []meta.NamespacedObjectReference{{Name: hmc.CoreCAPIName}}}
+		// Try to find corresponding provider in the Release object
+		if c.Template == "" {
+			c.Template = release.ProviderTemplate(p.Name)
+		}
 
-		if mgmt.Spec.Providers[i].Template == hmc.ProviderSveltosName {
+		if c.Template == hmc.ProviderSveltosName {
 			c.targetNamespace = hmc.ProviderSveltosTargetNamespace
 			c.createNamespace = hmc.ProviderSveltosCreateNamespace
 		}
 		components = append(components, c)
 	}
 
-	return
+	return components
 }
 
 // enableAdditionalComponents enables the admission controller and cluster api operator

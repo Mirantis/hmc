@@ -1,0 +1,3 @@
+{{- if .Values.createRelease }}
+{{ $.Files.Get "files/release.yaml" }}
+{{- end }}

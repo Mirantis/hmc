@@ -29,6 +29,7 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -115,6 +116,11 @@ func (p *Poller) ensureManagement(ctx context.Context) error {
 			return fmt.Errorf("failed to get %s Management object", hmc.ManagementName)
 		}
 
+		mgmtObj.Spec.Release, err = p.getCurrentReleaseName(ctx)
+		if err != nil {
+			return err
+		}
+
 		if err := mgmtObj.Spec.SetProvidersDefaults(); err != nil {
 			return err
 		}
@@ -148,9 +154,12 @@ func (p *Poller) ensureManagement(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		mgmtObj.Spec.Core = &hmc.DefaultCoreConfiguration
-		mgmtObj.Spec.Core.HMC.Config = &apiextensionsv1.JSON{
-			Raw: rawConfig,
+		mgmtObj.Spec.Core = &hmc.Core{
+			HMC: hmc.Component{
+				Config: &apiextensionsv1.JSON{
+					Raw: rawConfig,
+				},
+			},
 		}
 
 		err = p.Create(ctx, mgmtObj)
@@ -217,4 +226,17 @@ func (p *Poller) reconcileHMCTemplates(ctx context.Context) error {
 		l.Info(fmt.Sprintf("Successfully %s %s/%s HelmRelease", operation, p.SystemNamespace, hmcTemplatesReleaseName))
 	}
 	return nil
+}
+func (p *Poller) getCurrentReleaseName(ctx context.Context) (string, error) {
+	releases := &hmc.ReleaseList{}
+	listOptions := client.ListOptions{
+		FieldSelector: fields.SelectorFromSet(fields.Set{hmc.VersionKey: build.Version}),
+	}
+	if err := p.Client.List(ctx, releases, &listOptions); err != nil {
+		return "", err
+	}
+	if len(releases.Items) != 1 {
+		return "", fmt.Errorf("expected 1 Release with version %s, found %d", build.Version, len(releases.Items))
+	}
+	return releases.Items[0].Name, nil
 }
