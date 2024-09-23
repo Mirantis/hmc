@@ -26,6 +26,7 @@ type ClusterTemplateChain struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Spec is immutable"
 	Spec TemplateChainSpec `json:"spec,omitempty"`
 }
 
@@ -46,6 +47,7 @@ type ServiceTemplateChain struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Spec is immutable"
 	Spec TemplateChainSpec `json:"spec,omitempty"`
 }
 
