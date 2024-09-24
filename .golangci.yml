@@ -9,32 +9,84 @@ issues:
   # restore some of the defaults
   # (fill in the rest as needed)
   exclude-rules:
-    - path: "api/*"
-      linters:
-        - lll
     - path: "internal/*"
       linters:
         - dupl
-        - lll
+    - text: "struct-tag: unknown option 'inline' in JSON tag"
+      linters:
+        - revive
 linters:
   disable-all: true
   enable:
-    - dupl
-    - errcheck
+    - asciicheck
+    - bodyclose
+    - containedctx
+    - contextcheck
     - copyloopvar
+    - decorder
+    - dogsled
+    - dupl
+    - durationcheck
+    - errcheck
+    - forcetypeassert
     - goconst
     - gocyclo
     - gofmt
+    - gofumpt
     - goimports
+    - goprintffuncname
     - gosimple
     - govet
     - ineffassign
-    - lll
     - misspell
     - nakedret
+    - noctx
+    - nolintlint
+    - nosprintfhostport
     - prealloc
+    - predeclared
+    - promlinter
+    - revive
     - staticcheck
+    - stylecheck
+    - tenv
+    - thelper
     - typecheck
     - unconvert
     - unparam
     - unused
+    - usestdlibvars
+    - wastedassign
+    - whitespace
+
+linters-settings:
+  gofmt:
+    # Apply the rewrite rules to the source before reformatting.
+    # https://pkg.go.dev/cmd/gofmt
+    # Default: []
+    rewrite-rules:
+      - pattern: "interface{}"
+        replacement: "any"
+  stylecheck:
+    checks: ["all", "-ST1000", "-ST1001"]
+  revive:
+    enable-all-rules: true
+    rules:
+      - name: add-constant
+        disabled: true
+      - name: cognitive-complexity
+        disabled: true
+      - name: cyclomatic
+        disabled: true
+      - name: dot-imports
+        disabled: true
+      - name: exported
+        disabled: true
+      - name: function-length
+        disabled: true
+      - name: max-public-structs
+        disabled: true # the api/* pkgs have lots of structs
+      - name: line-length-limit
+        disabled: true
+      - name: package-comments
+        disabled: true

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package webhook // nolint:dupl
+package webhook
 
 import (
 	"context"
@@ -113,11 +113,11 @@ func getManagedClustersForTemplate(ctx context.Context, cl client.Client, namesp
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
-func (v *TemplateManagementValidator) ValidateDelete(ctx context.Context, _ runtime.Object) (admission.Warnings, error) {
+func (*TemplateManagementValidator) ValidateDelete(context.Context, runtime.Object) (admission.Warnings, error) {
 	return nil, nil
 }
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type.
-func (*TemplateManagementValidator) Default(_ context.Context, obj runtime.Object) error {
+func (*TemplateManagementValidator) Default(context.Context, runtime.Object) error {
 	return nil
 }

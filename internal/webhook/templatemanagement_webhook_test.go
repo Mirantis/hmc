@@ -19,7 +19,7 @@ import (
 	"testing"
 
 	. "github.com/onsi/gomega"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -42,7 +42,7 @@ func TestTemplateManagementValidateUpdate(t *testing.T) {
 	namespaceDevName := "dev"
 	namespaceProdName := "prod"
 
-	namespaceDev := &v1.Namespace{
+	namespaceDev := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: namespaceDevName,
 			Labels: map[string]string{
@@ -50,7 +50,7 @@ func TestTemplateManagementValidateUpdate(t *testing.T) {
 			},
 		},
 	}
-	namespaceProd := &v1.Namespace{
+	namespaceProd := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: namespaceProdName,
 			Labels: map[string]string{

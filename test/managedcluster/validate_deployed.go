@@ -53,11 +53,7 @@ func validateCluster(ctx context.Context, kc *kubeclient.KubeClient, clusterName
 		Fail(err.Error())
 	}
 
-	if err := utils.ValidateConditionsTrue(cluster); err != nil {
-		return err
-	}
-
-	return nil
+	return utils.ValidateConditionsTrue(cluster)
 }
 
 func validateMachines(ctx context.Context, kc *kubeclient.KubeClient, clusterName string) error {
@@ -103,16 +99,16 @@ func validateK0sControlPlanes(ctx context.Context, kc *kubeclient.KubeClient, cl
 			return fmt.Errorf("failed to get status conditions for %s: %s: %w", objKind, objName, err)
 		}
 
-		st, ok := status.(map[string]interface{})
+		st, ok := status.(map[string]any)
 		if !ok {
-			return fmt.Errorf("expected K0sControlPlane condition to be type map[string]interface{}, got: %T", status)
+			return fmt.Errorf("expected K0sControlPlane condition to be type map[string]any, got: %T", status)
 		}
 
 		if _, ok := st["ready"]; !ok {
 			return fmt.Errorf("%s %s has no 'ready' status", objKind, objName)
 		}
 
-		if !st["ready"].(bool) {
+		if v, ok := st["ready"].(bool); !ok || !v {
 			return fmt.Errorf("%s %s is not ready, status: %+v", objKind, objName, st)
 		}
 	}

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// This file contains specific helpers for testing a managed cluster
+// Package aws contains specific helpers for testing a managed cluster
 // that uses the AWS infrastructure provider.
 package aws
 
@@ -85,7 +85,7 @@ func PopulateHostedTemplateVars(ctx context.Context, kc *kubeclient.KubeClient) 
 	Expect(err).NotTo(HaveOccurred(), "failed to get AWS cluster subnets")
 	Expect(found).To(BeTrue(), "AWS cluster has no subnets")
 
-	subnet, ok := subnets[0].(map[string]interface{})
+	subnet, ok := subnets[0].(map[string]any)
 	Expect(ok).To(BeTrue(), "failed to cast subnet to map")
 
 	subnetID, ok := subnet["resourceID"].(string)
@@ -110,8 +110,8 @@ func PatchAWSClusterReady(ctx context.Context, kc *kubeclient.KubeClient, cluste
 
 	c := getAWSClusterClient(kc)
 
-	trueStatus := map[string]interface{}{
-		"status": map[string]interface{}{
+	trueStatus := map[string]any{
+		"status": map[string]any{
 			"ready": true,
 		},
 	}

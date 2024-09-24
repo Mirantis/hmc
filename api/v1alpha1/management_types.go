@@ -66,7 +66,7 @@ type Provider struct {
 	Name string `json:"name"`
 }
 
-func (in *Component) HelmValues() (values map[string]interface{}, err error) {
+func (in *Component) HelmValues() (values map[string]any, err error) {
 	if in.Config != nil {
 		err = yaml.Unmarshal(in.Config.Raw, &values)
 	}
@@ -104,8 +104,8 @@ type ComponentStatus struct {
 	Error string `json:"error,omitempty"`
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=hmc-mgmt;mgmt,scope=Cluster
 
 // Management is the Schema for the managements API
@@ -117,7 +117,7 @@ type Management struct {
 	Status ManagementStatus `json:"status,omitempty"`
 }
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
 // ManagementList contains a list of Management
 type ManagementList struct {

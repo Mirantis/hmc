@@ -291,7 +291,6 @@ var _ = Describe("controller", Ordered, func() {
 				err = deleteFunc()
 				Expect(err).NotTo(HaveOccurred())
 			}
-
 		})
 
 		It("should deploy standalone managed cluster", func() {
@@ -324,7 +323,6 @@ var _ = Describe("controller", Ordered, func() {
 			}).WithTimeout(10 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
 		})
 	})
-
 })
 
 // templateBy wraps a Ginkgo By with a block describing the template being
@@ -369,20 +367,21 @@ func collectLogArtifacts(kc *kubeclient.KubeClient, clusterName string, provider
 				utils.WarnError(fmt.Errorf("failed to get log stream for pod %s: %w", pod.Name, err))
 				continue
 			}
-			defer podLogs.Close() //nolint:errcheck
 
 			output, err := os.Create(fmt.Sprintf("./test/e2e/%s.log", host+"-"+pod.Name))
 			if err != nil {
 				utils.WarnError(fmt.Errorf("failed to create log file for pod %s: %w", pod.Name, err))
+				_ = podLogs.Close()
 				continue
 			}
-			defer output.Close() //nolint:errcheck
 
 			r := bufio.NewReader(podLogs)
-			_, err = r.WriteTo(output)
-			if err != nil {
+			if _, err := r.WriteTo(output); err != nil {
 				utils.WarnError(fmt.Errorf("failed to write log file for pod %s: %w", pod.Name, err))
 			}
+
+			_ = podLogs.Close()
+			_ = output.Close()
 		}
 	}
 
@@ -394,7 +393,7 @@ func collectLogArtifacts(kc *kubeclient.KubeClient, clusterName string, provider
 		return
 	}
 
-	err = os.WriteFile(filepath.Join("test/e2e", host+"-"+"clusterctl.log"), output, 0644)
+	err = os.WriteFile(filepath.Join("test/e2e", host+"-"+"clusterctl.log"), output, 0o644)
 	if err != nil {
 		utils.WarnError(fmt.Errorf("failed to write clusterctl log: %w", err))
 	}

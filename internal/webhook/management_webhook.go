@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package webhook // nolint:dupl
+package webhook
 
 import (
 	"context"
@@ -38,12 +38,12 @@ var (
 	errCreateManagementReenablingForbidden = errors.New("reenabling of the createManagement parameter is forbidden")
 )
 
-func (in *ManagementValidator) SetupWebhookWithManager(mgr ctrl.Manager) error {
-	in.Client = mgr.GetClient()
+func (v *ManagementValidator) SetupWebhookWithManager(mgr ctrl.Manager) error {
+	v.Client = mgr.GetClient()
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(&v1alpha1.Management{}).
-		WithValidator(in).
-		WithDefaulter(in).
+		WithValidator(v).
+		WithDefaulter(v).
 		Complete()
 }
 
@@ -77,7 +77,7 @@ func (*ManagementValidator) ValidateUpdate(_ context.Context, _ runtime.Object, 
 	}
 
 	// Check if the 'controller' field exists and is a map.
-	controller, ok := vals["controller"].(map[string]interface{})
+	controller, ok := vals["controller"].(map[string]any)
 	if !ok {
 		return nil, nil
 	}

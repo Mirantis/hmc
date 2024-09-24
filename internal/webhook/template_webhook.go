@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package webhook // nolint:dupl
+package webhook
 
 import (
 	"context"
@@ -36,12 +36,12 @@ type ClusterTemplateValidator struct {
 
 var errTemplateDeletionForbidden = errors.New("template deletion is forbidden")
 
-func (in *ClusterTemplateValidator) SetupWebhookWithManager(mgr ctrl.Manager) error {
-	in.Client = mgr.GetClient()
+func (v *ClusterTemplateValidator) SetupWebhookWithManager(mgr ctrl.Manager) error {
+	v.Client = mgr.GetClient()
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(&v1alpha1.ClusterTemplate{}).
-		WithValidator(in).
-		WithDefaulter(in).
+		WithValidator(v).
+		WithDefaulter(v).
 		Complete()
 }
 
@@ -86,7 +86,7 @@ func (v *ClusterTemplateValidator) ValidateDelete(ctx context.Context, obj runti
 }
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type.
-func (*ClusterTemplateValidator) Default(_ context.Context, _ runtime.Object) error {
+func (*ClusterTemplateValidator) Default(context.Context, runtime.Object) error {
 	return nil
 }
 

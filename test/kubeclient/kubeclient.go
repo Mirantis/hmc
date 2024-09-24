@@ -45,7 +45,7 @@ type KubeClient struct {
 // using the locally found kubeconfig.
 func NewFromLocal(namespace string) *KubeClient {
 	GinkgoHelper()
-	return new(getLocalKubeConfig(), namespace)
+	return newKubeClient(getLocalKubeConfig(), namespace)
 }
 
 // NewFromCluster creates a new KubeClient using the kubeconfig stored in the
@@ -53,7 +53,7 @@ func NewFromLocal(namespace string) *KubeClient {
 // the kubeconfig from secret it needs an existing kubeclient.
 func (kc *KubeClient) NewFromCluster(ctx context.Context, namespace, clusterName string) *KubeClient {
 	GinkgoHelper()
-	return new(kc.getKubeconfigSecretData(ctx, clusterName), namespace)
+	return newKubeClient(kc.getKubeconfigSecretData(ctx, clusterName), namespace)
 }
 
 // WriteKubeconfig writes the kubeconfig for the given clusterName to the
@@ -70,7 +70,7 @@ func (kc *KubeClient) WriteKubeconfig(ctx context.Context, clusterName string) (
 	path := filepath.Join(dir, clusterName+"-kubeconfig")
 
 	Expect(
-		os.WriteFile(path, secretData, 0644)).
+		os.WriteFile(path, secretData, 0o644)).
 		To(Succeed())
 
 	deleteFunc := func() error {
@@ -112,9 +112,9 @@ func getLocalKubeConfig() []byte {
 	return configBytes
 }
 
-// new creates a new instance of KubeClient from a given namespace using
+// newKubeClient creates a new instance of KubeClient from a given namespace using
 // the local kubeconfig.
-func new(configBytes []byte, namespace string) *KubeClient {
+func newKubeClient(configBytes []byte, namespace string) *KubeClient {
 	GinkgoHelper()
 
 	config, err := clientcmd.RESTConfigFromKubeConfig(configBytes)
@@ -148,7 +148,8 @@ func (kc *KubeClient) GetDynamicClient(gvr schema.GroupVersionResource) dynamic.
 // namespace and returns a DeleteFunc to clean up the deployment.
 // The DeleteFunc is a no-op if the deployment has already been deleted.
 func (kc *KubeClient) CreateManagedCluster(
-	ctx context.Context, managedcluster *unstructured.Unstructured) func() error {
+	ctx context.Context, managedcluster *unstructured.Unstructured,
+) func() error {
 	GinkgoHelper()
 
 	kind := managedcluster.GetKind()
@@ -195,7 +196,8 @@ func (kc *KubeClient) GetCluster(ctx context.Context, clusterName string) (*unst
 // listResource returns a list of resources for the given GroupVersionResource
 // affiliated with the given clusterName.
 func (kc *KubeClient) listResource(
-	ctx context.Context, gvr schema.GroupVersionResource, clusterName string) ([]unstructured.Unstructured, error) {
+	ctx context.Context, gvr schema.GroupVersionResource, clusterName string,
+) ([]unstructured.Unstructured, error) {
 	client := kc.GetDynamicClient(gvr)
 
 	resources, err := client.List(ctx, metav1.ListOptions{
@@ -222,7 +224,8 @@ func (kc *KubeClient) ListMachines(ctx context.Context, clusterName string) ([]u
 // ListMachineDeployments returns a list of MachineDeployment resources for the
 // given cluster.
 func (kc *KubeClient) ListMachineDeployments(
-	ctx context.Context, clusterName string) ([]unstructured.Unstructured, error) {
+	ctx context.Context, clusterName string,
+) ([]unstructured.Unstructured, error) {
 	GinkgoHelper()
 
 	return kc.listResource(ctx, schema.GroupVersionResource{
@@ -233,7 +236,8 @@ func (kc *KubeClient) ListMachineDeployments(
 }
 
 func (kc *KubeClient) ListK0sControlPlanes(
-	ctx context.Context, clusterName string) ([]unstructured.Unstructured, error) {
+	ctx context.Context, clusterName string,
+) ([]unstructured.Unstructured, error) {
 	GinkgoHelper()
 
 	return kc.listResource(ctx, schema.GroupVersionResource{

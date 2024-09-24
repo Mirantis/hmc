@@ -21,19 +21,21 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func ArtifactReady(chart *sourcev1.HelmChart) (err error, reportStatus bool) {
+func ArtifactReady(chart *sourcev1.HelmChart) (reportStatus bool, _ error) {
 	for _, c := range chart.Status.Conditions {
 		if c.Type == "Ready" {
 			if chart.Generation != c.ObservedGeneration {
-				return fmt.Errorf("HelmChart was not reconciled yet, retrying"), false
+				return false, fmt.Errorf("HelmChart was not reconciled yet, retrying")
 			}
 			if c.Status != metav1.ConditionTrue {
-				return fmt.Errorf("failed to download helm chart artifact: %s", c.Message), true
+				return true, fmt.Errorf("failed to download helm chart artifact: %s", c.Message)
 			}
 		}
 	}
+
 	if chart.Status.Artifact == nil || chart.Status.URL == "" {
-		return fmt.Errorf("helm chart artifact is not ready yet"), false
+		return false, fmt.Errorf("helm chart artifact is not ready yet")
 	}
-	return nil, false
+
+	return false, nil
 }

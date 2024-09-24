@@ -21,7 +21,7 @@ import (
 	hcv2 "github.com/fluxcd/helm-controller/api/v2"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -50,13 +50,13 @@ var _ = Describe("ManagedCluster Controller", func() {
 		managedCluster := &hmc.ManagedCluster{}
 		template := &hmc.ClusterTemplate{}
 		management := &hmc.Management{}
-		namespace := &v1.Namespace{}
+		namespace := &corev1.Namespace{}
 
 		BeforeEach(func() {
 			By("creating ManagedCluster namespace")
 			err := k8sClient.Get(ctx, types.NamespacedName{Name: managedClusterNamespace}, namespace)
 			if err != nil && errors.IsNotFound(err) {
-				namespace = &v1.Namespace{
+				namespace = &corev1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: managedClusterNamespace,
 					},

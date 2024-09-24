@@ -62,9 +62,9 @@ type ReleaseStatus struct {
 	Ready bool `json:"ready,omitempty"`
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
-//+kubebuilder:resource:scope=Cluster
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:resource:scope=Cluster
 
 // Release is the Schema for the releases API
 type Release struct {
@@ -75,7 +75,7 @@ type Release struct {
 	Status ReleaseStatus `json:"status,omitempty"`
 }
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
 // ReleaseList contains a list of Release
 type ReleaseList struct {

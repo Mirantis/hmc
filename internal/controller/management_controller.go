@@ -269,21 +269,33 @@ func (r *ManagementReconciler) enableAdditionalComponents(ctx context.Context, m
 	l := log.FromContext(ctx)
 
 	hmcComponent := &mgmt.Spec.Core.HMC
-	config := make(map[string]interface{})
+	config := make(map[string]any)
 
 	if hmcComponent.Config != nil {
 		err := json.Unmarshal(hmcComponent.Config.Raw, &config)
 		if err != nil {
-			return fmt.Errorf("failed to unmarshal HMC config into map[string]interface{}: %v", err)
+			return fmt.Errorf("failed to unmarshal HMC config into map[string]any: %v", err)
 		}
 	}
-	admissionWebhookValues := make(map[string]interface{})
+
+	admissionWebhookValues := make(map[string]any)
 	if config["admissionWebhook"] != nil {
-		admissionWebhookValues = config["admissionWebhook"].(map[string]interface{})
+		v, ok := config["admissionWebhook"].(map[string]any)
+		if !ok {
+			return fmt.Errorf("failed to cast 'admissionWebhook' (type %T) to map[string]any", config["admissionWebhook"])
+		}
+
+		admissionWebhookValues = v
 	}
-	capiOperatorValues := make(map[string]interface{})
+
+	capiOperatorValues := make(map[string]any)
 	if config["cluster-api-operator"] != nil {
-		capiOperatorValues = config["cluster-api-operator"].(map[string]interface{})
+		v, ok := config["cluster-api-operator"].(map[string]any)
+		if !ok {
+			return fmt.Errorf("failed to cast 'cluster-api-operator' (type %T) to map[string]any", config["cluster-api-operator"])
+		}
+
+		capiOperatorValues = v
 	}
 
 	err := certmanager.VerifyAPI(ctx, r.Config, r.Scheme, r.SystemNamespace)
@@ -297,7 +309,7 @@ func (r *ManagementReconciler) enableAdditionalComponents(ctx context.Context, m
 
 	// Enable HMC capi operator only if it was not explicitly disabled in the config to
 	// support installation with existing cluster api operator
-	if capiOperatorValues["enabled"] != false {
+	if v, ok := capiOperatorValues["enabled"].(bool); ok && v {
 		l.Info("Enabling cluster API operator")
 		capiOperatorValues["enabled"] = true
 	}
