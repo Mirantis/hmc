@@ -464,8 +464,7 @@ $(ENVSUBST): | $(LOCALBIN)
 .PHONY: awscli
 awscli: $(AWSCLI)
 $(AWSCLI): | $(LOCALBIN)
-	set -x; \
-	if [ $(OS) == "linux" ]; then \
+	@if [ $(OS) == "linux" ]; then \
 		curl "https://awscli.amazonaws.com/awscli-exe-linux-$(shell uname -m)-$(AWSCLI_VERSION).zip" -o "/tmp/awscliv2.zip"; \
 		unzip -qq /tmp/awscliv2.zip -d /tmp; \
 		/tmp/aws/install -i $(LOCALBIN)/aws-cli -b $(LOCALBIN) --update; \
