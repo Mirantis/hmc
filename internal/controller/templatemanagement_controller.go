@@ -75,11 +75,11 @@ func (r *TemplateManagementReconciler) Reconcile(ctx context.Context, req ctrl.R
 	}
 
 	var errs error
-	err = r.distributeTemplates(ctx, expectedState.ClusterTemplatesState, templateutil.ClusterTemplateKind)
+	err = r.distributeTemplates(ctx, expectedState.ClusterTemplatesState, hmc.ClusterTemplateKind)
 	if err != nil {
 		errs = errors.Join(errs, err)
 	}
-	err = r.distributeTemplates(ctx, expectedState.ServiceTemplatesState, templateutil.ServiceTemplateKind)
+	err = r.distributeTemplates(ctx, expectedState.ServiceTemplatesState, hmc.ServiceTemplateKind)
 	if err != nil {
 		errs = errors.Join(errs, err)
 	}
@@ -125,7 +125,7 @@ func (r *TemplateManagementReconciler) applyTemplates(ctx context.Context, kind 
 	chartName := ""
 
 	switch kind {
-	case templateutil.ClusterTemplateKind:
+	case hmc.ClusterTemplateKind:
 		source := &hmc.ClusterTemplate{}
 		err := r.Get(ctx, client.ObjectKey{
 			Namespace: r.SystemNamespace,
@@ -137,7 +137,7 @@ func (r *TemplateManagementReconciler) applyTemplates(ctx context.Context, kind 
 		} else if !apierrors.IsNotFound(err) {
 			return err
 		}
-	case templateutil.ServiceTemplateKind:
+	case hmc.ServiceTemplateKind:
 		source := &hmc.ServiceTemplate{}
 		err := r.Get(ctx, client.ObjectKey{
 			Namespace: r.SystemNamespace,
@@ -150,7 +150,7 @@ func (r *TemplateManagementReconciler) applyTemplates(ctx context.Context, kind 
 			return err
 		}
 	default:
-		return fmt.Errorf("invalid kind %s. Only %s or %s kinds are supported", kind, templateutil.ClusterTemplateKind, templateutil.ServiceTemplateKind)
+		return fmt.Errorf("invalid kind %s. Only %s or %s kinds are supported", kind, hmc.ClusterTemplateKind, hmc.ServiceTemplateKind)
 	}
 
 	spec := hmc.TemplateSpecCommon{
@@ -166,10 +166,10 @@ func (r *TemplateManagementReconciler) applyTemplates(ctx context.Context, kind 
 	for ns, keep := range namespaces {
 		var target client.Object
 		meta.Namespace = ns
-		if kind == templateutil.ClusterTemplateKind {
+		if kind == hmc.ClusterTemplateKind {
 			target = &hmc.ClusterTemplate{ObjectMeta: meta, Spec: hmc.ClusterTemplateSpec{TemplateSpecCommon: spec}}
 		}
-		if kind == templateutil.ServiceTemplateKind {
+		if kind == hmc.ServiceTemplateKind {
 			target = &hmc.ServiceTemplate{ObjectMeta: meta, Spec: hmc.ServiceTemplateSpec{TemplateSpecCommon: spec}}
 		}
 		if keep {
