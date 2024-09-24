@@ -218,9 +218,9 @@ type component struct {
 	hmc.Component
 
 	helmReleaseName string
+	targetNamespace string
 	// helm release dependencies
 	dependsOn       []meta.NamespacedObjectReference
-	targetNamespace string
 	createNamespace bool
 }
 
@@ -234,16 +234,20 @@ func wrappedComponents(mgmt *hmc.Management, release *hmc.Release) []component {
 		hmcComp.Template = release.Spec.HMC.Template
 	}
 	components = append(components, hmcComp)
-	capiComp := component{Component: mgmt.Spec.Core.CAPI, helmReleaseName: hmc.CoreCAPIName,
-		dependsOn: []meta.NamespacedObjectReference{{Name: hmc.CoreHMCName}}}
+	capiComp := component{
+		Component: mgmt.Spec.Core.CAPI, helmReleaseName: hmc.CoreCAPIName,
+		dependsOn: []meta.NamespacedObjectReference{{Name: hmc.CoreHMCName}},
+	}
 	if capiComp.Template == "" {
 		capiComp.Template = release.Spec.CAPI.Template
 	}
 	components = append(components, capiComp)
 
 	for _, p := range mgmt.Spec.Providers {
-		c := component{Component: p.Component, helmReleaseName: p.Name,
-			dependsOn: []meta.NamespacedObjectReference{{Name: hmc.CoreCAPIName}}}
+		c := component{
+			Component: p.Component, helmReleaseName: p.Name,
+			dependsOn: []meta.NamespacedObjectReference{{Name: hmc.CoreCAPIName}},
+		}
 		// Try to find corresponding provider in the Release object
 		if c.Template == "" {
 			c.Template = release.ProviderTemplate(p.Name)

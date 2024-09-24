@@ -127,8 +127,8 @@ func (r *ProviderTemplateReconciler) Reconcile(ctx context.Context, req ctrl.Req
 // Template is the interface defining a list of methods to interact with templates
 type Template interface {
 	client.Object
-	GetSpec() *hmc.TemplateSpecMixin
-	GetStatus() *hmc.TemplateStatusMixin
+	GetSpec() *hmc.TemplateSpecCommon
+	GetStatus() *hmc.TemplateStatusCommon
 }
 
 func (r *TemplateReconciler) ReconcileTemplate(ctx context.Context, template Template) (ctrl.Result, error) {
@@ -224,11 +224,7 @@ func (r *TemplateReconciler) ReconcileTemplate(ctx context.Context, template Tem
 }
 
 func templateManagedByHMC(template Template) bool {
-	labels := template.GetLabels()
-	if labels == nil {
-		return false
-	}
-	return labels[hmc.HMCManagedLabelKey] == hmc.HMCManagedLabelValue
+	return template.GetLabels()[hmc.HMCManagedLabelKey] == hmc.HMCManagedLabelValue
 }
 
 func (r *TemplateReconciler) parseChartMetadata(template Template, chart *chart.Chart) error {

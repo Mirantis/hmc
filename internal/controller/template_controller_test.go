@@ -38,7 +38,7 @@ var _ = Describe("Template Controller", func() {
 		const helmChartName = "test-helmchart"
 		const helmChartURL = "http://source-controller.hmc-system.svc.cluster.local./helmchart/hmc-system/test-chart/0.1.0.tar.gz"
 
-		var fakeDownloadHelmChartFunc = func(context.Context, *sourcev1.Artifact) (*chart.Chart, error) {
+		fakeDownloadHelmChartFunc := func(context.Context, *sourcev1.Artifact) (*chart.Chart, error) {
 			return &chart.Chart{
 				Metadata: &chart.Metadata{
 					APIVersion: "v2",
@@ -60,7 +60,7 @@ var _ = Describe("Template Controller", func() {
 		helmRepo := &sourcev1.HelmRepository{}
 		helmChart := &sourcev1.HelmChart{}
 
-		templateSpec := hmcmirantiscomv1alpha1.TemplateSpecMixin{
+		templateSpec := hmcmirantiscomv1alpha1.TemplateSpecCommon{
 			Helm: hmcmirantiscomv1alpha1.HelmSpec{
 				ChartRef: &v2.CrossNamespaceSourceReference{
 					Kind:      "HelmChart",
@@ -120,7 +120,7 @@ var _ = Describe("Template Controller", func() {
 						Name:      resourceName,
 						Namespace: "default",
 					},
-					Spec: hmcmirantiscomv1alpha1.ClusterTemplateSpec{TemplateSpecMixin: templateSpec},
+					Spec: hmcmirantiscomv1alpha1.ClusterTemplateSpec{TemplateSpecCommon: templateSpec},
 				}
 				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
 			}
@@ -132,7 +132,7 @@ var _ = Describe("Template Controller", func() {
 						Name:      resourceName,
 						Namespace: "default",
 					},
-					Spec: hmcmirantiscomv1alpha1.ServiceTemplateSpec{TemplateSpecMixin: templateSpec},
+					Spec: hmcmirantiscomv1alpha1.ServiceTemplateSpec{TemplateSpecCommon: templateSpec},
 				}
 				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
 			}
@@ -144,7 +144,7 @@ var _ = Describe("Template Controller", func() {
 						Name:      resourceName,
 						Namespace: "default",
 					},
-					Spec: hmcmirantiscomv1alpha1.ProviderTemplateSpec{TemplateSpecMixin: templateSpec},
+					Spec: hmcmirantiscomv1alpha1.ProviderTemplateSpec{TemplateSpecCommon: templateSpec},
 				}
 				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
 			}

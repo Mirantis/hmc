@@ -18,6 +18,24 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// ServiceTemplateSpec defines the desired state of ServiceTemplate
+type ServiceTemplateSpec struct {
+	TemplateSpecCommon `json:",inline"`
+}
+
+// ServiceTemplateStatus defines the observed state of ServiceTemplate
+type ServiceTemplateStatus struct {
+	TemplateStatusCommon `json:",inline"`
+}
+
+func (t *ServiceTemplate) GetSpec() *TemplateSpecCommon {
+	return &t.Spec.TemplateSpecCommon
+}
+
+func (t *ServiceTemplate) GetStatus() *TemplateStatusCommon {
+	return &t.Status.TemplateStatusCommon
+}
+
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=svctmpl
@@ -25,12 +43,13 @@ import (
 // +kubebuilder:printcolumn:name="validationError",type="string",JSONPath=".status.validationError",description="Validation Error",priority=1
 // +kubebuilder:printcolumn:name="description",type="string",JSONPath=".status.description",description="Description",priority=1
 
-// ServiceTemplate is the Schema for the service templates API
+// ServiceTemplate is the Schema for the servicetemplates API
 type ServiceTemplate struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Spec is immutable"
+
 	Spec   ServiceTemplateSpec   `json:"spec,omitempty"`
 	Status ServiceTemplateStatus `json:"status,omitempty"`
 }
@@ -44,20 +63,6 @@ type ServiceTemplateList struct {
 	Items           []ServiceTemplate `json:"items"`
 }
 
-// ServiceTemplateSpec defines the desired state of ServiceTemplate
-type ServiceTemplateSpec struct {
-	TemplateSpecMixin `json:",inline"`
-}
-
-// ServiceTemplateStatus defines the observed state of ServiceTemplate
-type ServiceTemplateStatus struct {
-	TemplateStatusMixin `json:",inline"`
-}
-
-func (t *ServiceTemplate) GetSpec() *TemplateSpecMixin {
-	return &t.Spec.TemplateSpecMixin
-}
-
-func (t *ServiceTemplate) GetStatus() *TemplateStatusMixin {
-	return &t.Status.TemplateStatusMixin
+func init() {
+	SchemeBuilder.Register(&ServiceTemplate{}, &ServiceTemplateList{})
 }

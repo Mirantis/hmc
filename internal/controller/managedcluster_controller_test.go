@@ -73,7 +73,7 @@ var _ = Describe("ManagedCluster Controller", func() {
 						Namespace: managedClusterNamespace,
 					},
 					Spec: hmc.ClusterTemplateSpec{
-						TemplateSpecMixin: hmc.TemplateSpecMixin{
+						TemplateSpecCommon: hmc.TemplateSpecCommon{
 							Helm: hmc.HelmSpec{
 								ChartRef: &hcv2.CrossNamespaceSourceReference{
 									Kind:      "HelmChart",
@@ -86,7 +86,7 @@ var _ = Describe("ManagedCluster Controller", func() {
 				}
 				Expect(k8sClient.Create(ctx, template)).To(Succeed())
 				template.Status = hmc.ClusterTemplateStatus{
-					TemplateStatusMixin: hmc.TemplateStatusMixin{
+					TemplateStatusCommon: hmc.TemplateStatusCommon{
 						TemplateValidationStatus: hmc.TemplateValidationStatus{
 							Valid: true,
 						},

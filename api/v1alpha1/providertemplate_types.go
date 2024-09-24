@@ -18,6 +18,24 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// ProviderTemplateSpec defines the desired state of ProviderTemplate
+type ProviderTemplateSpec struct {
+	TemplateSpecCommon `json:",inline"`
+}
+
+// ProviderTemplateStatus defines the observed state of ProviderTemplate
+type ProviderTemplateStatus struct {
+	TemplateStatusCommon `json:",inline"`
+}
+
+func (t *ProviderTemplate) GetSpec() *TemplateSpecCommon {
+	return &t.Spec.TemplateSpecCommon
+}
+
+func (t *ProviderTemplate) GetStatus() *TemplateStatusCommon {
+	return &t.Status.TemplateStatusCommon
+}
+
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=providertmpl,scope=Cluster
@@ -25,12 +43,13 @@ import (
 // +kubebuilder:printcolumn:name="validationError",type="string",JSONPath=".status.validationError",description="Validation Error",priority=1
 // +kubebuilder:printcolumn:name="description",type="string",JSONPath=".status.description",description="Description",priority=1
 
-// ProviderTemplate is the Schema for the provider templates API
+// ProviderTemplate is the Schema for the providertemplates API
 type ProviderTemplate struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Spec is immutable"
+
 	Spec   ProviderTemplateSpec   `json:"spec,omitempty"`
 	Status ProviderTemplateStatus `json:"status,omitempty"`
 }
@@ -44,20 +63,6 @@ type ProviderTemplateList struct {
 	Items           []ProviderTemplate `json:"items"`
 }
 
-// ProviderTemplateSpec defines the desired state of ProviderTemplate
-type ProviderTemplateSpec struct {
-	TemplateSpecMixin `json:",inline"`
-}
-
-// ProviderTemplateStatus defines the observed state of ProviderTemplate
-type ProviderTemplateStatus struct {
-	TemplateStatusMixin `json:",inline"`
-}
-
-func (t *ProviderTemplate) GetSpec() *TemplateSpecMixin {
-	return &t.Spec.TemplateSpecMixin
-}
-
-func (t *ProviderTemplate) GetStatus() *TemplateStatusMixin {
-	return &t.Status.TemplateStatusMixin
+func init() {
+	SchemeBuilder.Register(&ProviderTemplate{}, &ProviderTemplateList{})
 }

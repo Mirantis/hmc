@@ -19,7 +19,7 @@ spec:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: TemplateManagement is the Schema for the template management
+        description: TemplateManagement is the Schema for the templatemanagements
           API
         properties:
           apiVersion:

@@ -18,6 +18,24 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// ClusterTemplateSpec defines the desired state of ClusterTemplate
+type ClusterTemplateSpec struct {
+	TemplateSpecCommon `json:",inline"`
+}
+
+// ClusterTemplateStatus defines the observed state of ClusterTemplate
+type ClusterTemplateStatus struct {
+	TemplateStatusCommon `json:",inline"`
+}
+
+func (t *ClusterTemplate) GetSpec() *TemplateSpecCommon {
+	return &t.Spec.TemplateSpecCommon
+}
+
+func (t *ClusterTemplate) GetStatus() *TemplateStatusCommon {
+	return &t.Status.TemplateStatusCommon
+}
+
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=clustertmpl
@@ -25,12 +43,13 @@ import (
 // +kubebuilder:printcolumn:name="validationError",type="string",JSONPath=".status.validationError",description="Validation Error",priority=1
 // +kubebuilder:printcolumn:name="description",type="string",JSONPath=".status.description",description="Description",priority=1
 
-// ClusterTemplate is the Schema for the cluster templates API
+// ClusterTemplate is the Schema for the clustertemplates API
 type ClusterTemplate struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Spec is immutable"
+
 	Spec   ClusterTemplateSpec   `json:"spec,omitempty"`
 	Status ClusterTemplateStatus `json:"status,omitempty"`
 }
@@ -44,20 +63,6 @@ type ClusterTemplateList struct {
 	Items           []ClusterTemplate `json:"items"`
 }
 
-// ClusterTemplateSpec defines the desired state of ClusterTemplate
-type ClusterTemplateSpec struct {
-	TemplateSpecMixin `json:",inline"`
-}
-
-// ClusterTemplateStatus defines the observed state of ClusterTemplate
-type ClusterTemplateStatus struct {
-	TemplateStatusMixin `json:",inline"`
-}
-
-func (t *ClusterTemplate) GetSpec() *TemplateSpecMixin {
-	return &t.Spec.TemplateSpecMixin
-}
-
-func (t *ClusterTemplate) GetStatus() *TemplateStatusMixin {
-	return &t.Status.TemplateStatusMixin
+func init() {
+	SchemeBuilder.Register(&ClusterTemplate{}, &ClusterTemplateList{})
 }

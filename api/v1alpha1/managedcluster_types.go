@@ -62,27 +62,25 @@ const (
 
 // ManagedClusterSpec defines the desired state of ManagedCluster
 type ManagedClusterSpec struct {
-	// DryRun specifies whether the template should be applied after validation or only validated.
-	// +optional
-	DryRun bool `json:"dryRun,omitempty"`
-	// Template is a reference to a Template object located in the same namespace.
-	// +kubebuilder:validation:Required
-	// +kubebuilder:validation:MinLength=1
-	Template string `json:"template"`
 	// Config allows to provide parameters for template customization.
 	// If no Config provided, the field will be populated with the default values for
 	// the template and DryRun will be enabled.
-	// +optional
 	Config *apiextensionsv1.JSON `json:"config,omitempty"`
+
+	// +kubebuilder:validation:MinLength=1
+
+	// Template is a reference to a Template object located in the same namespace.
+	Template string `json:"template"`
+	// DryRun specifies whether the template should be applied after validation or only validated.
+	DryRun bool `json:"dryRun,omitempty"`
 }
 
 // ManagedClusterStatus defines the observed state of ManagedCluster
 type ManagedClusterStatus struct {
-	// ObservedGeneration is the last observed generation.
-	// +optional
-	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 	// Conditions contains details for the current state of the ManagedCluster
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
+	// ObservedGeneration is the last observed generation.
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 }
 
 //+kubebuilder:object:root=true

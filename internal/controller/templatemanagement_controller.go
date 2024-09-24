@@ -153,7 +153,7 @@ func (r *TemplateManagementReconciler) applyTemplates(ctx context.Context, kind 
 		return fmt.Errorf("invalid kind %s. Only %s or %s kinds are supported", kind, templateutil.ClusterTemplateKind, templateutil.ServiceTemplateKind)
 	}
 
-	spec := hmc.TemplateSpecMixin{
+	spec := hmc.TemplateSpecCommon{
 		Helm: hmc.HelmSpec{
 			ChartRef: &helmcontrollerv2.CrossNamespaceSourceReference{
 				Kind:      sourcev1.HelmChartKind,
@@ -167,10 +167,10 @@ func (r *TemplateManagementReconciler) applyTemplates(ctx context.Context, kind 
 		var target client.Object
 		meta.Namespace = ns
 		if kind == templateutil.ClusterTemplateKind {
-			target = &hmc.ClusterTemplate{ObjectMeta: meta, Spec: hmc.ClusterTemplateSpec{TemplateSpecMixin: spec}}
+			target = &hmc.ClusterTemplate{ObjectMeta: meta, Spec: hmc.ClusterTemplateSpec{TemplateSpecCommon: spec}}
 		}
 		if kind == templateutil.ServiceTemplateKind {
-			target = &hmc.ServiceTemplate{ObjectMeta: meta, Spec: hmc.ServiceTemplateSpec{TemplateSpecMixin: spec}}
+			target = &hmc.ServiceTemplate{ObjectMeta: meta, Spec: hmc.ServiceTemplateSpec{TemplateSpecCommon: spec}}
 		}
 		if keep {
 			if !sourceFound {

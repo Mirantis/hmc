@@ -17,7 +17,7 @@ spec:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: ServiceTemplateChain is the Schema for the service template chain
+        description: ServiceTemplateChain is the Schema for the servicetemplatechains
           API
         properties:
           apiVersion:

@@ -168,6 +168,12 @@ func main() {
 		os.Exit(1)
 	}
 
+	ctx := ctrl.SetupSignalHandler()
+	if err = hmcmirantiscomv1alpha1.SetupIndexers(ctx, mgr); err != nil {
+		setupLog.Error(err, "unable to setup indexers")
+		os.Exit(1)
+	}
+
 	currentNamespace := utils.CurrentNamespace()
 
 	templateReconciler := controller.TemplateReconciler{
@@ -186,13 +192,6 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "ClusterTemplate")
 		os.Exit(1)
 	}
-
-	ctx := ctrl.SetupSignalHandler()
-	if err = hmcmirantiscomv1alpha1.SetupIndexers(ctx, mgr); err != nil {
-		setupLog.Error(err, "unable to setup indexers")
-		os.Exit(1)
-	}
-
 	if err = (&controller.ServiceTemplateReconciler{
 		TemplateReconciler: templateReconciler,
 	}).SetupWithManager(mgr); err != nil {

@@ -34,7 +34,7 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: ProviderTemplate is the Schema for the provider templates API
+        description: ProviderTemplate is the Schema for the providertemplates API
         properties:
           apiVersion:
             description: |-

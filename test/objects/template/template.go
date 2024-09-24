@@ -28,8 +28,8 @@ const (
 
 type Template struct {
 	metav1.ObjectMeta `json:",inline"`
-	Spec              v1alpha1.TemplateSpecMixin   `json:"spec"`
-	Status            v1alpha1.TemplateStatusMixin `json:"status"`
+	Spec              v1alpha1.TemplateSpecCommon   `json:"spec"`
+	Status            v1alpha1.TemplateStatusCommon `json:"status"`
 }
 
 type Opt func(template *Template)
@@ -38,8 +38,8 @@ func NewClusterTemplate(opts ...Opt) *v1alpha1.ClusterTemplate {
 	templateState := NewTemplate(opts...)
 	return &v1alpha1.ClusterTemplate{
 		ObjectMeta: templateState.ObjectMeta,
-		Spec:       v1alpha1.ClusterTemplateSpec{TemplateSpecMixin: templateState.Spec},
-		Status:     v1alpha1.ClusterTemplateStatus{TemplateStatusMixin: templateState.Status},
+		Spec:       v1alpha1.ClusterTemplateSpec{TemplateSpecCommon: templateState.Spec},
+		Status:     v1alpha1.ClusterTemplateStatus{TemplateStatusCommon: templateState.Status},
 	}
 }
 
@@ -47,8 +47,8 @@ func NewServiceTemplate(opts ...Opt) *v1alpha1.ServiceTemplate {
 	templateState := NewTemplate(opts...)
 	return &v1alpha1.ServiceTemplate{
 		ObjectMeta: templateState.ObjectMeta,
-		Spec:       v1alpha1.ServiceTemplateSpec{TemplateSpecMixin: templateState.Spec},
-		Status:     v1alpha1.ServiceTemplateStatus{TemplateStatusMixin: templateState.Status},
+		Spec:       v1alpha1.ServiceTemplateSpec{TemplateSpecCommon: templateState.Spec},
+		Status:     v1alpha1.ServiceTemplateStatus{TemplateStatusCommon: templateState.Status},
 	}
 }
 
@@ -56,8 +56,8 @@ func NewProviderTemplate(opts ...Opt) *v1alpha1.ProviderTemplate {
 	templateState := NewTemplate(opts...)
 	return &v1alpha1.ProviderTemplate{
 		ObjectMeta: templateState.ObjectMeta,
-		Spec:       v1alpha1.ProviderTemplateSpec{TemplateSpecMixin: templateState.Spec},
-		Status:     v1alpha1.ProviderTemplateStatus{TemplateStatusMixin: templateState.Status},
+		Spec:       v1alpha1.ProviderTemplateSpec{TemplateSpecCommon: templateState.Spec},
+		Status:     v1alpha1.ProviderTemplateStatus{TemplateStatusCommon: templateState.Status},
 	}
 }
 

@@ -29,9 +29,7 @@ import (
 	"github.com/Mirantis/hmc/api/v1alpha1"
 )
 
-var (
-	ErrInvalidTemplateChainSpec = errors.New("the template chain spec is invalid")
-)
+var errInvalidTemplateChainSpec = errors.New("the template chain spec is invalid")
 
 type ClusterTemplateChainValidator struct {
 	client.Client
@@ -60,7 +58,7 @@ func (*ClusterTemplateChainValidator) ValidateCreate(_ context.Context, obj runt
 
 	warnings := isTemplateChainValid(chain.Spec)
 	if len(warnings) > 0 {
-		return warnings, ErrInvalidTemplateChainSpec
+		return warnings, errInvalidTemplateChainSpec
 	}
 	return nil, nil
 }
@@ -106,7 +104,7 @@ func (*ServiceTemplateChainValidator) ValidateCreate(_ context.Context, obj runt
 	}
 	warnings := isTemplateChainValid(chain.Spec)
 	if len(warnings) > 0 {
-		return warnings, ErrInvalidTemplateChainSpec
+		return warnings, errInvalidTemplateChainSpec
 	}
 	return nil, nil
 }

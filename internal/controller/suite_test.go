@@ -56,11 +56,13 @@ const (
 	validatingWebhookKind = "ValidatingWebhookConfiguration"
 )
 
-var cfg *rest.Config
-var k8sClient client.Client
-var testEnv *envtest.Environment
-var ctx context.Context
-var cancel context.CancelFunc
+var (
+	cfg       *rest.Config
+	k8sClient client.Client
+	testEnv   *envtest.Environment
+	ctx       context.Context
+	cancel    context.CancelFunc
+)
 
 func TestControllers(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -83,7 +85,8 @@ var _ = BeforeSuite(func() {
 	testEnv = &envtest.Environment{
 		CRDDirectoryPaths: []string{
 			filepath.Join("..", "..", "templates", "provider", "hmc", "templates", "crds"),
-			filepath.Join("..", "..", "bin", "crd")},
+			filepath.Join("..", "..", "bin", "crd"),
+		},
 		ErrorIfCRDPathMissing: true,
 
 		// The BinaryAssetsDirectory is only required if you want to run the tests directly
@@ -193,7 +196,7 @@ func loadWebhooks(path string) ([]*admissionv1.ValidatingWebhookConfiguration, [
 		return nil, nil, err
 	}
 
-	var re = regexp.MustCompile("{{.*}}")
+	re := regexp.MustCompile("{{.*}}")
 	s := re.ReplaceAllString(string(webhookFile), "")
 	objs, err := utilyaml.ToUnstructured([]byte(s))
 	if err != nil {
@@ -209,8 +212,8 @@ func loadWebhooks(path string) ([]*admissionv1.ValidatingWebhookConfiguration, [
 				return nil, nil, err
 			}
 			validatingWebhooks = append(validatingWebhooks, webhookConfig)
-
 		}
+
 		if o.GetKind() == mutatingWebhookKind {
 			o.SetName("mutating-webhook")
 			webhookConfig := &admissionv1.MutatingWebhookConfiguration{}

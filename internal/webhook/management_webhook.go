@@ -34,8 +34,8 @@ type ManagementValidator struct {
 }
 
 var (
-	ErrManagementDeletionForbidden         = errors.New("management deletion is forbidden")
-	ErrCreateManagementReenablingForbidden = errors.New("reenabling of the createManagement parameter is forbidden")
+	errManagementDeletionForbidden         = errors.New("management deletion is forbidden")
+	errCreateManagementReenablingForbidden = errors.New("reenabling of the createManagement parameter is forbidden")
 )
 
 func (in *ManagementValidator) SetupWebhookWithManager(mgr ctrl.Manager) error {
@@ -84,7 +84,7 @@ func (*ManagementValidator) ValidateUpdate(_ context.Context, _ runtime.Object, 
 
 	// Check if 'createManagement' exists and is true.
 	if createManagement, ok := controller["createManagement"].(bool); ok && createManagement {
-		return nil, ErrCreateManagementReenablingForbidden
+		return nil, errCreateManagementReenablingForbidden
 	}
 
 	return nil, nil
@@ -98,7 +98,7 @@ func (v *ManagementValidator) ValidateDelete(ctx context.Context, _ runtime.Obje
 		return nil, err
 	}
 	if len(managedClusters.Items) > 0 {
-		return admission.Warnings{"The Management object can't be removed if ManagedCluster objects still exist"}, ErrManagementDeletionForbidden
+		return admission.Warnings{"The Management object can't be removed if ManagedCluster objects still exist"}, errManagementDeletionForbidden
 	}
 	return nil, nil
 }
