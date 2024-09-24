@@ -51,14 +51,13 @@ type Core struct {
 
 // Component represents HMC management component
 type Component struct {
-	// Template is the name of the Template associated with this component.
-	// If not specified, will be taken from the Release object.
-	Template string `json:"template,omitempty"`
 	// Config allows to provide parameters for management component customization.
 	// If no Config provided, the field will be populated with the default
 	// values for the template.
-	// +optional
 	Config *apiextensionsv1.JSON `json:"config,omitempty"`
+	// Template is the name of the Template associated with this component.
+	// If not specified, will be taken from the Release object.
+	Template string `json:"template,omitempty"`
 }
 
 type Provider struct {
@@ -88,7 +87,6 @@ func (m *ManagementSpec) SetProvidersDefaults() error {
 // ManagementStatus defines the observed state of Management
 type ManagementStatus struct {
 	// ObservedGeneration is the last observed generation.
-	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 	// AvailableProviders holds all CAPI providers available on the Management cluster.
 	AvailableProviders Providers `json:"availableProviders,omitempty"`

@@ -28,10 +28,9 @@ const (
 	ChartAnnotationControlPlaneProviders = "hmc.mirantis.com/control-plane-providers"
 )
 
-// TemplateSpecMixin is a Template configuration common for all Template types
-type TemplateSpecMixin struct {
+// TemplateSpecCommon is a Template configuration common for all Template types
+type TemplateSpecCommon struct {
 	// Helm holds a reference to a Helm chart representing the HMC template
-	// +kubebuilder:validation:Required
 	Helm HelmSpec `json:"helm"`
 	// Providers represent required/exposed CAPI providers depending on the template type.
 	// Should be set if not present in the Helm chart metadata.
@@ -42,49 +41,35 @@ type TemplateSpecMixin struct {
 
 // HelmSpec references a Helm chart representing the HMC template
 type HelmSpec struct {
-	// ChartName is a name of a Helm chart representing the template in the HMC repository.
-	// +optional
-	ChartName string `json:"chartName,omitempty"`
-	// ChartVersion is a version of a Helm chart representing the template in the HMC repository.
-	// +optional
-	ChartVersion string `json:"chartVersion,omitempty"`
 	// ChartRef is a reference to a source controller resource containing the
 	// Helm chart representing the template.
-	// +optional
 	ChartRef *helmcontrollerv2.CrossNamespaceSourceReference `json:"chartRef,omitempty"`
+	// ChartName is a name of a Helm chart representing the template in the HMC repository.
+	ChartName string `json:"chartName,omitempty"`
+	// ChartVersion is a version of a Helm chart representing the template in the HMC repository.
+	ChartVersion string `json:"chartVersion,omitempty"`
 }
 
-// TemplateStatusMixin defines the observed state of Template common for all Template types
-type TemplateStatusMixin struct {
+// TemplateStatusCommon defines the observed state of Template common for all Template types
+type TemplateStatusCommon struct {
 	TemplateValidationStatus `json:",inline"`
 	// Description contains information about the template.
-	// +optional
 	Description string `json:"description,omitempty"`
 	// Config demonstrates available parameters for template customization,
 	// that can be used when creating ManagedCluster objects.
-	// +optional
 	Config *apiextensionsv1.JSON `json:"config,omitempty"`
 	// ChartRef is a reference to a source controller resource containing the
 	// Helm chart representing the template.
-	// +optional
 	ChartRef *helmcontrollerv2.CrossNamespaceSourceReference `json:"chartRef,omitempty"`
 	// Providers represent required/exposed CAPI providers depending on the template type.
 	Providers Providers `json:"providers,omitempty"`
 	// ObservedGeneration is the last observed generation.
-	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 }
 
 type TemplateValidationStatus struct {
+	// ValidationError provides information regarding issues encountered during template validation.
+	ValidationError string `json:"validationError,omitempty"`
 	// Valid indicates whether the template passed validation or not.
 	Valid bool `json:"valid"`
-	// ValidationError provides information regarding issues encountered during template validation.
-	// +optional
-	ValidationError string `json:"validationError,omitempty"`
-}
-
-func init() {
-	SchemeBuilder.Register(&ClusterTemplate{}, &ClusterTemplateList{})
-	SchemeBuilder.Register(&ServiceTemplate{}, &ServiceTemplateList{})
-	SchemeBuilder.Register(&ProviderTemplate{}, &ProviderTemplateList{})
 }

@@ -34,7 +34,7 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: ServiceTemplate is the Schema for the service templates API
+        description: ServiceTemplate is the Schema for the servicetemplates API
         properties:
           apiVersion:
             description: |-

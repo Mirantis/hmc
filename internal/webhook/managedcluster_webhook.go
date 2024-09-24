@@ -37,7 +37,7 @@ type ManagedClusterValidator struct {
 	client.Client
 }
 
-var InvalidManagedClusterErr = errors.New("the ManagedCluster is invalid")
+var invalidManagedClusterErr = errors.New("the ManagedCluster is invalid")
 
 func (v *ManagedClusterValidator) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	v.Client = mgr.GetClient()
@@ -61,11 +61,11 @@ func (v *ManagedClusterValidator) ValidateCreate(ctx context.Context, obj runtim
 	}
 	template, err := v.getManagedClusterTemplate(ctx, managedCluster.Namespace, managedCluster.Spec.Template)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %v", InvalidManagedClusterErr, err)
+		return nil, fmt.Errorf("%s: %v", invalidManagedClusterErr, err)
 	}
 	err = v.isTemplateValid(ctx, template)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %v", InvalidManagedClusterErr, err)
+		return nil, fmt.Errorf("%s: %v", invalidManagedClusterErr, err)
 	}
 	return nil, nil
 }
@@ -78,11 +78,11 @@ func (v *ManagedClusterValidator) ValidateUpdate(ctx context.Context, _ runtime.
 	}
 	template, err := v.getManagedClusterTemplate(ctx, newManagedCluster.Namespace, newManagedCluster.Spec.Template)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %v", InvalidManagedClusterErr, err)
+		return nil, fmt.Errorf("%s: %v", invalidManagedClusterErr, err)
 	}
 	err = v.isTemplateValid(ctx, template)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %v", InvalidManagedClusterErr, err)
+		return nil, fmt.Errorf("%s: %v", invalidManagedClusterErr, err)
 	}
 	return nil, nil
 }
@@ -173,7 +173,7 @@ func (v *ManagedClusterValidator) verifyProviders(ctx context.Context, template 
 
 func getMissingProviders(exposedProviders []string, requiredProviders []string) []string {
 	exposedBootstrapProviders := utils.SliceToMapKeys[[]string, map[string]struct{}](exposedProviders)
-	diff, isSubset := utils.DiffSliceSubset[[]string, map[string]struct{}](requiredProviders, exposedBootstrapProviders)
+	diff, isSubset := utils.DiffSliceSubset(requiredProviders, exposedBootstrapProviders)
 	if !isSubset {
 		return diff
 	}

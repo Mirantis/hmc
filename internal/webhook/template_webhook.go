@@ -34,9 +34,7 @@ type ClusterTemplateValidator struct {
 	client.Client
 }
 
-var (
-	ErrTemplateDeletionForbidden = errors.New("template deletion is forbidden")
-)
+var errTemplateDeletionForbidden = errors.New("template deletion is forbidden")
 
 func (in *ClusterTemplateValidator) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	in.Client = mgr.GetClient()
@@ -81,7 +79,7 @@ func (v *ClusterTemplateValidator) ValidateDelete(ctx context.Context, obj runti
 	}
 
 	if len(managedClusters.Items) > 0 {
-		return admission.Warnings{"The ClusterTemplate object can't be removed if ManagedCluster objects referencing it still exist"}, ErrTemplateDeletionForbidden
+		return admission.Warnings{"The ClusterTemplate object can't be removed if ManagedCluster objects referencing it still exist"}, errTemplateDeletionForbidden
 	}
 
 	return nil, nil

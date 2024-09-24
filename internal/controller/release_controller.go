@@ -227,6 +227,7 @@ func (p *Poller) reconcileHMCTemplates(ctx context.Context) error {
 	}
 	return nil
 }
+
 func (p *Poller) getCurrentReleaseName(ctx context.Context) (string, error) {
 	releases := &hmc.ReleaseList{}
 	listOptions := client.ListOptions{
