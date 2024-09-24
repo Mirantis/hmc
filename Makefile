@@ -464,15 +464,18 @@ $(ENVSUBST): | $(LOCALBIN)
 .PHONY: awscli
 awscli: $(AWSCLI)
 $(AWSCLI): | $(LOCALBIN)
-	@if [ $(OS) == "linux" ]; then \
+	set -x; \
+	if [ $(OS) == "linux" ]; then \
 		curl "https://awscli.amazonaws.com/awscli-exe-linux-$(shell uname -m)-$(AWSCLI_VERSION).zip" -o "/tmp/awscliv2.zip"; \
 		unzip -qq /tmp/awscliv2.zip -d /tmp; \
 		/tmp/aws/install -i $(LOCALBIN)/aws-cli -b $(LOCALBIN) --update; \
 	fi; \
 	if [ $(OS) == "darwin" ]; then \
 			curl "https://awscli.amazonaws.com/AWSCLIV2.pkg" -o "AWSCLIV2.pkg"; \
-			installer -pkg AWSCLIV2.pkg -target $(LOCALBIN) -applyChoiceChangesXML choices.xml; \
-			rm AWSCLIV2.pkg; \
+			LOCALBIN="$(LOCALBIN)" $(ENVSUBST) -i ./scripts/awscli-darwin-install.xml.tpl > choices.xml; \
+			sudo installer -pkg AWSCLIV2.pkg -target $(LOCALBIN) -applyChoiceChangesXML ./choices.xml; \
+			ln -s $(LOCALBIN)/aws-cli/aws $(LOCALBIN)/aws; \
+			rm AWSCLIV2.pkg && rm ./choices.xml; \
 	fi; \
 	if [ $(OS) == "windows" ]; then \
 		echo "Installing to $(LOCALBIN) on Windows is not yet implemented"; \
