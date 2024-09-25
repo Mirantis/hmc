@@ -37,11 +37,7 @@ spec:
             namespace: kube-system
             values: |
               config:
-                enabled: true
-                vcenter: {{ .Values.vsphere.server }}
-                datacenter: {{ .Values.vsphere.datacenter }}
-                username: "{{ .Values.vsphere.username }}"
-                password: "{{ .Values.vsphere.password }}"
+                enabled: false
               daemonset:
                 affinity: null
                 tolerations:
@@ -67,12 +63,7 @@ spec:
             namespace: kube-system
             values: |
               vcenterConfig:
-                enabled: true
-                clusterID: {{ include "cluster.name" . }}
-                vcenter: {{ .Values.vsphere.server }}
-                user: "{{ .Values.vsphere.username }}"
-                password: "{{ .Values.vsphere.password }}"
-                datacenters: {{ .Values.vsphere.datacenter }}
+                enabled: false
               controller:
                 nodeAffinity: null
               node:

@@ -40,6 +40,8 @@ const (
 
 	// CredentialReadyCondition indicates if referenced Credential exists and has Ready state
 	CredentialReadyCondition = "CredentialReady"
+	// CredentialPropagatedCondition indicates that CCM credentials were delivered to managed cluster
+	CredentialsPropagatedCondition = "CredentialsApplied"
 	// TemplateReadyCondition indicates the referenced Template exists and valid.
 	TemplateReadyCondition = "TemplateReady"
 	// HelmChartReadyCondition indicates the corresponding HelmChart is valid and ready.
