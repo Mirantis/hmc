@@ -18,7 +18,7 @@ import (
 	"github.com/segmentio/analytics-go"
 )
 
-var segmentToken = ""
+var segmentToken = "PS8UlR5fZ23Dixwo7CGOVYtRGMyDpDQw"
 var client = newClient()
 
 func newClient() analytics.Client {
