@@ -130,6 +130,10 @@ spec:
           status:
             description: ManagedClusterStatus defines the observed state of ManagedCluster
             properties:
+              ccmSecretReconciled:
+                description: CCMSecretReconciled signify if CCM secret was reconciled
+                  on managed cluster
+                type: boolean
               conditions:
                 description: Conditions contains details for the current state of
                   the ManagedCluster
