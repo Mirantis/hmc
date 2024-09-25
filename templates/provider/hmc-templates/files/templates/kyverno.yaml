@@ -1,0 +1,8 @@
+apiVersion: hmc.mirantis.com/v1alpha1
+kind: ServiceTemplate
+metadata:
+  name: kyverno
+spec:
+  helm:
+    chartName: kyverno
+    chartVersion: 3.2.6

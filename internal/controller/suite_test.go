@@ -45,6 +45,7 @@ import (
 
 	hmcmirantiscomv1alpha1 "github.com/Mirantis/hmc/api/v1alpha1"
 	hmcwebhook "github.com/Mirantis/hmc/internal/webhook"
+	sveltosv1beta1 "github.com/projectsveltos/addon-controller/api/v1beta1"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -112,6 +113,8 @@ var _ = BeforeSuite(func() {
 	err = sourcev1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 	err = helmcontrollerv2.AddToScheme(scheme.Scheme)
+	Expect(err).NotTo(HaveOccurred())
+	err = sveltosv1beta1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	// +kubebuilder:scaffold:scheme

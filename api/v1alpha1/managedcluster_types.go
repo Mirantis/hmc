@@ -25,7 +25,9 @@ const (
 	BlockingFinalizer       = "hmc.mirantis.com/cleanup"
 	ManagedClusterFinalizer = "hmc.mirantis.com/managed-cluster"
 
-	FluxHelmChartNameKey = "helm.toolkit.fluxcd.io/name"
+	FluxHelmChartNameKey      = "helm.toolkit.fluxcd.io/name"
+	FluxHelmChartNamespaceKey = "helm.toolkit.fluxcd.io/namespace"
+
 	HMCManagedLabelKey   = "hmc.mirantis.com/managed"
 	HMCManagedLabelValue = "true"
 
@@ -62,6 +64,26 @@ const (
 	ProgressingReason string = "Progressing"
 )
 
+// ManagedClusterServiceSpec represents a Service within ManagedCluster
+type ManagedClusterServiceSpec struct {
+	// Template is a reference to a Template object located in the same namespace.
+	// +kubebuilder:validation:MinLength=1
+	Template string `json:"template"`
+	// Disable can be set to disable handling of this service.
+	// +optional
+	Disable bool `json:"disable"`
+	// Name is the chart release.
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name"`
+	// Namespace is the namespace the release will be installed in.
+	// It will default to Name if not provided.
+	// +optional
+	Namespace string `json:"namespace"`
+	// Values is the helm values to be passed to the template.
+	// +optional
+	Values *apiextensionsv1.JSON `json:"values,omitempty"`
+}
+
 // ManagedClusterSpec defines the desired state of ManagedCluster
 type ManagedClusterSpec struct {
 	// Config allows to provide parameters for template customization.
@@ -76,6 +98,10 @@ type ManagedClusterSpec struct {
 	// DryRun specifies whether the template should be applied after validation or only validated.
 	DryRun     bool   `json:"dryRun,omitempty"`
 	Credential string `json:"credential,omitempty"`
+	// Services is a list of services created via ServiceTemplates
+	// that could be installed on the target cluster.
+	// +optional
+	Services []ManagedClusterServiceSpec `json:"services,omitempty"`
 }
 
 // ManagedClusterStatus defines the observed state of ManagedCluster

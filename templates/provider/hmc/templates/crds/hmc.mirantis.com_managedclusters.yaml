@@ -68,6 +68,40 @@ spec:
                 description: DryRun specifies whether the template should be applied
                   after validation or only validated.
                 type: boolean
+              services:
+                description: |-
+                  Services is a list of services created via ServiceTemplates
+                  that could be installed on the target cluster.
+                items:
+                  description: ManagedClusterServiceSpec represents a Service within
+                    ManagedCluster
+                  properties:
+                    disable:
+                      description: Disable can be set to disable handling of this
+                        service.
+                      type: boolean
+                    name:
+                      description: Name is the chart release.
+                      minLength: 1
+                      type: string
+                    namespace:
+                      description: |-
+                        Namespace is the namespace the release will be installed in.
+                        It will default to Name if not provided.
+                      type: string
+                    template:
+                      description: Template is a reference to a Template object located
+                        in the same namespace.
+                      minLength: 1
+                      type: string
+                    values:
+                      description: Values is the helm values to be passed to the template.
+                      x-kubernetes-preserve-unknown-fields: true
+                  required:
+                  - name
+                  - template
+                  type: object
+                type: array
               template:
                 description: Template is a reference to a Template object located
                   in the same namespace.
