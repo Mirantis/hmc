@@ -29,7 +29,8 @@ type Opt func(management *v1alpha1.Management)
 func NewManagement(opts ...Opt) *v1alpha1.Management {
 	p := &v1alpha1.Management{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: DefaultName,
+			Name:       DefaultName,
+			Finalizers: []string{v1alpha1.ManagementFinalizer},
 		},
 	}
 
@@ -42,6 +43,12 @@ func NewManagement(opts ...Opt) *v1alpha1.Management {
 func WithName(name string) Opt {
 	return func(p *v1alpha1.Management) {
 		p.Name = name
+	}
+}
+
+func WithDeletionTimestamp(deletionTimestamp metav1.Time) Opt {
+	return func(p *v1alpha1.Management) {
+		p.DeletionTimestamp = &deletionTimestamp
 	}
 }
 

@@ -43,12 +43,7 @@ rules:
   - hmc.mirantis.com
   resources:
   - templatemanagements
-  verbs:
-  - get
-  - list
-  - patch
-  - update
-  - watch
+  verbs: {{ include "rbac.editorVerbs" . | nindent 4 }}
 - apiGroups:
   - hmc.mirantis.com
   resources:

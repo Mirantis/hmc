@@ -11,6 +11,7 @@ controller:
   registryCredsSecret: ""
   insecureRegistry: false
   createManagement: true
+  createTemplateManagement: true
   createTemplates: true
   enableTelemetry: true
 

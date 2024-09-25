@@ -16,11 +16,13 @@ package webhook
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -30,6 +32,8 @@ import (
 	"github.com/Mirantis/hmc/api/v1alpha1"
 	"github.com/Mirantis/hmc/internal/templateutil"
 )
+
+var errTemplateManagementDeletionForbidden = errors.New("TemplateManagement deletion is forbidden")
 
 type TemplateManagementValidator struct {
 	client.Client
@@ -51,7 +55,16 @@ var (
 )
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type.
-func (*TemplateManagementValidator) ValidateCreate(_ context.Context, _ runtime.Object) (admission.Warnings, error) {
+func (v *TemplateManagementValidator) ValidateCreate(ctx context.Context, _ runtime.Object) (admission.Warnings, error) {
+	itemsList := &metav1.PartialObjectMetadataList{}
+	gvk := v1alpha1.GroupVersion.WithKind(v1alpha1.TemplateManagementKind)
+	itemsList.SetGroupVersionKind(gvk)
+	if err := v.List(ctx, itemsList); err != nil {
+		return nil, err
+	}
+	if len(itemsList.Items) > 0 {
+		return nil, fmt.Errorf("TemplateManagement object already exists")
+	}
 	return nil, nil
 }
 
@@ -113,7 +126,20 @@ func getManagedClustersForTemplate(ctx context.Context, cl client.Client, namesp
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
-func (*TemplateManagementValidator) ValidateDelete(context.Context, runtime.Object) (admission.Warnings, error) {
+func (v *TemplateManagementValidator) ValidateDelete(ctx context.Context, _ runtime.Object) (admission.Warnings, error) {
+	partialList := &metav1.PartialObjectMetadataList{}
+	gvk := v1alpha1.GroupVersion.WithKind(v1alpha1.ManagementKind)
+	partialList.SetGroupVersionKind(gvk)
+	err := v.List(ctx, partialList)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list Management objects: %v", err)
+	}
+	if len(partialList.Items) > 0 {
+		mgmt := partialList.Items[0]
+		if mgmt.DeletionTimestamp == nil {
+			return nil, errTemplateManagementDeletionForbidden
+		}
+	}
 	return nil, nil
 }
 

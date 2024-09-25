@@ -18,6 +18,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const TemplateManagementKind = "TemplateManagement"
+
 // TemplateManagementSpec defines the desired state of TemplateManagement
 type TemplateManagementSpec struct {
 	// AccessRules is the list of access rules. Each AccessRule enforces

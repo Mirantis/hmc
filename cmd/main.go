@@ -67,6 +67,7 @@ func main() {
 		insecureRegistry          bool
 		registryCredentialsSecret string
 		createManagement          bool
+		createTemplateManagement  bool
 		createTemplates           bool
 		hmcTemplatesChartName     string
 		enableTelemetry           bool
@@ -87,6 +88,8 @@ func main() {
 		"Secret containing authentication credentials for the registry.")
 	flag.BoolVar(&insecureRegistry, "insecure-registry", false, "Allow connecting to an HTTP registry.")
 	flag.BoolVar(&createManagement, "create-management", true, "Create Management object with default configuration.")
+	flag.BoolVar(&createTemplateManagement, "create-template-management", true,
+		"Create TemplateManagement object with default configuration.")
 	flag.BoolVar(&createTemplates, "create-templates", true, "Create HMC Templates.")
 	flag.StringVar(&hmcTemplatesChartName, "hmc-templates-chart-name", "hmc-templates",
 		"The name of the helm chart with HMC Templates.")
@@ -232,12 +235,13 @@ func main() {
 		os.Exit(1)
 	}
 	if err = mgr.Add(&controller.Poller{
-		Client:                mgr.GetClient(),
-		Config:                mgr.GetConfig(),
-		CreateManagement:      createManagement,
-		CreateTemplates:       createTemplates,
-		HMCTemplatesChartName: hmcTemplatesChartName,
-		SystemNamespace:       currentNamespace,
+		Client:                   mgr.GetClient(),
+		Config:                   mgr.GetConfig(),
+		CreateManagement:         createManagement,
+		CreateTemplateManagement: createTemplateManagement,
+		CreateTemplates:          createTemplates,
+		HMCTemplatesChartName:    hmcTemplatesChartName,
+		SystemNamespace:          currentNamespace,
 	}); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ReleaseController")
 		os.Exit(1)

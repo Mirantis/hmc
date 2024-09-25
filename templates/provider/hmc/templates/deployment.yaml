@@ -27,6 +27,7 @@ spec:
         - --registry-creds-secret={{ .Values.controller.registryCredsSecret }}
         {{- end }}
         - --create-management={{ .Values.controller.createManagement }}
+        - --create-template-management={{ .Values.controller.createTemplateManagement }}
         - --create-templates={{ .Values.controller.createTemplates }}
         - --enable-telemetry={{ .Values.controller.enableTelemetry }}
         - --enable-webhook={{ .Values.admissionWebhook.enabled }}

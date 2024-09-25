@@ -198,14 +198,8 @@ var _ = Describe("Template Management Controller", func() {
 				Expect(k8sClient.Delete(ctx, ns)).To(Succeed())
 			}
 
-			tm := &hmcmirantiscomv1alpha1.TemplateManagement{}
-			err := k8sClient.Get(ctx, types.NamespacedName{Name: tmName}, tm)
-			Expect(err).NotTo(HaveOccurred())
-			By("Cleanup the specific resource instance TemplateManagement")
-			Expect(k8sClient.Delete(ctx, tm)).To(Succeed())
-
 			ctChain := &hmcmirantiscomv1alpha1.ClusterTemplateChain{}
-			err = k8sClient.Get(ctx, types.NamespacedName{Name: ctChainName}, ctChain)
+			err := k8sClient.Get(ctx, types.NamespacedName{Name: ctChainName}, ctChain)
 			Expect(err).NotTo(HaveOccurred())
 			By("Cleanup the specific resource instance ClusterTemplateChain")
 			Expect(k8sClient.Delete(ctx, ctChain)).To(Succeed())
