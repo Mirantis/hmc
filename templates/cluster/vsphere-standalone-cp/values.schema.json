@@ -73,9 +73,7 @@
         "datacenter",
         "datastore",
         "resourcePool",
-        "folder",
-        "username",
-        "password"
+        "folder"
       ],
       "properties": {
         "server": {
@@ -94,12 +92,6 @@
           "type": "string"
         },
         "folder": {
-          "type": "string"
-        },
-        "username": {
-          "type": "string"
-        },
-        "password": {
           "type": "string"
         }
       }
