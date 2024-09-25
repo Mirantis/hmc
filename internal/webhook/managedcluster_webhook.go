@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package webhook // nolint:dupl
+package webhook
 
 import (
 	"context"
@@ -37,7 +37,7 @@ type ManagedClusterValidator struct {
 	client.Client
 }
 
-var invalidManagedClusterErr = errors.New("the ManagedCluster is invalid")
+var errInvalidManagedCluster = errors.New("the ManagedCluster is invalid")
 
 func (v *ManagedClusterValidator) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	v.Client = mgr.GetClient()
@@ -61,11 +61,11 @@ func (v *ManagedClusterValidator) ValidateCreate(ctx context.Context, obj runtim
 	}
 	template, err := v.getManagedClusterTemplate(ctx, managedCluster.Namespace, managedCluster.Spec.Template)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %v", invalidManagedClusterErr, err)
+		return nil, fmt.Errorf("%s: %v", errInvalidManagedCluster, err)
 	}
 	err = v.isTemplateValid(ctx, template)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %v", invalidManagedClusterErr, err)
+		return nil, fmt.Errorf("%s: %v", errInvalidManagedCluster, err)
 	}
 	return nil, nil
 }
@@ -78,11 +78,11 @@ func (v *ManagedClusterValidator) ValidateUpdate(ctx context.Context, _ runtime.
 	}
 	template, err := v.getManagedClusterTemplate(ctx, newManagedCluster.Namespace, newManagedCluster.Spec.Template)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %v", invalidManagedClusterErr, err)
+		return nil, fmt.Errorf("%s: %v", errInvalidManagedCluster, err)
 	}
 	err = v.isTemplateValid(ctx, template)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %v", invalidManagedClusterErr, err)
+		return nil, fmt.Errorf("%s: %v", errInvalidManagedCluster, err)
 	}
 	return nil, nil
 }

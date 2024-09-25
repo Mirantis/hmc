@@ -26,7 +26,7 @@ const (
 )
 
 func TrackManagedClusterCreate(id, managedClusterID, template string, dryRun bool) error {
-	props := map[string]interface{}{
+	props := map[string]any{
 		"hmcVersion":       build.Version,
 		"managedClusterID": managedClusterID,
 		"template":         template,
@@ -36,7 +36,7 @@ func TrackManagedClusterCreate(id, managedClusterID, template string, dryRun boo
 }
 
 func TrackManagedClusterHeartbeat(id, managedClusterID, clusterID, template, templateHelmChartVersion, infrastructureProvider, bootstrapProvider, controlPlaneProvider string) error {
-	props := map[string]interface{}{
+	props := map[string]any{
 		"hmcVersion":               build.Version,
 		"managedClusterID":         managedClusterID,
 		"clusterID":                clusterID,
@@ -49,7 +49,7 @@ func TrackManagedClusterHeartbeat(id, managedClusterID, clusterID, template, tem
 	return TrackEvent(managedClusterHeartbeatEvent, id, props)
 }
 
-func TrackEvent(name, id string, properties map[string]interface{}) error {
+func TrackEvent(name, id string, properties map[string]any) error {
 	if client == nil {
 		return nil
 	}

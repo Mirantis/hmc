@@ -21,7 +21,7 @@ import (
 	"os/exec"
 	"strings"
 
-	. "github.com/onsi/ginkgo/v2" //nolint:golint,revive
+	. "github.com/onsi/ginkgo/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -63,7 +63,7 @@ func prepareCmd(cmd *exec.Cmd) string {
 	return strings.Join(cmd.Args, " ")
 }
 
-// LoadImageToKindCluster loads a local docker image to the kind cluster
+// LoadImageToKindClusterWithName loads a local docker image to the kind cluster
 func LoadImageToKindClusterWithName(name string) error {
 	cluster := "kind"
 	if v, ok := os.LookupEnv("KIND_CLUSTER_NAME"); ok {
@@ -155,9 +155,9 @@ func GetConditionsFromUnstructured(unstrObj *unstructured.Unstructured) ([]metav
 	conditions := make([]metav1.Condition, 0, len(unstrConditions))
 
 	for _, condition := range unstrConditions {
-		conditionMap, ok := condition.(map[string]interface{})
+		conditionMap, ok := condition.(map[string]any)
 		if !ok {
-			return nil, fmt.Errorf("expected %s: %s condition to be type map[string]interface{}, got: %T",
+			return nil, fmt.Errorf("expected %s: %s condition to be type map[string]any, got: %T",
 				objKind, objName, conditionMap)
 		}
 
@@ -186,7 +186,7 @@ func ValidateObjectNamePrefix(unstrObj *unstructured.Unstructured, clusterName s
 	return nil
 }
 
-func ObjKindName(unstrObj *unstructured.Unstructured) (string, string) {
+func ObjKindName(unstrObj *unstructured.Unstructured) (kind string, name string) {
 	return unstrObj.GetKind(), unstrObj.GetName()
 }
 

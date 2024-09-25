@@ -21,7 +21,6 @@ import (
 	"strings"
 
 	helmcontrollerv2 "github.com/fluxcd/helm-controller/api/v2"
-	v2 "github.com/fluxcd/helm-controller/api/v2"
 	"github.com/fluxcd/pkg/apis/meta"
 	sourcev1 "github.com/fluxcd/source-controller/api/v1"
 	"helm.sh/helm/v3/pkg/chart"
@@ -170,12 +169,12 @@ func (r *TemplateReconciler) ReconcileTemplate(ctx context.Context, template Tem
 		return ctrl.Result{}, err
 	}
 
-	status.ChartRef = &v2.CrossNamespaceSourceReference{
+	status.ChartRef = &helmcontrollerv2.CrossNamespaceSourceReference{
 		Kind:      sourcev1.HelmChartKind,
 		Name:      hcChart.Name,
 		Namespace: hcChart.Namespace,
 	}
-	if err, reportStatus := helm.ArtifactReady(hcChart); err != nil {
+	if reportStatus, err := helm.ArtifactReady(hcChart); err != nil {
 		l.Info("HelmChart Artifact is not ready")
 		if reportStatus {
 			_ = r.updateStatus(ctx, template, err.Error())
@@ -198,7 +197,7 @@ func (r *TemplateReconciler) ReconcileTemplate(ctx context.Context, template Tem
 		return ctrl.Result{}, err
 	}
 	l.Info("Validating Helm chart")
-	if err := r.parseChartMetadata(template, helmChart); err != nil {
+	if err := parseChartMetadata(template, helmChart); err != nil {
 		l.Error(err, "Failed to parse Helm chart metadata")
 		_ = r.updateStatus(ctx, template, err.Error())
 		return ctrl.Result{}, err
@@ -227,8 +226,8 @@ func templateManagedByHMC(template Template) bool {
 	return template.GetLabels()[hmc.HMCManagedLabelKey] == hmc.HMCManagedLabelValue
 }
 
-func (r *TemplateReconciler) parseChartMetadata(template Template, chart *chart.Chart) error {
-	if chart.Metadata == nil {
+func parseChartMetadata(template Template, inChart *chart.Chart) error {
+	if inChart.Metadata == nil {
 		return fmt.Errorf("chart metadata is empty")
 	}
 	spec := template.GetSpec()
@@ -238,7 +237,7 @@ func (r *TemplateReconciler) parseChartMetadata(template Template, chart *chart.
 	if len(spec.Providers.InfrastructureProviders) > 0 {
 		status.Providers.InfrastructureProviders = spec.Providers.InfrastructureProviders
 	} else {
-		infraProviders := chart.Metadata.Annotations[hmc.ChartAnnotationInfraProviders]
+		infraProviders := inChart.Metadata.Annotations[hmc.ChartAnnotationInfraProviders]
 		if infraProviders != "" {
 			status.Providers.InfrastructureProviders = strings.Split(infraProviders, ",")
 		}
@@ -246,7 +245,7 @@ func (r *TemplateReconciler) parseChartMetadata(template Template, chart *chart.
 	if len(spec.Providers.BootstrapProviders) > 0 {
 		status.Providers.BootstrapProviders = spec.Providers.BootstrapProviders
 	} else {
-		bootstrapProviders := chart.Metadata.Annotations[hmc.ChartAnnotationBootstrapProviders]
+		bootstrapProviders := inChart.Metadata.Annotations[hmc.ChartAnnotationBootstrapProviders]
 		if bootstrapProviders != "" {
 			status.Providers.BootstrapProviders = strings.Split(bootstrapProviders, ",")
 		}
@@ -254,7 +253,7 @@ func (r *TemplateReconciler) parseChartMetadata(template Template, chart *chart.
 	if len(spec.Providers.ControlPlaneProviders) > 0 {
 		status.Providers.ControlPlaneProviders = spec.Providers.ControlPlaneProviders
 	} else {
-		cpProviders := chart.Metadata.Annotations[hmc.ChartAnnotationControlPlaneProviders]
+		cpProviders := inChart.Metadata.Annotations[hmc.ChartAnnotationControlPlaneProviders]
 		if cpProviders != "" {
 			status.Providers.ControlPlaneProviders = strings.Split(cpProviders, ",")
 		}

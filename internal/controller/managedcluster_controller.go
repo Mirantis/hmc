@@ -116,13 +116,13 @@ func (r *ManagedClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 }
 
 func (r *ManagedClusterReconciler) setStatusFromClusterStatus(ctx context.Context, l logr.Logger, managedCluster *hmc.ManagedCluster) (bool, error) {
-	resourceId := schema.GroupVersionResource{
+	resourceID := schema.GroupVersionResource{
 		Group:    "cluster.x-k8s.io",
 		Version:  "v1beta1",
 		Resource: "clusters",
 	}
 
-	list, err := r.DynamicClient.Resource(resourceId).Namespace(managedCluster.Namespace).List(ctx, metav1.ListOptions{
+	list, err := r.DynamicClient.Resource(resourceID).Namespace(managedCluster.Namespace).List(ctx, metav1.ListOptions{
 		LabelSelector: labels.SelectorFromSet(map[string]string{hmc.FluxHelmChartNameKey: managedCluster.Name}).String(),
 	})
 
@@ -147,9 +147,9 @@ func (r *ManagedClusterReconciler) setStatusFromClusterStatus(ctx context.Contex
 
 	allConditionsComplete := true
 	for _, condition := range conditions {
-		conditionMap, ok := condition.(map[string]interface{})
+		conditionMap, ok := condition.(map[string]any)
 		if !ok {
-			return true, fmt.Errorf("failed to cast condition to map[string]interface{} for managedCluster: %s in namespace: %s: %w",
+			return true, fmt.Errorf("failed to cast condition to map[string]any for managedCluster: %s in namespace: %s: %w",
 				managedCluster.Namespace, managedCluster.Name, err)
 		}
 
@@ -252,7 +252,7 @@ func (r *ManagedClusterReconciler) Update(ctx context.Context, l logr.Logger, ma
 	}
 
 	l.Info("Validating Helm chart with provided values")
-	if err := r.validateReleaseWithValues(ctx, actionConfig, managedCluster, hcChart); err != nil {
+	if err := validateReleaseWithValues(ctx, actionConfig, managedCluster, hcChart); err != nil {
 		apimeta.SetStatusCondition(managedCluster.GetConditions(), metav1.Condition{
 			Type:    hmc.HelmChartReadyCondition,
 			Status:  metav1.ConditionFalse,
@@ -304,9 +304,9 @@ func (r *ManagedClusterReconciler) Update(ctx context.Context, l logr.Logger, ma
 		if err != nil {
 			if requeue {
 				return ctrl.Result{RequeueAfter: 10 * time.Second}, err
-			} else {
-				return ctrl.Result{}, err
 			}
+
+			return ctrl.Result{}, err
 		}
 
 		if requeue {
@@ -317,10 +317,11 @@ func (r *ManagedClusterReconciler) Update(ctx context.Context, l logr.Logger, ma
 			return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 		}
 	}
+
 	return ctrl.Result{}, nil
 }
 
-func (r *ManagedClusterReconciler) validateReleaseWithValues(ctx context.Context, actionConfig *action.Configuration, managedCluster *hmc.ManagedCluster, hcChart *chart.Chart) error {
+func validateReleaseWithValues(ctx context.Context, actionConfig *action.Configuration, managedCluster *hmc.ManagedCluster, hcChart *chart.Chart) error {
 	install := action.NewInstall(actionConfig)
 	install.DryRun = true
 	install.ReleaseName = managedCluster.Name

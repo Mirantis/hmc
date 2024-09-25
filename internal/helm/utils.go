@@ -67,7 +67,7 @@ func DownloadChart(ctx context.Context, chartURL, digest string) (*chart.Chart, 
 }
 
 func copyChart(reader io.Reader, writer io.Writer, digest string) error {
-	var writers = []io.Writer{writer}
+	writers := []io.Writer{writer}
 	var verifier godigest.Verifier
 	// verify data integrity if digest is provided
 	if digest != "" {

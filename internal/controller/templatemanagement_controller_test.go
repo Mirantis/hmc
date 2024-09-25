@@ -19,7 +19,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -56,25 +56,25 @@ var _ = Describe("Template Management Controller", func() {
 
 		ctx := context.Background()
 
-		systemNamespace := &v1.Namespace{
+		systemNamespace := &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "hmc",
 			},
 		}
 
-		namespace1 := &v1.Namespace{
+		namespace1 := &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   namespace1Name,
 				Labels: map[string]string{"environment": "dev", "test": "test"},
 			},
 		}
-		namespace2 := &v1.Namespace{
+		namespace2 := &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   namespace2Name,
 				Labels: map[string]string{"environment": "prod"},
 			},
 		}
-		namespace3 := &v1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace3Name}}
+		namespace3 := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace3Name}}
 
 		accessRules := []hmcmirantiscomv1alpha1.AccessRule{
 			{
@@ -160,7 +160,7 @@ var _ = Describe("Template Management Controller", func() {
 		BeforeEach(func() {
 			By("creating test namespaces")
 			var err error
-			for _, ns := range []*v1.Namespace{systemNamespace, namespace1, namespace2, namespace3} {
+			for _, ns := range []*corev1.Namespace{systemNamespace, namespace1, namespace2, namespace3} {
 				err = k8sClient.Get(ctx, types.NamespacedName{Name: ns.Name}, ns)
 				if err != nil && errors.IsNotFound(err) {
 					Expect(k8sClient.Create(ctx, ns)).To(Succeed())
@@ -191,7 +191,7 @@ var _ = Describe("Template Management Controller", func() {
 		})
 
 		AfterEach(func() {
-			for _, ns := range []*v1.Namespace{namespace1, namespace2, namespace3} {
+			for _, ns := range []*corev1.Namespace{namespace1, namespace2, namespace3} {
 				err := k8sClient.Get(ctx, types.NamespacedName{Name: ns.Name}, ns)
 				Expect(err).NotTo(HaveOccurred())
 				By("Cleanup the namespace")
@@ -270,22 +270,22 @@ var _ = Describe("Template Management Controller", func() {
 	})
 })
 
-func verifyTemplateCreated(ctx context.Context, namespace string, template crclient.Object) {
-	err := k8sClient.Get(ctx, types.NamespacedName{Namespace: namespace, Name: template.GetName()}, template)
+func verifyTemplateCreated(ctx context.Context, namespace string, tpl crclient.Object) {
+	err := k8sClient.Get(ctx, types.NamespacedName{Namespace: namespace, Name: tpl.GetName()}, tpl)
 	Expect(err).NotTo(HaveOccurred())
-	checkHMCManagedLabelExistence(template.GetLabels())
+	checkHMCManagedLabelExistence(tpl.GetLabels())
 }
 
-func verifyTemplateDeleted(ctx context.Context, namespace string, template crclient.Object) {
-	err := k8sClient.Get(ctx, types.NamespacedName{Namespace: namespace, Name: template.GetName()}, template)
+func verifyTemplateDeleted(ctx context.Context, namespace string, tpl crclient.Object) {
+	err := k8sClient.Get(ctx, types.NamespacedName{Namespace: namespace, Name: tpl.GetName()}, tpl)
 	Expect(err).To(HaveOccurred())
 }
 
-func verifyTemplateUnchanged(ctx context.Context, namespace string, oldTemplate, newTemplate crclient.Object) {
-	err := k8sClient.Get(ctx, types.NamespacedName{Namespace: namespace, Name: newTemplate.GetName()}, newTemplate)
+func verifyTemplateUnchanged(ctx context.Context, namespace string, oldTpl, newTpl crclient.Object) {
+	err := k8sClient.Get(ctx, types.NamespacedName{Namespace: namespace, Name: newTpl.GetName()}, newTpl)
 	Expect(err).NotTo(HaveOccurred())
-	Expect(oldTemplate).To(Equal(newTemplate))
-	Expect(newTemplate.GetLabels()).NotTo(HaveKeyWithValue(hmcmirantiscomv1alpha1.HMCManagedLabelKey, hmcmirantiscomv1alpha1.HMCManagedLabelValue))
+	Expect(oldTpl).To(Equal(newTpl))
+	Expect(newTpl.GetLabels()).NotTo(HaveKeyWithValue(hmcmirantiscomv1alpha1.HMCManagedLabelKey, hmcmirantiscomv1alpha1.HMCManagedLabelValue))
 }
 
 func checkHMCManagedLabelExistence(labels map[string]string) {

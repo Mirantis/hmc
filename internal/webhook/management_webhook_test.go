@@ -79,8 +79,8 @@ func TestManagementValidateDelete(t *testing.T) {
 }
 
 func getManagementObjWithCreateFlag(flag bool) (*v1alpha1.Management, error) {
-	hmcConfig := map[string]interface{}{
-		"controller": map[string]interface{}{
+	hmcConfig := map[string]any{
+		"controller": map[string]any{
 			"createManagement": flag,
 		},
 	}

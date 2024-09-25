@@ -17,7 +17,7 @@ package controller
 import (
 	"context"
 
-	v2 "github.com/fluxcd/helm-controller/api/v2"
+	helmcontrollerv2 "github.com/fluxcd/helm-controller/api/v2"
 	sourcev1 "github.com/fluxcd/source-controller/api/v1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -62,7 +62,7 @@ var _ = Describe("Template Controller", func() {
 
 		templateSpec := hmcmirantiscomv1alpha1.TemplateSpecCommon{
 			Helm: hmcmirantiscomv1alpha1.HelmSpec{
-				ChartRef: &v2.CrossNamespaceSourceReference{
+				ChartRef: &helmcontrollerv2.CrossNamespaceSourceReference{
 					Kind:      "HelmChart",
 					Name:      helmChartName,
 					Namespace: helmRepoNamespace,

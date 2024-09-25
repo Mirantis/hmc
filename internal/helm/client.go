@@ -47,7 +47,7 @@ func (c *MemoryRESTClientGetter) ToRESTMapper() (meta.RESTMapper, error) {
 	return c.RestMapper, nil
 }
 
-func (c *MemoryRESTClientGetter) ToRawKubeConfigLoader() clientcmd.ClientConfig {
+func (*MemoryRESTClientGetter) ToRawKubeConfigLoader() clientcmd.ClientConfig {
 	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
 	configOverrides := &clientcmd.ConfigOverrides{}
 	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, configOverrides)

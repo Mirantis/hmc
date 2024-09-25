@@ -145,8 +145,8 @@ func (p *Poller) ensureManagement(ctx context.Context) error {
 		}
 
 		// Initially set createManagement:false to automatically create Management object only once
-		chartutil.CoalesceTables(hmcConfig, map[string]interface{}{
-			"controller": map[string]interface{}{
+		chartutil.CoalesceTables(hmcConfig, map[string]any{
+			"controller": map[string]any{
 				"createManagement": false,
 			},
 		})
@@ -207,8 +207,7 @@ func (p *Poller) reconcileHMCTemplates(ctx context.Context) error {
 		l.Info(fmt.Sprintf("Successfully %s %s/%s HelmChart", operation, p.SystemNamespace, p.HMCTemplatesChartName))
 	}
 
-	err, _ = helm.ArtifactReady(helmChart)
-	if err != nil {
+	if _, err := helm.ArtifactReady(helmChart); err != nil {
 		return fmt.Errorf("HelmChart %s/%s Artifact is not ready: %w", p.SystemNamespace, p.HMCTemplatesChartName, err)
 	}
 

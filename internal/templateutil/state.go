@@ -19,7 +19,7 @@ import (
 	"errors"
 	"fmt"
 
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -178,7 +178,7 @@ func getTargetNamespaces(ctx context.Context, cl client.Client, targetNamespaces
 		}
 	}
 
-	namespaces := &v1.NamespaceList{}
+	namespaces := &corev1.NamespaceList{}
 	listOpts := &client.ListOptions{}
 	if selector.String() != "" {
 		listOpts = &client.ListOptions{LabelSelector: selector}

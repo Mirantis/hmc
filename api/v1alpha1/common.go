@@ -49,22 +49,14 @@ func SetupIndexers(ctx context.Context, mgr ctrl.Manager) error {
 	if err := SetupManagedClusterIndexer(ctx, mgr); err != nil {
 		return err
 	}
-	if err := SetupReleaseIndexer(ctx, mgr); err != nil {
-		return err
-	}
 
-	return nil
+	return SetupReleaseIndexer(ctx, mgr)
 }
 
 const TemplateKey = ".spec.template"
 
 func SetupManagedClusterIndexer(ctx context.Context, mgr ctrl.Manager) error {
-	if err := mgr.GetFieldIndexer().
-		IndexField(ctx, &ManagedCluster{}, TemplateKey, ExtractTemplateName); err != nil {
-		return err
-	}
-
-	return nil
+	return mgr.GetFieldIndexer().IndexField(ctx, &ManagedCluster{}, TemplateKey, ExtractTemplateName)
 }
 
 func ExtractTemplateName(rawObj client.Object) []string {
@@ -78,12 +70,7 @@ func ExtractTemplateName(rawObj client.Object) []string {
 const VersionKey = ".spec.version"
 
 func SetupReleaseIndexer(ctx context.Context, mgr ctrl.Manager) error {
-	if err := mgr.GetFieldIndexer().
-		IndexField(ctx, &Release{}, VersionKey, ExtractReleaseVersion); err != nil {
-		return err
-	}
-
-	return nil
+	return mgr.GetFieldIndexer().IndexField(ctx, &Release{}, VersionKey, ExtractReleaseVersion)
 }
 
 func ExtractReleaseVersion(rawObj client.Object) []string {

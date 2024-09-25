@@ -83,8 +83,8 @@ type ManagedClusterStatus struct {
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=hmc-deploy;deploy
 // +kubebuilder:printcolumn:name="ready",type="string",JSONPath=".status.conditions[?(@.type==\"Ready\")].status",description="Ready",priority=0
 // +kubebuilder:printcolumn:name="status",type="string",JSONPath=".status.conditions[?(@.type==\"Ready\")].message",description="Status",priority=0
@@ -99,7 +99,7 @@ type ManagedCluster struct {
 	Status ManagedClusterStatus `json:"status,omitempty"`
 }
 
-func (in *ManagedCluster) HelmValues() (values map[string]interface{}, err error) {
+func (in *ManagedCluster) HelmValues() (values map[string]any, err error) {
 	if in.Spec.Config != nil {
 		err = yaml.Unmarshal(in.Spec.Config.Raw, &values)
 	}
@@ -139,7 +139,7 @@ func (in *ManagedCluster) InitConditions() {
 	})
 }
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
 // ManagedClusterList contains a list of ManagedCluster
 type ManagedClusterList struct {

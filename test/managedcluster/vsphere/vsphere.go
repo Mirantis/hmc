@@ -49,7 +49,6 @@ func CreateSecret(kc *kubeclient.KubeClient, secretName string) error {
 		},
 		Type: corev1.SecretTypeOpaque,
 	}, metav1.CreateOptions{})
-
 	if err != nil {
 		return fmt.Errorf("failed to create vSphere credentials secret: %w", err)
 	}
@@ -60,7 +59,6 @@ func CreateSecret(kc *kubeclient.KubeClient, secretName string) error {
 func CreateClusterIdentity(kc *kubeclient.KubeClient, secretName string, identityName string) error {
 	ctx := context.Background()
 	client, err := dynamic.NewForConfig(kc.Config)
-
 	if err != nil {
 		return fmt.Errorf("failed to create dynamic client: %w", err)
 	}
@@ -72,17 +70,17 @@ func CreateClusterIdentity(kc *kubeclient.KubeClient, secretName string, identit
 	}
 
 	clusterIdentity := &unstructured.Unstructured{
-		Object: map[string]interface{}{
+		Object: map[string]any{
 			"apiVersion": "infrastructure.cluster.x-k8s.io/v1beta1",
 			"kind":       "VSphereClusterIdentity",
-			"metadata": map[string]interface{}{
+			"metadata": map[string]any{
 				"name": identityName,
 			},
-			"spec": map[string]interface{}{
+			"spec": map[string]any{
 				"secretName": secretName,
-				"allowedNamespaces": map[string]interface{}{
-					"selector": map[string]interface{}{
-						"matchLabels": map[string]interface{}{},
+				"allowedNamespaces": map[string]any{
+					"selector": map[string]any{
+						"matchLabels": map[string]any{},
 					},
 				},
 			},
@@ -91,8 +89,8 @@ func CreateClusterIdentity(kc *kubeclient.KubeClient, secretName string, identit
 
 	result, err := client.Resource(gvr).Create(ctx, clusterIdentity, metav1.CreateOptions{})
 	if err != nil {
-		fmt.Printf("%+v", result)
-		return fmt.Errorf("Failed to create vsphereclusteridentity: %w", err)
+		fmt.Printf("%+v", result) //nolint:revive // false-positive
+		return fmt.Errorf("failed to create vsphereclusteridentity: %w", err)
 	}
 
 	return nil

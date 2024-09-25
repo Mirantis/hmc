@@ -111,7 +111,7 @@ func GetUnstructured(templateName Template) *unstructured.Unstructured {
 	managedClusterConfigBytes, err := envsubst.Bytes(managedClusterTemplateBytes)
 	Expect(err).NotTo(HaveOccurred(), "failed to substitute environment variables")
 
-	var managedClusterConfig map[string]interface{}
+	var managedClusterConfig map[string]any
 
 	err = yaml.Unmarshal(managedClusterConfigBytes, &managedClusterConfig)
 	Expect(err).NotTo(HaveOccurred(), "failed to unmarshal deployment config")
