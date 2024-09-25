@@ -309,9 +309,13 @@ func (r *ManagementReconciler) enableAdditionalComponents(ctx context.Context, m
 
 	// Enable HMC capi operator only if it was not explicitly disabled in the config to
 	// support installation with existing cluster api operator
-	if v, ok := capiOperatorValues["enabled"].(bool); ok && v {
-		l.Info("Enabling cluster API operator")
-		capiOperatorValues["enabled"] = true
+	{
+		enabledV, enabledExists := capiOperatorValues["enabled"]
+		enabledValue, castedOk := enabledV.(bool)
+		if !enabledExists || !castedOk || enabledValue {
+			l.Info("Enabling cluster API operator")
+			capiOperatorValues["enabled"] = true
+		}
 	}
 	config["cluster-api-operator"] = capiOperatorValues
 
