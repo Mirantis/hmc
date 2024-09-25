@@ -7,10 +7,10 @@ metadata:
   finalizers:
   - hmc.mirantis.com/cleanup
 spec:
+  {{- with .Values.clusterIdentity }}
   identityRef:
-    kind: AzureClusterIdentity
-    name: {{ .Values.clusterIdentity.name }}
-    namespace: {{ .Values.clusterIdentity.namespace }}
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
   networkSpec:
     vnet:
       resourceGroup: {{ .Values.resourceGroup }}

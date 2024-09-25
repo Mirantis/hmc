@@ -9,10 +9,3 @@ spec:
       args:
       - --enable-cloud-provider
       - --kubelet-extra-args="--cloud-provider=external"
-      files:
-        - path: "/etc/kubernetes/azure.json"
-          permissions: "0644"
-          contentFrom:
-            secretRef:
-              key: worker-node-azure.json
-              name: {{ include "azuremachinetemplate.name" . }}-azure-json

@@ -3,10 +3,10 @@ kind: AzureCluster
 metadata:
   name: {{ include "cluster.name" . }}
 spec:
+  {{- with .Values.clusterIdentity }}
   identityRef:
-    kind: AzureClusterIdentity
-    name: {{ .Values.clusterIdentity.name }}
-    namespace: {{ .Values.clusterIdentity.namespace }}
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
   location: {{ .Values.location }}
   {{- if .Values.bastion.enabled }}
   {{- with .Values.bastion.bastionSpec }}

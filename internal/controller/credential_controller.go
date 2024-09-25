@@ -38,7 +38,6 @@ func (r *CredentialReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	cred := &hmc.Credential{}
 	if err := r.Client.Get(ctx, req.NamespacedName, cred); err != nil {
-		l.Error(err, "unable to fetch Credential")
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 

@@ -20,8 +20,6 @@ vsphere:
   datastore: ""
   resourcePool: ""
   folder: ""
-  username: ""
-  password: ""
 controlPlaneEndpointIP: ""
 
 # vSphere machines parameters

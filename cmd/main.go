@@ -29,6 +29,8 @@ import (
 	"k8s.io/client-go/dynamic"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
+	capz "sigs.k8s.io/cluster-api-provider-azure/api/v1beta1"
+	capv "sigs.k8s.io/cluster-api-provider-vsphere/apis/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -58,6 +60,8 @@ func init() {
 	utilruntime.Must(sourcev1.AddToScheme(scheme))
 	utilruntime.Must(hcv2.AddToScheme(scheme))
 	utilruntime.Must(sveltosv1beta1.AddToScheme(scheme))
+	utilruntime.Must(capz.AddToScheme(scheme))
+	utilruntime.Must(capv.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
@@ -215,9 +219,10 @@ func main() {
 		os.Exit(1)
 	}
 	if err = (&controller.ManagedClusterReconciler{
-		Client:        mgr.GetClient(),
-		Config:        mgr.GetConfig(),
-		DynamicClient: dc,
+		Client:          mgr.GetClient(),
+		Config:          mgr.GetConfig(),
+		DynamicClient:   dc,
+		SystemNamespace: currentNamespace,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ManagedCluster")
 		os.Exit(1)
