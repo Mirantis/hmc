@@ -34,7 +34,8 @@ type Tracker struct {
 	SystemNamespace string
 }
 
-const interval = 10 * time.Minute
+// Daily Heartbeat
+const interval = 1440 * time.Minute
 
 func (t *Tracker) Start(ctx context.Context) error {
 	timer := time.NewTimer(0)
