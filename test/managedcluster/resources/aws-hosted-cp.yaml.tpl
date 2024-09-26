@@ -5,6 +5,9 @@ metadata:
 spec:
   template: aws-hosted-cp
   config:
+    clusterIdentity:
+      name: aws-cluster-identity
+      namespace: ${NAMESPACE}
     vpcID: ${AWS_VPC_ID}
     region: ${AWS_REGION}
     subnets:

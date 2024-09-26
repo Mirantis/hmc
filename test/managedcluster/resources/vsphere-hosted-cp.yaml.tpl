@@ -1,7 +1,7 @@
 apiVersion: hmc.mirantis.com/v1alpha1
 kind: ManagedCluster
 metadata:
-  name: ${MANAGED_CLUSTER_NAME}
+  name: ${MANAGED_CLUSTER_NAME}-vsphere
 spec:
   template: vsphere-hosted-cp
   config:

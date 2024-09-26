@@ -17,64 +17,91 @@
 package aws
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
+	"io"
 	"os"
-	"os/exec"
 
-	corev1 "k8s.io/api/core/v1"
-
+	"github.com/a8m/envsubst"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
 	"k8s.io/apimachinery/pkg/types"
+	yamlutil "k8s.io/apimachinery/pkg/util/yaml"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/restmapper"
 
 	"github.com/Mirantis/hmc/test/kubeclient"
 	"github.com/Mirantis/hmc/test/managedcluster"
-	"github.com/Mirantis/hmc/test/utils"
 )
 
-// CreateCredentialSecret uses clusterawsadm to encode existing AWS
-// credentials and create a secret in the given namespace if one does not
-// already exist.
 func CreateCredentialSecret(ctx context.Context, kc *kubeclient.KubeClient) {
 	GinkgoHelper()
+	serializer := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
+	yamlFile, err := os.ReadFile("config/dev/aws-credentials.yaml")
+	Expect(err).NotTo(HaveOccurred())
 
-	_, err := kc.Client.CoreV1().Secrets(kc.Namespace).
-		Get(ctx, managedcluster.AWSCredentialsSecretName, metav1.GetOptions{})
-	if !apierrors.IsNotFound(err) {
-		Expect(err).NotTo(HaveOccurred(), "failed to get AWS credentials secret")
-		return
+	yamlFile, err = envsubst.Bytes(yamlFile)
+	Expect(err).NotTo(HaveOccurred())
+
+	c := discovery.NewDiscoveryClientForConfigOrDie(kc.Config)
+	groupResources, err := restmapper.GetAPIGroupResources(c)
+	Expect(err).NotTo(HaveOccurred())
+
+	yamlReader := yamlutil.NewYAMLReader(bufio.NewReader(bytes.NewReader(yamlFile)))
+	for {
+		yamlDoc, err := yamlReader.Read()
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			Expect(err).NotTo(HaveOccurred(), "failed to read yaml file")
+		}
+
+		credentialResource := &unstructured.Unstructured{}
+		_, _, err = serializer.Decode(yamlDoc, nil, credentialResource)
+		Expect(err).NotTo(HaveOccurred(), "failed to parse credential resource")
+
+		mapper := restmapper.NewDiscoveryRESTMapper(groupResources)
+		mapping, err := mapper.RESTMapping(credentialResource.GroupVersionKind().GroupKind())
+		Expect(err).NotTo(HaveOccurred(), "failed to get rest mapping")
+
+		dc := kc.GetDynamicClient(schema.GroupVersionResource{
+			Group:    credentialResource.GroupVersionKind().Group,
+			Version:  credentialResource.GroupVersionKind().Version,
+			Resource: mapping.Resource.Resource,
+		})
+
+		exists, err := dc.Get(ctx, credentialResource.GetName(), metav1.GetOptions{})
+		if !apierrors.IsNotFound(err) {
+			Expect(err).NotTo(HaveOccurred(), "failed to get azure credential secret")
+		}
+
+		if exists == nil {
+			if _, err := dc.Create(ctx, credentialResource, metav1.CreateOptions{}); err != nil {
+				Expect(err).NotTo(HaveOccurred(), "failed to create azure credential secret")
+			}
+		}
 	}
-
-	cmd := exec.Command("./bin/clusterawsadm", "bootstrap", "credentials", "encode-as-profile")
-	output, err := utils.Run(cmd)
-	Expect(err).NotTo(HaveOccurred(), "failed to encode AWS credentials with clusterawsadm")
-
-	_, err = kc.Client.CoreV1().Secrets(kc.Namespace).Create(ctx, &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: managedcluster.AWSCredentialsSecretName,
-		},
-		Data: map[string][]byte{
-			"AWS_B64ENCODED_CREDENTIALS": output,
-		},
-		Type: corev1.SecretTypeOpaque,
-	}, metav1.CreateOptions{})
-	Expect(err).NotTo(HaveOccurred(), "failed to create AWS credentials secret")
 }
 
 // PopulateHostedTemplateVars populates the environment variables required for
 // the AWS hosted CP template by querying the standalone CP cluster with the
 // given kubeclient.
-func PopulateHostedTemplateVars(ctx context.Context, kc *kubeclient.KubeClient) {
+func PopulateHostedTemplateVars(ctx context.Context, kc *kubeclient.KubeClient, clusterName string) {
 	GinkgoHelper()
 
 	c := getAWSClusterClient(kc)
-	awsCluster, err := c.Get(ctx, os.Getenv(managedcluster.EnvVarManagedClusterName), metav1.GetOptions{})
+	awsCluster, err := c.Get(ctx, clusterName, metav1.GetOptions{})
 	Expect(err).NotTo(HaveOccurred(), "failed to get AWS cluster")
 
 	vpcID, found, err := unstructured.NestedString(awsCluster.Object, "spec", "network", "vpc", "id")

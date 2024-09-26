@@ -243,7 +243,7 @@ func validateCCM(ctx context.Context, kc *kubeclient.KubeClient, clusterName str
 	}
 
 	for _, i := range service.Status.LoadBalancer.Ingress {
-		if i.Hostname != "" {
+		if i.Hostname != "" || i.IP != "" {
 			return nil
 		}
 	}

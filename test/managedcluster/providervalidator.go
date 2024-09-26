@@ -64,6 +64,8 @@ func NewProviderValidator(template Template, clusterName string, action Validati
 		case TemplateAWSStandaloneCP, TemplateAWSHostedCP:
 			resourcesToValidate["ccm"] = validateCCM
 			resourceOrder = append(resourceOrder, "ccm")
+		case TemplateAzureStandaloneCP, TemplateVSphereHostedCP:
+			delete(resourcesToValidate, "csi-driver")
 		}
 	} else {
 		resourcesToValidate = map[string]resourceValidationFunc{
