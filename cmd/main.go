@@ -35,12 +35,13 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
+	sveltosv1beta1 "github.com/projectsveltos/addon-controller/api/v1beta1"
+
 	hmcmirantiscomv1alpha1 "github.com/Mirantis/hmc/api/v1alpha1"
 	"github.com/Mirantis/hmc/internal/controller"
 	"github.com/Mirantis/hmc/internal/telemetry"
 	"github.com/Mirantis/hmc/internal/utils"
 	hmcwebhook "github.com/Mirantis/hmc/internal/webhook"
-	sveltosv1beta1 "github.com/projectsveltos/addon-controller/api/v1beta1"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -252,7 +253,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = mgr.Add(&controller.Poller{
+	if err = (&controller.ReleaseReconciler{
 		Client:                   mgr.GetClient(),
 		Config:                   mgr.GetConfig(),
 		CreateManagement:         createManagement,
@@ -260,8 +261,8 @@ func main() {
 		CreateTemplates:          createTemplates,
 		HMCTemplatesChartName:    hmcTemplatesChartName,
 		SystemNamespace:          currentNamespace,
-	}); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ReleaseController")
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Release")
 		os.Exit(1)
 	}
 
