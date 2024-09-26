@@ -55,7 +55,7 @@ func ReconcileProfile(ctx context.Context,
 	name string,
 	matchLabels map[string]string,
 	opts ReconcileProfileOpts,
-) (*sveltosv1beta1.Profile, controllerutil.OperationResult, error) {
+) (*sveltosv1beta1.Profile, error) {
 	cp := &sveltosv1beta1.Profile{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
@@ -120,14 +120,14 @@ func ReconcileProfile(ctx context.Context,
 		return nil
 	})
 	if err != nil {
-		return nil, operation, err
+		return nil, err
 	}
 
 	if operation == controllerutil.OperationResultCreated || operation == controllerutil.OperationResultUpdated {
-		l.Info(fmt.Sprintf("Successfully %s Profile (%s)", string(operation), cp.Name))
+		l.Info(fmt.Sprintf("Successfully %s Profile (%s/%s)", string(operation), cp.Namespace, cp.Name))
 	}
 
-	return cp, operation, nil
+	return cp, nil
 }
 
 func DeleteProfile(ctx context.Context, cl client.Client, namespace string, name string) error {

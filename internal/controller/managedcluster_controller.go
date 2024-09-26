@@ -387,7 +387,7 @@ func (r *ManagedClusterReconciler) updateServices(ctx context.Context, mc *hmc.M
 		tmpl := &hmc.ServiceTemplate{}
 		tmplRef := types.NamespacedName{Name: svc.Template, Namespace: mc.Namespace}
 		if err := r.Get(ctx, tmplRef, tmpl); err != nil {
-			return ctrl.Result{}, fmt.Errorf("failed to get Template (%s)", tmplRef.String())
+			return ctrl.Result{}, fmt.Errorf("failed to get Template (%s): %w", tmplRef.String(), err)
 		}
 
 		source, err := r.getServiceTemplateSource(ctx, tmpl)
@@ -416,7 +416,7 @@ func (r *ManagedClusterReconciler) updateServices(ctx context.Context, mc *hmc.M
 		})
 	}
 
-	if _, _, err := sveltos.ReconcileProfile(ctx, r.Client, l, mc.Namespace, mc.Name,
+	if _, err := sveltos.ReconcileProfile(ctx, r.Client, l, mc.Namespace, mc.Name,
 		map[string]string{
 			hmc.FluxHelmChartNamespaceKey: mc.Namespace,
 			hmc.FluxHelmChartNameKey:      mc.Name,
@@ -453,9 +453,9 @@ func (r *ManagedClusterReconciler) getServiceTemplateSource(ctx context.Context,
 	hc := &sourcev1.HelmChart{}
 	if err := r.Get(ctx, types.NamespacedName{
 		Namespace: tmpl.Status.ChartRef.Namespace,
-		Name:      tmpl.Spec.Helm.ChartName,
+		Name:      tmpl.Status.ChartRef.Name,
 	}, hc); err != nil {
-		return nil, fmt.Errorf("failed to get HelmChart (%s)", tmplRef.String())
+		return nil, fmt.Errorf("failed to get HelmChart (%s): %w", tmplRef.String(), err)
 	}
 
 	repo := &sourcev1.HelmRepository{}
@@ -465,7 +465,7 @@ func (r *ManagedClusterReconciler) getServiceTemplateSource(ctx context.Context,
 		Namespace: hc.Namespace,
 		Name:      hc.Spec.SourceRef.Name,
 	}, repo); err != nil {
-		return nil, fmt.Errorf("failed to get HelmRepository (%s)", tmplRef.String())
+		return nil, fmt.Errorf("failed to get HelmRepository (%s): %w", tmplRef.String(), err)
 	}
 
 	return repo, nil
