@@ -1,4 +1,14 @@
-# Mirantis Hybrid Cloud Platform
+# Mirantis Hybrid Multi Cluster
+
+## Overview
+
+Mirantis Hybribd Multi Cluster is part of Mirantis Project 2A which is focused on delivering a 
+open source approach to providing an enterprise grade multi-cluster kubernetes managment solution
+based entirely on standard open source tooling.
+
+## Documentation
+
+Detailed documentation is available in [Project 2A Docs](https://mirantis.github.io/project-2a-docs/)
 
 ## Installation
 
