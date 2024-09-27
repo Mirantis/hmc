@@ -38,17 +38,20 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
 	"github.com/Mirantis/hmc/internal/helm"
 	"github.com/Mirantis/hmc/internal/telemetry"
+	"github.com/Mirantis/hmc/internal/utils"
 )
 
 const (
@@ -396,12 +399,21 @@ func (r *ManagedClusterReconciler) updateServices(ctx context.Context, mc *hmc.M
 		}
 
 		opts = append(opts, sveltos.HelmChartOpts{
-			RepositoryURL:  source.Spec.URL,
+			RepositoryURL: source.Spec.URL,
+			// We don't have repository name so chart name becomes repository name.
 			RepositoryName: tmpl.Spec.Helm.ChartName,
-			ChartName:      tmpl.Spec.Helm.ChartName,
-			ChartVersion:   tmpl.Spec.Helm.ChartVersion,
-			ReleaseName:    svc.Name,
-			Values:         svc.Values,
+			ChartName: func() string {
+				if source.Spec.Type == utils.RegistryTypeOCI {
+					return tmpl.Spec.Helm.ChartName
+				}
+				// Sveltos accepts ChartName in <repository>/<chart> format for non-OCI.
+				// We don't have a repository name, so we can use <chart>/<chart> instead.
+				// See: https://projectsveltos.github.io/sveltos/addons/helm_charts/.
+				return fmt.Sprintf("%s/%s", tmpl.Spec.Helm.ChartName, tmpl.Spec.Helm.ChartName)
+			}(),
+			ChartVersion: tmpl.Spec.Helm.ChartVersion,
+			ReleaseName:  svc.Name,
+			Values:       svc.Values,
 			ReleaseNamespace: func() string {
 				if svc.Namespace != "" {
 					return svc.Namespace

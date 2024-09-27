@@ -182,4 +182,3 @@ rules:
   verbs:
   - get
   - list
-

@@ -461,7 +461,7 @@ func (in *ManagedClusterServiceSpec) DeepCopyInto(out *ManagedClusterServiceSpec
 	*out = *in
 	if in.Values != nil {
 		in, out := &in.Values, &out.Values
-		*out = new(v1.JSON)
+		*out = new(apiextensionsv1.JSON)
 		(*in).DeepCopyInto(*out)
 	}
 }
