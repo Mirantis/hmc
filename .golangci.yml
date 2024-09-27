@@ -68,7 +68,7 @@ linters-settings:
       - pattern: "interface{}"
         replacement: "any"
   stylecheck:
-    checks: ["all", "-ST1000", "-ST1001"]
+    checks: ["all", "-ST1000", "-ST1001", "-ST1021"]
   revive:
     enable-all-rules: true
     rules:

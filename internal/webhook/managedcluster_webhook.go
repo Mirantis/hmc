@@ -29,7 +29,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/Mirantis/hmc/api/v1alpha1"
-	"github.com/Mirantis/hmc/internal/utils"
 )
 
 type ManagedClusterValidator struct {
@@ -170,11 +169,17 @@ func (v *ManagedClusterValidator) verifyProviders(ctx context.Context, template 
 	return nil
 }
 
-func getMissingProviders(exposedProviders []string, requiredProviders []string) []string {
-	exposedBootstrapProviders := utils.SliceToMapKeys[[]string, map[string]struct{}](exposedProviders)
-	diff, isSubset := utils.DiffSliceSubset(requiredProviders, exposedBootstrapProviders)
-	if !isSubset {
-		return diff
+func getMissingProviders(exposedProviders, requiredProviders []v1alpha1.ProviderTuple) (missing []string) {
+	exposedSet := make(map[string]struct{}, len(requiredProviders))
+	for _, v := range exposedProviders {
+		exposedSet[v.Name] = struct{}{}
 	}
-	return []string{}
+
+	for _, v := range requiredProviders {
+		if _, ok := exposedSet[v.Name]; !ok {
+			missing = append(missing, v.Name)
+		}
+	}
+
+	return missing
 }

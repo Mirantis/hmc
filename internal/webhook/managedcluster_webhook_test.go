@@ -36,10 +36,10 @@ var (
 	testNamespace    = "test"
 
 	mgmt = management.NewManagement(
-		management.WithAvailableProviders(v1alpha1.Providers{
-			InfrastructureProviders: []string{"aws"},
-			BootstrapProviders:      []string{"k0s"},
-			ControlPlaneProviders:   []string{"k0s"},
+		management.WithAvailableProviders(v1alpha1.ProvidersTupled{
+			InfrastructureProviders: []v1alpha1.ProviderTuple{{Name: "aws"}},
+			BootstrapProviders:      []v1alpha1.ProviderTuple{{Name: "k0s"}},
+			ControlPlaneProviders:   []v1alpha1.ProviderTuple{{Name: "k0s"}},
 		}),
 	)
 
@@ -87,17 +87,17 @@ var (
 			managedCluster: managedcluster.NewManagedCluster(managedcluster.WithTemplate(testTemplateName)),
 			existingObjects: []runtime.Object{
 				management.NewManagement(
-					management.WithAvailableProviders(v1alpha1.Providers{
-						InfrastructureProviders: []string{"aws"},
-						BootstrapProviders:      []string{"k0s"},
+					management.WithAvailableProviders(v1alpha1.ProvidersTupled{
+						InfrastructureProviders: []v1alpha1.ProviderTuple{{Name: "aws"}},
+						BootstrapProviders:      []v1alpha1.ProviderTuple{{Name: "k0s"}},
 					}),
 				),
 				template.NewClusterTemplate(
 					template.WithName(testTemplateName),
-					template.WithProvidersStatus(v1alpha1.Providers{
-						InfrastructureProviders: []string{"azure"},
-						BootstrapProviders:      []string{"k0s"},
-						ControlPlaneProviders:   []string{"k0s"},
+					template.WithProvidersStatus(v1alpha1.ProvidersTupled{
+						InfrastructureProviders: []v1alpha1.ProviderTuple{{Name: "azure"}},
+						BootstrapProviders:      []v1alpha1.ProviderTuple{{Name: "k0s"}},
+						ControlPlaneProviders:   []v1alpha1.ProviderTuple{{Name: "k0s"}},
 					}),
 					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
 				),
@@ -111,10 +111,10 @@ var (
 				mgmt,
 				template.NewClusterTemplate(
 					template.WithName(testTemplateName),
-					template.WithProvidersStatus(v1alpha1.Providers{
-						InfrastructureProviders: []string{"aws"},
-						BootstrapProviders:      []string{"k0s"},
-						ControlPlaneProviders:   []string{"k0s"},
+					template.WithProvidersStatus(v1alpha1.ProvidersTupled{
+						InfrastructureProviders: []v1alpha1.ProviderTuple{{Name: "aws"}},
+						BootstrapProviders:      []v1alpha1.ProviderTuple{{Name: "k0s"}},
+						ControlPlaneProviders:   []v1alpha1.ProviderTuple{{Name: "k0s"}},
 					}),
 					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
 				),
