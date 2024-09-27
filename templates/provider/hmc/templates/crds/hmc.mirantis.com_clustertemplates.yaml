@@ -57,8 +57,8 @@ spec:
             description: ClusterTemplateSpec defines the desired state of ClusterTemplate
             properties:
               helm:
-                description: Helm holds a reference to a Helm chart representing the
-                  HMC template
+                description: HelmSpec references a Helm chart representing the HMC
+                  template
                 properties:
                   chartName:
                     description: ChartName is a name of a Helm chart representing
@@ -103,28 +103,62 @@ spec:
                 - message: either chartName or chartRef must be set
                   rule: (has(self.chartName) && !has(self.chartRef)) || (!has(self.chartName)
                     && has(self.chartRef))
+              k8sVersion:
+                description: Compatible K8S version of the cluster set in the SemVer
+                  format.
+                type: string
               providers:
-                description: |-
-                  Providers represent required/exposed CAPI providers depending on the template type.
-                  Should be set if not present in the Helm chart metadata.
+                description: Providers represent required CAPI providers with constrainted
+                  compatibility versions set. Should be set if not present in the
+                  Helm chart metadata.
                 properties:
                   bootstrap:
-                    description: BootstrapProviders is the list of CAPI bootstrap
-                      providers
+                    description: List of CAPI bootstrap providers with either an exact
+                      or constrainted version in the SemVer format.
                     items:
-                      type: string
+                      description: Represents name of the provider with either an
+                        exact or constrainted version in the SemVer format.
+                      properties:
+                        name:
+                          description: Name of the provider.
+                          type: string
+                        versionOrContraint:
+                          description: Compatibility restriction in the SemVer format
+                            (exact or constrainted version)
+                          type: string
+                      type: object
                     type: array
                   controlPlane:
-                    description: ControlPlaneProviders is the list of CAPI control
-                      plane providers
+                    description: List of CAPI control plane providers with either
+                      an exact or constrainted version in the SemVer format.
                     items:
-                      type: string
+                      description: Represents name of the provider with either an
+                        exact or constrainted version in the SemVer format.
+                      properties:
+                        name:
+                          description: Name of the provider.
+                          type: string
+                        versionOrContraint:
+                          description: Compatibility restriction in the SemVer format
+                            (exact or constrainted version)
+                          type: string
+                      type: object
                     type: array
                   infrastructure:
-                    description: InfrastructureProviders is the list of CAPI infrastructure
-                      providers
+                    description: List of CAPI infrastructure providers with either
+                      an exact or constrainted version in the SemVer format.
                     items:
-                      type: string
+                      description: Represents name of the provider with either an
+                        exact or constrainted version in the SemVer format.
+                      properties:
+                        name:
+                          description: Name of the provider.
+                          type: string
+                        versionOrContraint:
+                          description: Compatibility restriction in the SemVer format
+                            (exact or constrainted version)
+                          type: string
+                      type: object
                     type: array
                 type: object
             required:
@@ -174,31 +208,65 @@ spec:
               description:
                 description: Description contains information about the template.
                 type: string
+              k8sVersion:
+                description: Compatible K8S version of the cluster set in the SemVer
+                  format.
+                type: string
               observedGeneration:
                 description: ObservedGeneration is the last observed generation.
                 format: int64
                 type: integer
               providers:
-                description: Providers represent required/exposed CAPI providers depending
-                  on the template type.
+                description: Providers represent exposed CAPI providers with constrainted
+                  compatibility versions set.
                 properties:
                   bootstrap:
-                    description: BootstrapProviders is the list of CAPI bootstrap
-                      providers
+                    description: List of CAPI bootstrap providers with either an exact
+                      or constrainted version in the SemVer format.
                     items:
-                      type: string
+                      description: Represents name of the provider with either an
+                        exact or constrainted version in the SemVer format.
+                      properties:
+                        name:
+                          description: Name of the provider.
+                          type: string
+                        versionOrContraint:
+                          description: Compatibility restriction in the SemVer format
+                            (exact or constrainted version)
+                          type: string
+                      type: object
                     type: array
                   controlPlane:
-                    description: ControlPlaneProviders is the list of CAPI control
-                      plane providers
+                    description: List of CAPI control plane providers with either
+                      an exact or constrainted version in the SemVer format.
                     items:
-                      type: string
+                      description: Represents name of the provider with either an
+                        exact or constrainted version in the SemVer format.
+                      properties:
+                        name:
+                          description: Name of the provider.
+                          type: string
+                        versionOrContraint:
+                          description: Compatibility restriction in the SemVer format
+                            (exact or constrainted version)
+                          type: string
+                      type: object
                     type: array
                   infrastructure:
-                    description: InfrastructureProviders is the list of CAPI infrastructure
-                      providers
+                    description: List of CAPI infrastructure providers with either
+                      an exact or constrainted version in the SemVer format.
                     items:
-                      type: string
+                      description: Represents name of the provider with either an
+                        exact or constrainted version in the SemVer format.
+                      properties:
+                        name:
+                          description: Name of the provider.
+                          type: string
+                        versionOrContraint:
+                          description: Compatibility restriction in the SemVer format
+                            (exact or constrainted version)
+                          type: string
+                      type: object
                     type: array
                 type: object
               valid:

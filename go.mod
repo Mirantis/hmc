@@ -3,6 +3,7 @@ module github.com/Mirantis/hmc
 go 1.22.7
 
 require (
+	github.com/Masterminds/semver/v3 v3.3.0
 	github.com/a8m/envsubst v1.4.2
 	github.com/cert-manager/cert-manager v1.15.3
 	github.com/fluxcd/helm-controller/api v1.1.0
@@ -37,7 +38,6 @@ require (
 	github.com/BurntSushi/toml v1.4.0 // indirect
 	github.com/MakeNowJust/heredoc v1.0.0 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
-	github.com/Masterminds/semver/v3 v3.3.0 // indirect
 	github.com/Masterminds/sprig/v3 v3.3.0 // indirect
 	github.com/Masterminds/squirrel v1.5.4 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect

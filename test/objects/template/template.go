@@ -15,8 +15,11 @@
 package template
 
 import (
+	"fmt"
+
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/Mirantis/hmc/api/v1alpha1"
 )
@@ -26,108 +29,136 @@ const (
 	DefaultNamespace = "default"
 )
 
-type Template struct {
-	metav1.ObjectMeta `json:",inline"`
-	Spec              v1alpha1.TemplateSpecCommon   `json:"spec"`
-	Status            v1alpha1.TemplateStatusCommon `json:"status"`
-}
+type (
+	Opt func(template Template)
 
-type Opt func(template *Template)
+	Template interface {
+		client.Object
+		GetHelmSpec() *v1alpha1.HelmSpec
+		GetCommonStatus() *v1alpha1.TemplateStatusCommon
+	}
+)
 
 func NewClusterTemplate(opts ...Opt) *v1alpha1.ClusterTemplate {
-	templateState := NewTemplate(opts...)
-	return &v1alpha1.ClusterTemplate{
-		ObjectMeta: templateState.ObjectMeta,
-		Spec:       v1alpha1.ClusterTemplateSpec{TemplateSpecCommon: templateState.Spec},
-		Status:     v1alpha1.ClusterTemplateStatus{TemplateStatusCommon: templateState.Status},
-	}
-}
-
-func NewServiceTemplate(opts ...Opt) *v1alpha1.ServiceTemplate {
-	templateState := NewTemplate(opts...)
-	return &v1alpha1.ServiceTemplate{
-		ObjectMeta: templateState.ObjectMeta,
-		Spec:       v1alpha1.ServiceTemplateSpec{TemplateSpecCommon: templateState.Spec},
-		Status:     v1alpha1.ServiceTemplateStatus{TemplateStatusCommon: templateState.Status},
-	}
-}
-
-func NewProviderTemplate(opts ...Opt) *v1alpha1.ProviderTemplate {
-	templateState := NewTemplate(opts...)
-	return &v1alpha1.ProviderTemplate{
-		ObjectMeta: templateState.ObjectMeta,
-		Spec:       v1alpha1.ProviderTemplateSpec{TemplateSpecCommon: templateState.Spec},
-		Status:     v1alpha1.ProviderTemplateStatus{TemplateStatusCommon: templateState.Status},
-	}
-}
-
-func NewTemplate(opts ...Opt) *Template {
-	template := &Template{
+	t := &v1alpha1.ClusterTemplate{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      DefaultName,
 			Namespace: DefaultNamespace,
 		},
 	}
-	for _, opt := range opts {
-		opt(template)
+
+	for _, o := range opts {
+		o(t)
 	}
-	return template
+
+	return t
+}
+
+func NewServiceTemplate(opts ...Opt) *v1alpha1.ServiceTemplate {
+	t := &v1alpha1.ServiceTemplate{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      DefaultName,
+			Namespace: DefaultNamespace,
+		},
+	}
+
+	for _, o := range opts {
+		o(t)
+	}
+
+	return t
+}
+
+func NewProviderTemplate(opts ...Opt) *v1alpha1.ProviderTemplate {
+	t := &v1alpha1.ProviderTemplate{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      DefaultName,
+			Namespace: DefaultNamespace,
+		},
+	}
+
+	for _, o := range opts {
+		o(t)
+	}
+
+	return t
 }
 
 func WithName(name string) Opt {
-	return func(t *Template) {
-		t.Name = name
+	return func(t Template) {
+		t.SetName(name)
 	}
 }
 
 func WithNamespace(namespace string) Opt {
-	return func(t *Template) {
-		t.Namespace = namespace
+	return func(t Template) {
+		t.SetNamespace(namespace)
 	}
 }
 
 func WithLabels(labels map[string]string) Opt {
-	return func(t *Template) {
-		t.Labels = labels
+	return func(t Template) {
+		t.SetLabels(labels)
 	}
 }
 
 func ManagedByHMC() Opt {
-	return func(t *Template) {
-		if t.Labels == nil {
-			t.Labels = make(map[string]string)
+	return func(template Template) {
+		labels := template.GetLabels()
+		if labels == nil {
+			labels = make(map[string]string)
 		}
-		t.Labels[v1alpha1.HMCManagedLabelKey] = v1alpha1.HMCManagedLabelValue
+		labels[v1alpha1.HMCManagedLabelKey] = v1alpha1.HMCManagedLabelValue
+
+		template.SetLabels(labels)
 	}
 }
 
 func WithHelmSpec(helmSpec v1alpha1.HelmSpec) Opt {
-	return func(t *Template) {
-		t.Spec.Helm = helmSpec
-	}
-}
-
-func WithProviders(providers v1alpha1.Providers) Opt {
-	return func(t *Template) {
-		t.Spec.Providers = providers
+	return func(t Template) {
+		spec := t.GetHelmSpec()
+		spec.ChartName = helmSpec.ChartName
+		spec.ChartRef = helmSpec.ChartRef
+		spec.ChartVersion = helmSpec.ChartVersion
 	}
 }
 
 func WithValidationStatus(validationStatus v1alpha1.TemplateValidationStatus) Opt {
-	return func(t *Template) {
-		t.Status.TemplateValidationStatus = validationStatus
+	return func(t Template) {
+		status := t.GetCommonStatus()
+		status.TemplateValidationStatus = validationStatus
 	}
 }
 
-func WithProvidersStatus(providers v1alpha1.Providers) Opt {
-	return func(t *Template) {
-		t.Status.Providers = providers
+func WithProvidersStatus[T v1alpha1.Providers | v1alpha1.ProvidersTupled](providers T) Opt {
+	return func(t Template) {
+		switch v := t.(type) {
+		case *v1alpha1.ClusterTemplate:
+			var ok bool
+			v.Status.Providers, ok = any(providers).(v1alpha1.ProvidersTupled)
+			if !ok {
+				panic(fmt.Sprintf("unexpected type %T", providers))
+			}
+		case *v1alpha1.ProviderTemplate:
+			var ok bool
+			v.Status.Providers, ok = any(providers).(v1alpha1.ProvidersTupled)
+			if !ok {
+				panic(fmt.Sprintf("unexpected type %T", providers))
+			}
+		case *v1alpha1.ServiceTemplate:
+			var ok bool
+			v.Status.Providers, ok = any(providers).(v1alpha1.Providers)
+			if !ok {
+				panic(fmt.Sprintf("unexpected type %T", providers))
+			}
+		}
 	}
 }
 
 func WithConfigStatus(config string) Opt {
-	return func(t *Template) {
-		t.Status.Config = &apiextensionsv1.JSON{
+	return func(t Template) {
+		status := t.GetCommonStatus()
+		status.Config = &apiextensionsv1.JSON{
 			Raw: []byte(config),
 		}
 	}

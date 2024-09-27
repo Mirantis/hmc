@@ -107,9 +107,9 @@ func (r *ReleaseReconciler) ensureManagement(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if err := mgmtObj.Spec.SetProvidersDefaults(); err != nil {
-		return err
-	}
+
+	mgmtObj.Spec.Providers = hmc.GetDefaultProviders()
+
 	getter := helm.NewMemoryRESTClientGetter(r.Config, r.RESTMapper())
 	actionConfig := new(action.Configuration)
 	err = actionConfig.Init(getter, r.SystemNamespace, "secret", l.Info)

@@ -105,7 +105,7 @@ func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Manag
 	}
 
 	var errs error
-	detectedProviders := hmc.Providers{}
+	detectedProviders := hmc.ProvidersTupled{}
 	detectedComponents := make(map[string]hmc.ComponentStatus)
 
 	err := r.enableAdditionalComponents(ctx, management)
@@ -312,6 +312,7 @@ func wrappedComponents(mgmt *hmc.Management, release *hmc.Release) ([]component,
 	}
 	hmcComp.Config = hmcConfig
 	components = append(components, hmcComp)
+
 	capiComp := component{
 		Component: mgmt.Spec.Core.CAPI, helmReleaseName: hmc.CoreCAPIName,
 		dependsOn: []meta.NamespacedObjectReference{{Name: hmc.CoreHMCName}},
@@ -335,6 +336,7 @@ func wrappedComponents(mgmt *hmc.Management, release *hmc.Release) ([]component,
 			c.targetNamespace = hmc.ProviderSveltosTargetNamespace
 			c.createNamespace = hmc.ProviderSveltosCreateNamespace
 		}
+
 		components = append(components, c)
 	}
 
@@ -409,7 +411,7 @@ func (r *ManagementReconciler) enableAdditionalComponents(ctx context.Context, m
 
 func updateComponentsStatus(
 	components map[string]hmc.ComponentStatus,
-	providers *hmc.Providers,
+	providers *hmc.ProvidersTupled,
 	componentName string,
 	templateStatus hmc.ProviderTemplateStatus,
 	err string,
@@ -419,11 +421,13 @@ func updateComponentsStatus(
 		Success: err == "",
 	}
 
-	if err == "" {
-		providers.InfrastructureProviders = append(providers.InfrastructureProviders, templateStatus.Providers.InfrastructureProviders...)
-		providers.BootstrapProviders = append(providers.BootstrapProviders, templateStatus.Providers.BootstrapProviders...)
-		providers.ControlPlaneProviders = append(providers.ControlPlaneProviders, templateStatus.Providers.ControlPlaneProviders...)
+	if err != "" {
+		return
 	}
+
+	providers.InfrastructureProviders = append(providers.InfrastructureProviders, templateStatus.Providers.InfrastructureProviders...)
+	providers.BootstrapProviders = append(providers.BootstrapProviders, templateStatus.Providers.BootstrapProviders...)
+	providers.ControlPlaneProviders = append(providers.ControlPlaneProviders, templateStatus.Providers.ControlPlaneProviders...)
 }
 
 // SetupWithManager sets up the controller with the Manager.

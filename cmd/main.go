@@ -184,7 +184,6 @@ func main() {
 
 	templateReconciler := controller.TemplateReconciler{
 		Client:                    mgr.GetClient(),
-		Scheme:                    mgr.GetScheme(),
 		SystemNamespace:           currentNamespace,
 		DefaultRegistryURL:        defaultRegistryURL,
 		DefaultRepoType:           determinedRepositoryType,
