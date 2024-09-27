@@ -37,7 +37,10 @@ type ManagedClusterValidator struct {
 	client.Client
 }
 
-var errInvalidManagedCluster = errors.New("the ManagedCluster is invalid")
+var (
+	errInvalidManagedCluster = errors.New("the ManagedCluster is invalid")
+	errNotReadyComponents    = errors.New("one or more required components are not ready")
+)
 
 func (v *ManagedClusterValidator) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	v.Client = mgr.GetClient()
@@ -63,9 +66,16 @@ func (v *ManagedClusterValidator) ValidateCreate(ctx context.Context, obj runtim
 	if err != nil {
 		return nil, fmt.Errorf("%s: %v", errInvalidManagedCluster, err)
 	}
-	err = v.isTemplateValid(ctx, template)
+	err = v.isTemplateValid(template)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %v", errInvalidManagedCluster, err)
+	}
+	warnings, err := v.checkComponentsHealth(ctx, template)
+	if err != nil {
+		return nil, fmt.Errorf("failed to verify components health: %v", err)
+	}
+	if len(warnings) > 0 {
+		return warnings, errNotReadyComponents
 	}
 	return nil, nil
 }
@@ -80,7 +90,7 @@ func (v *ManagedClusterValidator) ValidateUpdate(ctx context.Context, _ runtime.
 	if err != nil {
 		return nil, fmt.Errorf("%s: %v", errInvalidManagedCluster, err)
 	}
-	err = v.isTemplateValid(ctx, template)
+	err = v.isTemplateValid(template)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %v", errInvalidManagedCluster, err)
 	}
@@ -107,7 +117,7 @@ func (v *ManagedClusterValidator) Default(ctx context.Context, obj runtime.Objec
 	if err != nil {
 		return fmt.Errorf("could not get template for the managedcluster: %s", err)
 	}
-	err = v.isTemplateValid(ctx, template)
+	err = v.isTemplateValid(template)
 	if err != nil {
 		return fmt.Errorf("template is invalid: %s", err)
 	}
@@ -128,47 +138,73 @@ func (v *ManagedClusterValidator) getManagedClusterTemplate(ctx context.Context,
 	return template, nil
 }
 
-func (v *ManagedClusterValidator) isTemplateValid(ctx context.Context, template *v1alpha1.ClusterTemplate) error {
+func (v *ManagedClusterValidator) getProviderTemplate(ctx context.Context, templateName string) (*v1alpha1.ProviderTemplate, error) {
+	template := &v1alpha1.ProviderTemplate{}
+	templateRef := types.NamespacedName{Name: templateName}
+	if err := v.Get(ctx, templateRef, template); err != nil {
+		return nil, err
+	}
+	return template, nil
+}
+
+func (*ManagedClusterValidator) isTemplateValid(template *v1alpha1.ClusterTemplate) error {
 	if !template.Status.Valid {
 		return fmt.Errorf("the template is not valid: %s", template.Status.ValidationError)
-	}
-	err := v.verifyProviders(ctx, template)
-	if err != nil {
-		return fmt.Errorf("providers verification failed: %v", err)
 	}
 	return nil
 }
 
-func (v *ManagedClusterValidator) verifyProviders(ctx context.Context, template *v1alpha1.ClusterTemplate) error {
-	requiredProviders := template.Status.Providers
+func (v *ManagedClusterValidator) checkComponentsHealth(ctx context.Context, clusterTemplate *v1alpha1.ClusterTemplate) (admission.Warnings, error) {
+	requiredProviders := clusterTemplate.Status.Providers
 	management := &v1alpha1.Management{}
 	managementRef := types.NamespacedName{Name: v1alpha1.ManagementName}
 	if err := v.Get(ctx, managementRef, management); err != nil {
-		return err
+		return nil, err
 	}
 
 	exposedProviders := management.Status.AvailableProviders
-	missingProviders := make(map[string][]string)
-	missingProviders["bootstrap"] = getMissingProviders(exposedProviders.BootstrapProviders, requiredProviders.BootstrapProviders)
-	missingProviders["control plane"] = getMissingProviders(exposedProviders.ControlPlaneProviders, requiredProviders.ControlPlaneProviders)
-	missingProviders["infrastructure"] = getMissingProviders(exposedProviders.InfrastructureProviders, requiredProviders.InfrastructureProviders)
+	missingComponents := make(map[string][]string)
 
-	var errs []error
-	for providerType, missing := range missingProviders {
-		if len(missing) > 0 {
-			sort.Slice(missing, func(i, j int) bool {
-				return missing[i] < missing[j]
-			})
-			errs = append(errs, fmt.Errorf("one or more required %s providers are not deployed yet: %v", providerType, missing))
+	var failedComponents []string
+	componentsErrors := make(map[string]string)
+	for component, status := range management.Status.Components {
+		if !status.Success {
+			template, err := v.getProviderTemplate(ctx, component)
+			if err != nil {
+				return nil, err
+			}
+			if management.Spec.GetCoreTemplates()[component] {
+				missingComponents["core components"] = append(missingComponents["core components"], component)
+				failedComponents = append(failedComponents, component)
+				componentsErrors[component] = status.Error
+			}
+			if oneOrMoreProviderFailed(template.Status.Providers.BootstrapProviders, requiredProviders.BootstrapProviders) ||
+				oneOrMoreProviderFailed(template.Status.Providers.ControlPlaneProviders, requiredProviders.ControlPlaneProviders) ||
+				oneOrMoreProviderFailed(template.Status.Providers.InfrastructureProviders, requiredProviders.InfrastructureProviders) {
+				failedComponents = append(failedComponents, component)
+				componentsErrors[component] = status.Error
+			}
 		}
 	}
-	if len(errs) > 0 {
-		sort.Slice(errs, func(i, j int) bool {
-			return errs[i].Error() < errs[j].Error()
-		})
-		return errors.Join(errs...)
+
+	missingComponents["bootstrap providers"] = getMissingProviders(exposedProviders.BootstrapProviders, requiredProviders.BootstrapProviders)
+	missingComponents["control plane providers"] = getMissingProviders(exposedProviders.ControlPlaneProviders, requiredProviders.ControlPlaneProviders)
+	missingComponents["infrastructure providers"] = getMissingProviders(exposedProviders.InfrastructureProviders, requiredProviders.InfrastructureProviders)
+
+	warnings := make([]string, 0, len(missingComponents)+len(failedComponents))
+	for componentType, missing := range missingComponents {
+		if len(missing) > 0 {
+			sort.Strings(missing)
+			warnings = append(warnings, fmt.Sprintf("not ready %s: %v", componentType, missing))
+		}
 	}
-	return nil
+	sort.Strings(warnings)
+
+	sort.Strings(failedComponents)
+	for _, failedComponent := range failedComponents {
+		warnings = append(warnings, fmt.Sprintf("%s installation failed: %s", failedComponent, componentsErrors[failedComponent]))
+	}
+	return warnings, nil
 }
 
 func getMissingProviders(exposedProviders []string, requiredProviders []string) []string {
@@ -178,4 +214,10 @@ func getMissingProviders(exposedProviders []string, requiredProviders []string) 
 		return diff
 	}
 	return []string{}
+}
+
+func oneOrMoreProviderFailed(failedProviders []string, requiredProviders []string) bool {
+	failedProvidersMap := utils.SliceToMapKeys[[]string, map[string]struct{}](failedProviders)
+	_, isSubset := utils.DiffSliceSubset[[]string, map[string]struct{}](requiredProviders, failedProvidersMap)
+	return isSubset
 }
