@@ -187,7 +187,6 @@ func main() {
 
 	templateReconciler := controller.TemplateReconciler{
 		Client:          mgr.GetClient(),
-		Scheme:          mgr.GetScheme(),
 		SystemNamespace: currentNamespace,
 		DefaultRegistryConfig: helm.DefaultRegistryConfig{
 			URL:               defaultRegistryURL,

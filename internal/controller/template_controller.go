@@ -18,7 +18,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	helmcontrollerv2 "github.com/fluxcd/helm-controller/api/v2"
 	sourcev1 "github.com/fluxcd/source-controller/api/v1"
@@ -26,7 +25,6 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -38,10 +36,9 @@ const (
 	defaultRepoName = "hmc-templates"
 )
 
-// TemplateReconciler reconciles a Template object
+// TemplateReconciler reconciles a *Template object
 type TemplateReconciler struct {
 	client.Client
-	Scheme          *runtime.Scheme
 	SystemNamespace string
 
 	DefaultRegistryConfig helm.DefaultRegistryConfig
@@ -65,26 +62,26 @@ func (r *ClusterTemplateReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	l := ctrl.LoggerFrom(ctx)
 	l.Info("Reconciling ClusterTemplate")
 
-	clusterTemplate := &hmc.ClusterTemplate{}
-	err := r.Get(ctx, req.NamespacedName, clusterTemplate)
-	if err != nil {
+	clusterTemplate := new(hmc.ClusterTemplate)
+	if err := r.Get(ctx, req.NamespacedName, clusterTemplate); err != nil {
 		if apierrors.IsNotFound(err) {
 			l.Info("ClusterTemplate not found, ignoring since object must be deleted")
 			return ctrl.Result{}, nil
 		}
+
 		l.Error(err, "Failed to get ClusterTemplate")
 		return ctrl.Result{}, err
 	}
+
 	return r.ReconcileTemplate(ctx, clusterTemplate)
 }
 
 func (r *ServiceTemplateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	l := ctrl.LoggerFrom(ctx).WithValues("ServiceTemplateReconciler", req.NamespacedName)
+	l := ctrl.LoggerFrom(ctx)
 	l.Info("Reconciling ServiceTemplate")
 
-	serviceTemplate := &hmc.ServiceTemplate{}
-	err := r.Get(ctx, req.NamespacedName, serviceTemplate)
-	if err != nil {
+	serviceTemplate := new(hmc.ServiceTemplate)
+	if err := r.Get(ctx, req.NamespacedName, serviceTemplate); err != nil {
 		if apierrors.IsNotFound(err) {
 			l.Info("ServiceTemplate not found, ignoring since object must be deleted")
 			return ctrl.Result{}, nil
@@ -96,44 +93,45 @@ func (r *ServiceTemplateReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 }
 
 func (r *ProviderTemplateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	l := ctrl.LoggerFrom(ctx).WithValues("ProviderTemplateReconciler", req.NamespacedName)
+	l := ctrl.LoggerFrom(ctx)
 	l.Info("Reconciling ProviderTemplate")
 
-	providerTemplate := &hmc.ProviderTemplate{}
-	err := r.Get(ctx, req.NamespacedName, providerTemplate)
-	if err != nil {
+	providerTemplate := new(hmc.ProviderTemplate)
+	if err := r.Get(ctx, req.NamespacedName, providerTemplate); err != nil {
 		if apierrors.IsNotFound(err) {
 			l.Info("ProviderTemplate not found, ignoring since object must be deleted")
 			return ctrl.Result{}, nil
 		}
+
 		l.Error(err, "Failed to get ProviderTemplate")
 		return ctrl.Result{}, err
 	}
+
 	return r.ReconcileTemplate(ctx, providerTemplate)
 }
 
-// Template is the interface defining a list of methods to interact with templates
-type Template interface {
+type templateCommon interface {
 	client.Object
-	GetSpec() *hmc.TemplateSpecCommon
-	GetStatus() *hmc.TemplateStatusCommon
+	GetHelmSpec() *hmc.HelmSpec
+	GetCommonStatus() *hmc.TemplateStatusCommon
+	FillStatusWithProviders(map[string]string) error
 }
 
-func (r *TemplateReconciler) ReconcileTemplate(ctx context.Context, template Template) (ctrl.Result, error) {
+func (r *TemplateReconciler) ReconcileTemplate(ctx context.Context, template templateCommon) (ctrl.Result, error) {
 	l := ctrl.LoggerFrom(ctx)
 
-	spec := template.GetSpec()
-	status := template.GetStatus()
+	helmSpec := template.GetHelmSpec()
+	status := template.GetCommonStatus()
 	var err error
 	var hcChart *sourcev1.HelmChart
-	if spec.Helm.ChartRef != nil {
-		hcChart, err = r.getHelmChartFromChartRef(ctx, spec.Helm.ChartRef)
+	if helmSpec.ChartRef != nil {
+		hcChart, err = r.getHelmChartFromChartRef(ctx, helmSpec.ChartRef)
 		if err != nil {
-			l.Error(err, "failed to get artifact from chartRef", "kind", spec.Helm.ChartRef.Kind, "namespace", spec.Helm.ChartRef.Namespace, "name", spec.Helm.ChartRef.Name)
+			l.Error(err, "failed to get artifact from chartRef", "chartRef", helmSpec.String())
 			return ctrl.Result{}, err
 		}
 	} else {
-		if spec.Helm.ChartName == "" {
+		if helmSpec.ChartName == "" {
 			err := fmt.Errorf("neither chartName nor chartRef is set")
 			l.Error(err, "invalid helm chart reference")
 			return ctrl.Result{}, err
@@ -189,19 +187,23 @@ func (r *TemplateReconciler) ReconcileTemplate(ctx context.Context, template Tem
 		_ = r.updateStatus(ctx, template, err.Error())
 		return ctrl.Result{}, err
 	}
+
 	l.Info("Validating Helm chart")
-	if err := parseChartMetadata(template, helmChart); err != nil {
-		l.Error(err, "Failed to parse Helm chart metadata")
-		_ = r.updateStatus(ctx, template, err.Error())
-		return ctrl.Result{}, err
-	}
 	if err = helmChart.Validate(); err != nil {
 		l.Error(err, "Helm chart validation failed")
 		_ = r.updateStatus(ctx, template, err.Error())
 		return ctrl.Result{}, err
 	}
 
+	l.Info("Parsing Helm chart metadata")
+	if err := fillStatusWithProviders(template, helmChart); err != nil {
+		l.Error(err, "Failed to fill status with providers")
+		_ = r.updateStatus(ctx, template, err.Error())
+		return ctrl.Result{}, err
+	}
+
 	status.Description = helmChart.Metadata.Description
+
 	rawValues, err := json.Marshal(helmChart.Values)
 	if err != nil {
 		l.Error(err, "Failed to parse Helm chart values")
@@ -210,52 +212,26 @@ func (r *TemplateReconciler) ReconcileTemplate(ctx context.Context, template Tem
 		return ctrl.Result{}, err
 	}
 	status.Config = &apiextensionsv1.JSON{Raw: rawValues}
+
 	l.Info("Chart validation completed successfully")
 
 	return ctrl.Result{}, r.updateStatus(ctx, template, "")
 }
 
-func templateManagedByHMC(template Template) bool {
+func templateManagedByHMC(template templateCommon) bool {
 	return template.GetLabels()[hmc.HMCManagedLabelKey] == hmc.HMCManagedLabelValue
 }
 
-func parseChartMetadata(template Template, inChart *chart.Chart) error {
-	if inChart.Metadata == nil {
+func fillStatusWithProviders(template templateCommon, helmChart *chart.Chart) error {
+	if helmChart.Metadata == nil {
 		return fmt.Errorf("chart metadata is empty")
 	}
-	spec := template.GetSpec()
-	status := template.GetStatus()
 
-	// the value in spec has higher priority
-	if len(spec.Providers.InfrastructureProviders) > 0 {
-		status.Providers.InfrastructureProviders = spec.Providers.InfrastructureProviders
-	} else {
-		infraProviders := inChart.Metadata.Annotations[hmc.ChartAnnotationInfraProviders]
-		if infraProviders != "" {
-			status.Providers.InfrastructureProviders = strings.Split(infraProviders, ",")
-		}
-	}
-	if len(spec.Providers.BootstrapProviders) > 0 {
-		status.Providers.BootstrapProviders = spec.Providers.BootstrapProviders
-	} else {
-		bootstrapProviders := inChart.Metadata.Annotations[hmc.ChartAnnotationBootstrapProviders]
-		if bootstrapProviders != "" {
-			status.Providers.BootstrapProviders = strings.Split(bootstrapProviders, ",")
-		}
-	}
-	if len(spec.Providers.ControlPlaneProviders) > 0 {
-		status.Providers.ControlPlaneProviders = spec.Providers.ControlPlaneProviders
-	} else {
-		cpProviders := inChart.Metadata.Annotations[hmc.ChartAnnotationControlPlaneProviders]
-		if cpProviders != "" {
-			status.Providers.ControlPlaneProviders = strings.Split(cpProviders, ",")
-		}
-	}
-	return nil
+	return template.FillStatusWithProviders(helmChart.Metadata.Annotations)
 }
 
-func (r *TemplateReconciler) updateStatus(ctx context.Context, template Template, validationError string) error {
-	status := template.GetStatus()
+func (r *TemplateReconciler) updateStatus(ctx context.Context, template templateCommon, validationError string) error {
+	status := template.GetCommonStatus()
 	status.ObservedGeneration = template.GetGeneration()
 	status.ValidationError = validationError
 	status.Valid = validationError == ""
@@ -266,8 +242,7 @@ func (r *TemplateReconciler) updateStatus(ctx context.Context, template Template
 	return nil
 }
 
-func (r *TemplateReconciler) reconcileHelmChart(ctx context.Context, template Template) (*sourcev1.HelmChart, error) {
-	spec := template.GetSpec()
+func (r *TemplateReconciler) reconcileHelmChart(ctx context.Context, template templateCommon) (*sourcev1.HelmChart, error) {
 	namespace := template.GetNamespace()
 	if namespace == "" {
 		namespace = r.SystemNamespace
@@ -279,10 +254,12 @@ func (r *TemplateReconciler) reconcileHelmChart(ctx context.Context, template Te
 		},
 	}
 
+	helmSpec := template.GetHelmSpec()
 	_, err := ctrl.CreateOrUpdate(ctx, r.Client, helmChart, func() error {
 		if helmChart.Labels == nil {
 			helmChart.Labels = make(map[string]string)
 		}
+
 		helmChart.Labels[hmc.HMCManagedLabelKey] = hmc.HMCManagedLabelValue
 		helmChart.OwnerReferences = []metav1.OwnerReference{
 			{
@@ -292,21 +269,21 @@ func (r *TemplateReconciler) reconcileHelmChart(ctx context.Context, template Te
 				UID:        template.GetUID(),
 			},
 		}
+
 		helmChart.Spec = sourcev1.HelmChartSpec{
-			Chart:   spec.Helm.ChartName,
-			Version: spec.Helm.ChartVersion,
+			Chart:   helmSpec.ChartName,
+			Version: helmSpec.ChartVersion,
 			SourceRef: sourcev1.LocalHelmChartSourceReference{
 				Kind: sourcev1.HelmRepositoryKind,
 				Name: defaultRepoName,
 			},
 			Interval: metav1.Duration{Duration: helm.DefaultReconcileInterval},
 		}
+
 		return nil
 	})
-	if err != nil {
-		return nil, err
-	}
-	return helmChart, nil
+
+	return helmChart, err
 }
 
 func (r *TemplateReconciler) getHelmChartFromChartRef(ctx context.Context, chartRef *helmcontrollerv2.CrossNamespaceSourceReference) (*sourcev1.HelmChart, error) {

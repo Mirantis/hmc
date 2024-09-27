@@ -142,8 +142,8 @@ func getNamespacedName(namespace, name string) string {
 	return fmt.Sprintf("%s/%s", namespace, name)
 }
 
-func (r *TemplateManagementReconciler) getCurrentTemplateChains(ctx context.Context, templateChainKind string) (map[string]TemplateChain, []TemplateChain, error) {
-	var templateChains []TemplateChain
+func (r *TemplateManagementReconciler) getCurrentTemplateChains(ctx context.Context, templateChainKind string) (map[string]templateChain, []templateChain, error) {
+	var templateChains []templateChain
 	switch templateChainKind {
 	case hmc.ClusterTemplateChainKind:
 		ctChainList := &hmc.ClusterTemplateChainList{}
@@ -167,17 +167,21 @@ func (r *TemplateManagementReconciler) getCurrentTemplateChains(ctx context.Cont
 		return nil, nil, fmt.Errorf("invalid TemplateChain kind. Supported kinds are %s and %s", hmc.ClusterTemplateChainKind, hmc.ServiceTemplateChainKind)
 	}
 
-	systemTemplateChains := make(map[string]TemplateChain)
-	var managedTemplateChains []TemplateChain
+	var (
+		systemTemplateChains  = make(map[string]templateChain, len(templateChains))
+		managedTemplateChains = make([]templateChain, 0, len(templateChains))
+	)
 	for _, chain := range templateChains {
 		if chain.GetNamespace() == r.SystemNamespace {
 			systemTemplateChains[chain.GetName()] = chain
 			continue
 		}
+
 		if chain.GetLabels()[hmc.HMCManagedLabelKey] == hmc.HMCManagedLabelValue {
 			managedTemplateChains = append(managedTemplateChains, chain)
 		}
 	}
+
 	return systemTemplateChains, managedTemplateChains, nil
 }
 
@@ -199,23 +203,27 @@ func getTargetNamespaces(ctx context.Context, cl client.Client, targetNamespaces
 		}
 	}
 
-	namespaces := &corev1.NamespaceList{}
-	listOpts := &client.ListOptions{}
-	if selector.String() != "" {
-		listOpts = &client.ListOptions{LabelSelector: selector}
+	var (
+		namespaces = new(corev1.NamespaceList)
+		listOpts   = new(client.ListOptions)
+	)
+	if !selector.Empty() {
+		listOpts.LabelSelector = selector
 	}
-	err = cl.List(ctx, namespaces, listOpts)
-	if err != nil {
-		return []string{}, err
+
+	if err := cl.List(ctx, namespaces, listOpts); err != nil {
+		return nil, err
 	}
+
 	result := make([]string, len(namespaces.Items))
 	for i, ns := range namespaces.Items {
 		result[i] = ns.Name
 	}
+
 	return result, nil
 }
 
-func (r *TemplateManagementReconciler) createTemplateChain(ctx context.Context, source TemplateChain, targetNamespace string) error {
+func (r *TemplateManagementReconciler) createTemplateChain(ctx context.Context, source templateChain, targetNamespace string) error {
 	l := ctrl.LoggerFrom(ctx)
 
 	meta := metav1.ObjectMeta{
@@ -225,7 +233,7 @@ func (r *TemplateManagementReconciler) createTemplateChain(ctx context.Context, 
 			hmc.HMCManagedLabelKey: hmc.HMCManagedLabelValue,
 		},
 	}
-	var target TemplateChain
+	var target templateChain
 	switch source.Kind() {
 	case hmc.ClusterTemplateChainKind:
 		target = &hmc.ClusterTemplateChain{ObjectMeta: meta, Spec: *source.GetSpec()}
@@ -244,7 +252,7 @@ func (r *TemplateManagementReconciler) createTemplateChain(ctx context.Context, 
 	return nil
 }
 
-func (r *TemplateManagementReconciler) deleteTemplateChain(ctx context.Context, chain TemplateChain) error {
+func (r *TemplateManagementReconciler) deleteTemplateChain(ctx context.Context, chain templateChain) error {
 	l := ctrl.LoggerFrom(ctx)
 
 	err := r.Delete(ctx, chain)

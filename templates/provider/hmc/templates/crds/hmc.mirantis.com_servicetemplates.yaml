@@ -57,8 +57,8 @@ spec:
             description: ServiceTemplateSpec defines the desired state of ServiceTemplate
             properties:
               helm:
-                description: Helm holds a reference to a Helm chart representing the
-                  HMC template
+                description: HelmSpec references a Helm chart representing the HMC
+                  template
                 properties:
                   chartName:
                     description: ChartName is a name of a Helm chart representing
@@ -103,10 +103,13 @@ spec:
                 - message: either chartName or chartRef must be set
                   rule: (has(self.chartName) && !has(self.chartRef)) || (!has(self.chartName)
                     && has(self.chartRef))
+              k8sConstraint:
+                description: Constraint describing compatible K8S versions of the
+                  cluster set in the SemVer format.
+                type: string
               providers:
-                description: |-
-                  Providers represent required/exposed CAPI providers depending on the template type.
-                  Should be set if not present in the Helm chart metadata.
+                description: Represents required CAPI providers. Should be set if
+                  not present in the Helm chart metadata.
                 properties:
                   bootstrap:
                     description: BootstrapProviders is the list of CAPI bootstrap
@@ -174,13 +177,16 @@ spec:
               description:
                 description: Description contains information about the template.
                 type: string
+              k8sConstraint:
+                description: Constraint describing compatible K8S versions of the
+                  cluster set in the SemVer format.
+                type: string
               observedGeneration:
                 description: ObservedGeneration is the last observed generation.
                 format: int64
                 type: integer
               providers:
-                description: Providers represent required/exposed CAPI providers depending
-                  on the template type.
+                description: Represents exposed CAPI providers.
                 properties:
                   bootstrap:
                     description: BootstrapProviders is the list of CAPI bootstrap

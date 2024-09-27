@@ -73,13 +73,11 @@ var _ = Describe("ManagedCluster Controller", func() {
 						Namespace: managedClusterNamespace,
 					},
 					Spec: hmc.ClusterTemplateSpec{
-						TemplateSpecCommon: hmc.TemplateSpecCommon{
-							Helm: hmc.HelmSpec{
-								ChartRef: &hcv2.CrossNamespaceSourceReference{
-									Kind:      "HelmChart",
-									Name:      "ref-test",
-									Namespace: "default",
-								},
+						Helm: hmc.HelmSpec{
+							ChartRef: &hcv2.CrossNamespaceSourceReference{
+								Kind:      "HelmChart",
+								Name:      "ref-test",
+								Namespace: "default",
 							},
 						},
 					},
@@ -154,8 +152,6 @@ var _ = Describe("ManagedCluster Controller", func() {
 				NamespacedName: typeNamespacedName,
 			})
 			Expect(err).NotTo(HaveOccurred())
-			// TODO(user): Add more specific assertions depending on your controller's reconciliation logic.
-			// Example: If you expect a certain status condition after reconciliation, verify it here.
 		})
 	})
 })

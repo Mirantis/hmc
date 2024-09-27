@@ -188,6 +188,11 @@ spec:
                   - type
                   type: object
                 type: array
+              k8sVersion:
+                description: |-
+                  Currently compatible K8S version of the cluster. Being set only if
+                  the corresponding ClusterTemplate provided it in the spec.
+                type: string
               observedGeneration:
                 description: ObservedGeneration is the last observed generation.
                 format: int64

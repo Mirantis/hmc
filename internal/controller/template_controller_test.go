@@ -52,7 +52,7 @@ var _ = Describe("Template Controller", func() {
 
 		typeNamespacedName := types.NamespacedName{
 			Name:      resourceName,
-			Namespace: "default", // TODO(user):Modify as needed
+			Namespace: "default",
 		}
 		clusterTemplate := &hmcmirantiscomv1alpha1.ClusterTemplate{}
 		serviceTemplate := &hmcmirantiscomv1alpha1.ServiceTemplate{}
@@ -60,13 +60,11 @@ var _ = Describe("Template Controller", func() {
 		helmRepo := &sourcev1.HelmRepository{}
 		helmChart := &sourcev1.HelmChart{}
 
-		templateSpec := hmcmirantiscomv1alpha1.TemplateSpecCommon{
-			Helm: hmcmirantiscomv1alpha1.HelmSpec{
-				ChartRef: &helmcontrollerv2.CrossNamespaceSourceReference{
-					Kind:      "HelmChart",
-					Name:      helmChartName,
-					Namespace: helmRepoNamespace,
-				},
+		helmSpec := hmcmirantiscomv1alpha1.HelmSpec{
+			ChartRef: &helmcontrollerv2.CrossNamespaceSourceReference{
+				Kind:      "HelmChart",
+				Name:      helmChartName,
+				Namespace: helmRepoNamespace,
 			},
 		}
 
@@ -120,7 +118,7 @@ var _ = Describe("Template Controller", func() {
 						Name:      resourceName,
 						Namespace: "default",
 					},
-					Spec: hmcmirantiscomv1alpha1.ClusterTemplateSpec{TemplateSpecCommon: templateSpec},
+					Spec: hmcmirantiscomv1alpha1.ClusterTemplateSpec{Helm: helmSpec},
 				}
 				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
 			}
@@ -132,7 +130,7 @@ var _ = Describe("Template Controller", func() {
 						Name:      resourceName,
 						Namespace: "default",
 					},
-					Spec: hmcmirantiscomv1alpha1.ServiceTemplateSpec{TemplateSpecCommon: templateSpec},
+					Spec: hmcmirantiscomv1alpha1.ServiceTemplateSpec{Helm: helmSpec},
 				}
 				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
 			}
@@ -144,14 +142,13 @@ var _ = Describe("Template Controller", func() {
 						Name:      resourceName,
 						Namespace: "default",
 					},
-					Spec: hmcmirantiscomv1alpha1.ProviderTemplateSpec{TemplateSpecCommon: templateSpec},
+					Spec: hmcmirantiscomv1alpha1.ProviderTemplateSpec{Helm: helmSpec},
 				}
 				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
 			}
 		})
 
 		AfterEach(func() {
-			// TODO(user): Cleanup logic after each test, like removing the resource instance.
 			clusterTemplateResource := &hmcmirantiscomv1alpha1.ClusterTemplate{}
 			err := k8sClient.Get(ctx, typeNamespacedName, clusterTemplateResource)
 			Expect(err).NotTo(HaveOccurred())
@@ -176,7 +173,6 @@ var _ = Describe("Template Controller", func() {
 		It("should successfully reconcile the resource", func() {
 			templateReconciler := TemplateReconciler{
 				Client:                k8sClient,
-				Scheme:                k8sClient.Scheme(),
 				downloadHelmChartFunc: fakeDownloadHelmChartFunc,
 			}
 			By("Reconciling the ClusterTemplate resource")
@@ -193,8 +189,6 @@ var _ = Describe("Template Controller", func() {
 			providerTemplateReconciler := &ProviderTemplateReconciler{TemplateReconciler: templateReconciler}
 			_, err = providerTemplateReconciler.Reconcile(ctx, reconcile.Request{NamespacedName: typeNamespacedName})
 			Expect(err).NotTo(HaveOccurred())
-			// TODO(user): Add more specific assertions depending on your controller's reconciliation logic.
-			// Example: If you expect a certain status condition after reconciliation, verify it here.
 		})
 	})
 })

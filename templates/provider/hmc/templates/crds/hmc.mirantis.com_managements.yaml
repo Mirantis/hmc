@@ -112,26 +112,57 @@ spec:
             description: ManagementStatus defines the observed state of Management
             properties:
               availableProviders:
-                description: AvailableProviders holds all CAPI providers available
-                  on the Management cluster.
+                description: |-
+                  AvailableProviders holds all CAPI providers available along with
+                  their exact compatibility versions if specified in ProviderTemplates on the Management cluster.
                 properties:
                   bootstrap:
-                    description: BootstrapProviders is the list of CAPI bootstrap
-                      providers
+                    description: List of CAPI bootstrap providers with either an exact
+                      or constrainted version in the SemVer format.
                     items:
-                      type: string
+                      description: Represents name of the provider with either an
+                        exact or constrainted version in the SemVer format.
+                      properties:
+                        name:
+                          description: Name of the provider.
+                          type: string
+                        versionOrContraint:
+                          description: Compatibility restriction in the SemVer format
+                            (exact or constrainted version)
+                          type: string
+                      type: object
                     type: array
                   controlPlane:
-                    description: ControlPlaneProviders is the list of CAPI control
-                      plane providers
+                    description: List of CAPI control plane providers with either
+                      an exact or constrainted version in the SemVer format.
                     items:
-                      type: string
+                      description: Represents name of the provider with either an
+                        exact or constrainted version in the SemVer format.
+                      properties:
+                        name:
+                          description: Name of the provider.
+                          type: string
+                        versionOrContraint:
+                          description: Compatibility restriction in the SemVer format
+                            (exact or constrainted version)
+                          type: string
+                      type: object
                     type: array
                   infrastructure:
-                    description: InfrastructureProviders is the list of CAPI infrastructure
-                      providers
+                    description: List of CAPI infrastructure providers with either
+                      an exact or constrainted version in the SemVer format.
                     items:
-                      type: string
+                      description: Represents name of the provider with either an
+                        exact or constrainted version in the SemVer format.
+                      properties:
+                        name:
+                          description: Name of the provider.
+                          type: string
+                        versionOrContraint:
+                          description: Compatibility restriction in the SemVer format
+                            (exact or constrainted version)
+                          type: string
+                      type: object
                     type: array
                 type: object
               components:
