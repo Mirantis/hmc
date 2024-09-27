@@ -18,10 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sort"
-	"strings"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -30,7 +27,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/Mirantis/hmc/api/v1alpha1"
-	"github.com/Mirantis/hmc/internal/templateutil"
 )
 
 var errTemplateManagementDeletionForbidden = errors.New("TemplateManagement deletion is forbidden")
@@ -69,60 +65,8 @@ func (v *TemplateManagementValidator) ValidateCreate(ctx context.Context, _ runt
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type.
-func (v *TemplateManagementValidator) ValidateUpdate(ctx context.Context, _ runtime.Object, newObj runtime.Object) (admission.Warnings, error) {
-	newTm, ok := newObj.(*v1alpha1.TemplateManagement)
-	if !ok {
-		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected TemplateManagement but got a %T", newObj))
-	}
-	currentState, err := templateutil.GetCurrentTemplatesState(ctx, v.Client, v.SystemNamespace)
-	if err != nil {
-		return nil, fmt.Errorf("could not get current templates state: %v", err)
-	}
-
-	expectedState, err := templateutil.ParseAccessRules(ctx, v.Client, v.SystemNamespace, newTm.Spec.AccessRules, currentState)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse access rules for TemplateManagement: %v", err)
-	}
-
-	warnings := admission.Warnings{}
-	for templateName, namespaces := range expectedState.ClusterTemplatesState {
-		for namespace, keep := range namespaces {
-			if !keep {
-				managedClusters, err := getManagedClustersForTemplate(ctx, v.Client, namespace, templateName)
-				if err != nil {
-					return nil, err
-				}
-
-				if len(managedClusters) > 0 {
-					errMsg := fmt.Sprintf("ClusterTemplate \"%s/%s\" can't be removed: found ManagedClusters that reference it: ", namespace, templateName)
-					sort.Slice(managedClusters, func(i, j int) bool {
-						return managedClusters[i].Name < managedClusters[j].Name
-					})
-					for _, cluster := range managedClusters {
-						errMsg += fmt.Sprintf("\"%s/%s\", ", cluster.Namespace, cluster.Name)
-					}
-					warnings = append(warnings, strings.TrimRight(errMsg, ", "))
-				}
-			}
-		}
-	}
-	if len(warnings) > 0 {
-		sort.Strings(warnings)
-		return warnings, fmt.Errorf("can not apply new access rules")
-	}
+func (*TemplateManagementValidator) ValidateUpdate(_ context.Context, _ runtime.Object, _ runtime.Object) (admission.Warnings, error) {
 	return nil, nil
-}
-
-func getManagedClustersForTemplate(ctx context.Context, cl client.Client, namespace, templateName string) ([]v1alpha1.ManagedCluster, error) {
-	managedClusters := &v1alpha1.ManagedClusterList{}
-	err := cl.List(ctx, managedClusters,
-		client.InNamespace(namespace),
-		client.MatchingFields{v1alpha1.TemplateKey: templateName},
-	)
-	if err != nil {
-		return nil, err
-	}
-	return managedClusters.Items, nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type.

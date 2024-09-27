@@ -16,6 +16,7 @@ package controller
 
 import (
 	"context"
+	"fmt"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -263,35 +264,39 @@ var _ = Describe("Template Chain Controller", func() {
 					* test/st1 - should be deleted
 					* test/st2 - should be unchanged (unmanaged by HMC)
 			*/
-			verifyTemplateCreated(ctx, namespace.Name, ctTemplates["test"])
-			verifyTemplateCreated(ctx, namespace.Name, ctTemplates["ct0"])
-			verifyTemplateDeleted(ctx, namespace.Name, ctTemplates["ct1"])
-			verifyTemplateUnchanged(ctx, namespace.Name, ctUnmanagedBefore, ctTemplates["ct2"])
 
-			verifyTemplateCreated(ctx, namespace.Name, stTemplates["test"])
-			verifyTemplateCreated(ctx, namespace.Name, stTemplates["st0"])
-			verifyTemplateDeleted(ctx, namespace.Name, stTemplates["st1"])
-			verifyTemplateUnchanged(ctx, namespace.Name, stUnmanagedBefore, stTemplates["st2"])
+			verifyObjectCreated(ctx, namespace.Name, ctTemplates["test"])
+			verifyObjectCreated(ctx, namespace.Name, ctTemplates["ct0"])
+			verifyObjectDeleted(ctx, namespace.Name, ctTemplates["ct1"])
+			verifyObjectUnchanged(ctx, namespace.Name, ctUnmanagedBefore, ctTemplates["ct2"])
+
+			verifyObjectCreated(ctx, namespace.Name, stTemplates["test"])
+			verifyObjectCreated(ctx, namespace.Name, stTemplates["st0"])
+			verifyObjectDeleted(ctx, namespace.Name, stTemplates["st1"])
+			verifyObjectUnchanged(ctx, namespace.Name, stUnmanagedBefore, stTemplates["st2"])
 		})
 	})
 })
 
-func verifyTemplateCreated(ctx context.Context, namespace string, tpl crclient.Object) {
-	err := k8sClient.Get(ctx, types.NamespacedName{Namespace: namespace, Name: tpl.GetName()}, tpl)
+func verifyObjectCreated(ctx context.Context, namespace string, obj crclient.Object) {
+	By(fmt.Sprintf("Verifying existence of %s/%s", namespace, obj.GetName()))
+	err := k8sClient.Get(ctx, types.NamespacedName{Namespace: namespace, Name: obj.GetName()}, obj)
 	Expect(err).NotTo(HaveOccurred())
-	checkHMCManagedLabelExistence(tpl.GetLabels())
+	checkHMCManagedLabelExistence(obj.GetLabels())
 }
 
-func verifyTemplateDeleted(ctx context.Context, namespace string, tpl crclient.Object) {
-	err := k8sClient.Get(ctx, types.NamespacedName{Namespace: namespace, Name: tpl.GetName()}, tpl)
+func verifyObjectDeleted(ctx context.Context, namespace string, obj crclient.Object) {
+	By(fmt.Sprintf("Verifying %s/%s is deleted", namespace, obj.GetName()))
+	err := k8sClient.Get(ctx, types.NamespacedName{Namespace: namespace, Name: obj.GetName()}, obj)
 	Expect(err).To(HaveOccurred())
 }
 
-func verifyTemplateUnchanged(ctx context.Context, namespace string, oldTpl, newTpl crclient.Object) {
-	err := k8sClient.Get(ctx, types.NamespacedName{Namespace: namespace, Name: newTpl.GetName()}, newTpl)
+func verifyObjectUnchanged(ctx context.Context, namespace string, oldObj, newObj crclient.Object) {
+	By(fmt.Sprintf("Verifying %s/%s is unchanged", namespace, newObj.GetName()))
+	err := k8sClient.Get(ctx, types.NamespacedName{Namespace: namespace, Name: newObj.GetName()}, newObj)
 	Expect(err).NotTo(HaveOccurred())
-	Expect(oldTpl).To(Equal(newTpl))
-	Expect(newTpl.GetLabels()).NotTo(HaveKeyWithValue(hmcmirantiscomv1alpha1.HMCManagedLabelKey, hmcmirantiscomv1alpha1.HMCManagedLabelValue))
+	Expect(oldObj).To(Equal(newObj))
+	Expect(newObj.GetLabels()).NotTo(HaveKeyWithValue(hmcmirantiscomv1alpha1.HMCManagedLabelKey, hmcmirantiscomv1alpha1.HMCManagedLabelValue))
 }
 
 func checkHMCManagedLabelExistence(labels map[string]string) {

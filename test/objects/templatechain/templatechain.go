@@ -71,6 +71,15 @@ func WithNamespace(namespace string) Opt {
 	}
 }
 
+func ManagedByHMC() Opt {
+	return func(t *TemplateChain) {
+		if t.Labels == nil {
+			t.Labels = make(map[string]string)
+		}
+		t.Labels[v1alpha1.HMCManagedLabelKey] = v1alpha1.HMCManagedLabelValue
+	}
+}
+
 func WithSupportedTemplates(supportedTemplates []v1alpha1.SupportedTemplate) Opt {
 	return func(tc *TemplateChain) {
 		tc.Spec.SupportedTemplates = supportedTemplates
