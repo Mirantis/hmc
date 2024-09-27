@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/fields"
@@ -28,13 +29,21 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/Mirantis/hmc/api/v1alpha1"
+	"github.com/Mirantis/hmc/internal/templateutil"
 )
 
-type ClusterTemplateValidator struct {
+var errTemplateDeletionForbidden = errors.New("template deletion is forbidden")
+
+type TemplateValidator struct {
 	client.Client
+
+	SystemNamespace string
+	InjectUserInfo  func(*admission.Request)
 }
 
-var errTemplateDeletionForbidden = errors.New("template deletion is forbidden")
+type ClusterTemplateValidator struct {
+	TemplateValidator
+}
 
 func (v *ClusterTemplateValidator) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	v.Client = mgr.GetClient()
@@ -66,6 +75,13 @@ func (v *ClusterTemplateValidator) ValidateDelete(ctx context.Context, obj runti
 	if !ok {
 		return admission.Warnings{"Wrong object"}, apierrors.NewBadRequest(fmt.Sprintf("expected ClusterTemplate but got a %T", obj))
 	}
+	deletionAllowed, err := v.isTemplateDeletionAllowed(ctx, template)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check if the ClusterTemplate %s/%s is allowed to be deleted: %v", template.Namespace, template.Name, err)
+	}
+	if !deletionAllowed {
+		return nil, errTemplateDeletionForbidden
+	}
 
 	managedClusters := &v1alpha1.ManagedClusterList{}
 	listOptions := client.ListOptions{
@@ -73,7 +89,7 @@ func (v *ClusterTemplateValidator) ValidateDelete(ctx context.Context, obj runti
 		Limit:         1,
 		Namespace:     template.Namespace,
 	}
-	err := v.Client.List(ctx, managedClusters, &listOptions)
+	err = v.Client.List(ctx, managedClusters, &listOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -91,15 +107,15 @@ func (*ClusterTemplateValidator) Default(context.Context, runtime.Object) error 
 }
 
 type ServiceTemplateValidator struct {
-	client.Client
+	TemplateValidator
 }
 
-func (in *ServiceTemplateValidator) SetupWebhookWithManager(mgr ctrl.Manager) error {
-	in.Client = mgr.GetClient()
+func (v *ServiceTemplateValidator) SetupWebhookWithManager(mgr ctrl.Manager) error {
+	v.Client = mgr.GetClient()
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(&v1alpha1.ServiceTemplate{}).
-		WithValidator(in).
-		WithDefaulter(in).
+		WithValidator(v).
+		WithDefaulter(v).
 		Complete()
 }
 
@@ -119,7 +135,18 @@ func (*ServiceTemplateValidator) ValidateUpdate(_ context.Context, _ runtime.Obj
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
-func (*ServiceTemplateValidator) ValidateDelete(_ context.Context, _ runtime.Object) (admission.Warnings, error) {
+func (v *ServiceTemplateValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+	template, ok := obj.(*v1alpha1.ServiceTemplate)
+	if !ok {
+		return admission.Warnings{"Wrong object"}, apierrors.NewBadRequest(fmt.Sprintf("expected ServiceTemplate but got a %T", obj))
+	}
+	deletionAllowed, err := v.isTemplateDeletionAllowed(ctx, template)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check if the ServiceTemplate %s/%s is allowed to be deleted: %v", template.Namespace, template.Name, err)
+	}
+	if !deletionAllowed {
+		return nil, errTemplateDeletionForbidden
+	}
 	return nil, nil
 }
 
@@ -129,15 +156,15 @@ func (*ServiceTemplateValidator) Default(_ context.Context, _ runtime.Object) er
 }
 
 type ProviderTemplateValidator struct {
-	client.Client
+	TemplateValidator
 }
 
-func (in *ProviderTemplateValidator) SetupWebhookWithManager(mgr ctrl.Manager) error {
-	in.Client = mgr.GetClient()
+func (v *ProviderTemplateValidator) SetupWebhookWithManager(mgr ctrl.Manager) error {
+	v.Client = mgr.GetClient()
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(&v1alpha1.ProviderTemplate{}).
-		WithValidator(in).
-		WithDefaulter(in).
+		WithValidator(v).
+		WithDefaulter(v).
 		Complete()
 }
 
@@ -157,11 +184,45 @@ func (*ProviderTemplateValidator) ValidateUpdate(_ context.Context, _ runtime.Ob
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
-func (*ProviderTemplateValidator) ValidateDelete(_ context.Context, _ runtime.Object) (admission.Warnings, error) {
+func (v *ProviderTemplateValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+	template, ok := obj.(*v1alpha1.ProviderTemplate)
+	if !ok {
+		return admission.Warnings{"Wrong object"}, apierrors.NewBadRequest(fmt.Sprintf("expected ProviderTemplate but got a %T", obj))
+	}
+	deletionAllowed, err := v.isTemplateDeletionAllowed(ctx, template)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check if the ProviderTemplate %s is allowed to be deleted: %v", template.Name, err)
+	}
+	if !deletionAllowed {
+		return nil, errTemplateDeletionForbidden
+	}
 	return nil, nil
 }
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type.
 func (*ProviderTemplateValidator) Default(_ context.Context, _ runtime.Object) error {
 	return nil
+}
+
+func (v TemplateValidator) isTemplateDeletionAllowed(ctx context.Context, template templateutil.Template) (bool, error) {
+	req, err := admission.RequestFromContext(ctx)
+	if err != nil {
+		return false, err
+	}
+	if v.InjectUserInfo != nil {
+		v.InjectUserInfo(&req)
+	}
+	// Allow all templates' deletion for the HMC controller
+	if serviceAccountIsEqual(req, os.Getenv(ServiceAccountEnvName)) {
+		return true, nil
+	}
+	// Cluster-scoped ProviderTemplates and Templates from the system namespace are not allowed to be deleted
+	if template.GetNamespace() == "" || template.GetNamespace() == v.SystemNamespace {
+		return false, nil
+	}
+	// Forbid template deletion if the template is managed by the TemplateManagement
+	if templateutil.IsManagedByHMC(template) {
+		return false, nil
+	}
+	return true, nil
 }

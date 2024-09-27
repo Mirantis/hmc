@@ -36,6 +36,7 @@ import (
 
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
 	"github.com/Mirantis/hmc/internal/helm"
+	"github.com/Mirantis/hmc/internal/templateutil"
 )
 
 const (
@@ -123,14 +124,7 @@ func (r *ProviderTemplateReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	return r.ReconcileTemplate(ctx, providerTemplate)
 }
 
-// Template is the interface defining a list of methods to interact with templates
-type Template interface {
-	client.Object
-	GetSpec() *hmc.TemplateSpecCommon
-	GetStatus() *hmc.TemplateStatusCommon
-}
-
-func (r *TemplateReconciler) ReconcileTemplate(ctx context.Context, template Template) (ctrl.Result, error) {
+func (r *TemplateReconciler) ReconcileTemplate(ctx context.Context, template templateutil.Template) (ctrl.Result, error) {
 	l := log.FromContext(ctx)
 
 	spec := template.GetSpec()
@@ -149,7 +143,7 @@ func (r *TemplateReconciler) ReconcileTemplate(ctx context.Context, template Tem
 			l.Error(err, "invalid helm chart reference")
 			return ctrl.Result{}, err
 		}
-		if template.GetNamespace() == r.SystemNamespace || !templateManagedByHMC(template) {
+		if template.GetNamespace() == r.SystemNamespace || !templateutil.IsManagedByHMC(template) {
 			err := r.reconcileDefaultHelmRepository(ctx, template.GetNamespace())
 			if err != nil {
 				l.Error(err, "Failed to reconcile default HelmRepository", "namespace", template.GetNamespace())
@@ -222,11 +216,7 @@ func (r *TemplateReconciler) ReconcileTemplate(ctx context.Context, template Tem
 	return ctrl.Result{}, r.updateStatus(ctx, template, "")
 }
 
-func templateManagedByHMC(template Template) bool {
-	return template.GetLabels()[hmc.HMCManagedLabelKey] == hmc.HMCManagedLabelValue
-}
-
-func parseChartMetadata(template Template, inChart *chart.Chart) error {
+func parseChartMetadata(template templateutil.Template, inChart *chart.Chart) error {
 	if inChart.Metadata == nil {
 		return fmt.Errorf("chart metadata is empty")
 	}
@@ -261,7 +251,7 @@ func parseChartMetadata(template Template, inChart *chart.Chart) error {
 	return nil
 }
 
-func (r *TemplateReconciler) updateStatus(ctx context.Context, template Template, validationError string) error {
+func (r *TemplateReconciler) updateStatus(ctx context.Context, template templateutil.Template, validationError string) error {
 	status := template.GetStatus()
 	status.ObservedGeneration = template.GetGeneration()
 	status.ValidationError = validationError
@@ -312,7 +302,7 @@ func (r *TemplateReconciler) reconcileDefaultHelmRepository(ctx context.Context,
 	return nil
 }
 
-func (r *TemplateReconciler) reconcileHelmChart(ctx context.Context, template Template) (*sourcev1.HelmChart, error) {
+func (r *TemplateReconciler) reconcileHelmChart(ctx context.Context, template templateutil.Template) (*sourcev1.HelmChart, error) {
 	spec := template.GetSpec()
 	namespace := template.GetNamespace()
 	if namespace == "" {

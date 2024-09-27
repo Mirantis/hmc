@@ -29,10 +29,12 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
+	authenticationv1 "k8s.io/api/authentication/v1"
 	utilyaml "sigs.k8s.io/cluster-api/util/yaml"
 	ctrl "sigs.k8s.io/controller-runtime"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	helmcontrollerv2 "github.com/fluxcd/helm-controller/api/v2"
 	sourcev1 "github.com/fluxcd/source-controller/api/v1"
@@ -54,6 +56,8 @@ import (
 const (
 	mutatingWebhookKind   = "MutatingWebhookConfiguration"
 	validatingWebhookKind = "ValidatingWebhookConfiguration"
+
+	hmcServiceAccountName = "hmc-controller-manager"
 )
 
 var (
@@ -62,6 +66,8 @@ var (
 	testEnv   *envtest.Environment
 	ctx       context.Context
 	cancel    context.CancelFunc
+
+	userInfo = authenticationv1.UserInfo{Username: fmt.Sprintf("system:serviceaccount:hmc-system:%s", hmcServiceAccountName)}
 )
 
 func TestControllers(t *testing.T) {
@@ -81,6 +87,9 @@ var _ = BeforeSuite(func() {
 		filepath.Join("..", "..", "templates", "provider", "hmc", "templates", "webhooks.yaml"),
 	)
 	Expect(err).NotTo(HaveOccurred())
+
+	err = os.Setenv(hmcwebhook.ServiceAccountEnvName, hmcServiceAccountName)
+	Expect(err).To(Succeed())
 
 	testEnv = &envtest.Environment{
 		CRDDirectoryPaths: []string{
@@ -153,13 +162,19 @@ var _ = BeforeSuite(func() {
 	err = (&hmcwebhook.ServiceTemplateChainValidator{}).SetupWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
-	err = (&hmcwebhook.ClusterTemplateValidator{}).SetupWebhookWithManager(mgr)
+	templateValidator := hmcwebhook.TemplateValidator{
+		InjectUserInfo: func(req *admission.Request) {
+			req.UserInfo = userInfo
+		},
+	}
+
+	err = (&hmcwebhook.ClusterTemplateValidator{TemplateValidator: templateValidator}).SetupWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
-	err = (&hmcwebhook.ServiceTemplateValidator{}).SetupWebhookWithManager(mgr)
+	err = (&hmcwebhook.ServiceTemplateValidator{TemplateValidator: templateValidator}).SetupWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
-	err = (&hmcwebhook.ProviderTemplateValidator{}).SetupWebhookWithManager(mgr)
+	err = (&hmcwebhook.ProviderTemplateValidator{TemplateValidator: templateValidator}).SetupWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
 	go func() {
@@ -185,6 +200,9 @@ var _ = AfterSuite(func() {
 	cancel()
 	err := testEnv.Stop()
 	Expect(err).NotTo(HaveOccurred())
+
+	err = os.Unsetenv(hmcwebhook.ServiceAccountEnvName)
+	Expect(err).To(Succeed())
 })
 
 func loadWebhooks(path string) ([]*admissionv1.ValidatingWebhookConfiguration, []*admissionv1.MutatingWebhookConfiguration, error) {

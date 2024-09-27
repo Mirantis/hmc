@@ -38,6 +38,8 @@ spec:
         env:
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: {{ quote .Values.kubernetesClusterDomain }}
+        - name: SERVICE_ACCOUNT
+          value: {{ include "hmc.fullname" . }}-controller-manager
         image: {{ .Values.image.repository }}:{{ .Values.image.tag
           | default .Chart.AppVersion }}
         imagePullPolicy: {{ .Values.image.pullPolicy }}
