@@ -36,6 +36,8 @@ const (
 	// ManagedClusterKind is the string representation of a ManagedCluster.
 	ManagedClusterKind = "ManagedCluster"
 
+	// CredentialReadyCondition indicates if referenced Credential exists and has Ready state
+	CredentialReadyCondition = "CredentialReady"
 	// TemplateReadyCondition indicates the referenced Template exists and valid.
 	TemplateReadyCondition = "TemplateReady"
 	// HelmChartReadyCondition indicates the corresponding HelmChart is valid and ready.
@@ -72,7 +74,8 @@ type ManagedClusterSpec struct {
 	// Template is a reference to a Template object located in the same namespace.
 	Template string `json:"template"`
 	// DryRun specifies whether the template should be applied after validation or only validated.
-	DryRun bool `json:"dryRun,omitempty"`
+	DryRun     bool   `json:"dryRun,omitempty"`
+	Credential string `json:"credential,omitempty"`
 }
 
 // ManagedClusterStatus defines the observed state of ManagedCluster
