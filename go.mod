@@ -5,7 +5,7 @@ go 1.22.0
 require (
 	github.com/a8m/envsubst v1.4.2
 	github.com/cert-manager/cert-manager v1.15.3
-	github.com/fluxcd/helm-controller/api v1.0.1
+	github.com/fluxcd/helm-controller/api v1.1.0
 	github.com/fluxcd/pkg/apis/meta v1.6.1
 	github.com/fluxcd/pkg/runtime v0.49.1
 	github.com/fluxcd/source-controller/api v1.4.1
@@ -61,7 +61,7 @@ require (
 	github.com/fatih/color v1.17.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fluxcd/pkg/apis/acl v0.3.0 // indirect
-	github.com/fluxcd/pkg/apis/kustomize v1.5.0 // indirect
+	github.com/fluxcd/pkg/apis/kustomize v1.6.1 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
 	github.com/go-errors/errors v1.5.1 // indirect
