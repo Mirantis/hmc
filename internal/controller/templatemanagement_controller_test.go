@@ -211,6 +211,21 @@ var _ = Describe("Template Management Controller", func() {
 			Expect(err).NotTo(HaveOccurred())
 			By("Cleanup the specific resource instance ServiceTemplateChain")
 			Expect(k8sClient.Delete(ctx, stChain)).To(Succeed())
+
+			for _, template := range []*hmcmirantiscomv1alpha1.ClusterTemplate{ct1, ct2, ct3, ctUnmanaged} {
+				for _, ns := range []*corev1.Namespace{systemNamespace, namespace1, namespace2, namespace3} {
+					template.Namespace = ns.Name
+					err := k8sClient.Delete(ctx, template)
+					Expect(crclient.IgnoreNotFound(err)).To(Succeed())
+				}
+			}
+			for _, template := range []*hmcmirantiscomv1alpha1.ServiceTemplate{st1, st2, st3, stUnmanaged} {
+				for _, ns := range []*corev1.Namespace{systemNamespace, namespace1, namespace2, namespace3} {
+					template.Namespace = ns.Name
+					err := k8sClient.Delete(ctx, template)
+					Expect(crclient.IgnoreNotFound(err)).To(Succeed())
+				}
+			}
 		})
 		It("should successfully reconcile the resource", func() {
 			By("Get unmanaged templates before the reconciliation to verify it wasn't changed")
@@ -264,25 +279,3 @@ var _ = Describe("Template Management Controller", func() {
 		})
 	})
 })
-
-func verifyTemplateCreated(ctx context.Context, namespace string, tpl crclient.Object) {
-	err := k8sClient.Get(ctx, types.NamespacedName{Namespace: namespace, Name: tpl.GetName()}, tpl)
-	Expect(err).NotTo(HaveOccurred())
-	checkHMCManagedLabelExistence(tpl.GetLabels())
-}
-
-func verifyTemplateDeleted(ctx context.Context, namespace string, tpl crclient.Object) {
-	err := k8sClient.Get(ctx, types.NamespacedName{Namespace: namespace, Name: tpl.GetName()}, tpl)
-	Expect(err).To(HaveOccurred())
-}
-
-func verifyTemplateUnchanged(ctx context.Context, namespace string, oldTpl, newTpl crclient.Object) {
-	err := k8sClient.Get(ctx, types.NamespacedName{Namespace: namespace, Name: newTpl.GetName()}, newTpl)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(oldTpl).To(Equal(newTpl))
-	Expect(newTpl.GetLabels()).NotTo(HaveKeyWithValue(hmcmirantiscomv1alpha1.HMCManagedLabelKey, hmcmirantiscomv1alpha1.HMCManagedLabelValue))
-}
-
-func checkHMCManagedLabelExistence(labels map[string]string) {
-	Expect(labels).To(HaveKeyWithValue(hmcmirantiscomv1alpha1.HMCManagedLabelKey, hmcmirantiscomv1alpha1.HMCManagedLabelValue))
-}

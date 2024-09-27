@@ -18,6 +18,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const ServiceTemplateKind = "ServiceTemplate"
+
 // ServiceTemplateSpec defines the desired state of ServiceTemplate
 type ServiceTemplateSpec struct {
 	TemplateSpecCommon `json:",inline"`

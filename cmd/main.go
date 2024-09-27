@@ -232,6 +232,24 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "TemplateManagement")
 		os.Exit(1)
 	}
+
+	templateChainReconciler := controller.TemplateChainReconciler{
+		Client:          mgr.GetClient(),
+		SystemNamespace: currentNamespace,
+	}
+	if err = (&controller.ClusterTemplateChainReconciler{
+		TemplateChainReconciler: templateChainReconciler,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "ClusterTemplateChain")
+		os.Exit(1)
+	}
+	if err = (&controller.ServiceTemplateChainReconciler{
+		TemplateChainReconciler: templateChainReconciler,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "ServiceTemplateChain")
+		os.Exit(1)
+	}
+
 	if err = mgr.Add(&controller.Poller{
 		Client:                   mgr.GetClient(),
 		Config:                   mgr.GetConfig(),
@@ -274,37 +292,8 @@ func main() {
 	}
 
 	if enableWebhook {
-		if err := (&hmcwebhook.ManagedClusterValidator{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "ManagedCluster")
-			os.Exit(1)
-		}
-		if err := (&hmcwebhook.ManagementValidator{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "Management")
-			os.Exit(1)
-		}
-		if err := (&hmcwebhook.TemplateManagementValidator{
-			SystemNamespace: currentNamespace,
-		}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "TemplateManagement")
-		}
-		if err := (&hmcwebhook.ClusterTemplateChainValidator{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "ClusterTemplateChain")
-			os.Exit(1)
-		}
-		if err := (&hmcwebhook.ServiceTemplateChainValidator{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "ServiceTemplateChain")
-			os.Exit(1)
-		}
-		if err := (&hmcwebhook.ClusterTemplateValidator{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "ClusterTemplate")
-			os.Exit(1)
-		}
-		if err := (&hmcwebhook.ServiceTemplateValidator{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "ServiceTemplate")
-			os.Exit(1)
-		}
-		if err := (&hmcwebhook.ProviderTemplateValidator{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "ProviderTemplate")
+		if err := setupWebhooks(mgr, currentNamespace); err != nil {
+			setupLog.Error(err, "failed to setup webhooks")
 			os.Exit(1)
 		}
 	}
@@ -314,4 +303,40 @@ func main() {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
+}
+
+func setupWebhooks(mgr ctrl.Manager, currentNamespace string) error {
+	if err := (&hmcwebhook.ManagedClusterValidator{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "ManagedCluster")
+		return err
+	}
+	if err := (&hmcwebhook.ManagementValidator{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "Management")
+		return err
+	}
+	if err := (&hmcwebhook.TemplateManagementValidator{SystemNamespace: currentNamespace}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "TemplateManagement")
+		return err
+	}
+	if err := (&hmcwebhook.ClusterTemplateChainValidator{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "ClusterTemplateChain")
+		return err
+	}
+	if err := (&hmcwebhook.ServiceTemplateChainValidator{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "ServiceTemplateChain")
+		return err
+	}
+	if err := (&hmcwebhook.ClusterTemplateValidator{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "ClusterTemplate")
+		return err
+	}
+	if err := (&hmcwebhook.ServiceTemplateValidator{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "ServiceTemplate")
+		return err
+	}
+	if err := (&hmcwebhook.ProviderTemplateValidator{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "ProviderTemplate")
+		return err
+	}
+	return nil
 }

@@ -18,6 +18,20 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const ClusterTemplateChainKind = "ClusterTemplateChain"
+
+func (*ClusterTemplateChain) Kind() string {
+	return ClusterTemplateChainKind
+}
+
+func (*ClusterTemplateChain) TemplateKind() string {
+	return ClusterTemplateKind
+}
+
+func (t *ClusterTemplateChain) GetSpec() *TemplateChainSpec {
+	return &t.Spec
+}
+
 // +kubebuilder:object:root=true
 
 // ClusterTemplateChain is the Schema for the clustertemplatechains API

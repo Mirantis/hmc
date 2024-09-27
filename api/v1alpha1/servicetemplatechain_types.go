@@ -18,6 +18,20 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const ServiceTemplateChainKind = "ServiceTemplateChain"
+
+func (*ServiceTemplateChain) Kind() string {
+	return ServiceTemplateChainKind
+}
+
+func (*ServiceTemplateChain) TemplateKind() string {
+	return ServiceTemplateKind
+}
+
+func (t *ServiceTemplateChain) GetSpec() *TemplateChainSpec {
+	return &t.Spec
+}
+
 // +kubebuilder:object:root=true
 
 // ServiceTemplateChain is the Schema for the servicetemplatechains API
