@@ -93,9 +93,9 @@ func (t *Tracker) trackManagedClusterHeartbeat(ctx context.Context) error {
 			clusterID,
 			managedCluster.Spec.Template,
 			template.Spec.Helm.ChartVersion,
-			strings.Join(template.Status.Providers.InfrastructureProviders, ","),
-			strings.Join(template.Status.Providers.BootstrapProviders, ","),
-			strings.Join(template.Status.Providers.ControlPlaneProviders, ","),
+			strings.Join(template.Status.Providers.InfrastructureProvidersNames(), ","),
+			strings.Join(template.Status.Providers.BootstrapProvidersNames(), ","),
+			strings.Join(template.Status.Providers.ControlPlaneProvidersNames(), ","),
 		)
 		if err != nil {
 			errs = errors.Join(errs, fmt.Errorf("failed to track the heartbeat of the managedcluster %s/%s", managedCluster.Namespace, managedCluster.Name))

@@ -15,6 +15,8 @@
 package v1alpha1
 
 import (
+	"strings"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -22,19 +24,71 @@ const ServiceTemplateKind = "ServiceTemplate"
 
 // ServiceTemplateSpec defines the desired state of ServiceTemplate
 type ServiceTemplateSpec struct {
-	TemplateSpecCommon `json:",inline"`
+	Helm HelmSpec `json:"helm"`
+	// Constraint describing compatible K8S versions of the cluster set in the SemVer format.
+	KubertenesConstraint string `json:"k8sConstraint,omitempty"`
+	// Represents required CAPI providers. Should be set if not present in the Helm chart metadata.
+	Providers Providers `json:"providers,omitempty"`
 }
 
 // ServiceTemplateStatus defines the observed state of ServiceTemplate
 type ServiceTemplateStatus struct {
+	// Constraint describing compatible K8S versions of the cluster set in the SemVer format.
+	KubertenesConstraint string `json:"k8sConstraint,omitempty"`
+	// Represents exposed CAPI providers.
+	Providers Providers `json:"providers,omitempty"`
+
 	TemplateStatusCommon `json:",inline"`
 }
 
-func (t *ServiceTemplate) GetSpec() *TemplateSpecCommon {
-	return &t.Spec.TemplateSpecCommon
+// FillStatusWithProviders sets the status of the template with providers
+// either from the spec or from the given annotations.
+//
+// The return parameter is noop and is always nil.
+func (t *ServiceTemplate) FillStatusWithProviders(annotations map[string]string) error {
+	parseProviders := func(typ providersType) []string {
+		var (
+			pspec, pstatus []string
+			anno           string
+		)
+		switch typ {
+		case bootstrapProvidersType:
+			pspec, pstatus = t.Spec.Providers.BootstrapProviders, t.Status.Providers.BootstrapProviders
+			anno = ChartAnnotationBootstrapProviders
+		case controlPlaneProvidersType:
+			pspec, pstatus = t.Spec.Providers.ControlPlaneProviders, t.Status.Providers.ControlPlaneProviders
+			anno = ChartAnnotationControlPlaneProviders
+		case infrastructureProvidersType:
+			pspec, pstatus = t.Spec.Providers.InfrastructureProviders, t.Status.Providers.InfrastructureProviders
+			anno = ChartAnnotationInfraProviders
+		}
+
+		if len(pspec) > 0 {
+			return pstatus
+		}
+
+		providers := annotations[anno]
+		if len(providers) == 0 {
+			return []string{}
+		}
+
+		return strings.Split(providers, ",")
+	}
+
+	t.Status.Providers.BootstrapProviders = parseProviders(bootstrapProvidersType)
+	t.Status.Providers.ControlPlaneProviders = parseProviders(controlPlaneProvidersType)
+	t.Status.Providers.InfrastructureProviders = parseProviders(infrastructureProvidersType)
+
+	return nil
 }
 
-func (t *ServiceTemplate) GetStatus() *TemplateStatusCommon {
+// GetHelmSpec returns .spec.helm of the Template.
+func (t *ServiceTemplate) GetHelmSpec() *HelmSpec {
+	return &t.Spec.Helm
+}
+
+// GetCommonStatus returns common status of the Template.
+func (t *ServiceTemplate) GetCommonStatus() *TemplateStatusCommon {
 	return &t.Status.TemplateStatusCommon
 }
 

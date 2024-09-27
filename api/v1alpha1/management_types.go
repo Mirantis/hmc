@@ -75,37 +75,37 @@ func (in *Component) HelmValues() (values map[string]any, err error) {
 	return values, err
 }
 
-func (m *ManagementSpec) SetProvidersDefaults() error {
-	m.Providers = []Provider{
+func GetDefaultProviders() []Provider {
+	return []Provider{
 		{Name: ProviderK0smotronName},
 		{Name: ProviderCAPAName},
 		{Name: ProviderAzureName},
 		{Name: ProviderVSphereName},
 		{Name: ProviderSveltosName},
 	}
-	return nil
 }
 
 // ManagementStatus defines the observed state of Management
 type ManagementStatus struct {
-	// ObservedGeneration is the last observed generation.
-	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
-	// AvailableProviders holds all CAPI providers available on the Management cluster.
-	AvailableProviders Providers `json:"availableProviders,omitempty"`
 	// Components indicates the status of installed HMC components and CAPI providers.
 	Components map[string]ComponentStatus `json:"components,omitempty"`
 	// Release indicates the current Release object.
 	Release string `json:"release,omitempty"`
+	// AvailableProviders holds all CAPI providers available along with
+	// their exact compatibility versions if specified in ProviderTemplates on the Management cluster.
+	AvailableProviders ProvidersTupled `json:"availableProviders,omitempty"`
+	// ObservedGeneration is the last observed generation.
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 }
 
 // ComponentStatus is the status of Management component installation
 type ComponentStatus struct {
 	// Template is the name of the Template associated with this component.
 	Template string `json:"template,omitempty"`
-	// Success represents if a component installation was successful
-	Success bool `json:"success,omitempty"`
 	// Error stores as error message in case of failed installation
 	Error string `json:"error,omitempty"`
+	// Success represents if a component installation was successful
+	Success bool `json:"success,omitempty"`
 }
 
 // +kubebuilder:object:root=true

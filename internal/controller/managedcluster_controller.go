@@ -45,7 +45,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
@@ -374,7 +373,7 @@ func (r *ManagedClusterReconciler) Update(ctx context.Context, l logr.Logger, ma
 // updateServices reconciles services provided in ManagedCluster.Spec.Services.
 // TODO(https://github.com/Mirantis/hmc/issues/361): Set status to ManagedCluster object at appropriate places.
 func (r *ManagedClusterReconciler) updateServices(ctx context.Context, mc *hmc.ManagedCluster) (ctrl.Result, error) {
-	l := log.FromContext(ctx).WithValues("ManagedClusterController", fmt.Sprintf("%s/%s", mc.Namespace, mc.Name))
+	l := ctrl.LoggerFrom(ctx)
 	opts := []sveltos.HelmChartOpts{}
 
 	// NOTE: The Profile object will be updated with no helm
@@ -606,7 +605,7 @@ func (r *ManagedClusterReconciler) releaseCluster(ctx context.Context, namespace
 
 	// Associate the provider with it's GVK
 	for _, provider := range providers {
-		gvk, ok := providerGVKs[provider]
+		gvk, ok := providerGVKs[provider.Name]
 		if !ok {
 			continue
 		}
@@ -629,13 +628,14 @@ func (r *ManagedClusterReconciler) releaseCluster(ctx context.Context, namespace
 	return nil
 }
 
-func (r *ManagedClusterReconciler) getProviders(ctx context.Context, templateNamespace, templateName string) ([]string, error) {
+func (r *ManagedClusterReconciler) getProviders(ctx context.Context, templateNamespace, templateName string) ([]hmc.ProviderTuple, error) {
 	template := &hmc.ClusterTemplate{}
 	templateRef := client.ObjectKey{Name: templateName, Namespace: templateNamespace}
 	if err := r.Get(ctx, templateRef, template); err != nil {
 		ctrl.LoggerFrom(ctx).Error(err, "Failed to get ClusterTemplate", "namespace", templateNamespace, "name", templateName)
 		return nil, err
 	}
+
 	return template.Status.Providers.InfrastructureProviders, nil
 }
 

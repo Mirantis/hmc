@@ -100,6 +100,9 @@ type ManagedClusterSpec struct {
 
 // ManagedClusterStatus defines the observed state of ManagedCluster
 type ManagedClusterStatus struct {
+	// Currently compatible K8S version of the cluster. Being set only if
+	// the corresponding ClusterTemplate provided it in the spec.
+	KubertenesVersion string `json:"k8sVersion,omitempty"`
 	// Conditions contains details for the current state of the ManagedCluster
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 	// ObservedGeneration is the last observed generation.
