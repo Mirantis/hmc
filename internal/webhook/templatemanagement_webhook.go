@@ -79,7 +79,7 @@ func (v *TemplateManagementValidator) ValidateUpdate(ctx context.Context, _ runt
 		return nil, fmt.Errorf("could not get current templates state: %v", err)
 	}
 
-	expectedState, err := templateutil.ParseAccessRules(ctx, v.Client, newTm.Spec.AccessRules, currentState)
+	expectedState, err := templateutil.ParseAccessRules(ctx, v.Client, v.SystemNamespace, newTm.Spec.AccessRules, currentState)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse access rules for TemplateManagement: %v", err)
 	}

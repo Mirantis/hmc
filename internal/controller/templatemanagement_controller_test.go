@@ -124,6 +124,7 @@ var _ = Describe("Template Management Controller", func() {
 		}
 		ctChain := chain.NewClusterTemplateChain(
 			chain.WithName(ctChainName),
+			chain.WithNamespace(systemNamespace.Name),
 			chain.WithSupportedTemplates(supportedClusterTemplates),
 		)
 
@@ -133,6 +134,7 @@ var _ = Describe("Template Management Controller", func() {
 		}
 		stChain := chain.NewServiceTemplateChain(
 			chain.WithName(stChainName),
+			chain.WithNamespace(systemNamespace.Name),
 			chain.WithSupportedTemplates(supportedServiceTemplates),
 		)
 
@@ -172,12 +174,12 @@ var _ = Describe("Template Management Controller", func() {
 				Expect(k8sClient.Create(ctx, tm)).To(Succeed())
 			}
 			By("creating the custom resource for the Kind ClusterTemplateChain")
-			err = k8sClient.Get(ctx, types.NamespacedName{Name: ctChainName}, ctChain)
+			err = k8sClient.Get(ctx, types.NamespacedName{Name: ctChainName, Namespace: systemNamespace.Name}, ctChain)
 			if err != nil && errors.IsNotFound(err) {
 				Expect(k8sClient.Create(ctx, ctChain)).To(Succeed())
 			}
 			By("creating the custom resource for the Kind ServiceTemplateChain")
-			err = k8sClient.Get(ctx, types.NamespacedName{Name: stChainName}, stChain)
+			err = k8sClient.Get(ctx, types.NamespacedName{Name: stChainName, Namespace: systemNamespace.Name}, stChain)
 			if err != nil && errors.IsNotFound(err) {
 				Expect(k8sClient.Create(ctx, stChain)).To(Succeed())
 			}
@@ -199,13 +201,13 @@ var _ = Describe("Template Management Controller", func() {
 			}
 
 			ctChain := &hmcmirantiscomv1alpha1.ClusterTemplateChain{}
-			err := k8sClient.Get(ctx, types.NamespacedName{Name: ctChainName}, ctChain)
+			err := k8sClient.Get(ctx, types.NamespacedName{Name: ctChainName, Namespace: systemNamespace.Name}, ctChain)
 			Expect(err).NotTo(HaveOccurred())
 			By("Cleanup the specific resource instance ClusterTemplateChain")
 			Expect(k8sClient.Delete(ctx, ctChain)).To(Succeed())
 
 			stChain := &hmcmirantiscomv1alpha1.ServiceTemplateChain{}
-			err = k8sClient.Get(ctx, types.NamespacedName{Name: stChainName}, stChain)
+			err = k8sClient.Get(ctx, types.NamespacedName{Name: stChainName, Namespace: systemNamespace.Name}, stChain)
 			Expect(err).NotTo(HaveOccurred())
 			By("Cleanup the specific resource instance ServiceTemplateChain")
 			Expect(k8sClient.Delete(ctx, stChain)).To(Succeed())

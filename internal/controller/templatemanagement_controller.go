@@ -67,7 +67,7 @@ func (r *TemplateManagementReconciler) Reconcile(ctx context.Context, req ctrl.R
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	expectedState, err := templateutil.ParseAccessRules(ctx, r.Client, templateMgmt.Spec.AccessRules, currentState)
+	expectedState, err := templateutil.ParseAccessRules(ctx, r.Client, r.SystemNamespace, templateMgmt.Spec.AccessRules, currentState)
 	if err != nil {
 		return ctrl.Result{}, err
 	}

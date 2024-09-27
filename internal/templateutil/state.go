@@ -93,7 +93,7 @@ func GetCurrentTemplatesState(ctx context.Context, cl client.Client, systemNames
 	}, nil
 }
 
-func ParseAccessRules(ctx context.Context, cl client.Client, rules []hmc.AccessRule, currentState State) (State, error) {
+func ParseAccessRules(ctx context.Context, cl client.Client, systemNamespace string, rules []hmc.AccessRule, currentState State) (State, error) {
 	var errs error
 
 	expectedState := currentState
@@ -109,7 +109,8 @@ func ParseAccessRules(ctx context.Context, cl client.Client, rules []hmc.AccessR
 		for _, ctChainName := range rule.ClusterTemplateChains {
 			ctChain := &hmc.ClusterTemplateChain{}
 			err := cl.Get(ctx, client.ObjectKey{
-				Name: ctChainName,
+				Name:      ctChainName,
+				Namespace: systemNamespace,
 			}, ctChain)
 			if err != nil {
 				errs = errors.Join(errs, err)
@@ -122,7 +123,8 @@ func ParseAccessRules(ctx context.Context, cl client.Client, rules []hmc.AccessR
 		for _, stChainName := range rule.ServiceTemplateChains {
 			stChain := &hmc.ServiceTemplateChain{}
 			err := cl.Get(ctx, client.ObjectKey{
-				Name: stChainName,
+				Name:      stChainName,
+				Namespace: systemNamespace,
 			}, stChain)
 			if err != nil {
 				errs = errors.Join(errs, err)

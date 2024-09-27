@@ -19,7 +19,6 @@ import (
 )
 
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:scope=Cluster
 
 // ClusterTemplateChain is the Schema for the clustertemplatechains API
 type ClusterTemplateChain struct {

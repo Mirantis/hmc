@@ -19,7 +19,6 @@ import (
 )
 
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:scope=Cluster
 
 // ServiceTemplateChain is the Schema for the servicetemplatechains API
 type ServiceTemplateChain struct {

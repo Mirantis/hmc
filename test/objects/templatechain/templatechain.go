@@ -65,6 +65,12 @@ func WithName(name string) Opt {
 	}
 }
 
+func WithNamespace(namespace string) Opt {
+	return func(tc *TemplateChain) {
+		tc.Namespace = namespace
+	}
+}
+
 func WithSupportedTemplates(supportedTemplates []v1alpha1.SupportedTemplate) Opt {
 	return func(tc *TemplateChain) {
 		tc.Spec.SupportedTemplates = supportedTemplates

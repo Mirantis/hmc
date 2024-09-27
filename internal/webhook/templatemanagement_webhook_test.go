@@ -139,18 +139,24 @@ func TestTemplateManagementValidateUpdate(t *testing.T) {
 		ClusterTemplateChains: []string{azureCtChainName},
 	}
 
-	awsCtChain := chain.NewClusterTemplateChain(chain.WithName(awsCtChainName), chain.WithSupportedTemplates(
-		[]v1alpha1.SupportedTemplate{
-			{Name: awsStandaloneCpTemplateName},
-			{Name: awsHostedCpTemplateName},
-		},
-	))
-	azureCtChain := chain.NewClusterTemplateChain(chain.WithName(azureCtChainName), chain.WithSupportedTemplates(
-		[]v1alpha1.SupportedTemplate{
-			{Name: azureStandaloneCpTemplateName},
-			{Name: azureHostedCpTemplateName},
-		},
-	))
+	awsCtChain := chain.NewClusterTemplateChain(
+		chain.WithName(awsCtChainName),
+		chain.WithNamespace(utils.DefaultSystemNamespace),
+		chain.WithSupportedTemplates(
+			[]v1alpha1.SupportedTemplate{
+				{Name: awsStandaloneCpTemplateName},
+				{Name: awsHostedCpTemplateName},
+			},
+		))
+	azureCtChain := chain.NewClusterTemplateChain(
+		chain.WithName(azureCtChainName),
+		chain.WithNamespace(utils.DefaultSystemNamespace),
+		chain.WithSupportedTemplates(
+			[]v1alpha1.SupportedTemplate{
+				{Name: azureStandaloneCpTemplateName},
+				{Name: azureHostedCpTemplateName},
+			},
+		))
 
 	hmcClusterTemplate := template.WithLabels(map[string]string{v1alpha1.HMCManagedLabelKey: v1alpha1.HMCManagedLabelValue})
 

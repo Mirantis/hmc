@@ -12,7 +12,7 @@ spec:
     listKind: ServiceTemplateChainList
     plural: servicetemplatechains
     singular: servicetemplatechain
-  scope: Cluster
+  scope: Namespaced
   versions:
   - name: v1alpha1
     schema:
