@@ -26,6 +26,9 @@ const (
 	ChartAnnotationBootstrapProviders = "hmc.mirantis.com/bootstrap-providers"
 	// ChartAnnotationControlPlaneProviders is an annotation containing the CAPI control plane providers associated with Template.
 	ChartAnnotationControlPlaneProviders = "hmc.mirantis.com/control-plane-providers"
+
+	ClusterTemplateKind = "ClusterTemplate"
+	ServiceTemplateKind = "ServiceTemplate"
 )
 
 // TemplateSpecCommon is a Template configuration common for all Template types

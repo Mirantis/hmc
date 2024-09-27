@@ -16,22 +16,16 @@ package templateutil
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"slices"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
-)
-
-const (
-	ClusterTemplateKind = "ClusterTemplate"
-	ServiceTemplateKind = "ServiceTemplate"
 )
 
 type State struct {
@@ -50,7 +44,7 @@ func GetCurrentTemplatesState(ctx context.Context, cl client.Client, systemNames
 	}
 	clusterTemplatesList, serviceTemplatesList := &metav1.PartialObjectMetadataList{}, &metav1.PartialObjectMetadataList{}
 
-	for _, kind := range []string{ClusterTemplateKind, ServiceTemplateKind} {
+	for _, kind := range []string{hmc.ClusterTemplateKind, hmc.ServiceTemplateKind} {
 		partialList := &metav1.PartialObjectMetadataList{}
 		partialList.SetGroupVersionKind(schema.GroupVersionKind{
 			Group:   hmc.GroupVersion.Group,
@@ -61,10 +55,10 @@ func GetCurrentTemplatesState(ctx context.Context, cl client.Client, systemNames
 		if err != nil {
 			return State{}, err
 		}
-		if kind == ClusterTemplateKind {
+		if kind == hmc.ClusterTemplateKind {
 			clusterTemplatesList = partialList
 		}
-		if kind == ServiceTemplateKind {
+		if kind == hmc.ServiceTemplateKind {
 			serviceTemplatesList = partialList
 		}
 	}
@@ -104,53 +98,33 @@ func ParseAccessRules(ctx context.Context, cl client.Client, rules []hmc.AccessR
 	if expectedState.ServiceTemplatesState == nil {
 		expectedState.ServiceTemplatesState = make(map[string]map[string]bool)
 	}
+	ctChains, err := getTemplateChains(ctx, cl, hmc.ClusterTemplateKind)
+	if err != nil {
+		return State{}, err
+	}
+	stChains, err := getTemplateChains(ctx, cl, hmc.ServiceTemplateKind)
+	if err != nil {
+		return State{}, err
+	}
 	for _, rule := range rules {
-		var clusterTemplates []string
-		var serviceTemplates []string
-		for _, ctChainName := range rule.ClusterTemplateChains {
-			ctChain := &hmc.ClusterTemplateChain{}
-			err := cl.Get(ctx, types.NamespacedName{
-				Name: ctChainName,
-			}, ctChain)
-			if err != nil {
-				errs = errors.Join(errs, err)
-				continue
-			}
-			for _, supportedTemplate := range ctChain.Spec.SupportedTemplates {
-				clusterTemplates = append(clusterTemplates, supportedTemplate.Name)
-			}
-		}
-		for _, stChainName := range rule.ServiceTemplateChains {
-			stChain := &hmc.ServiceTemplateChain{}
-			err := cl.Get(ctx, types.NamespacedName{
-				Name: stChainName,
-			}, stChain)
-			if err != nil {
-				errs = errors.Join(errs, err)
-				continue
-			}
-			for _, supportedTemplate := range stChain.Spec.SupportedTemplates {
-				serviceTemplates = append(serviceTemplates, supportedTemplate.Name)
-			}
-		}
 		namespaces, err := getTargetNamespaces(ctx, cl, rule.TargetNamespaces)
 		if err != nil {
 			return State{}, err
 		}
-		for _, ct := range clusterTemplates {
-			if expectedState.ClusterTemplatesState[ct] == nil {
-				expectedState.ClusterTemplatesState[ct] = make(map[string]bool)
+		for _, ct := range getSupportedTemplates(ctChains, rule.ClusterTemplateChains) {
+			if expectedState.ClusterTemplatesState[ct.Name] == nil {
+				expectedState.ClusterTemplatesState[ct.Name] = make(map[string]bool)
 			}
 			for _, ns := range namespaces {
-				expectedState.ClusterTemplatesState[ct][ns] = true
+				expectedState.ClusterTemplatesState[ct.Name][ns] = true
 			}
 		}
-		for _, st := range serviceTemplates {
-			if expectedState.ServiceTemplatesState[st] == nil {
-				expectedState.ServiceTemplatesState[st] = make(map[string]bool)
+		for _, st := range getSupportedTemplates(stChains, rule.ServiceTemplateChains) {
+			if expectedState.ServiceTemplatesState[st.Name] == nil {
+				expectedState.ServiceTemplatesState[st.Name] = make(map[string]bool)
 			}
 			for _, ns := range namespaces {
-				expectedState.ServiceTemplatesState[st][ns] = true
+				expectedState.ServiceTemplatesState[st.Name][ns] = true
 			}
 		}
 	}
@@ -158,6 +132,43 @@ func ParseAccessRules(ctx context.Context, cl client.Client, rules []hmc.AccessR
 		return State{}, errs
 	}
 	return expectedState, nil
+}
+
+func IsAvailableForUpgrade(ctx context.Context, cl client.Client, templateKind string, source, target string) (bool, error) {
+	tmList := &hmc.TemplateManagementList{}
+	listOpts := &client.ListOptions{Limit: 1}
+	err := cl.List(ctx, tmList, listOpts)
+	if err != nil {
+		return false, err
+	}
+	if len(tmList.Items) == 0 {
+		return false, fmt.Errorf("TemplateManagement is not found")
+	}
+	allChains, err := getTemplateChains(ctx, cl, templateKind)
+	if err != nil {
+		return false, err
+	}
+	for _, accessRule := range tmList.Items[0].Spec.AccessRules {
+		var accessRuleChains []string
+		switch templateKind {
+		case hmc.ClusterTemplateKind:
+			accessRuleChains = accessRule.ClusterTemplateChains
+		case hmc.ServiceTemplateKind:
+			accessRuleChains = accessRule.ServiceTemplateChains
+		default:
+			return false, fmt.Errorf("invalid template kind. Supported values: %s and %s", hmc.ClusterTemplateKind, hmc.ServiceTemplateKind)
+		}
+		for _, supportedTemplate := range getSupportedTemplates(allChains, accessRuleChains) {
+			if source == supportedTemplate.Name {
+				if slices.ContainsFunc(supportedTemplate.AvailableUpgrades, func(au hmc.AvailableUpgrade) bool {
+					return target == au.Name
+				}) {
+					return true, nil
+				}
+			}
+		}
+	}
+	return false, nil
 }
 
 func getTargetNamespaces(ctx context.Context, cl client.Client, targetNamespaces hmc.TargetNamespaces) ([]string, error) {
@@ -192,4 +203,50 @@ func getTargetNamespaces(ctx context.Context, cl client.Client, targetNamespaces
 		result[i] = ns.Name
 	}
 	return result, nil
+}
+
+func getSupportedTemplates(allChains []templateChain, accessRuleChains []string) []hmc.SupportedTemplate {
+	supportedTemplates := make(map[string][]hmc.SupportedTemplate)
+	for _, chain := range allChains {
+		supportedTemplates[chain.GetName()] = chain.GetSupportedTemplates()
+	}
+	var result []hmc.SupportedTemplate
+	for _, chainName := range accessRuleChains {
+		result = append(result, supportedTemplates[chainName]...)
+	}
+	return result
+}
+
+type templateChain interface {
+	client.Object
+	GetSupportedTemplates() []hmc.SupportedTemplate
+}
+
+func getTemplateChains(ctx context.Context, cl client.Client, kind string) ([]templateChain, error) {
+	switch kind {
+	case hmc.ClusterTemplateKind:
+		ctChains := &hmc.ClusterTemplateChainList{}
+		err := cl.List(ctx, ctChains)
+		if err != nil {
+			return nil, err
+		}
+		templateChains := make([]templateChain, len(ctChains.Items))
+		for i, chain := range ctChains.Items {
+			templateChains[i] = &chain
+		}
+		return templateChains, nil
+	case hmc.ServiceTemplateKind:
+		stChains := &hmc.ServiceTemplateChainList{}
+		err := cl.List(ctx, stChains)
+		if err != nil {
+			return nil, err
+		}
+		templateChains := make([]templateChain, len(stChains.Items))
+		for i, chain := range stChains.Items {
+			templateChains[i] = &chain
+		}
+		return templateChains, nil
+	default:
+		return nil, fmt.Errorf("invalid template kind. Supported values: %s and %s", hmc.ClusterTemplateKind, hmc.ServiceTemplateKind)
+	}
 }

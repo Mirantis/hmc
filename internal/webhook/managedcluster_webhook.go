@@ -30,6 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/Mirantis/hmc/api/v1alpha1"
+	"github.com/Mirantis/hmc/internal/templateutil"
 	"github.com/Mirantis/hmc/internal/utils"
 )
 
@@ -37,7 +38,10 @@ type ManagedClusterValidator struct {
 	client.Client
 }
 
-var errInvalidManagedCluster = errors.New("the ManagedCluster is invalid")
+var (
+	errInvalidManagedCluster = errors.New("the ManagedCluster is invalid")
+	errUpgradeForbidden      = errors.New("the ManagedCluster upgrade is forbidden")
+)
 
 func (v *ManagedClusterValidator) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	v.Client = mgr.GetClient()
@@ -71,10 +75,19 @@ func (v *ManagedClusterValidator) ValidateCreate(ctx context.Context, obj runtim
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type.
-func (v *ManagedClusterValidator) ValidateUpdate(ctx context.Context, _ runtime.Object, newObj runtime.Object) (admission.Warnings, error) {
+func (v *ManagedClusterValidator) ValidateUpdate(ctx context.Context, oldObj runtime.Object, newObj runtime.Object) (admission.Warnings, error) {
+	oldManagedCluster, ok := oldObj.(*v1alpha1.ManagedCluster)
+	if !ok {
+		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected ManagedCluster but got a %T", oldObj))
+	}
 	newManagedCluster, ok := newObj.(*v1alpha1.ManagedCluster)
 	if !ok {
 		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected ManagedCluster but got a %T", newObj))
+	}
+	oldTemplateName := oldManagedCluster.Spec.Template
+	newTemplateName := newManagedCluster.Spec.Template
+	if oldTemplateName == newTemplateName {
+		return nil, nil
 	}
 	template, err := v.getManagedClusterTemplate(ctx, newManagedCluster.Namespace, newManagedCluster.Spec.Template)
 	if err != nil {
@@ -83,6 +96,15 @@ func (v *ManagedClusterValidator) ValidateUpdate(ctx context.Context, _ runtime.
 	err = v.isTemplateValid(ctx, template)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %v", errInvalidManagedCluster, err)
+	}
+	if !newManagedCluster.Spec.DryRun && templateutil.IsManagedByHMC(template) {
+		availableForUpgrade, err := templateutil.IsAvailableForUpgrade(ctx, v.Client, v1alpha1.ClusterTemplateKind, oldTemplateName, newTemplateName)
+		if err != nil {
+			return nil, fmt.Errorf("%s: failed to check if the ClusterTemplate %s is available for the upgrade from %s: %w", errUpgradeForbidden, newTemplateName, oldTemplateName, err)
+		}
+		if !availableForUpgrade {
+			return nil, fmt.Errorf("%s: ClusterTemplate %s is not available for the upgrade from %s", errUpgradeForbidden, newTemplateName, oldTemplateName)
+		}
 	}
 	return nil, nil
 }
