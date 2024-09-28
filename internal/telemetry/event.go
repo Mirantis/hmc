@@ -50,10 +50,10 @@ func TrackManagedClusterHeartbeat(id, managedClusterID, clusterID, template, tem
 }
 
 func TrackEvent(name, id string, properties map[string]any) error {
-	if client == nil {
+	if analyticsClient == nil {
 		return nil
 	}
-	return client.Enqueue(analytics.Track{
+	return analyticsClient.Enqueue(analytics.Track{
 		AnonymousId: id,
 		Event:       name,
 		Properties:  properties,

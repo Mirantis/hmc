@@ -34,7 +34,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
 	"github.com/Mirantis/hmc/internal/build"
@@ -80,7 +79,7 @@ func (p *Poller) Start(ctx context.Context) error {
 }
 
 func (p *Poller) Tick(ctx context.Context) error {
-	l := log.FromContext(ctx).WithValues("controller", "ReleaseController")
+	l := ctrl.LoggerFrom(ctx).WithValues("controller", "ReleaseController")
 
 	l.Info("Poll is run")
 	defer l.Info("Poll is finished")
@@ -104,7 +103,7 @@ func (p *Poller) Tick(ctx context.Context) error {
 }
 
 func (p *Poller) getOrCreateManagement(ctx context.Context) (*hmc.Management, error) {
-	l := log.FromContext(ctx)
+	l := ctrl.LoggerFrom(ctx)
 	mgmtObj := &hmc.Management{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:       hmc.ManagementName,
@@ -177,7 +176,7 @@ func (p *Poller) getOrCreateManagement(ctx context.Context) (*hmc.Management, er
 }
 
 func (p *Poller) ensureTemplateManagement(ctx context.Context, mgmt *hmc.Management) error {
-	l := log.FromContext(ctx)
+	l := ctrl.LoggerFrom(ctx)
 	if !p.CreateTemplateManagement {
 		return nil
 	}
@@ -214,7 +213,7 @@ func (p *Poller) ensureTemplateManagement(ctx context.Context, mgmt *hmc.Managem
 }
 
 func (p *Poller) reconcileHMCTemplates(ctx context.Context) error {
-	l := log.FromContext(ctx)
+	l := ctrl.LoggerFrom(ctx)
 	if !p.CreateTemplates {
 		l.Info("Reconciling HMC Templates is skipped")
 		return nil

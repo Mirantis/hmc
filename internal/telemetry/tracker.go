@@ -21,15 +21,14 @@ import (
 	"strings"
 	"time"
 
-	"k8s.io/apimachinery/pkg/types"
-	crclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/Mirantis/hmc/api/v1alpha1"
 )
 
 type Tracker struct {
-	crclient.Client
+	client.Client
 
 	SystemNamespace string
 }
@@ -63,26 +62,23 @@ func (t *Tracker) Tick(ctx context.Context) {
 
 func (t *Tracker) trackManagedClusterHeartbeat(ctx context.Context) error {
 	mgmt := &v1alpha1.Management{}
-	mgmtRef := types.NamespacedName{Name: v1alpha1.ManagementName}
-	err := t.Get(ctx, mgmtRef, mgmt)
-	if err != nil {
+	if err := t.Get(ctx, client.ObjectKey{Name: v1alpha1.ManagementName}, mgmt); err != nil {
+		return err
+	}
+
+	templatesList := &v1alpha1.ClusterTemplateList{}
+	if err := t.List(ctx, templatesList, client.InNamespace(t.SystemNamespace)); err != nil {
 		return err
 	}
 
 	templates := make(map[string]v1alpha1.ClusterTemplate)
-	templatesList := &v1alpha1.ClusterTemplateList{}
-	err = t.List(ctx, templatesList, crclient.InNamespace(t.SystemNamespace))
-	if err != nil {
-		return err
-	}
 	for _, template := range templatesList.Items {
 		templates[template.Name] = template
 	}
 
 	var errs error
 	managedClusters := &v1alpha1.ManagedClusterList{}
-	err = t.List(ctx, managedClusters, &crclient.ListOptions{})
-	if err != nil {
+	if err := t.List(ctx, managedClusters); err != nil {
 		return err
 	}
 
@@ -90,7 +86,8 @@ func (t *Tracker) trackManagedClusterHeartbeat(ctx context.Context) error {
 		template := templates[managedCluster.Spec.Template]
 		// TODO: get k0s cluster ID once it's exposed in k0smotron API
 		clusterID := ""
-		err = TrackManagedClusterHeartbeat(
+
+		err := TrackManagedClusterHeartbeat(
 			string(mgmt.UID),
 			string(managedCluster.UID),
 			clusterID,

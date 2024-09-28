@@ -209,7 +209,6 @@ func main() {
 	}
 	if err = (&controller.ManagedClusterReconciler{
 		Client:        mgr.GetClient(),
-		Scheme:        mgr.GetScheme(),
 		Config:        mgr.GetConfig(),
 		DynamicClient: dc,
 	}).SetupWithManager(mgr); err != nil {
@@ -227,7 +226,6 @@ func main() {
 	}
 	if err = (&controller.TemplateManagementReconciler{
 		Client:          mgr.GetClient(),
-		Scheme:          mgr.GetScheme(),
 		Config:          mgr.GetConfig(),
 		SystemNamespace: currentNamespace,
 	}).SetupWithManager(mgr); err != nil {
@@ -259,7 +257,6 @@ func main() {
 
 	if err = (&controller.CredentialReconciler{
 		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Credential")
 		os.Exit(1)

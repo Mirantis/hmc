@@ -37,14 +37,12 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
@@ -55,7 +53,6 @@ import (
 // ManagedClusterReconciler reconciles a ManagedCluster object
 type ManagedClusterReconciler struct {
 	client.Client
-	Scheme        *runtime.Scheme
 	Config        *rest.Config
 	DynamicClient *dynamic.DynamicClient
 }
@@ -87,14 +84,16 @@ var (
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 func (r *ManagedClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	l := log.FromContext(ctx).WithValues("ManagedClusterController", req.NamespacedName)
+	l := ctrl.LoggerFrom(ctx)
 	l.Info("Reconciling ManagedCluster")
+
 	managedCluster := &hmc.ManagedCluster{}
 	if err := r.Get(ctx, req.NamespacedName, managedCluster); err != nil {
 		if apierrors.IsNotFound(err) {
 			l.Info("ManagedCluster not found, ignoring since object must be deleted")
 			return ctrl.Result{}, nil
 		}
+
 		l.Error(err, "Failed to get ManagedCluster")
 		return ctrl.Result{}, err
 	}
@@ -106,7 +105,7 @@ func (r *ManagedClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	if managedCluster.Status.ObservedGeneration == 0 {
 		mgmt := &hmc.Management{}
-		mgmtRef := types.NamespacedName{Name: hmc.ManagementName}
+		mgmtRef := client.ObjectKey{Name: hmc.ManagementName}
 		if err := r.Get(ctx, mgmtRef, mgmt); err != nil {
 			l.Error(err, "Failed to get Management object")
 			return ctrl.Result{}, err
@@ -193,7 +192,7 @@ func (r *ManagedClusterReconciler) Update(ctx context.Context, l logr.Logger, ma
 	}()
 
 	template := &hmc.ClusterTemplate{}
-	templateRef := types.NamespacedName{Name: managedCluster.Spec.Template, Namespace: managedCluster.Namespace}
+	templateRef := client.ObjectKey{Name: managedCluster.Spec.Template, Namespace: managedCluster.Namespace}
 	if err := r.Get(ctx, templateRef, template); err != nil {
 		l.Error(err, "Failed to get Template")
 		errMsg := fmt.Sprintf("failed to get provided template: %s", err)
@@ -422,7 +421,7 @@ func (r *ManagedClusterReconciler) getSource(ctx context.Context, ref *hcv2.Cros
 	if ref == nil {
 		return nil, fmt.Errorf("helm chart source is not provided")
 	}
-	chartRef := types.NamespacedName{Namespace: ref.Namespace, Name: ref.Name}
+	chartRef := client.ObjectKey{Namespace: ref.Namespace, Name: ref.Name}
 	hc := sourcev1.HelmChart{}
 	if err := r.Client.Get(ctx, chartRef, &hc); err != nil {
 		return nil, err
@@ -432,7 +431,7 @@ func (r *ManagedClusterReconciler) getSource(ctx context.Context, ref *hcv2.Cros
 
 func (r *ManagedClusterReconciler) Delete(ctx context.Context, l logr.Logger, managedCluster *hmc.ManagedCluster) (ctrl.Result, error) {
 	hr := &hcv2.HelmRelease{}
-	err := r.Get(ctx, types.NamespacedName{
+	err := r.Get(ctx, client.ObjectKey{
 		Name:      managedCluster.Name,
 		Namespace: managedCluster.Namespace,
 	}, hr)
@@ -503,9 +502,9 @@ func (r *ManagedClusterReconciler) releaseCluster(ctx context.Context, namespace
 
 func (r *ManagedClusterReconciler) getProviders(ctx context.Context, templateNamespace, templateName string) ([]string, error) {
 	template := &hmc.ClusterTemplate{}
-	templateRef := types.NamespacedName{Name: templateName, Namespace: templateNamespace}
+	templateRef := client.ObjectKey{Name: templateName, Namespace: templateNamespace}
 	if err := r.Get(ctx, templateRef, template); err != nil {
-		log.FromContext(ctx).Error(err, "Failed to get ClusterTemplate", "namespace", templateNamespace, "name", templateName)
+		ctrl.LoggerFrom(ctx).Error(err, "Failed to get ClusterTemplate", "namespace", templateNamespace, "name", templateName)
 		return nil, err
 	}
 	return template.Status.Providers.InfrastructureProviders, nil
@@ -532,7 +531,7 @@ func (r *ManagedClusterReconciler) removeClusterFinalizer(ctx context.Context, c
 	originalCluster := *cluster
 	finalizersUpdated := controllerutil.RemoveFinalizer(cluster, hmc.BlockingFinalizer)
 	if finalizersUpdated {
-		log.FromContext(ctx).Info("Allow to stop cluster", "finalizer", hmc.BlockingFinalizer)
+		ctrl.LoggerFrom(ctx).Info("Allow to stop cluster", "finalizer", hmc.BlockingFinalizer)
 		if err := r.Client.Patch(ctx, cluster, client.MergeFrom(&originalCluster)); err != nil {
 			return fmt.Errorf("failed to patch cluster %s/%s: %w", cluster.Namespace, cluster.Name, err)
 		}
@@ -580,7 +579,7 @@ func (r *ManagedClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(&hcv2.HelmRelease{},
 			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, o client.Object) []ctrl.Request {
 				managedCluster := hmc.ManagedCluster{}
-				managedClusterRef := types.NamespacedName{
+				managedClusterRef := client.ObjectKey{
 					Namespace: o.GetNamespace(),
 					Name:      o.GetName(),
 				}
