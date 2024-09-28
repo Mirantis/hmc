@@ -27,12 +27,10 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
 	"github.com/Mirantis/hmc/internal/certmanager"
@@ -49,15 +47,16 @@ type ManagementReconciler struct {
 }
 
 func (r *ManagementReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	l := log.FromContext(ctx).WithValues("ManagementController", req.NamespacedName)
-	log.IntoContext(ctx, l)
+	l := ctrl.LoggerFrom(ctx)
 	l.Info("Reconciling Management")
+
 	management := &hmc.Management{}
 	if err := r.Get(ctx, req.NamespacedName, management); err != nil {
 		if apierrors.IsNotFound(err) {
 			l.Info("Management not found, ignoring since object must be deleted")
 			return ctrl.Result{}, nil
 		}
+
 		l.Error(err, "Failed to get Management")
 		return ctrl.Result{}, err
 	}
@@ -71,7 +70,7 @@ func (r *ManagementReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 }
 
 func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Management) (ctrl.Result, error) {
-	l := log.FromContext(ctx)
+	l := ctrl.LoggerFrom(ctx)
 
 	finalizersUpdated := controllerutil.AddFinalizer(management, hmc.ManagementFinalizer)
 	if finalizersUpdated {
@@ -82,7 +81,7 @@ func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Manag
 	}
 
 	release := &hmc.Release{}
-	if err := r.Client.Get(ctx, types.NamespacedName{Name: management.Spec.Release}, release); err != nil {
+	if err := r.Client.Get(ctx, client.ObjectKey{Name: management.Spec.Release}, release); err != nil {
 		l.Error(err, "failed to get Release object")
 		return ctrl.Result{}, err
 	}
@@ -100,7 +99,7 @@ func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Manag
 	components := wrappedComponents(management, release)
 	for _, component := range components {
 		template := &hmc.ProviderTemplate{}
-		err := r.Get(ctx, types.NamespacedName{
+		err := r.Get(ctx, client.ObjectKey{
 			Name: component.Template,
 		}, template)
 		if err != nil {
@@ -147,7 +146,7 @@ func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Manag
 }
 
 func (r *ManagementReconciler) Delete(ctx context.Context, management *hmc.Management) (ctrl.Result, error) {
-	l := log.FromContext(ctx)
+	l := ctrl.LoggerFrom(ctx)
 	listOpts := &client.ListOptions{
 		LabelSelector: labels.SelectorFromSet(map[string]string{hmc.HMCManagedLabelKey: hmc.HMCManagedLabelValue}),
 	}
@@ -170,10 +169,10 @@ func (r *ManagementReconciler) Delete(ctx context.Context, management *hmc.Manag
 }
 
 func (r *ManagementReconciler) removeHelmReleases(ctx context.Context, hmcReleaseName string, opts *client.ListOptions) error {
-	l := log.FromContext(ctx)
+	l := ctrl.LoggerFrom(ctx)
 	l.Info("Suspending HMC Helm Release reconciles")
 	hmcRelease := &fluxv2.HelmRelease{}
-	err := r.Client.Get(ctx, types.NamespacedName{Namespace: r.SystemNamespace, Name: hmcReleaseName}, hmcRelease)
+	err := r.Client.Get(ctx, client.ObjectKey{Namespace: r.SystemNamespace, Name: hmcReleaseName}, hmcRelease)
 	if err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
@@ -193,7 +192,7 @@ func (r *ManagementReconciler) removeHelmReleases(ctx context.Context, hmcReleas
 }
 
 func (r *ManagementReconciler) removeHelmCharts(ctx context.Context, opts *client.ListOptions) error {
-	l := log.FromContext(ctx)
+	l := ctrl.LoggerFrom(ctx)
 	l.Info("Ensuring all HelmCharts owned by HMC are removed")
 	gvk := sourcev1.GroupVersion.WithKind(sourcev1.HelmChartKind)
 	if err := utils.EnsureDeleteAllOf(ctx, r.Client, gvk, opts); err != nil {
@@ -204,7 +203,7 @@ func (r *ManagementReconciler) removeHelmCharts(ctx context.Context, opts *clien
 }
 
 func (r *ManagementReconciler) removeHelmRepositories(ctx context.Context, opts *client.ListOptions) error {
-	l := log.FromContext(ctx)
+	l := ctrl.LoggerFrom(ctx)
 	l.Info("Ensuring all HelmRepositories owned by HMC are removed")
 	gvk := sourcev1.GroupVersion.WithKind(sourcev1.HelmRepositoryKind)
 	if err := utils.EnsureDeleteAllOf(ctx, r.Client, gvk, opts); err != nil {
@@ -266,7 +265,7 @@ func wrappedComponents(mgmt *hmc.Management, release *hmc.Release) []component {
 // enableAdditionalComponents enables the admission controller and cluster api operator
 // once the cert manager is ready
 func (r *ManagementReconciler) enableAdditionalComponents(ctx context.Context, mgmt *hmc.Management) error {
-	l := log.FromContext(ctx)
+	l := ctrl.LoggerFrom(ctx)
 
 	hmcComponent := &mgmt.Spec.Core.HMC
 	config := make(map[string]any)

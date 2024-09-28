@@ -28,11 +28,9 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
 	"github.com/Mirantis/hmc/internal/helm"
@@ -73,7 +71,7 @@ type ProviderTemplateReconciler struct {
 }
 
 func (r *ClusterTemplateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	l := log.FromContext(ctx).WithValues("ClusterTemplateController", req.NamespacedName)
+	l := ctrl.LoggerFrom(ctx)
 	l.Info("Reconciling ClusterTemplate")
 
 	clusterTemplate := &hmc.ClusterTemplate{}
@@ -90,7 +88,7 @@ func (r *ClusterTemplateReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 }
 
 func (r *ServiceTemplateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	l := log.FromContext(ctx).WithValues("ServiceTemplateReconciler", req.NamespacedName)
+	l := ctrl.LoggerFrom(ctx).WithValues("ServiceTemplateReconciler", req.NamespacedName)
 	l.Info("Reconciling ServiceTemplate")
 
 	serviceTemplate := &hmc.ServiceTemplate{}
@@ -107,7 +105,7 @@ func (r *ServiceTemplateReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 }
 
 func (r *ProviderTemplateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	l := log.FromContext(ctx).WithValues("ProviderTemplateReconciler", req.NamespacedName)
+	l := ctrl.LoggerFrom(ctx).WithValues("ProviderTemplateReconciler", req.NamespacedName)
 	l.Info("Reconciling ProviderTemplate")
 
 	providerTemplate := &hmc.ProviderTemplate{}
@@ -131,7 +129,7 @@ type Template interface {
 }
 
 func (r *TemplateReconciler) ReconcileTemplate(ctx context.Context, template Template) (ctrl.Result, error) {
-	l := log.FromContext(ctx)
+	l := ctrl.LoggerFrom(ctx)
 
 	spec := template.GetSpec()
 	status := template.GetStatus()
@@ -274,7 +272,7 @@ func (r *TemplateReconciler) updateStatus(ctx context.Context, template Template
 }
 
 func (r *TemplateReconciler) reconcileDefaultHelmRepository(ctx context.Context, namespace string) error {
-	l := log.FromContext(ctx)
+	l := ctrl.LoggerFrom(ctx)
 	if namespace == "" {
 		namespace = r.SystemNamespace
 	}
@@ -360,7 +358,7 @@ func (r *TemplateReconciler) getHelmChartFromChartRef(ctx context.Context, chart
 		return nil, fmt.Errorf("invalid chartRef.Kind: %s. Only HelmChart kind is supported", chartRef.Kind)
 	}
 	helmChart := &sourcev1.HelmChart{}
-	err := r.Get(ctx, types.NamespacedName{
+	err := r.Get(ctx, client.ObjectKey{
 		Namespace: chartRef.Namespace,
 		Name:      chartRef.Name,
 	}, helmChart)

@@ -23,7 +23,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
@@ -109,7 +108,7 @@ func ParseAccessRules(ctx context.Context, cl client.Client, rules []hmc.AccessR
 		var serviceTemplates []string
 		for _, ctChainName := range rule.ClusterTemplateChains {
 			ctChain := &hmc.ClusterTemplateChain{}
-			err := cl.Get(ctx, types.NamespacedName{
+			err := cl.Get(ctx, client.ObjectKey{
 				Name: ctChainName,
 			}, ctChain)
 			if err != nil {
@@ -122,7 +121,7 @@ func ParseAccessRules(ctx context.Context, cl client.Client, rules []hmc.AccessR
 		}
 		for _, stChainName := range rule.ServiceTemplateChains {
 			stChain := &hmc.ServiceTemplateChain{}
-			err := cl.Get(ctx, types.NamespacedName{
+			err := cl.Get(ctx, client.ObjectKey{
 				Name: stChainName,
 			}, stChain)
 			if err != nil {

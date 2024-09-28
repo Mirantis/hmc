@@ -130,7 +130,6 @@ var _ = Describe("ManagedCluster Controller", func() {
 
 			controllerReconciler := &ManagedClusterReconciler{
 				Client: k8sClient,
-				Scheme: k8sClient.Scheme(),
 			}
 
 			Expect(k8sClient.Delete(ctx, managedCluster)).To(Succeed())
@@ -148,7 +147,6 @@ var _ = Describe("ManagedCluster Controller", func() {
 			By("Reconciling the created resource")
 			controllerReconciler := &ManagedClusterReconciler{
 				Client: k8sClient,
-				Scheme: k8sClient.Scheme(),
 				Config: &rest.Config{},
 			}
 

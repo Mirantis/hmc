@@ -222,7 +222,6 @@ var _ = Describe("Template Management Controller", func() {
 			By("Reconciling the created resource")
 			controllerReconciler := &TemplateManagementReconciler{
 				Client:          k8sClient,
-				Scheme:          k8sClient.Scheme(),
 				SystemNamespace: systemNamespace.Name,
 			}
 			_, err = controllerReconciler.Reconcile(ctx, reconcile.Request{

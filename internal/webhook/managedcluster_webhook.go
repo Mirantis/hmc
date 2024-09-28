@@ -23,7 +23,6 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -121,7 +120,7 @@ func (v *ManagedClusterValidator) Default(ctx context.Context, obj runtime.Objec
 
 func (v *ManagedClusterValidator) getManagedClusterTemplate(ctx context.Context, templateNamespace, templateName string) (*v1alpha1.ClusterTemplate, error) {
 	template := &v1alpha1.ClusterTemplate{}
-	templateRef := types.NamespacedName{Name: templateName, Namespace: templateNamespace}
+	templateRef := client.ObjectKey{Name: templateName, Namespace: templateNamespace}
 	if err := v.Get(ctx, templateRef, template); err != nil {
 		return nil, err
 	}
@@ -142,7 +141,7 @@ func (v *ManagedClusterValidator) isTemplateValid(ctx context.Context, template 
 func (v *ManagedClusterValidator) verifyProviders(ctx context.Context, template *v1alpha1.ClusterTemplate) error {
 	requiredProviders := template.Status.Providers
 	management := &v1alpha1.Management{}
-	managementRef := types.NamespacedName{Name: v1alpha1.ManagementName}
+	managementRef := client.ObjectKey{Name: v1alpha1.ManagementName}
 	if err := v.Get(ctx, managementRef, management); err != nil {
 		return err
 	}

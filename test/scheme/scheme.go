@@ -18,36 +18,23 @@ import (
 	hcv2 "github.com/fluxcd/helm-controller/api/v2"
 	sourcev1 "github.com/fluxcd/source-controller/api/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"k8s.io/apimachinery/pkg/runtime/serializer/json"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 
 	"github.com/Mirantis/hmc/api/v1alpha1"
 )
 
 var (
-	Scheme  = runtime.NewScheme()
-	Codecs  = serializer.NewCodecFactory(Scheme)
-	Builder = runtime.SchemeBuilder{
+	Scheme = runtime.NewScheme()
+
+	builder = runtime.SchemeBuilder{
 		clientgoscheme.AddToScheme,
 		v1alpha1.AddToScheme,
 		sourcev1.AddToScheme,
 		hcv2.AddToScheme,
 	}
 )
-var Encoder = json.NewYAMLSerializer(json.DefaultMetaFactory, Scheme, Scheme)
 
 func init() {
-	err := Builder.AddToScheme(Scheme)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func Decode(yaml []byte) (runtime.Object, error) {
-	return runtime.Decode(Codecs.UniversalDeserializer(), yaml)
-}
-
-func Encode(obj runtime.Object) ([]byte, error) {
-	return runtime.Encode(Encoder, obj)
+	utilruntime.Must(builder.AddToScheme(Scheme))
 }

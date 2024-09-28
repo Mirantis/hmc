@@ -29,9 +29,10 @@ const (
 
 // CredentialSpec defines the desired state of Credential
 type CredentialSpec struct {
+	// Reference to the Credential Identity
 	IdentityRef *corev1.ObjectReference `json:"identityRef"`
-	// +optional
-	Description string `json:"description,omitempty"`
+	// Description of the Credential object
+	Description string `json:"description,omitempty"` // WARN: noop
 }
 
 // CredentialStatus defines the observed state of Credential

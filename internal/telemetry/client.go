@@ -19,13 +19,14 @@ import (
 )
 
 var (
-	segmentToken = ""
-	client       = newClient()
+	segmentToken    = ""
+	analyticsClient analytics.Client
 )
 
-func newClient() analytics.Client {
+func init() {
 	if segmentToken == "" {
-		return nil
+		return
 	}
-	return analytics.New(segmentToken)
+
+	analyticsClient = analytics.New(segmentToken)
 }
