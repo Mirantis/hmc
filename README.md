@@ -1,4 +1,14 @@
-# Mirantis Hybrid Cloud Platform
+# Mirantis Hybrid Multi Cluster
+
+## Overview
+
+Mirantis Hybrid Multi Cluster is part of Mirantis Project 2A which is focused on delivering a 
+open source approach to providing an enterprise grade multi-cluster kubernetes managment solution
+based entirely on standard open source tooling.
+
+## Documentation
+
+Detailed documentation is available in [Project 2A Docs](https://mirantis.github.io/project-2a-docs/)
 
 ## Installation
 
@@ -34,10 +44,7 @@ Optionally, the following CLIs may be helpful:
 
 ### Providers configuration
 
-Follow the instruction to configure providers. Currently supported providers:
-* [AWS](docs/aws/main.md#prepare-the-aws-infra-provider)
-* [Azure](docs/azure/main.md)
-* [vSphere](docs/vsphere/main.md)
+Full details on the provider configuration can be found in the Project 2A Docs, see [Documentation](#documentation)
 
 ### Installation
 
@@ -46,8 +53,6 @@ export KUBECONFIG=<path-to-management-kubeconfig>
 
 helm install hmc oci://ghcr.io/mirantis/hmc/charts/hmc --version <hmc-version> -n hmc-system --create-namespace
 ```
-
-See [HMC configuration options](templates/hmc/values.yaml).
 
 #### Extended Management configuration
 
@@ -106,9 +111,7 @@ export KUBECONFIG=<path-to-management-kubeconfig>
 kubectl get template -n hmc-system -o go-template='{{ range .items }}{{ if eq .status.type "deployment" }}{{ .metadata.name }}{{ printf "\n" }}{{ end }}{{ end }}'
 ```
 
-For details about the `Template system` in HMC, see [Templates system](docs/templates/main.md#templates-system).
-
-If you want to deploy hostded control plate template, make sure to check additional notes on [Hosted control plane](docs/aws/hosted-control-plane.md).
+If you want to deploy hostded control plate template, make sure to check additional notes on Hosted control plane in 2A Docs, see [Documentation](#documentation).
 
 2. Create the file with the `ManagedCluster` configuration:
 
