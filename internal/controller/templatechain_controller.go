@@ -30,6 +30,8 @@ import (
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
 )
 
+const HMCManagedByChainLabelKey = "hmc.mirantis.com/managed-by-chain"
+
 // TemplateChainReconciler reconciles a TemplateChain object
 type TemplateChainReconciler struct {
 	client.Client
@@ -89,7 +91,7 @@ func (r *ServiceTemplateChainReconciler) Reconcile(ctx context.Context, req ctrl
 func (r *TemplateChainReconciler) ReconcileTemplateChain(ctx context.Context, templateChain TemplateChain) (ctrl.Result, error) {
 	l := log.FromContext(ctx)
 
-	systemTemplates, existingTemplates, err := getCurrentTemplates(ctx, r.Client, templateChain.TemplateKind(), r.SystemNamespace, templateChain.GetNamespace())
+	systemTemplates, managedTemplates, err := getCurrentTemplates(ctx, r.Client, templateChain.TemplateKind(), r.SystemNamespace, templateChain.GetNamespace(), templateChain.GetName())
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to get current templates: %v", err)
 	}
@@ -102,7 +104,8 @@ func (r *TemplateChainReconciler) ReconcileTemplateChain(ctx context.Context, te
 			Name:      supportedTemplate.Name,
 			Namespace: templateChain.GetNamespace(),
 			Labels: map[string]string{
-				hmc.HMCManagedLabelKey: hmc.HMCManagedLabelValue,
+				hmc.HMCManagedLabelKey:    hmc.HMCManagedLabelValue,
+				HMCManagedByChainLabelKey: templateChain.GetName(),
 			},
 		}
 		keepTemplate[supportedTemplate.Name] = true
@@ -145,7 +148,7 @@ func (r *TemplateChainReconciler) ReconcileTemplateChain(ctx context.Context, te
 			errs = errors.Join(errs, err)
 		}
 	}
-	for _, template := range existingTemplates {
+	for _, template := range managedTemplates {
 		if !keepTemplate[template.GetName()] {
 			l.Info(fmt.Sprintf("Deleting %s", templateChain.TemplateKind()), "namespace", templateChain.GetNamespace(), "name", template.GetName())
 			err := r.Delete(ctx, template)
@@ -161,7 +164,7 @@ func (r *TemplateChainReconciler) ReconcileTemplateChain(ctx context.Context, te
 	return ctrl.Result{}, nil
 }
 
-func getCurrentTemplates(ctx context.Context, cl client.Client, templateKind, systemNamespace, targetNamespace string) (map[string]Template, []Template, error) {
+func getCurrentTemplates(ctx context.Context, cl client.Client, templateKind, systemNamespace, targetNamespace, templateChainName string) (map[string]Template, []Template, error) {
 	var templates []Template
 
 	switch templateKind {
@@ -194,7 +197,10 @@ func getCurrentTemplates(ctx context.Context, cl client.Client, templateKind, sy
 			systemTemplates[template.GetName()] = template
 			continue
 		}
-		if template.GetNamespace() == targetNamespace && template.GetLabels()[hmc.HMCManagedLabelKey] == "true" {
+		labels := template.GetLabels()
+		if template.GetNamespace() == targetNamespace &&
+			labels[hmc.HMCManagedLabelKey] == "true" &&
+			labels[HMCManagedByChainLabelKey] == templateChainName {
 			managedTemplates = append(managedTemplates, template)
 		}
 	}
