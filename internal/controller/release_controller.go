@@ -42,10 +42,7 @@ import (
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
 	"github.com/Mirantis/hmc/internal/build"
 	"github.com/Mirantis/hmc/internal/helm"
-)
-
-const (
-	hmcTemplatesReleaseName = "hmc-templates"
+	"github.com/Mirantis/hmc/internal/utils"
 )
 
 // ReleaseReconciler reconciles a Template object
@@ -67,22 +64,29 @@ func (r *ReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	l.Info("Reconciling Release")
 	defer l.Info("Release reconcile is finished")
 
-	err := r.reconcileHMCTemplates(ctx)
+	err := r.reconcileHMCTemplates(ctx, req)
 	if err != nil {
 		l.Error(err, "failed to reconcile HMC Templates")
 		return ctrl.Result{}, err
 	}
-	mgmt, err := r.getOrCreateManagement(ctx)
-	if err != nil {
-		l.Error(err, "failed to get or create Management object")
-		return ctrl.Result{}, err
-	}
-	err = r.ensureTemplateManagement(ctx, mgmt)
-	if err != nil {
-		l.Error(err, "failed to ensure default TemplateManagement object")
-		return ctrl.Result{}, err
+
+	if initialReconcile(req) {
+		mgmt, err := r.getOrCreateManagement(ctx)
+		if err != nil {
+			l.Error(err, "failed to get or create Management object")
+			return ctrl.Result{}, err
+		}
+		err = r.ensureTemplateManagement(ctx, mgmt)
+		if err != nil {
+			l.Error(err, "failed to ensure default TemplateManagement object")
+			return ctrl.Result{}, err
+		}
 	}
 	return ctrl.Result{}, nil
+}
+
+func initialReconcile(req ctrl.Request) bool {
+	return req.Name == ""
 }
 
 func (r *ReleaseReconciler) getOrCreateManagement(ctx context.Context) (*hmc.Management, error) {
@@ -195,27 +199,49 @@ func (r *ReleaseReconciler) ensureTemplateManagement(ctx context.Context, mgmt *
 	return nil
 }
 
-func (r *ReleaseReconciler) reconcileHMCTemplates(ctx context.Context) error {
+func (r *ReleaseReconciler) reconcileHMCTemplates(ctx context.Context, req ctrl.Request) error {
 	l := ctrl.LoggerFrom(ctx)
 	if !r.CreateTemplates {
 		l.Info("Reconciling HMC Templates is skipped")
 		return nil
 	}
+	name := utils.ReleaseNameFromVersion(build.Version)
+	version := build.Version
+	var ownerRefs []metav1.OwnerReference
+	release := &hmc.Release{}
+	if !initialReconcile(req) {
+		if err := r.Client.Get(ctx, req.NamespacedName, release); err != nil {
+			l.Error(err, "failed to get Release")
+			return err
+		}
+		name = req.Name
+		version = release.Spec.Version
+		ownerRefs = []metav1.OwnerReference{
+			{
+				APIVersion: hmc.GroupVersion.String(),
+				Kind:       release.Kind,
+				Name:       release.Name,
+				UID:        release.UID,
+			},
+		}
+	}
+
 	helmChart := &sourcev1.HelmChart{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      r.HMCTemplatesChartName,
+			Name:      name,
 			Namespace: r.SystemNamespace,
 		},
 	}
 
 	operation, err := ctrl.CreateOrUpdate(ctx, r.Client, helmChart, func() error {
+		helmChart.OwnerReferences = ownerRefs
 		if helmChart.Labels == nil {
 			helmChart.Labels = make(map[string]string)
 		}
 		helmChart.Labels[hmc.HMCManagedLabelKey] = hmc.HMCManagedLabelValue
 		helmChart.Spec = sourcev1.HelmChartSpec{
 			Chart:   r.HMCTemplatesChartName,
-			Version: build.Version,
+			Version: version,
 			SourceRef: sourcev1.LocalHelmChartSourceReference{
 				Kind: sourcev1.HelmRepositoryKind,
 				Name: defaultRepoName,
@@ -228,14 +254,14 @@ func (r *ReleaseReconciler) reconcileHMCTemplates(ctx context.Context) error {
 		return err
 	}
 	if operation == controllerutil.OperationResultCreated || operation == controllerutil.OperationResultUpdated {
-		l.Info(fmt.Sprintf("Successfully %s %s/%s HelmChart", operation, r.SystemNamespace, r.HMCTemplatesChartName))
+		l.Info(fmt.Sprintf("Successfully %s %s/%s HelmChart", operation, r.SystemNamespace, name))
 	}
 
 	if _, err := helm.ArtifactReady(helmChart); err != nil {
-		return fmt.Errorf("HelmChart %s/%s Artifact is not ready: %w", r.SystemNamespace, r.HMCTemplatesChartName, err)
+		return fmt.Errorf("HelmChart %s/%s Artifact is not ready: %w", r.SystemNamespace, name, err)
 	}
 
-	_, operation, err = helm.ReconcileHelmRelease(ctx, r.Client, hmcTemplatesReleaseName, r.SystemNamespace, helm.ReconcileHelmReleaseOpts{
+	_, operation, err = helm.ReconcileHelmRelease(ctx, r.Client, name, r.SystemNamespace, helm.ReconcileHelmReleaseOpts{
 		ChartRef: &hcv2.CrossNamespaceSourceReference{
 			Kind:      helmChart.Kind,
 			Name:      helmChart.Name,
@@ -246,7 +272,7 @@ func (r *ReleaseReconciler) reconcileHMCTemplates(ctx context.Context) error {
 		return err
 	}
 	if operation == controllerutil.OperationResultCreated || operation == controllerutil.OperationResultUpdated {
-		l.Info(fmt.Sprintf("Successfully %s %s/%s HelmRelease", operation, r.SystemNamespace, hmcTemplatesReleaseName))
+		l.Info(fmt.Sprintf("Successfully %s %s/%s HelmRelease", operation, r.SystemNamespace, name))
 	}
 	return nil
 }
@@ -280,7 +306,7 @@ func (r *ReleaseReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	if !r.CreateManagement {
 		return nil
 	}
-	// There's no Release objects created yet and we need a way to trigger reconcile
+	// There's no Release objects created yet and we need to trigger reconcile
 	initChannel := make(chan event.GenericEvent, 1)
 	initChannel <- event.GenericEvent{Object: &hmc.Release{}}
 	return c.Watch(source.Channel(initChannel, &handler.EnqueueRequestForObject{}))
