@@ -15,5 +15,5 @@ version: 0.1.4
 appVersion: "1.30.4+k0s.0"
 annotations:
   hmc.mirantis.com/infrastructure-providers: aws
-  hmc.mirantis.com/controlplane-providers: k0smotron
+  hmc.mirantis.com/control-plane-providers: k0smotron
   hmc.mirantis.com/bootstrap-providers: k0s
