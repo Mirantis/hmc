@@ -5,6 +5,7 @@ metadata:
   namespace: ${NAMESPACE}
 spec:
   template: azure-standalone-cp
+  credential: azure-cluster-identity-cred
   config:
     controlPlaneNumber: 1
     workersNumber: 1
