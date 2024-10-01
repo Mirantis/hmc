@@ -4,6 +4,7 @@ metadata:
   name: aws-dev
   namespace: ${NAMESPACE}
 spec:
+  credential: aws-cluster-identity-cred
   config:
     clusterIdentity:
       name: aws-cluster-identity
