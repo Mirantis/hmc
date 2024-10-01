@@ -43,13 +43,13 @@ rules:
   - hmc.mirantis.com
   resources:
   - templatemanagements
+  - clustertemplatechains
+  - servicetemplatechains
   verbs: {{ include "rbac.editorVerbs" . | nindent 4 }}
 - apiGroups:
   - hmc.mirantis.com
   resources:
   - releases
-  - clustertemplatechains
-  - servicetemplatechains
   verbs:
   - get
   - list

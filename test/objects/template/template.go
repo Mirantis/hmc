@@ -92,6 +92,15 @@ func WithLabels(labels map[string]string) Opt {
 	}
 }
 
+func ManagedByHMC() Opt {
+	return func(t *Template) {
+		if t.Labels == nil {
+			t.Labels = make(map[string]string)
+		}
+		t.Labels[v1alpha1.HMCManagedLabelKey] = v1alpha1.HMCManagedLabelValue
+	}
+}
+
 func WithHelmSpec(helmSpec v1alpha1.HelmSpec) Opt {
 	return func(t *Template) {
 		t.Spec.Helm = helmSpec
