@@ -5,4 +5,4 @@ metadata:
 spec:
   helm:
     chartName: projectsveltos
-    chartVersion: 0.38.1
+    chartVersion: 0.38.2

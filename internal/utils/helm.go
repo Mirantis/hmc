@@ -20,8 +20,8 @@ import (
 )
 
 const (
-	registryTypeOCI     = "oci"
-	registryTypeDefault = "default"
+	RegistryTypeOCI     = "oci"
+	RegistryTypeDefault = "default"
 )
 
 func DetermineDefaultRepositoryType(defaultRegistryURL string) (string, error) {
@@ -32,9 +32,9 @@ func DetermineDefaultRepositoryType(defaultRegistryURL string) (string, error) {
 
 	switch parsedRegistryURL.Scheme {
 	case "oci":
-		return registryTypeOCI, nil
+		return RegistryTypeOCI, nil
 	case "http", "https":
-		return registryTypeDefault, nil
+		return RegistryTypeDefault, nil
 	default:
 		return "", fmt.Errorf("invalid default registry URL scheme: %s must be 'oci://', 'http://', or 'https://'", parsedRegistryURL.Scheme)
 	}

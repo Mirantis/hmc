@@ -40,6 +40,7 @@ import (
 	"github.com/Mirantis/hmc/internal/telemetry"
 	"github.com/Mirantis/hmc/internal/utils"
 	hmcwebhook "github.com/Mirantis/hmc/internal/webhook"
+	sveltosv1beta1 "github.com/projectsveltos/addon-controller/api/v1beta1"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -54,6 +55,7 @@ func init() {
 	utilruntime.Must(hmcmirantiscomv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(sourcev1.AddToScheme(scheme))
 	utilruntime.Must(hcv2.AddToScheme(scheme))
+	utilruntime.Must(sveltosv1beta1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 

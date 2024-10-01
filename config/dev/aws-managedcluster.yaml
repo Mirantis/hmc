@@ -18,3 +18,10 @@ spec:
     workersNumber: 1
     installBeachHeadServices: false
   template: aws-standalone-cp
+  services:
+    - template: kyverno
+      name: kyverno
+      namespace: kyverno
+    - template: ingress-nginx
+      name: ingress-nginx
+      namespace: ingress-nginx

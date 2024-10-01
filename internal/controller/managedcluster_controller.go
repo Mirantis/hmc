@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Mirantis/hmc/internal/sveltos"
 	hcv2 "github.com/fluxcd/helm-controller/api/v2"
 	fluxmeta "github.com/fluxcd/pkg/apis/meta"
 	fluxconditions "github.com/fluxcd/pkg/runtime/conditions"
@@ -37,17 +38,24 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
 	"github.com/Mirantis/hmc/internal/helm"
 	"github.com/Mirantis/hmc/internal/telemetry"
+	"github.com/Mirantis/hmc/internal/utils"
+)
+
+const (
+	DefaultRequeueInterval = 10 * time.Second
 )
 
 // ManagedClusterReconciler reconciles a ManagedCluster object
@@ -343,22 +351,136 @@ func (r *ManagedClusterReconciler) Update(ctx context.Context, l logr.Logger, ma
 		requeue, err := r.setStatusFromClusterStatus(ctx, l, managedCluster)
 		if err != nil {
 			if requeue {
-				return ctrl.Result{RequeueAfter: 10 * time.Second}, err
+				return ctrl.Result{RequeueAfter: DefaultRequeueInterval}, err
 			}
 
 			return ctrl.Result{}, err
 		}
 
 		if requeue {
-			return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
+			return ctrl.Result{RequeueAfter: DefaultRequeueInterval}, nil
 		}
 
 		if !fluxconditions.IsReady(hr) {
-			return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
+			return ctrl.Result{RequeueAfter: DefaultRequeueInterval}, nil
 		}
+
+		return r.updateServices(ctx, managedCluster)
 	}
 
 	return ctrl.Result{}, nil
+}
+
+// updateServices reconciles services provided in ManagedCluster.Spec.Services.
+// TODO(https://github.com/Mirantis/hmc/issues/361): Set status to ManagedCluster object at appropriate places.
+func (r *ManagedClusterReconciler) updateServices(ctx context.Context, mc *hmc.ManagedCluster) (ctrl.Result, error) {
+	l := log.FromContext(ctx).WithValues("ManagedClusterController", fmt.Sprintf("%s/%s", mc.Namespace, mc.Name))
+	opts := []sveltos.HelmChartOpts{}
+
+	// NOTE: The Profile object will be updated with no helm
+	// charts if len(mc.Spec.Services) == 0. This will result in the
+	// helm charts being uninstalled on matching clusters if
+	// Profile originally had len(m.Spec.Sevices) > 0.
+	for _, svc := range mc.Spec.Services {
+		if svc.Disable {
+			l.Info(fmt.Sprintf("Skip adding Template (%s) to Profile (%s) because Disable=true", svc.Template, mc.Name))
+			continue
+		}
+
+		tmpl := &hmc.ServiceTemplate{}
+		tmplRef := types.NamespacedName{Name: svc.Template, Namespace: mc.Namespace}
+		if err := r.Get(ctx, tmplRef, tmpl); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to get Template (%s): %w", tmplRef.String(), err)
+		}
+
+		source, err := r.getServiceTemplateSource(ctx, tmpl)
+		if err != nil {
+			return ctrl.Result{}, fmt.Errorf("could not get repository url: %w", err)
+		}
+
+		opts = append(opts, sveltos.HelmChartOpts{
+			RepositoryURL: source.Spec.URL,
+			// We don't have repository name so chart name becomes repository name.
+			RepositoryName: tmpl.Spec.Helm.ChartName,
+			ChartName: func() string {
+				if source.Spec.Type == utils.RegistryTypeOCI {
+					return tmpl.Spec.Helm.ChartName
+				}
+				// Sveltos accepts ChartName in <repository>/<chart> format for non-OCI.
+				// We don't have a repository name, so we can use <chart>/<chart> instead.
+				// See: https://projectsveltos.github.io/sveltos/addons/helm_charts/.
+				return fmt.Sprintf("%s/%s", tmpl.Spec.Helm.ChartName, tmpl.Spec.Helm.ChartName)
+			}(),
+			ChartVersion: tmpl.Spec.Helm.ChartVersion,
+			ReleaseName:  svc.Name,
+			Values:       svc.Values,
+			ReleaseNamespace: func() string {
+				if svc.Namespace != "" {
+					return svc.Namespace
+				}
+				return svc.Name
+			}(),
+			// The reason it is passed to PlainHTTP instead of InsecureSkipTLSVerify is because
+			// the source.Spec.Insecure field is meant to be used for connecting to repositories
+			// over plain HTTP, which is different than what InsecureSkipTLSVerify is meant for.
+			// See: https://github.com/fluxcd/source-controller/pull/1288
+			PlainHTTP: source.Spec.Insecure,
+		})
+	}
+
+	if _, err := sveltos.ReconcileProfile(ctx, r.Client, l, mc.Namespace, mc.Name,
+		map[string]string{
+			hmc.FluxHelmChartNamespaceKey: mc.Namespace,
+			hmc.FluxHelmChartNameKey:      mc.Name,
+		},
+		sveltos.ReconcileProfileOpts{
+			OwnerReference: &metav1.OwnerReference{
+				APIVersion: hmc.GroupVersion.String(),
+				Kind:       hmc.ManagedClusterKind,
+				Name:       mc.Name,
+				UID:        mc.UID,
+			},
+			HelmChartOpts: opts,
+		}); err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to reconcile Profile: %w", err)
+	}
+
+	// We don't technically need to requeue here, but doing so because golint fails with:
+	// `(*ManagedClusterReconciler).updateServices` - result `res` is always `nil` (unparam)
+	//
+	// This will be automatically resolved once setting status is implemented (https://github.com/Mirantis/hmc/issues/361),
+	// as it is likely that some execution path in the function will have to return with a requeue to fetch latest status.
+	return ctrl.Result{RequeueAfter: DefaultRequeueInterval}, nil
+}
+
+// getServiceTemplateSource returns the source (HelmRepository) used by the ServiceTemplate.
+// It is fetched by querying for ServiceTemplate -> HelmChart -> HelmRepository.
+func (r *ManagedClusterReconciler) getServiceTemplateSource(ctx context.Context, tmpl *hmc.ServiceTemplate) (*sourcev1.HelmRepository, error) {
+	tmplRef := types.NamespacedName{Namespace: tmpl.Namespace, Name: tmpl.Name}
+
+	if tmpl.Status.ChartRef == nil {
+		return nil, fmt.Errorf("status for ServiceTemplate (%s) has not been updated yet", tmplRef.String())
+	}
+
+	hc := &sourcev1.HelmChart{}
+	if err := r.Get(ctx, types.NamespacedName{
+		Namespace: tmpl.Status.ChartRef.Namespace,
+		Name:      tmpl.Status.ChartRef.Name,
+	}, hc); err != nil {
+		return nil, fmt.Errorf("failed to get HelmChart (%s): %w", tmplRef.String(), err)
+	}
+
+	repo := &sourcev1.HelmRepository{}
+	if err := r.Get(ctx, types.NamespacedName{
+		// Using chart's namespace because it's source
+		// (helm repository in this case) should be within the same namespace.
+		Namespace: hc.Namespace,
+		Name:      hc.Spec.SourceRef.Name,
+	}, repo); err != nil {
+		return nil, fmt.Errorf("failed to get HelmRepository (%s): %w", tmplRef.String(), err)
+	}
+
+	return repo, nil
 }
 
 func validateReleaseWithValues(ctx context.Context, actionConfig *action.Configuration, managedCluster *hmc.ManagedCluster, hcChart *chart.Chart) error {
@@ -455,13 +577,18 @@ func (r *ManagedClusterReconciler) Delete(ctx context.Context, l logr.Logger, ma
 		return ctrl.Result{}, err
 	}
 
+	err = sveltos.DeleteProfile(ctx, r.Client, managedCluster.Namespace, managedCluster.Name)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
 	err = r.releaseCluster(ctx, managedCluster.Namespace, managedCluster.Name, managedCluster.Spec.Template)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
 	l.Info("HelmRelease still exists, retrying")
-	return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
+	return ctrl.Result{RequeueAfter: DefaultRequeueInterval}, nil
 }
 
 func (r *ManagedClusterReconciler) releaseCluster(ctx context.Context, namespace, name, templateName string) error {
