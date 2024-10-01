@@ -16,7 +16,7 @@ require (
 	github.com/onsi/gomega v1.34.2
 	github.com/opencontainers/go-digest v1.0.1-0.20231025023718-d50d2fec9c98
 	github.com/projectsveltos/addon-controller v0.38.2
-	github.com/projectsveltos/libsveltos v0.38.3
+	github.com/projectsveltos/libsveltos v0.38.4
 	github.com/segmentio/analytics-go v3.1.0+incompatible
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.16.1
