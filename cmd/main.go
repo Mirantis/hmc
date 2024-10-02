@@ -219,10 +219,11 @@ func main() {
 		os.Exit(1)
 	}
 	if err = (&controller.ManagementReconciler{
-		Client:          mgr.GetClient(),
-		Scheme:          mgr.GetScheme(),
-		Config:          mgr.GetConfig(),
-		SystemNamespace: currentNamespace,
+		Client:                   mgr.GetClient(),
+		Scheme:                   mgr.GetScheme(),
+		Config:                   mgr.GetConfig(),
+		SystemNamespace:          currentNamespace,
+		CreateTemplateManagement: createTemplateManagement,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Management")
 		os.Exit(1)
@@ -254,13 +255,12 @@ func main() {
 	}
 
 	if err = (&controller.ReleaseReconciler{
-		Client:                   mgr.GetClient(),
-		Config:                   mgr.GetConfig(),
-		CreateManagement:         createManagement,
-		CreateTemplateManagement: createTemplateManagement,
-		CreateTemplates:          createTemplates,
-		HMCTemplatesChartName:    hmcTemplatesChartName,
-		SystemNamespace:          currentNamespace,
+		Client:                mgr.GetClient(),
+		Config:                mgr.GetConfig(),
+		CreateManagement:      createManagement,
+		CreateTemplates:       createTemplates,
+		HMCTemplatesChartName: hmcTemplatesChartName,
+		SystemNamespace:       currentNamespace,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Release")
 		os.Exit(1)
