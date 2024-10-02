@@ -62,7 +62,7 @@ spec:
                     operator: Exists
           - name: vsphere-csi
             chartname: mirantis/vsphere-csi-driver
-            version: 0.0.1
+            version: 0.0.2
             order: 2
             namespace: kube-system
             values: |
