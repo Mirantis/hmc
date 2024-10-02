@@ -30,7 +30,6 @@ import (
 )
 
 func TestClusterTemplateValidateDelete(t *testing.T) {
-	g := NewWithT(t)
 	ctx := context.Background()
 	namespace := "test"
 	tpl := template.NewClusterTemplate(template.WithName("testTemplateFail"), template.WithNamespace(namespace))
@@ -75,6 +74,8 @@ func TestClusterTemplateValidateDelete(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+
 			c := fake.NewClientBuilder().
 				WithScheme(scheme.Scheme).
 				WithRuntimeObjects(tt.existingObjects...).
@@ -83,13 +84,73 @@ func TestClusterTemplateValidateDelete(t *testing.T) {
 			validator := &ClusterTemplateValidator{Client: c}
 			warn, err := validator.ValidateDelete(ctx, tt.template)
 			if tt.err != "" {
-				g.Expect(err).To(HaveOccurred())
-				if err.Error() != tt.err {
-					t.Fatalf("expected error '%s', got error: %s", tt.err, err.Error())
-				}
+				g.Expect(err).To(MatchError(tt.err))
 			} else {
 				g.Expect(err).To(Succeed())
 			}
+
+			if len(tt.warnings) > 0 {
+				g.Expect(warn).To(Equal(tt.warnings))
+			} else {
+				g.Expect(warn).To(BeEmpty())
+			}
+		})
+	}
+}
+
+func TestServiceTemplateValidateDelete(t *testing.T) {
+	ctx := context.Background()
+	tmpl := template.NewServiceTemplate(template.WithNamespace("mynamespace"), template.WithName("mytemplate"))
+
+	tests := []struct {
+		title           string
+		template        *v1alpha1.ServiceTemplate
+		existingObjects []runtime.Object
+		warnings        admission.Warnings
+		err             string
+	}{
+		{
+			title:    "should fail if ManagedCluster exists in same namespace",
+			template: tmpl,
+			existingObjects: []runtime.Object{
+				managedcluster.NewManagedCluster(
+					managedcluster.WithNamespace(tmpl.Namespace),
+					managedcluster.WithServiceTemplate(tmpl.Name),
+				),
+			},
+			warnings: admission.Warnings{"The ServiceTemplate object can't be removed if ManagedCluster objects referencing it still exist"},
+			err:      errTemplateDeletionForbidden.Error(),
+		},
+		{
+			title:    "should succeed if managedCluster referencing ServiceTemplate is another namespace",
+			template: tmpl,
+			existingObjects: []runtime.Object{
+				managedcluster.NewManagedCluster(
+					managedcluster.WithNamespace("someothernamespace"),
+					managedcluster.WithServiceTemplate(tmpl.Name),
+				),
+			},
+		},
+		{
+			title:           "should be OK because of a different cluster",
+			template:        tmpl,
+			existingObjects: []runtime.Object{managedcluster.NewManagedCluster()},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.title, func(t *testing.T) {
+			g := NewWithT(t)
+
+			c := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(tt.existingObjects...).Build()
+			validator := &ServiceTemplateValidator{Client: c}
+			warn, err := validator.ValidateDelete(ctx, tt.template)
+			if tt.err != "" {
+				g.Expect(err).To(MatchError(tt.err))
+			} else {
+				g.Expect(err).To(Succeed())
+			}
+
 			if len(tt.warnings) > 0 {
 				g.Expect(warn).To(Equal(tt.warnings))
 			} else {

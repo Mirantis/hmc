@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -119,7 +120,39 @@ func (*ServiceTemplateValidator) ValidateUpdate(_ context.Context, _ runtime.Obj
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
-func (*ServiceTemplateValidator) ValidateDelete(_ context.Context, _ runtime.Object) (admission.Warnings, error) {
+func (in *ServiceTemplateValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+	tmpl, ok := obj.(*v1alpha1.ServiceTemplate)
+	if !ok {
+		return admission.Warnings{"Wrong object"}, apierrors.NewBadRequest(fmt.Sprintf("expected ServiceTemplate but got a %T", obj))
+	}
+
+	var token string
+
+	for {
+		managedClusters := &v1alpha1.ManagedClusterList{}
+		if err := in.Client.List(ctx, managedClusters, &client.ListOptions{
+			Namespace: tmpl.Namespace,
+			Limit:     100,
+			Raw: &metav1.ListOptions{
+				Continue: token,
+			},
+		}); err != nil {
+			return nil, err
+		}
+
+		for _, m := range managedClusters.Items {
+			for _, s := range m.Spec.Services {
+				if s.Template == tmpl.Name {
+					return admission.Warnings{"The ServiceTemplate object can't be removed if ManagedCluster objects referencing it still exist"}, errTemplateDeletionForbidden
+				}
+			}
+		}
+
+		if token = managedClusters.Continue; token == "" {
+			break
+		}
+	}
+
 	return nil, nil
 }
 
