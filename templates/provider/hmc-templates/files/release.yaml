@@ -2,6 +2,8 @@ apiVersion: hmc.mirantis.com/v1alpha1
 kind: Release
 metadata:
   name: hmc-0-0-2
+  annotations:
+    helm.sh/resource-policy: keep
 spec:
   version: v0.0.2
   hmc:

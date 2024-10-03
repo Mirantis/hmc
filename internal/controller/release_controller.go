@@ -210,13 +210,26 @@ func (r *ReleaseReconciler) reconcileHMCTemplates(ctx context.Context, req ctrl.
 		return fmt.Errorf("HelmChart %s/%s Artifact is not ready: %w", r.SystemNamespace, name, err)
 	}
 
-	_, operation, err = helm.ReconcileHelmRelease(ctx, r.Client, name, r.SystemNamespace, helm.ReconcileHelmReleaseOpts{
+	opts := helm.ReconcileHelmReleaseOpts{
 		ChartRef: &hcv2.CrossNamespaceSourceReference{
 			Kind:      helmChart.Kind,
 			Name:      helmChart.Name,
 			Namespace: helmChart.Namespace,
 		},
-	})
+	}
+
+	if initialReconcile(req) {
+		createReleaseValues := map[string]any{
+			"createRelease": true,
+		}
+		raw, err := json.Marshal(createReleaseValues)
+		if err != nil {
+			return err
+		}
+		opts.Values = &apiextensionsv1.JSON{Raw: raw}
+	}
+
+	_, operation, err = helm.ReconcileHelmRelease(ctx, r.Client, name, r.SystemNamespace, opts)
 	if err != nil {
 		return err
 	}
