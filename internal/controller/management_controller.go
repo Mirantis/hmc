@@ -23,6 +23,7 @@ import (
 	fluxv2 "github.com/fluxcd/helm-controller/api/v2"
 	"github.com/fluxcd/pkg/apis/meta"
 	sourcev1 "github.com/fluxcd/source-controller/api/v1"
+	"helm.sh/helm/v3/pkg/chartutil"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,6 +39,15 @@ import (
 	"github.com/Mirantis/hmc/internal/helm"
 	"github.com/Mirantis/hmc/internal/utils"
 )
+
+// Those are only needed for the initial installation
+var enforcedValues = map[string]any{
+	"controller": map[string]any{
+		"createManagement":         false,
+		"createTemplateManagement": false,
+		"createRelease":            false,
+	},
+}
 
 // ManagementReconciler reconciles a Management object
 type ManagementReconciler struct {
@@ -104,7 +114,11 @@ func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Manag
 		return ctrl.Result{}, err
 	}
 
-	components := wrappedComponents(management, release)
+	components, err := wrappedComponents(management, release)
+	if err != nil {
+		l.Error(err, "failed to wrap HMC components")
+		return ctrl.Result{}, err
+	}
 	for _, component := range components {
 		template := &hmc.ProviderTemplate{}
 		err := r.Get(ctx, client.ObjectKey{
@@ -267,15 +281,36 @@ type component struct {
 	createNamespace bool
 }
 
-func wrappedComponents(mgmt *hmc.Management, release *hmc.Release) []component {
+func applyHMCDefaults(config *apiextensionsv1.JSON) (*apiextensionsv1.JSON, error) {
+	values := chartutil.Values{}
+	if config != nil && config.Raw != nil {
+		err := json.Unmarshal(config.Raw, &values)
+		if err != nil {
+			return nil, err
+		}
+	}
+	chartutil.CoalesceTables(values, enforcedValues)
+	raw, err := json.Marshal(values)
+	if err != nil {
+		return nil, err
+	}
+	return &apiextensionsv1.JSON{Raw: raw}, nil
+}
+
+func wrappedComponents(mgmt *hmc.Management, release *hmc.Release) ([]component, error) {
 	if mgmt.Spec.Core == nil {
-		return nil
+		return nil, nil
 	}
 	components := make([]component, 0, len(mgmt.Spec.Providers)+2)
 	hmcComp := component{Component: mgmt.Spec.Core.HMC, helmReleaseName: hmc.CoreHMCName}
 	if hmcComp.Template == "" {
 		hmcComp.Template = release.Spec.HMC.Template
 	}
+	hmcConfig, err := applyHMCDefaults(hmcComp.Config)
+	if err != nil {
+		return nil, err
+	}
+	hmcComp.Config = hmcConfig
 	components = append(components, hmcComp)
 	capiComp := component{
 		Component: mgmt.Spec.Core.CAPI, helmReleaseName: hmc.CoreCAPIName,
@@ -303,7 +338,7 @@ func wrappedComponents(mgmt *hmc.Management, release *hmc.Release) []component {
 		components = append(components, c)
 	}
 
-	return components
+	return components, nil
 }
 
 // enableAdditionalComponents enables the admission controller and cluster api operator

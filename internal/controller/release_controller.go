@@ -128,13 +128,6 @@ func (r *ReleaseReconciler) ensureManagement(ctx context.Context) error {
 			chartutil.CoalesceTables(hmcConfig, release.Config)
 		}
 	}
-
-	// Initially set createManagement:false to automatically create Management object only once
-	chartutil.CoalesceTables(hmcConfig, map[string]any{
-		"controller": map[string]any{
-			"createManagement": false,
-		},
-	})
 	rawConfig, err := json.Marshal(hmcConfig)
 	if err != nil {
 		return err
