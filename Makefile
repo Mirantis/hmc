@@ -127,7 +127,7 @@ lint-fix: golangci-lint ## Run golangci-lint linter and perform fixes
 add-license: addlicense
 	$(ADDLICENSE) -c "" -ignore ".github/**" -ignore "config/**" -ignore "templates/**" -ignore ".*" -y 2024 .
 
-##@ Build
+##@ Package
 
 TEMPLATES_DIR := templates
 PROVIDER_TEMPLATES_DIR := $(TEMPLATES_DIR)/provider
@@ -135,12 +135,24 @@ CHARTS_PACKAGE_DIR ?= $(LOCALBIN)/charts
 $(CHARTS_PACKAGE_DIR): | $(LOCALBIN)
 	rm -rf $(CHARTS_PACKAGE_DIR)
 	mkdir -p $(CHARTS_PACKAGE_DIR)
+IMAGES_PACKAGE_DIR ?= $(LOCALBIN)/images
+$(IMAGES_PACKAGE_DIR): | $(LOCALBIN)
+	rm -rf $(IMAGES_PACKAGE_DIR)
+	mkdir -p $(IMAGES_PACKAGE_DIR)
 
 TEMPLATE_FOLDERS = $(patsubst $(TEMPLATES_DIR)/%,%,$(wildcard $(TEMPLATES_DIR)/*))
 
 .PHONY: helm-package
-helm-package: $(CHARTS_PACKAGE_DIR) helm
+helm-package: $(CHARTS_PACKAGE_DIR) helm ## Package Helm charts used by HMC.
 	@make $(patsubst %,package-%-tmpl,$(TEMPLATE_FOLDERS))
+
+.PHONY: bundle-images
+bundle-images: $(IMAGES_PACKAGE_DIR) ## Create a tarball with all images used by HMC.
+	@BUNDLE_TARBALL=$(IMAGES_PACKAGE_DIR)/hmc-images-$(VERSION).tgz IMG=$(IMG) KUBECTL=$(KUBECTL) YQ=$(YQ) HELM=$(HELM) NAMESPACE=$(NAMESPACE) TEMPLATES_DIR=$(TEMPLATES_DIR) KIND_CLUSTER_NAME=$(KIND_CLUSTER_NAME) bash -c "./scripts/bundle-images.sh"
+
+.PHONY: airgap-package
+airgap-package: helm-package bundle-images ## Create a tarball with all images and Helm charts used by HMC, useful for deploying in air-gapped environments.
+	tar -czf hmc-charts-images-$(VERSION).tgz $(CHARTS_PACKAGE_DIR) $(IMAGES_PACKAGE_DIR)
 
 package-%-tmpl:
 	@make TEMPLATES_SUBDIR=$(TEMPLATES_DIR)/$* $(patsubst %,package-chart-%,$(shell ls $(TEMPLATES_DIR)/$*))
@@ -151,6 +163,8 @@ lint-chart-%:
 
 package-chart-%: lint-chart-%
 	$(HELM) package --destination $(CHARTS_PACKAGE_DIR) $(TEMPLATES_SUBDIR)/$*
+
+##@ Build
 
 LD_FLAGS?= -s -w
 LD_FLAGS += -X github.com/Mirantis/hmc/internal/build.Version=$(VERSION)
@@ -348,6 +362,9 @@ dev-aws-nuke: envsubst awscli yq cloud-nuke ## Warning: Destructive! Nuke all AW
 
 .PHONY: cli-install
 cli-install: clusterawsadm clusterctl cloud-nuke envsubst yq awscli ## Install the necessary CLI tools for deployment, development and testing.
+
+.PHONY: airgap-package
+airgap-package: ## Generate Helm chart and Docker image tarballs for air-gapped environments.
 
 ##@ Dependencies
 
