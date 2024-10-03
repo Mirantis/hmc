@@ -12,7 +12,7 @@ controller:
   insecureRegistry: false
   createManagement: true
   createTemplateManagement: true
-  createTemplates: true
+  createRelease: true
   enableTelemetry: true
 
 containerSecurityContext:
