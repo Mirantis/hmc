@@ -35,12 +35,13 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
+	sveltosv1beta1 "github.com/projectsveltos/addon-controller/api/v1beta1"
+
 	hmcmirantiscomv1alpha1 "github.com/Mirantis/hmc/api/v1alpha1"
 	"github.com/Mirantis/hmc/internal/controller"
 	"github.com/Mirantis/hmc/internal/telemetry"
 	"github.com/Mirantis/hmc/internal/utils"
 	hmcwebhook "github.com/Mirantis/hmc/internal/webhook"
-	sveltosv1beta1 "github.com/projectsveltos/addon-controller/api/v1beta1"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -218,10 +219,11 @@ func main() {
 		os.Exit(1)
 	}
 	if err = (&controller.ManagementReconciler{
-		Client:          mgr.GetClient(),
-		Scheme:          mgr.GetScheme(),
-		Config:          mgr.GetConfig(),
-		SystemNamespace: currentNamespace,
+		Client:                   mgr.GetClient(),
+		Scheme:                   mgr.GetScheme(),
+		Config:                   mgr.GetConfig(),
+		SystemNamespace:          currentNamespace,
+		CreateTemplateManagement: createTemplateManagement,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Management")
 		os.Exit(1)
@@ -252,16 +254,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = mgr.Add(&controller.Poller{
-		Client:                   mgr.GetClient(),
-		Config:                   mgr.GetConfig(),
-		CreateManagement:         createManagement,
-		CreateTemplateManagement: createTemplateManagement,
-		CreateTemplates:          createTemplates,
-		HMCTemplatesChartName:    hmcTemplatesChartName,
-		SystemNamespace:          currentNamespace,
-	}); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ReleaseController")
+	if err = (&controller.ReleaseReconciler{
+		Client:                mgr.GetClient(),
+		Config:                mgr.GetConfig(),
+		CreateManagement:      createManagement,
+		CreateTemplates:       createTemplates,
+		HMCTemplatesChartName: hmcTemplatesChartName,
+		SystemNamespace:       currentNamespace,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Release")
 		os.Exit(1)
 	}
 

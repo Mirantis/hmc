@@ -41,6 +41,8 @@ EOF
             cat <<EOF >> $TEMPLATES_OUTPUT_DIR/$name.yaml
 metadata:
   name: $name
+  annotations:
+    helm.sh/resource-policy: keep
 spec:
   helm:
     chartName: $name

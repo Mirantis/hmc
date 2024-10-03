@@ -25,6 +25,7 @@ import (
 	sourcev1 "github.com/fluxcd/source-controller/api/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
@@ -41,9 +42,10 @@ import (
 // ManagementReconciler reconciles a Management object
 type ManagementReconciler struct {
 	client.Client
-	Scheme          *runtime.Scheme
-	Config          *rest.Config
-	SystemNamespace string
+	Scheme                   *runtime.Scheme
+	Config                   *rest.Config
+	SystemNamespace          string
+	CreateTemplateManagement bool
 }
 
 func (r *ManagementReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -75,9 +77,15 @@ func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Manag
 	finalizersUpdated := controllerutil.AddFinalizer(management, hmc.ManagementFinalizer)
 	if finalizersUpdated {
 		if err := r.Client.Update(ctx, management); err != nil {
-			return ctrl.Result{}, fmt.Errorf("failed to update Management %s: %w", management.Name, err)
+			l.Error(err, "Failed to update Management finalizers")
+			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
+	}
+
+	if err := r.ensureTemplateManagement(ctx, management); err != nil {
+		l.Error(err, "Failed to ensure TemplateManagement is created")
+		return ctrl.Result{}, err
 	}
 
 	release := &hmc.Release{}
@@ -143,6 +151,42 @@ func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Manag
 		return ctrl.Result{}, errs
 	}
 	return ctrl.Result{}, nil
+}
+
+func (r *ManagementReconciler) ensureTemplateManagement(ctx context.Context, mgmt *hmc.Management) error {
+	l := ctrl.LoggerFrom(ctx)
+	if !r.CreateTemplateManagement {
+		return nil
+	}
+	l.Info("Ensuring TemplateManagement is created")
+	tmObj := &hmc.TemplateManagement{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: hmc.TemplateManagementName,
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion: hmc.GroupVersion.String(),
+					Kind:       mgmt.Kind,
+					Name:       mgmt.Name,
+					UID:        mgmt.UID,
+				},
+			},
+		},
+	}
+	err := r.Get(ctx, client.ObjectKey{
+		Name: hmc.TemplateManagementName,
+	}, tmObj)
+	if err == nil {
+		return nil
+	}
+	if !apierrors.IsNotFound(err) {
+		return fmt.Errorf("failed to get %s TemplateManagement object: %w", hmc.TemplateManagementName, err)
+	}
+	err = r.Create(ctx, tmObj)
+	if err != nil {
+		return fmt.Errorf("failed to create %s TemplateManagement object: %w", hmc.TemplateManagementName, err)
+	}
+	l.Info("Successfully created TemplateManagement object")
+	return nil
 }
 
 func (r *ManagementReconciler) Delete(ctx context.Context, management *hmc.Management) (ctrl.Result, error) {

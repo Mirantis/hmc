@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"time"
 
 	hcv2 "github.com/fluxcd/helm-controller/api/v2"
 	sourcev1 "github.com/fluxcd/source-controller/api/v1"
@@ -32,207 +31,173 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
 	"github.com/Mirantis/hmc/internal/build"
 	"github.com/Mirantis/hmc/internal/helm"
+	"github.com/Mirantis/hmc/internal/utils"
 )
 
-const (
-	pollPeriod    = 10 * time.Minute
-	errPollPeriod = 10 * time.Second
-
-	hmcTemplatesReleaseName = "hmc-templates"
-)
-
-// Poller reconciles a Template object
-type Poller struct {
+// ReleaseReconciler reconciles a Template object
+type ReleaseReconciler struct {
 	client.Client
 
 	Config *rest.Config
 
-	CreateManagement         bool
-	CreateTemplateManagement bool
-	CreateTemplates          bool
+	CreateManagement bool
+	CreateTemplates  bool
 
 	HMCTemplatesChartName string
 	SystemNamespace       string
 }
 
-func (p *Poller) Start(ctx context.Context) error {
-	timer := time.NewTimer(0)
-	for {
-		select {
-		case <-timer.C:
-			err := p.Tick(ctx)
-			if err != nil {
-				timer.Reset(errPollPeriod)
-			} else {
-				timer.Reset(pollPeriod)
-			}
-		case <-ctx.Done():
-			return nil
-		}
-	}
-}
-
-func (p *Poller) Tick(ctx context.Context) error {
+func (r *ReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	l := ctrl.LoggerFrom(ctx).WithValues("controller", "ReleaseController")
+	l.Info("Reconciling Release")
+	defer l.Info("Release reconcile is finished")
 
-	l.Info("Poll is run")
-	defer l.Info("Poll is finished")
-
-	err := p.reconcileHMCTemplates(ctx)
+	err := r.reconcileHMCTemplates(ctx, req)
 	if err != nil {
 		l.Error(err, "failed to reconcile HMC Templates")
-		return err
+		return ctrl.Result{}, err
 	}
-	mgmt, err := p.getOrCreateManagement(ctx)
-	if err != nil {
-		l.Error(err, "failed to get or create Management object")
-		return err
+
+	if initialReconcile(req) {
+		if err := r.ensureManagement(ctx); err != nil {
+			l.Error(err, "failed to get or create Management object")
+			return ctrl.Result{}, err
+		}
 	}
-	err = p.ensureTemplateManagement(ctx, mgmt)
-	if err != nil {
-		l.Error(err, "failed to ensure default TemplateManagement object")
-		return err
-	}
-	return nil
+	return ctrl.Result{}, nil
 }
 
-func (p *Poller) getOrCreateManagement(ctx context.Context) (*hmc.Management, error) {
+func initialReconcile(req ctrl.Request) bool {
+	return req.Name == ""
+}
+
+func (r *ReleaseReconciler) ensureManagement(ctx context.Context) error {
 	l := ctrl.LoggerFrom(ctx)
+	if !r.CreateManagement {
+		return nil
+	}
+	l.Info("Ensuring Management is created")
 	mgmtObj := &hmc.Management{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:       hmc.ManagementName,
 			Finalizers: []string{hmc.ManagementFinalizer},
 		},
 	}
-	err := p.Get(ctx, client.ObjectKey{
+	err := r.Get(ctx, client.ObjectKey{
 		Name: hmc.ManagementName,
 	}, mgmtObj)
-	if err != nil {
-		if !apierrors.IsNotFound(err) {
-			return nil, fmt.Errorf("failed to get %s Management object: %w", hmc.ManagementName, err)
-		}
-		if !p.CreateManagement {
-			return nil, nil
-		}
-		mgmtObj.Spec.Release, err = p.getCurrentReleaseName(ctx)
-		if err != nil {
-			return nil, err
-		}
-
-		if err := mgmtObj.Spec.SetProvidersDefaults(); err != nil {
-			return nil, err
-		}
-
-		getter := helm.NewMemoryRESTClientGetter(p.Config, p.RESTMapper())
-		actionConfig := new(action.Configuration)
-		err = actionConfig.Init(getter, p.SystemNamespace, "secret", l.Info)
-		if err != nil {
-			return nil, err
-		}
-
-		hmcConfig := make(chartutil.Values)
-		release, err := actionConfig.Releases.Last("hmc")
-		if err != nil {
-			if !errors.Is(err, driver.ErrReleaseNotFound) {
-				return nil, err
-			}
-		} else {
-			if len(release.Config) > 0 {
-				chartutil.CoalesceTables(hmcConfig, release.Config)
-			}
-		}
-
-		// Initially set createManagement:false to automatically create Management object only once
-		chartutil.CoalesceTables(hmcConfig, map[string]any{
-			"controller": map[string]any{
-				"createManagement": false,
-			},
-		})
-		rawConfig, err := json.Marshal(hmcConfig)
-		if err != nil {
-			return nil, err
-		}
-		mgmtObj.Spec.Core = &hmc.Core{
-			HMC: hmc.Component{
-				Config: &apiextensionsv1.JSON{
-					Raw: rawConfig,
-				},
-			},
-		}
-
-		err = p.Create(ctx, mgmtObj)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create %s Management object: %s", hmc.ManagementName, err)
-		}
-		l.Info("Successfully created Management object with default configuration")
-	}
-	return mgmtObj, nil
-}
-
-func (p *Poller) ensureTemplateManagement(ctx context.Context, mgmt *hmc.Management) error {
-	l := ctrl.LoggerFrom(ctx)
-	if !p.CreateTemplateManagement {
+	if err == nil {
 		return nil
 	}
-	if mgmt == nil {
-		return fmt.Errorf("management object is not found")
+	if !apierrors.IsNotFound(err) {
+		return fmt.Errorf("failed to get %s Management object: %w", hmc.TemplateManagementName, err)
 	}
-	tmObj := &hmc.TemplateManagement{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: hmc.TemplateManagementName,
-			OwnerReferences: []metav1.OwnerReference{
-				{
-					APIVersion: hmc.GroupVersion.String(),
-					Kind:       mgmt.Kind,
-					Name:       mgmt.Name,
-					UID:        mgmt.UID,
-				},
+	mgmtObj.Spec.Release, err = r.getCurrentReleaseName(ctx)
+	if err != nil {
+		return err
+	}
+	if err := mgmtObj.Spec.SetProvidersDefaults(); err != nil {
+		return err
+	}
+	getter := helm.NewMemoryRESTClientGetter(r.Config, r.RESTMapper())
+	actionConfig := new(action.Configuration)
+	err = actionConfig.Init(getter, r.SystemNamespace, "secret", l.Info)
+	if err != nil {
+		return err
+	}
+
+	hmcConfig := make(chartutil.Values)
+	release, err := actionConfig.Releases.Last("hmc")
+	if err != nil {
+		if !errors.Is(err, driver.ErrReleaseNotFound) {
+			return err
+		}
+	} else {
+		if len(release.Config) > 0 {
+			chartutil.CoalesceTables(hmcConfig, release.Config)
+		}
+	}
+
+	// Initially set createManagement:false to automatically create Management object only once
+	chartutil.CoalesceTables(hmcConfig, map[string]any{
+		"controller": map[string]any{
+			"createManagement": false,
+		},
+	})
+	rawConfig, err := json.Marshal(hmcConfig)
+	if err != nil {
+		return err
+	}
+	mgmtObj.Spec.Core = &hmc.Core{
+		HMC: hmc.Component{
+			Config: &apiextensionsv1.JSON{
+				Raw: rawConfig,
 			},
 		},
 	}
-	err := p.Get(ctx, client.ObjectKey{
-		Name: hmc.TemplateManagementName,
-	}, tmObj)
+	err = r.Create(ctx, mgmtObj)
 	if err != nil {
-		if !apierrors.IsNotFound(err) {
-			return fmt.Errorf("failed to get %s TemplateManagement object: %w", hmc.TemplateManagementName, err)
-		}
-		err = p.Create(ctx, tmObj)
-		if err != nil {
-			return fmt.Errorf("failed to create %s TemplateManagement object: %w", hmc.TemplateManagementName, err)
-		}
-		l.Info("Successfully created TemplateManagement object")
+		return fmt.Errorf("failed to create %s Management object: %w", hmc.TemplateManagementName, err)
 	}
+
+	l.Info("Successfully created Management object with default configuration")
 	return nil
 }
 
-func (p *Poller) reconcileHMCTemplates(ctx context.Context) error {
+func (r *ReleaseReconciler) reconcileHMCTemplates(ctx context.Context, req ctrl.Request) error {
 	l := ctrl.LoggerFrom(ctx)
-	if !p.CreateTemplates {
+	if !r.CreateTemplates {
 		l.Info("Reconciling HMC Templates is skipped")
 		return nil
 	}
+	name := utils.ReleaseNameFromVersion(build.Version)
+	version := build.Version
+	var ownerRefs []metav1.OwnerReference
+	release := &hmc.Release{}
+	if !initialReconcile(req) {
+		if err := r.Client.Get(ctx, req.NamespacedName, release); err != nil {
+			l.Error(err, "failed to get Release")
+			return err
+		}
+		name = req.Name
+		version = release.Spec.Version
+		ownerRefs = []metav1.OwnerReference{
+			{
+				APIVersion: hmc.GroupVersion.String(),
+				Kind:       release.Kind,
+				Name:       release.Name,
+				UID:        release.UID,
+			},
+		}
+	}
+
 	helmChart := &sourcev1.HelmChart{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      p.HMCTemplatesChartName,
-			Namespace: p.SystemNamespace,
+			Name:      name,
+			Namespace: r.SystemNamespace,
 		},
 	}
 
-	operation, err := ctrl.CreateOrUpdate(ctx, p.Client, helmChart, func() error {
+	operation, err := ctrl.CreateOrUpdate(ctx, r.Client, helmChart, func() error {
+		helmChart.OwnerReferences = ownerRefs
 		if helmChart.Labels == nil {
 			helmChart.Labels = make(map[string]string)
 		}
 		helmChart.Labels[hmc.HMCManagedLabelKey] = hmc.HMCManagedLabelValue
 		helmChart.Spec = sourcev1.HelmChartSpec{
-			Chart:   p.HMCTemplatesChartName,
-			Version: build.Version,
+			Chart:   r.HMCTemplatesChartName,
+			Version: version,
 			SourceRef: sourcev1.LocalHelmChartSourceReference{
 				Kind: sourcev1.HelmRepositoryKind,
 				Name: defaultRepoName,
@@ -245,14 +210,14 @@ func (p *Poller) reconcileHMCTemplates(ctx context.Context) error {
 		return err
 	}
 	if operation == controllerutil.OperationResultCreated || operation == controllerutil.OperationResultUpdated {
-		l.Info(fmt.Sprintf("Successfully %s %s/%s HelmChart", operation, p.SystemNamespace, p.HMCTemplatesChartName))
+		l.Info(fmt.Sprintf("Successfully %s %s/%s HelmChart", operation, r.SystemNamespace, name))
 	}
 
 	if _, err := helm.ArtifactReady(helmChart); err != nil {
-		return fmt.Errorf("HelmChart %s/%s Artifact is not ready: %w", p.SystemNamespace, p.HMCTemplatesChartName, err)
+		return fmt.Errorf("HelmChart %s/%s Artifact is not ready: %w", r.SystemNamespace, name, err)
 	}
 
-	_, operation, err = helm.ReconcileHelmRelease(ctx, p.Client, hmcTemplatesReleaseName, p.SystemNamespace, helm.ReconcileHelmReleaseOpts{
+	_, operation, err = helm.ReconcileHelmRelease(ctx, r.Client, name, r.SystemNamespace, helm.ReconcileHelmReleaseOpts{
 		ChartRef: &hcv2.CrossNamespaceSourceReference{
 			Kind:      helmChart.Kind,
 			Name:      helmChart.Name,
@@ -263,21 +228,42 @@ func (p *Poller) reconcileHMCTemplates(ctx context.Context) error {
 		return err
 	}
 	if operation == controllerutil.OperationResultCreated || operation == controllerutil.OperationResultUpdated {
-		l.Info(fmt.Sprintf("Successfully %s %s/%s HelmRelease", operation, p.SystemNamespace, hmcTemplatesReleaseName))
+		l.Info(fmt.Sprintf("Successfully %s %s/%s HelmRelease", operation, r.SystemNamespace, name))
 	}
 	return nil
 }
 
-func (p *Poller) getCurrentReleaseName(ctx context.Context) (string, error) {
+func (r *ReleaseReconciler) getCurrentReleaseName(ctx context.Context) (string, error) {
 	releases := &hmc.ReleaseList{}
 	listOptions := client.ListOptions{
 		FieldSelector: fields.SelectorFromSet(fields.Set{hmc.VersionKey: build.Version}),
 	}
-	if err := p.Client.List(ctx, releases, &listOptions); err != nil {
+	if err := r.Client.List(ctx, releases, &listOptions); err != nil {
 		return "", err
 	}
 	if len(releases.Items) != 1 {
 		return "", fmt.Errorf("expected 1 Release with version %s, found %d", build.Version, len(releases.Items))
 	}
 	return releases.Items[0].Name, nil
+}
+
+// SetupWithManager sets up the controller with the Manager.
+func (r *ReleaseReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	c, err := ctrl.NewControllerManagedBy(mgr).
+		For(&hmc.Release{}, builder.WithPredicates(predicate.Funcs{
+			DeleteFunc:  func(event.DeleteEvent) bool { return false },
+			GenericFunc: func(event.GenericEvent) bool { return false },
+		})).
+		Build(r)
+	if err != nil {
+		return err
+	}
+	//
+	if !r.CreateManagement {
+		return nil
+	}
+	// There's no Release objects created yet and we need to trigger reconcile
+	initChannel := make(chan event.GenericEvent, 1)
+	initChannel <- event.GenericEvent{Object: &hmc.Release{}}
+	return c.Watch(source.Channel(initChannel, &handler.EnqueueRequestForObject{}))
 }
