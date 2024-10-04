@@ -142,7 +142,12 @@ func TestServiceTemplateValidateDelete(t *testing.T) {
 		t.Run(tt.title, func(t *testing.T) {
 			g := NewWithT(t)
 
-			c := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(tt.existingObjects...).Build()
+			c := fake.
+				NewClientBuilder().
+				WithScheme(scheme.Scheme).
+				WithRuntimeObjects(tt.existingObjects...).
+				WithIndex(tt.existingObjects[0], v1alpha1.ServicesTemplateKey, v1alpha1.ExtractServiceTemplateName).
+				Build()
 			validator := &ServiceTemplateValidator{Client: c}
 			warn, err := validator.ValidateDelete(ctx, tt.template)
 			if tt.err != "" {
