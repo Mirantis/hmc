@@ -4,4 +4,4 @@ image:
 controller:
   defaultRegistryURL: oci://hmc-local-registry:5000/charts
   insecureRegistry: true
-  createTemplates: false
+  createRelease: false

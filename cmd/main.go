@@ -71,7 +71,7 @@ func main() {
 		registryCredentialsSecret string
 		createManagement          bool
 		createTemplateManagement  bool
-		createTemplates           bool
+		createRelease             bool
 		hmcTemplatesChartName     string
 		enableTelemetry           bool
 		enableWebhook             bool
@@ -90,10 +90,10 @@ func main() {
 	flag.StringVar(&registryCredentialsSecret, "registry-creds-secret", "",
 		"Secret containing authentication credentials for the registry.")
 	flag.BoolVar(&insecureRegistry, "insecure-registry", false, "Allow connecting to an HTTP registry.")
-	flag.BoolVar(&createManagement, "create-management", true, "Create Management object with default configuration.")
+	flag.BoolVar(&createManagement, "create-management", true, "Create a Management object with default configuration upon initial installation.")
 	flag.BoolVar(&createTemplateManagement, "create-template-management", true,
-		"Create TemplateManagement object with default configuration.")
-	flag.BoolVar(&createTemplates, "create-templates", true, "Create HMC Templates.")
+		"Create a TemplateManagement object upon initial installation.")
+	flag.BoolVar(&createRelease, "create-release", true, "Create an HMC Release upon initial installation.")
 	flag.StringVar(&hmcTemplatesChartName, "hmc-templates-chart-name", "hmc-templates",
 		"The name of the helm chart with HMC Templates.")
 	flag.BoolVar(&enableTelemetry, "enable-telemetry", true, "Collect and send telemetry data.")
@@ -258,7 +258,7 @@ func main() {
 		Client:                mgr.GetClient(),
 		Config:                mgr.GetConfig(),
 		CreateManagement:      createManagement,
-		CreateTemplates:       createTemplates,
+		CreateRelease:         createRelease,
 		HMCTemplatesChartName: hmcTemplatesChartName,
 		SystemNamespace:       currentNamespace,
 	}).SetupWithManager(mgr); err != nil {

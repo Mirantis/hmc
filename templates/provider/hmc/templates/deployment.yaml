@@ -28,7 +28,7 @@ spec:
         {{- end }}
         - --create-management={{ .Values.controller.createManagement }}
         - --create-template-management={{ .Values.controller.createTemplateManagement }}
-        - --create-templates={{ .Values.controller.createTemplates }}
+        - --create-release={{ .Values.controller.createRelease }}
         - --enable-telemetry={{ .Values.controller.enableTelemetry }}
         - --enable-webhook={{ .Values.admissionWebhook.enabled }}
         - --webhook-port={{ .Values.admissionWebhook.port }}

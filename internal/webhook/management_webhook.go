@@ -17,9 +17,7 @@ package webhook
 import (
 	"context"
 	"errors"
-	"fmt"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -33,10 +31,7 @@ type ManagementValidator struct {
 	client.Client
 }
 
-var (
-	errManagementDeletionForbidden         = errors.New("management deletion is forbidden")
-	errCreateManagementReenablingForbidden = errors.New("reenabling of the createManagement parameter is forbidden")
-)
+var errManagementDeletionForbidden = errors.New("management deletion is forbidden")
 
 func (v *ManagementValidator) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	v.Client = mgr.GetClient()
@@ -58,35 +53,7 @@ func (*ManagementValidator) ValidateCreate(_ context.Context, _ runtime.Object) 
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type.
-func (*ManagementValidator) ValidateUpdate(_ context.Context, _ runtime.Object, newObj runtime.Object) (admission.Warnings, error) {
-	// Ensure the newObj is of the expected type.
-	newManagement, ok := newObj.(*v1alpha1.Management)
-	if !ok {
-		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected Management but got a %T", newObj))
-	}
-
-	// without Core, no further validation is needed.
-	if newManagement.Spec.Core == nil {
-		return nil, nil
-	}
-
-	// Retrieve Helm values.
-	vals, err := newManagement.Spec.Core.HMC.HelmValues()
-	if err != nil {
-		return nil, apierrors.NewBadRequest(fmt.Sprintf("cannot retrieve helm values: %v", err))
-	}
-
-	// Check if the 'controller' field exists and is a map.
-	controller, ok := vals["controller"].(map[string]any)
-	if !ok {
-		return nil, nil
-	}
-
-	// Check if 'createManagement' exists and is true.
-	if createManagement, ok := controller["createManagement"].(bool); ok && createManagement {
-		return nil, errCreateManagementReenablingForbidden
-	}
-
+func (*ManagementValidator) ValidateUpdate(_ context.Context, _ runtime.Object, _ runtime.Object) (admission.Warnings, error) {
 	return nil, nil
 }
 

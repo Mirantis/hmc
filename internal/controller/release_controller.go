@@ -52,7 +52,7 @@ type ReleaseReconciler struct {
 	Config *rest.Config
 
 	CreateManagement bool
-	CreateTemplates  bool
+	CreateRelease    bool
 
 	HMCTemplatesChartName string
 	SystemNamespace       string
@@ -128,13 +128,6 @@ func (r *ReleaseReconciler) ensureManagement(ctx context.Context) error {
 			chartutil.CoalesceTables(hmcConfig, release.Config)
 		}
 	}
-
-	// Initially set createManagement:false to automatically create Management object only once
-	chartutil.CoalesceTables(hmcConfig, map[string]any{
-		"controller": map[string]any{
-			"createManagement": false,
-		},
-	})
 	rawConfig, err := json.Marshal(hmcConfig)
 	if err != nil {
 		return err
@@ -157,7 +150,7 @@ func (r *ReleaseReconciler) ensureManagement(ctx context.Context) error {
 
 func (r *ReleaseReconciler) reconcileHMCTemplates(ctx context.Context, req ctrl.Request) error {
 	l := ctrl.LoggerFrom(ctx)
-	if !r.CreateTemplates {
+	if !r.CreateRelease {
 		l.Info("Reconciling HMC Templates is skipped")
 		return nil
 	}
@@ -217,13 +210,26 @@ func (r *ReleaseReconciler) reconcileHMCTemplates(ctx context.Context, req ctrl.
 		return fmt.Errorf("HelmChart %s/%s Artifact is not ready: %w", r.SystemNamespace, name, err)
 	}
 
-	_, operation, err = helm.ReconcileHelmRelease(ctx, r.Client, name, r.SystemNamespace, helm.ReconcileHelmReleaseOpts{
+	opts := helm.ReconcileHelmReleaseOpts{
 		ChartRef: &hcv2.CrossNamespaceSourceReference{
 			Kind:      helmChart.Kind,
 			Name:      helmChart.Name,
 			Namespace: helmChart.Namespace,
 		},
-	})
+	}
+
+	if initialReconcile(req) {
+		createReleaseValues := map[string]any{
+			"createRelease": true,
+		}
+		raw, err := json.Marshal(createReleaseValues)
+		if err != nil {
+			return err
+		}
+		opts.Values = &apiextensionsv1.JSON{Raw: raw}
+	}
+
+	_, operation, err = helm.ReconcileHelmRelease(ctx, r.Client, name, r.SystemNamespace, opts)
 	if err != nil {
 		return err
 	}
