@@ -50,7 +50,11 @@ func SetupIndexers(ctx context.Context, mgr ctrl.Manager) error {
 		return err
 	}
 
-	return SetupReleaseIndexer(ctx, mgr)
+	if err := SetupReleaseIndexer(ctx, mgr); err != nil {
+		return err
+	}
+
+	return SetupManagedClusterServicesIndexer(ctx, mgr)
 }
 
 const TemplateKey = ".spec.template"
@@ -79,4 +83,24 @@ func ExtractReleaseVersion(rawObj client.Object) []string {
 		return nil
 	}
 	return []string{release.Spec.Version}
+}
+
+const ServicesTemplateKey = ".spec.services[].Template"
+
+func SetupManagedClusterServicesIndexer(ctx context.Context, mgr ctrl.Manager) error {
+	return mgr.GetFieldIndexer().IndexField(ctx, &ManagedCluster{}, ServicesTemplateKey, ExtractServiceTemplateName)
+}
+
+func ExtractServiceTemplateName(rawObj client.Object) []string {
+	cluster, ok := rawObj.(*ManagedCluster)
+	if !ok {
+		return nil
+	}
+
+	services := []string{}
+	for _, s := range cluster.Spec.Services {
+		services = append(services, s.Template)
+	}
+
+	return services
 }

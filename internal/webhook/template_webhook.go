@@ -119,7 +119,27 @@ func (*ServiceTemplateValidator) ValidateUpdate(_ context.Context, _ runtime.Obj
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
-func (*ServiceTemplateValidator) ValidateDelete(_ context.Context, _ runtime.Object) (admission.Warnings, error) {
+func (in *ServiceTemplateValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+	tmpl, ok := obj.(*v1alpha1.ServiceTemplate)
+	if !ok {
+		return admission.Warnings{"Wrong object"}, apierrors.NewBadRequest(fmt.Sprintf("expected ServiceTemplate but got a %T", obj))
+	}
+
+	managedClusters := &v1alpha1.ManagedClusterList{}
+	listOptions := client.ListOptions{
+		FieldSelector: fields.SelectorFromSet(fields.Set{v1alpha1.ServicesTemplateKey: tmpl.Name}),
+		Limit:         1,
+		Namespace:     tmpl.Namespace,
+	}
+	err := in.Client.List(ctx, managedClusters, &listOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(managedClusters.Items) > 0 {
+		return admission.Warnings{"The ServiceTemplate object can't be removed if ManagedCluster objects referencing it still exist"}, errTemplateDeletionForbidden
+	}
+
 	return nil, nil
 }
 

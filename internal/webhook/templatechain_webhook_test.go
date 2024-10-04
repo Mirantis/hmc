@@ -29,8 +29,6 @@ import (
 )
 
 func TestClusterTemplateChainValidateCreate(t *testing.T) {
-	g := NewWithT(t)
-
 	ctx := context.Background()
 
 	upgradeFromTemplateName := "template-1-0-1"
@@ -69,17 +67,114 @@ func TestClusterTemplateChainValidateCreate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+
 			c := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(tt.existingObjects...).Build()
 			validator := &ClusterTemplateChainValidator{Client: c}
 			warn, err := validator.ValidateCreate(ctx, tt.chain)
 			if tt.err != "" {
-				g.Expect(err).To(HaveOccurred())
-				if err.Error() != tt.err {
-					t.Fatalf("expected error '%s', got error: %s", tt.err, err.Error())
-				}
+				g.Expect(err).To(MatchError(tt.err))
 			} else {
 				g.Expect(err).To(Succeed())
 			}
+
+			if len(tt.warnings) > 0 {
+				g.Expect(warn).To(Equal(tt.warnings))
+			} else {
+				g.Expect(warn).To(BeEmpty())
+			}
+		})
+	}
+}
+
+func TestServiceTemplateChainValidateCreate(t *testing.T) {
+	ctx := context.Background()
+
+	serviceChain := tc.NewServiceTemplateChain(tc.WithNamespace("test"), tc.WithName("myapp-chain"),
+		tc.WithSupportedTemplates([]v1alpha1.SupportedTemplate{
+			{
+				Name: "myapp-v1",
+				AvailableUpgrades: []v1alpha1.AvailableUpgrade{
+					{Name: "myapp-v2"},
+					{Name: "myapp-v2.1"},
+					{Name: "myapp-v2.2"},
+				},
+			},
+			{
+				Name: "myapp-v2",
+				AvailableUpgrades: []v1alpha1.AvailableUpgrade{
+					{Name: "myapp-v2.1"},
+					{Name: "myapp-v2.2"},
+					{Name: "myapp-v3"},
+				},
+			},
+			{
+				Name: "myapp-v2.1",
+				AvailableUpgrades: []v1alpha1.AvailableUpgrade{
+					{Name: "myapp-v2.2"},
+					{Name: "myapp-v3"},
+				},
+			},
+			{
+				Name: "myapp-v2.2",
+				AvailableUpgrades: []v1alpha1.AvailableUpgrade{
+					{Name: "myapp-v3"},
+				},
+			},
+			{
+				Name: "myapp-v3",
+			},
+		}),
+	)
+
+	tests := []struct {
+		title        string
+		chain        *v1alpha1.ServiceTemplateChain
+		existingObjs []runtime.Object
+		warnings     admission.Warnings
+		err          string
+	}{
+		{
+			title: "should succeed",
+			chain: serviceChain,
+		},
+		{
+			title: "should fail if a ServiceTemplate exists and is allowed for update but is supported in the chain",
+			chain: func() *v1alpha1.ServiceTemplateChain {
+				tmpls := []v1alpha1.SupportedTemplate{}
+				for _, s := range serviceChain.Spec.SupportedTemplates {
+					// remove myapp-v3 from supportedTemplates
+					if s.Name == "myapp-v3" {
+						continue
+					}
+					tmpls = append(tmpls, s)
+				}
+
+				return tc.NewServiceTemplateChain(
+					tc.WithNamespace(serviceChain.Namespace),
+					tc.WithName(serviceChain.Name),
+					tc.WithSupportedTemplates(tmpls))
+			}(),
+			warnings: admission.Warnings{
+				"template myapp-v3 is allowed for upgrade but is not present in the list of spec.SupportedTemplates",
+			},
+			err: errInvalidTemplateChainSpec.Error(),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.title, func(t *testing.T) {
+			g := NewWithT(t)
+
+			c := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(tt.existingObjs...).Build()
+			validator := ServiceTemplateChainValidator{Client: c}
+			warn, err := validator.ValidateCreate(ctx, tt.chain)
+			if tt.err != "" {
+				g.Expect(err).To(MatchError(tt.err))
+			} else {
+				g.Expect(err).To(Succeed())
+			}
+
 			if len(tt.warnings) > 0 {
 				g.Expect(warn).To(Equal(tt.warnings))
 			} else {
