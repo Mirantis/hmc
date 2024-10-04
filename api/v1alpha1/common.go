@@ -97,10 +97,10 @@ func ExtractServiceTemplateName(rawObj client.Object) []string {
 		return nil
 	}
 
-	services := []string{}
+	templates := []string{}
 	for _, s := range cluster.Spec.Services {
-		services = append(services, s.Template)
+		templates = append(templates, s.Template)
 	}
 
-	return services
+	return templates
 }

@@ -94,12 +94,12 @@ type ServiceTemplateValidator struct {
 	client.Client
 }
 
-func (in *ServiceTemplateValidator) SetupWebhookWithManager(mgr ctrl.Manager) error {
-	in.Client = mgr.GetClient()
+func (v *ServiceTemplateValidator) SetupWebhookWithManager(mgr ctrl.Manager) error {
+	v.Client = mgr.GetClient()
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(&v1alpha1.ServiceTemplate{}).
-		WithValidator(in).
-		WithDefaulter(in).
+		WithValidator(v).
+		WithDefaulter(v).
 		Complete()
 }
 
@@ -119,20 +119,18 @@ func (*ServiceTemplateValidator) ValidateUpdate(_ context.Context, _ runtime.Obj
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
-func (in *ServiceTemplateValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+func (v *ServiceTemplateValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
 	tmpl, ok := obj.(*v1alpha1.ServiceTemplate)
 	if !ok {
 		return admission.Warnings{"Wrong object"}, apierrors.NewBadRequest(fmt.Sprintf("expected ServiceTemplate but got a %T", obj))
 	}
 
 	managedClusters := &v1alpha1.ManagedClusterList{}
-	listOptions := client.ListOptions{
+	if err := v.Client.List(ctx, managedClusters, &client.ListOptions{
 		FieldSelector: fields.SelectorFromSet(fields.Set{v1alpha1.ServicesTemplateKey: tmpl.Name}),
 		Limit:         1,
 		Namespace:     tmpl.Namespace,
-	}
-	err := in.Client.List(ctx, managedClusters, &listOptions)
-	if err != nil {
+	}); err != nil {
 		return nil, err
 	}
 
@@ -152,12 +150,12 @@ type ProviderTemplateValidator struct {
 	client.Client
 }
 
-func (in *ProviderTemplateValidator) SetupWebhookWithManager(mgr ctrl.Manager) error {
-	in.Client = mgr.GetClient()
+func (v *ProviderTemplateValidator) SetupWebhookWithManager(mgr ctrl.Manager) error {
+	v.Client = mgr.GetClient()
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(&v1alpha1.ProviderTemplate{}).
-		WithValidator(in).
-		WithDefaulter(in).
+		WithValidator(v).
+		WithDefaulter(v).
 		Complete()
 }
 
