@@ -126,7 +126,7 @@ spec:
                         name:
                           description: Name of the provider.
                           type: string
-                        versionOrContraint:
+                        versionOrConstraint:
                           description: Compatibility restriction in the SemVer format
                             (exact or constrainted version)
                           type: string
@@ -142,7 +142,7 @@ spec:
                         name:
                           description: Name of the provider.
                           type: string
-                        versionOrContraint:
+                        versionOrConstraint:
                           description: Compatibility restriction in the SemVer format
                             (exact or constrainted version)
                           type: string
@@ -158,7 +158,7 @@ spec:
                         name:
                           description: Name of the provider.
                           type: string
-                        versionOrContraint:
+                        versionOrConstraint:
                           description: Compatibility restriction in the SemVer format
                             (exact or constrainted version)
                           type: string

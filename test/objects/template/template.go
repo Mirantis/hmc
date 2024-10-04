@@ -123,6 +123,17 @@ func WithHelmSpec(helmSpec v1alpha1.HelmSpec) Opt {
 	}
 }
 
+func WithServiceK8sConstraint(v string) Opt {
+	return func(template Template) {
+		switch tt := template.(type) {
+		case *v1alpha1.ServiceTemplate:
+			tt.Status.KubertenesConstraint = v
+		default:
+			panic(fmt.Sprintf("unexpected obj typed %T, expected *ServiceTemplate", tt))
+		}
+	}
+}
+
 func WithValidationStatus(validationStatus v1alpha1.TemplateValidationStatus) Opt {
 	return func(t Template) {
 		status := t.GetCommonStatus()

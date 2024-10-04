@@ -74,7 +74,8 @@ type ManagedClusterSpec struct {
 	// +kubebuilder:validation:MinLength=1
 
 	// Template is a reference to a Template object located in the same namespace.
-	Template   string `json:"template"`
+	Template string `json:"template"`
+	// Name reference to the related Credentials object.
 	Credential string `json:"credential,omitempty"`
 	// Services is a list of services created via ServiceTemplates
 	// that could be installed on the target cluster.
@@ -101,8 +102,11 @@ type ManagedClusterSpec struct {
 // ManagedClusterStatus defines the observed state of ManagedCluster
 type ManagedClusterStatus struct {
 	// Currently compatible K8S version of the cluster. Being set only if
-	// the corresponding ClusterTemplate provided it in the spec.
+	// provided by the corresponding ClusterTemplate.
 	KubertenesVersion string `json:"k8sVersion,omitempty"`
+	// Providers represent exposed CAPI providers with constrainted compatibility versions set.
+	// Propagated from the corresponding ClusterTemplate.
+	Providers ProvidersTupled `json:"providers,omitempty"`
 	// Conditions contains details for the current state of the ManagedCluster
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 	// ObservedGeneration is the last observed generation.

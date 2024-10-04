@@ -15,6 +15,9 @@ issues:
     - text: "struct-tag: unknown option 'inline' in JSON tag"
       linters:
         - revive
+    - text: "Unhandled error in call to function fmt.Print*"
+      linters:
+        - revive
 linters:
   disable-all: true
   enable:
@@ -60,6 +63,10 @@ linters:
     - whitespace
 
 linters-settings:
+  dupl:
+    # Tokens count to trigger issue.
+    # Default: 150
+    threshold: 200
   gofmt:
     # Apply the rewrite rules to the source before reformatting.
     # https://pkg.go.dev/cmd/gofmt

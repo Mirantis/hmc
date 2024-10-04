@@ -143,7 +143,7 @@ func (r *TemplateReconciler) ReconcileTemplate(ctx context.Context, template tem
 			}
 			err := helm.ReconcileHelmRepository(ctx, r.Client, defaultRepoName, namespace, r.DefaultRegistryConfig.HelmRepositorySpec())
 			if err != nil {
-				l.Error(err, "Failed to reconcile default HelmRepository", "namespace", template.GetNamespace())
+				l.Error(err, "Failed to reconcile default HelmRepository")
 				return ctrl.Result{}, err
 			}
 		}

@@ -248,7 +248,7 @@ func (r *TemplateManagementReconciler) createTemplateChain(ctx context.Context, 
 		}
 		return err
 	}
-	l.Info(fmt.Sprintf("%s was successfully created", source.Kind()), "namespace", targetNamespace, "name", source.GetName())
+	l.Info(fmt.Sprintf("%s was successfully created", source.Kind()), "target namespace", targetNamespace, "source name", source.GetName())
 	return nil
 }
 
@@ -262,7 +262,7 @@ func (r *TemplateManagementReconciler) deleteTemplateChain(ctx context.Context, 
 		}
 		return err
 	}
-	l.Info(fmt.Sprintf("%s was successfully deleted", chain.Kind()), "namespace", chain.GetNamespace(), "name", chain.GetName())
+	l.Info(fmt.Sprintf("%s was successfully deleted", chain.Kind()), "chain namespace", chain.GetNamespace(), "chain name", chain.GetName())
 	return nil
 }
 

@@ -20,7 +20,6 @@ import (
 	"math"
 
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
-	"github.com/go-logr/logr"
 	sveltosv1beta1 "github.com/projectsveltos/addon-controller/api/v1beta1"
 	libsveltosv1beta1 "github.com/projectsveltos/libsveltos/api/v1beta1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -53,12 +52,13 @@ type HelmChartOpts struct {
 // ReconcileProfile reconciles a Sveltos Profile object.
 func ReconcileProfile(ctx context.Context,
 	cl client.Client,
-	l logr.Logger,
 	namespace string,
 	name string,
 	matchLabels map[string]string,
 	opts ReconcileProfileOpts,
 ) (*sveltosv1beta1.Profile, error) {
+	l := ctrl.LoggerFrom(ctx)
+
 	cp := &sveltosv1beta1.Profile{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,

@@ -85,14 +85,10 @@ const (
 	infrastructureProvidersType
 )
 
-func parseProviders[T any](providersGetter interface {
-	GetSpecProviders() ProvidersTupled
-	GetStatusProviders() ProvidersTupled
-}, typ providersType, annotations map[string]string, validationFn func(string) (T, error),
-) ([]ProviderTuple, error) {
-	pspec, pstatus, anno := getProvidersSpecStatusAnno(providersGetter, typ)
+func parseProviders[T any](providersGetter interface{ GetSpecProviders() ProvidersTupled }, typ providersType, annotations map[string]string, validationFn func(string) (T, error)) ([]ProviderTuple, error) {
+	pspec, anno := getProvidersSpecAnno(providersGetter, typ)
 	if len(pspec) > 0 {
-		return pstatus, nil
+		return pspec, nil
 	}
 
 	providers := annotations[anno]
@@ -102,13 +98,12 @@ func parseProviders[T any](providersGetter interface {
 
 	var (
 		splitted = strings.Split(providers, ",")
+		pstatus  = make([]ProviderTuple, 0, len(splitted))
 		merr     error
 	)
-
-	pstatus = make([]ProviderTuple, 0, len(splitted))
-
 	for _, v := range splitted {
-		nVerOrC := strings.SplitN(v, " ", 1)
+		v = strings.TrimSpace(v)
+		nVerOrC := strings.SplitN(v, " ", 2)
 		if len(nVerOrC) == 0 { // BCE (bound check elimination)
 			continue
 		}
@@ -121,30 +116,26 @@ func parseProviders[T any](providersGetter interface {
 
 		ver := strings.TrimSpace(nVerOrC[1])
 		if _, err := validationFn(ver); err != nil { // validation
-			merr = errors.Join(merr, fmt.Errorf("failed to parse version %s in the %s: %v", ver, v, err))
+			merr = errors.Join(merr, fmt.Errorf("failed to parse %s in the %s: %v", ver, v, err))
 			continue
 		}
 
-		n.VersionOrContraint = ver
+		n.VersionOrConstraint = ver
 		pstatus = append(pstatus, n)
 	}
 
 	return pstatus, merr
 }
 
-func getProvidersSpecStatusAnno(providersGetter interface {
-	GetSpecProviders() ProvidersTupled
-	GetStatusProviders() ProvidersTupled
-}, typ providersType,
-) (spec, status []ProviderTuple, annotation string) {
+func getProvidersSpecAnno(providersGetter interface{ GetSpecProviders() ProvidersTupled }, typ providersType) (spec []ProviderTuple, annotation string) {
 	switch typ {
 	case bootstrapProvidersType:
-		return providersGetter.GetSpecProviders().BootstrapProviders, providersGetter.GetStatusProviders().BootstrapProviders, ChartAnnotationBootstrapProviders
+		return providersGetter.GetSpecProviders().BootstrapProviders, ChartAnnotationBootstrapProviders
 	case controlPlaneProvidersType:
-		return providersGetter.GetSpecProviders().ControlPlaneProviders, providersGetter.GetStatusProviders().ControlPlaneProviders, ChartAnnotationControlPlaneProviders
+		return providersGetter.GetSpecProviders().ControlPlaneProviders, ChartAnnotationControlPlaneProviders
 	case infrastructureProvidersType:
-		return providersGetter.GetSpecProviders().InfrastructureProviders, providersGetter.GetStatusProviders().InfrastructureProviders, ChartAnnotationInfraProviders
+		return providersGetter.GetSpecProviders().InfrastructureProviders, ChartAnnotationInfraProviders
 	default:
-		return []ProviderTuple{}, []ProviderTuple{}, ""
+		return []ProviderTuple{}, ""
 	}
 }

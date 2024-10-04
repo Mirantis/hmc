@@ -34,7 +34,7 @@ type (
 
 	// Holds different types of CAPI providers with either
 	// an exact or constrainted version in the SemVer format. The requirement
-	// is determined by a consumer this type.
+	// is determined by a consumer of this type.
 	ProvidersTupled struct {
 		// List of CAPI infrastructure providers with either an exact or constrainted version in the SemVer format.
 		InfrastructureProviders []ProviderTuple `json:"infrastructure,omitempty"`
@@ -49,7 +49,7 @@ type (
 		// Name of the provider.
 		Name string `json:"name,omitempty"`
 		// Compatibility restriction in the SemVer format (exact or constrainted version)
-		VersionOrContraint string `json:"versionOrContraint,omitempty"`
+		VersionOrConstraint string `json:"versionOrConstraint,omitempty"`
 	}
 )
 

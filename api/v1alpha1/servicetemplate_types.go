@@ -15,12 +15,19 @@
 package v1alpha1
 
 import (
+	"fmt"
 	"strings"
 
+	"github.com/Masterminds/semver/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const ServiceTemplateKind = "ServiceTemplate"
+const (
+	// Denotes the servicetemplate resource Kind.
+	ServiceTemplateKind = "ServiceTemplate"
+	// ChartAnnotationKubernetesConstraint is an annotation containing the Kubernetes constrainted version in the SemVer format associated with a ServiceTemplate.
+	ChartAnnotationKubernetesConstraint = "hmc.mirantis.com/k8s-version-constraint"
+)
 
 // ServiceTemplateSpec defines the desired state of ServiceTemplate
 type ServiceTemplateSpec struct {
@@ -43,28 +50,23 @@ type ServiceTemplateStatus struct {
 
 // FillStatusWithProviders sets the status of the template with providers
 // either from the spec or from the given annotations.
-//
-// The return parameter is noop and is always nil.
 func (t *ServiceTemplate) FillStatusWithProviders(annotations map[string]string) error {
 	parseProviders := func(typ providersType) []string {
 		var (
-			pspec, pstatus []string
-			anno           string
+			pspec []string
+			anno  string
 		)
 		switch typ {
 		case bootstrapProvidersType:
-			pspec, pstatus = t.Spec.Providers.BootstrapProviders, t.Status.Providers.BootstrapProviders
-			anno = ChartAnnotationBootstrapProviders
+			pspec, anno = t.Spec.Providers.BootstrapProviders, ChartAnnotationBootstrapProviders
 		case controlPlaneProvidersType:
-			pspec, pstatus = t.Spec.Providers.ControlPlaneProviders, t.Status.Providers.ControlPlaneProviders
-			anno = ChartAnnotationControlPlaneProviders
+			pspec, anno = t.Spec.Providers.ControlPlaneProviders, ChartAnnotationControlPlaneProviders
 		case infrastructureProvidersType:
-			pspec, pstatus = t.Spec.Providers.InfrastructureProviders, t.Status.Providers.InfrastructureProviders
-			anno = ChartAnnotationInfraProviders
+			pspec, anno = t.Spec.Providers.InfrastructureProviders, ChartAnnotationInfraProviders
 		}
 
 		if len(pspec) > 0 {
-			return pstatus
+			return pspec
 		}
 
 		providers := annotations[anno]
@@ -72,12 +74,34 @@ func (t *ServiceTemplate) FillStatusWithProviders(annotations map[string]string)
 			return []string{}
 		}
 
-		return strings.Split(providers, ",")
+		splitted := strings.Split(providers, ",")
+		result := make([]string, 0, len(splitted))
+		for _, v := range splitted {
+			if c := strings.TrimSpace(v); c != "" {
+				result = append(result, c)
+			}
+		}
+
+		return result
 	}
 
 	t.Status.Providers.BootstrapProviders = parseProviders(bootstrapProvidersType)
 	t.Status.Providers.ControlPlaneProviders = parseProviders(controlPlaneProvidersType)
 	t.Status.Providers.InfrastructureProviders = parseProviders(infrastructureProvidersType)
+
+	kconstraint := annotations[ChartAnnotationKubernetesConstraint]
+	if t.Spec.KubertenesConstraint != "" {
+		kconstraint = t.Spec.KubertenesConstraint
+	}
+	if kconstraint == "" {
+		return nil
+	}
+
+	if _, err := semver.NewConstraint(kconstraint); err != nil {
+		return fmt.Errorf("failed to parse kubernetes constraint %s: %w", kconstraint, err)
+	}
+
+	t.Status.KubertenesConstraint = kconstraint
 
 	return nil
 }

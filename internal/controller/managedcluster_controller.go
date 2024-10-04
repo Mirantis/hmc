@@ -26,7 +26,6 @@ import (
 	fluxmeta "github.com/fluxcd/pkg/apis/meta"
 	fluxconditions "github.com/fluxcd/pkg/runtime/conditions"
 	sourcev1 "github.com/fluxcd/source-controller/api/v1"
-	"github.com/go-logr/logr"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
 	corev1 "k8s.io/api/core/v1"
@@ -38,7 +37,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -107,7 +105,7 @@ func (r *ManagedClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	if !managedCluster.DeletionTimestamp.IsZero() {
 		l.Info("Deleting ManagedCluster")
-		return r.Delete(ctx, l, managedCluster)
+		return r.Delete(ctx, managedCluster)
 	}
 
 	if managedCluster.Status.ObservedGeneration == 0 {
@@ -121,10 +119,13 @@ func (r *ManagedClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			l.Error(err, "Failed to track ManagedCluster creation")
 		}
 	}
-	return r.Update(ctx, l, managedCluster)
+
+	return r.Update(ctx, managedCluster)
 }
 
-func (r *ManagedClusterReconciler) setStatusFromClusterStatus(ctx context.Context, l logr.Logger, managedCluster *hmc.ManagedCluster) (bool, error) {
+func (r *ManagedClusterReconciler) setStatusFromClusterStatus(ctx context.Context, managedCluster *hmc.ManagedCluster) (requeue bool, _ error) {
+	l := ctrl.LoggerFrom(ctx)
+
 	resourceID := schema.GroupVersionResource{
 		Group:    "cluster.x-k8s.io",
 		Version:  "v1beta1",
@@ -181,7 +182,9 @@ func (r *ManagedClusterReconciler) setStatusFromClusterStatus(ctx context.Contex
 	return !allConditionsComplete, nil
 }
 
-func (r *ManagedClusterReconciler) Update(ctx context.Context, l logr.Logger, managedCluster *hmc.ManagedCluster) (result ctrl.Result, err error) {
+func (r *ManagedClusterReconciler) Update(ctx context.Context, managedCluster *hmc.ManagedCluster) (result ctrl.Result, err error) {
+	l := ctrl.LoggerFrom(ctx)
+
 	finalizersUpdated := controllerutil.AddFinalizer(managedCluster, hmc.ManagedClusterFinalizer)
 	if finalizersUpdated {
 		if err := r.Client.Update(ctx, managedCluster); err != nil {
@@ -214,6 +217,7 @@ func (r *ManagedClusterReconciler) Update(ctx context.Context, l logr.Logger, ma
 		})
 		return ctrl.Result{}, err
 	}
+
 	if !template.Status.Valid {
 		errMsg := "provided template is not marked as valid"
 		apimeta.SetStatusCondition(managedCluster.GetConditions(), metav1.Condition{
@@ -224,12 +228,17 @@ func (r *ManagedClusterReconciler) Update(ctx context.Context, l logr.Logger, ma
 		})
 		return ctrl.Result{}, errors.New(errMsg)
 	}
+	// template is ok, propagate data from it
+	managedCluster.Status.KubertenesVersion = template.Status.KubertenesVersion
+	managedCluster.Status.Providers = template.Status.Providers
+
 	apimeta.SetStatusCondition(managedCluster.GetConditions(), metav1.Condition{
 		Type:    hmc.TemplateReadyCondition,
 		Status:  metav1.ConditionTrue,
 		Reason:  hmc.SucceededReason,
 		Message: "Template is valid",
 	})
+
 	source, err := r.getSource(ctx, template.Status.ChartRef)
 	if err != nil {
 		apimeta.SetStatusCondition(managedCluster.GetConditions(), metav1.Condition{
@@ -347,7 +356,7 @@ func (r *ManagedClusterReconciler) Update(ctx context.Context, l logr.Logger, ma
 			})
 		}
 
-		requeue, err := r.setStatusFromClusterStatus(ctx, l, managedCluster)
+		requeue, err := r.setStatusFromClusterStatus(ctx, managedCluster)
 		if err != nil {
 			if requeue {
 				return ctrl.Result{RequeueAfter: DefaultRequeueInterval}, err
@@ -387,7 +396,7 @@ func (r *ManagedClusterReconciler) updateServices(ctx context.Context, mc *hmc.M
 		}
 
 		tmpl := &hmc.ServiceTemplate{}
-		tmplRef := types.NamespacedName{Name: svc.Template, Namespace: mc.Namespace}
+		tmplRef := client.ObjectKey{Name: svc.Template, Namespace: mc.Namespace}
 		if err := r.Get(ctx, tmplRef, tmpl); err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to get Template (%s): %w", tmplRef.String(), err)
 		}
@@ -427,7 +436,7 @@ func (r *ManagedClusterReconciler) updateServices(ctx context.Context, mc *hmc.M
 		})
 	}
 
-	if _, err := sveltos.ReconcileProfile(ctx, r.Client, l, mc.Namespace, mc.Name,
+	if _, err := sveltos.ReconcileProfile(ctx, r.Client, mc.Namespace, mc.Name,
 		map[string]string{
 			hmc.FluxHelmChartNamespaceKey: mc.Namespace,
 			hmc.FluxHelmChartNameKey:      mc.Name,
@@ -457,14 +466,14 @@ func (r *ManagedClusterReconciler) updateServices(ctx context.Context, mc *hmc.M
 // getServiceTemplateSource returns the source (HelmRepository) used by the ServiceTemplate.
 // It is fetched by querying for ServiceTemplate -> HelmChart -> HelmRepository.
 func (r *ManagedClusterReconciler) getServiceTemplateSource(ctx context.Context, tmpl *hmc.ServiceTemplate) (*sourcev1.HelmRepository, error) {
-	tmplRef := types.NamespacedName{Namespace: tmpl.Namespace, Name: tmpl.Name}
+	tmplRef := client.ObjectKey{Namespace: tmpl.Namespace, Name: tmpl.Name}
 
 	if tmpl.Status.ChartRef == nil {
 		return nil, fmt.Errorf("status for ServiceTemplate (%s) has not been updated yet", tmplRef.String())
 	}
 
 	hc := &sourcev1.HelmChart{}
-	if err := r.Get(ctx, types.NamespacedName{
+	if err := r.Get(ctx, client.ObjectKey{
 		Namespace: tmpl.Status.ChartRef.Namespace,
 		Name:      tmpl.Status.ChartRef.Name,
 	}, hc); err != nil {
@@ -472,7 +481,7 @@ func (r *ManagedClusterReconciler) getServiceTemplateSource(ctx context.Context,
 	}
 
 	repo := &sourcev1.HelmRepository{}
-	if err := r.Get(ctx, types.NamespacedName{
+	if err := r.Get(ctx, client.ObjectKey{
 		// Using chart's namespace because it's source
 		// (helm repository in this case) should be within the same namespace.
 		Namespace: hc.Namespace,
@@ -552,7 +561,9 @@ func (r *ManagedClusterReconciler) getSource(ctx context.Context, ref *hcv2.Cros
 	return &hc, nil
 }
 
-func (r *ManagedClusterReconciler) Delete(ctx context.Context, l logr.Logger, managedCluster *hmc.ManagedCluster) (ctrl.Result, error) {
+func (r *ManagedClusterReconciler) Delete(ctx context.Context, managedCluster *hmc.ManagedCluster) (ctrl.Result, error) {
+	l := ctrl.LoggerFrom(ctx)
+
 	hr := &hcv2.HelmRelease{}
 	err := r.Get(ctx, client.ObjectKey{
 		Name:      managedCluster.Name,
@@ -632,7 +643,7 @@ func (r *ManagedClusterReconciler) getProviders(ctx context.Context, templateNam
 	template := &hmc.ClusterTemplate{}
 	templateRef := client.ObjectKey{Name: templateName, Namespace: templateNamespace}
 	if err := r.Get(ctx, templateRef, template); err != nil {
-		ctrl.LoggerFrom(ctx).Error(err, "Failed to get ClusterTemplate", "namespace", templateNamespace, "name", templateName)
+		ctrl.LoggerFrom(ctx).Error(err, "Failed to get ClusterTemplate", "template namespace", templateNamespace, "template name", templateName)
 		return nil, err
 	}
 
