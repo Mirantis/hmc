@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -126,13 +127,15 @@ func (in *ServiceTemplateValidator) ValidateDelete(ctx context.Context, obj runt
 		return admission.Warnings{"Wrong object"}, apierrors.NewBadRequest(fmt.Sprintf("expected ServiceTemplate but got a %T", obj))
 	}
 
+	// TODO: Find a way to only select the ManagedClusters that have
+	// .Spec.Services[].Template == tmpl.Name using ListOptions if possible.
+	// This way we can get rid of the pagination as well.
 	var token string
-
 	for {
 		managedClusters := &v1alpha1.ManagedClusterList{}
 		if err := in.Client.List(ctx, managedClusters, &client.ListOptions{
 			Namespace: tmpl.Namespace,
-			Limit:     100,
+			Limit:     100, // arbitrary page size.
 			Raw: &metav1.ListOptions{
 				Continue: token,
 			},
@@ -141,10 +144,10 @@ func (in *ServiceTemplateValidator) ValidateDelete(ctx context.Context, obj runt
 		}
 
 		for _, m := range managedClusters.Items {
-			for _, s := range m.Spec.Services {
-				if s.Template == tmpl.Name {
-					return admission.Warnings{"The ServiceTemplate object can't be removed if ManagedCluster objects referencing it still exist"}, errTemplateDeletionForbidden
-				}
+			if slices.ContainsFunc(m.Spec.Services, func(s v1alpha1.ManagedClusterServiceSpec) bool {
+				return s.Template == tmpl.Name
+			}) {
+				return admission.Warnings{"The ServiceTemplate object can't be removed if ManagedCluster objects referencing it still exist"}, errTemplateDeletionForbidden
 			}
 		}
 
