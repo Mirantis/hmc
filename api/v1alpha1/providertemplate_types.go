@@ -21,6 +21,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// ChartAnnotationCAPIVersion is an annotation containing the CAPI exact version in the SemVer format associated with a ProviderTemplate.
+const ChartAnnotationCAPIVersion = "hmc.mirantis.com/capi-version"
+
 // ProviderTemplateSpec defines the desired state of ProviderTemplate
 type ProviderTemplateSpec struct {
 	Helm HelmSpec `json:"helm"`
@@ -59,17 +62,26 @@ func (t *ProviderTemplate) FillStatusWithProviders(annotations map[string]string
 		return fmt.Errorf("failed to parse ProviderTemplate infrastructure providers: %v", err)
 	}
 
+	capiVersion := annotations[ChartAnnotationCAPIVersion]
+	if t.Spec.CAPIVersion != "" {
+		capiVersion = t.Spec.CAPIVersion
+	}
+	if capiVersion == "" {
+		return nil
+	}
+
+	if _, err := semver.NewVersion(capiVersion); err != nil {
+		return fmt.Errorf("failed to parse CAPI version %s: %w", capiVersion, err)
+	}
+
+	t.Status.CAPIVersion = capiVersion
+
 	return nil
 }
 
 // GetSpecProviders returns .spec.providers of the Template.
 func (t *ProviderTemplate) GetSpecProviders() ProvidersTupled {
 	return t.Spec.Providers
-}
-
-// GetStatusProviders returns .status.providers of the Template.
-func (t *ProviderTemplate) GetStatusProviders() ProvidersTupled {
-	return t.Status.Providers
 }
 
 // GetHelmSpec returns .spec.helm of the Template.

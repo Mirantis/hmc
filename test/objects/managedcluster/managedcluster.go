@@ -60,9 +60,15 @@ func WithDryRun(dryRun bool) Opt {
 	}
 }
 
-func WithTemplate(templateName string) Opt {
+func WithClusterTemplate(templateName string) Opt {
 	return func(p *v1alpha1.ManagedCluster) {
 		p.Spec.Template = templateName
+	}
+}
+
+func WithK8sVersionStatus(v string) Opt {
+	return func(managedCluster *v1alpha1.ManagedCluster) {
+		managedCluster.Status.KubertenesVersion = v
 	}
 }
 

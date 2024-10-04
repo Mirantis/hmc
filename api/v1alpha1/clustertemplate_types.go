@@ -21,7 +21,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const ClusterTemplateKind = "ClusterTemplate"
+const (
+	// Denotes the clustertemplate resource Kind.
+	ClusterTemplateKind = "ClusterTemplate"
+	// ChartAnnotationKubernetesVersion is an annotation containing the Kubernetes exact version in the SemVer format associated with a ClusterTemplate.
+	ChartAnnotationKubernetesVersion = "hmc.mirantis.com/k8s-version"
+)
 
 // ClusterTemplateSpec defines the desired state of ClusterTemplate
 type ClusterTemplateSpec struct {
@@ -61,17 +66,26 @@ func (t *ClusterTemplate) FillStatusWithProviders(annotations map[string]string)
 		return fmt.Errorf("failed to parse ClusterTemplate infrastructure providers: %v", err)
 	}
 
+	kversion := annotations[ChartAnnotationKubernetesVersion]
+	if t.Spec.KubertenesVersion != "" {
+		kversion = t.Spec.KubertenesVersion
+	}
+	if kversion == "" {
+		return nil
+	}
+
+	if _, err := semver.NewVersion(kversion); err != nil {
+		return fmt.Errorf("failed to parse kubernetes version %s: %w", kversion, err)
+	}
+
+	t.Status.KubertenesVersion = kversion
+
 	return nil
 }
 
 // GetSpecProviders returns .spec.providers of the Template.
 func (t *ClusterTemplate) GetSpecProviders() ProvidersTupled {
 	return t.Spec.Providers
-}
-
-// GetStatusProviders returns .status.providers of the Template.
-func (t *ClusterTemplate) GetStatusProviders() ProvidersTupled {
-	return t.Status.Providers
 }
 
 // GetHelmSpec returns .spec.helm of the Template.
