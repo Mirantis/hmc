@@ -156,6 +156,7 @@ func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Manag
 	management.Status.ObservedGeneration = management.Generation
 	management.Status.AvailableProviders = detectedProviders
 	management.Status.Components = detectedComponents
+	management.Status.Release = management.Spec.Release
 	if err := r.Status().Update(ctx, management); err != nil {
 		errs = errors.Join(errs, fmt.Errorf("failed to update status for Management %s: %w",
 			management.Name, err))

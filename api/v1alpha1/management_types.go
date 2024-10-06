@@ -94,6 +94,8 @@ type ManagementStatus struct {
 	AvailableProviders Providers `json:"availableProviders,omitempty"`
 	// Components indicates the status of installed HMC components and CAPI providers.
 	Components map[string]ComponentStatus `json:"components,omitempty"`
+	// Release indicates the current Release object.
+	Release string `json:"release,omitempty"`
 }
 
 // ComponentStatus is the status of Management component installation
