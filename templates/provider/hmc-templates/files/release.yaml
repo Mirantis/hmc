@@ -7,17 +7,17 @@ metadata:
 spec:
   version: v0.0.2
   hmc:
-    template: hmc
+    template: hmc-0-0-1
   capi:
-    template: cluster-api
+    template: cluster-api-0-0-1
   providers:
     - name: k0smotron
-      template: k0smotron
+      template: k0smotron-0-0-1
     - name: cluster-api-provider-azure
-      template: cluster-api-provider-azure
+      template: cluster-api-provider-azure-0-0-1
     - name: cluster-api-provider-vsphere
-      template: cluster-api-provider-vsphere
+      template: cluster-api-provider-vsphere-0-0-1
     - name: cluster-api-provider-aws
-      template: cluster-api-provider-aws
+      template: cluster-api-provider-aws-0-0-1
     - name: projectsveltos
-      template: projectsveltos
+      template: projectsveltos-0-38-2

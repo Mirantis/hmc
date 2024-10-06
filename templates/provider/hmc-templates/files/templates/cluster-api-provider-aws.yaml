@@ -1,10 +1,10 @@
 apiVersion: hmc.mirantis.com/v1alpha1
 kind: ProviderTemplate
 metadata:
-  name: cluster-api-provider-aws
+  name: cluster-api-provider-aws-0-0-1
   annotations:
     helm.sh/resource-policy: keep
 spec:
   helm:
     chartName: cluster-api-provider-aws
-    chartVersion: 0.1.2
+    chartVersion: 0.0.1
