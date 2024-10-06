@@ -76,12 +76,6 @@ spec:
                   - template
                   type: object
                 type: array
-              upgradeableVersions:
-                description: UpgradeableVersions contains a list of versions available
-                  to upgrade from.
-                items:
-                  type: string
-                type: array
               version:
                 description: Version of the HMC Release in the semver format.
                 type: string

@@ -22,8 +22,6 @@ import (
 type ReleaseSpec struct {
 	// Version of the HMC Release in the semver format.
 	Version string `json:"version"`
-	// UpgradeableVersions contains a list of versions available to upgrade from.
-	UpgradeableVersions []string `json:"upgradeableVersions,omitempty"`
 	// HMC references the HMC template.
 	HMC CoreProviderTemplate `json:"hmc"`
 	// CAPI references the Cluster API template.
