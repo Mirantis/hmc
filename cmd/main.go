@@ -39,6 +39,7 @@ import (
 
 	hmcmirantiscomv1alpha1 "github.com/Mirantis/hmc/api/v1alpha1"
 	"github.com/Mirantis/hmc/internal/controller"
+	"github.com/Mirantis/hmc/internal/helm"
 	"github.com/Mirantis/hmc/internal/telemetry"
 	"github.com/Mirantis/hmc/internal/utils"
 	hmcwebhook "github.com/Mirantis/hmc/internal/webhook"
@@ -183,13 +184,15 @@ func main() {
 	currentNamespace := utils.CurrentNamespace()
 
 	templateReconciler := controller.TemplateReconciler{
-		Client:                    mgr.GetClient(),
-		Scheme:                    mgr.GetScheme(),
-		SystemNamespace:           currentNamespace,
-		DefaultRegistryURL:        defaultRegistryURL,
-		DefaultRepoType:           determinedRepositoryType,
-		RegistryCredentialsSecret: registryCredentialsSecret,
-		InsecureRegistry:          insecureRegistry,
+		Client:          mgr.GetClient(),
+		Scheme:          mgr.GetScheme(),
+		SystemNamespace: currentNamespace,
+		DefaultRegistryConfig: helm.DefaultRegistryConfig{
+			URL:               defaultRegistryURL,
+			RepoType:          determinedRepositoryType,
+			CredentialsSecret: registryCredentialsSecret,
+			Insecure:          insecureRegistry,
+		},
 	}
 
 	if err = (&controller.ClusterTemplateReconciler{
