@@ -140,9 +140,9 @@ TEMPLATE_FOLDERS = $(patsubst $(TEMPLATES_DIR)/%,%,$(wildcard $(TEMPLATES_DIR)/*
 
 .PHONY: helm-package
 helm-package: $(CHARTS_PACKAGE_DIR) helm
-	@make $(patsubst %,package-%-templates,$(TEMPLATE_FOLDERS))
+	@make $(patsubst %,package-%-tmpl,$(TEMPLATE_FOLDERS))
 
-package-%-templates:
+package-%-tmpl:
 	@make TEMPLATES_SUBDIR=$(TEMPLATES_DIR)/$* $(patsubst %,package-chart-%,$(shell ls $(TEMPLATES_DIR)/$*))
 
 lint-chart-%:
