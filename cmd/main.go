@@ -73,6 +73,7 @@ func main() {
 		createManagement          bool
 		createTemplateManagement  bool
 		createRelease             bool
+		createTemplates           bool
 		hmcTemplatesChartName     string
 		enableTelemetry           bool
 		enableWebhook             bool
@@ -95,6 +96,7 @@ func main() {
 	flag.BoolVar(&createTemplateManagement, "create-template-management", true,
 		"Create a TemplateManagement object upon initial installation.")
 	flag.BoolVar(&createRelease, "create-release", true, "Create an HMC Release upon initial installation.")
+	flag.BoolVar(&createTemplates, "create-templates", true, "Create HMC Templates based on Release objects.")
 	flag.StringVar(&hmcTemplatesChartName, "hmc-templates-chart-name", "hmc-templates",
 		"The name of the helm chart with HMC Templates.")
 	flag.BoolVar(&enableTelemetry, "enable-telemetry", true, "Collect and send telemetry data.")
@@ -262,6 +264,7 @@ func main() {
 		Config:                mgr.GetConfig(),
 		CreateManagement:      createManagement,
 		CreateRelease:         createRelease,
+		CreateTemplates:       createTemplates,
 		HMCTemplatesChartName: hmcTemplatesChartName,
 		SystemNamespace:       currentNamespace,
 		DefaultRegistryConfig: helm.DefaultRegistryConfig{

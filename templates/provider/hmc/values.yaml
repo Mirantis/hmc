@@ -13,6 +13,7 @@ controller:
   createManagement: true
   createTemplateManagement: true
   createRelease: true
+  createTemplates: true
   enableTelemetry: true
 
 containerSecurityContext:
