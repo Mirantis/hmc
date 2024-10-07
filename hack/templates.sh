@@ -34,12 +34,13 @@ for type in "$TEMPLATES_DIR"/*; do
             if [ "$name" = "$HMC_TEMPLATES_CHART_NAME" ]; then continue; fi
             version=$(grep '^version:' $chart/Chart.yaml | awk '{print $2}')
             template_name=$name-$(echo "$version" | sed 's/^v//; s/\./-/g')
+            if [ "$kind" = "ProviderTemplate" ]; then file_name=$name; else file_name=$template_name; fi
 
-            cat <<EOF > $TEMPLATES_OUTPUT_DIR/$name.yaml
+            cat <<EOF > $TEMPLATES_OUTPUT_DIR/$file_name.yaml
 apiVersion: hmc.mirantis.com/v1alpha1
 kind: $kind
 EOF
-            cat <<EOF >> $TEMPLATES_OUTPUT_DIR/$name.yaml
+            cat <<EOF >> $TEMPLATES_OUTPUT_DIR/$file_name.yaml
 metadata:
   name: $template_name
   annotations:
