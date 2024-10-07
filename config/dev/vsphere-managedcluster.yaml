@@ -4,7 +4,7 @@ metadata:
   name: vsphere-dev
   namespace: ${NAMESPACE}
 spec:
-  template: vsphere-standalone-cp
+  template: vsphere-standalone-cp-0-0-1
   credential: vsphere-cluster-identity-cred
   config:
     controlPlaneNumber: 1
