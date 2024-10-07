@@ -161,7 +161,7 @@ func (r *ReleaseReconciler) reconcileHMCTemplates(ctx context.Context, req ctrl.
 		l.Info("Initial creation of HMC Release is skipped")
 		return nil
 	}
-	name := utils.ReleaseNameFromVersion(build.Version)
+	releaseName := utils.ReleaseNameFromVersion(build.Version)
 	version := build.Version
 	var ownerRefs []metav1.OwnerReference
 	release := &hmc.Release{}
@@ -170,7 +170,7 @@ func (r *ReleaseReconciler) reconcileHMCTemplates(ctx context.Context, req ctrl.
 			l.Error(err, "failed to get Release")
 			return err
 		}
-		name = req.Name
+		releaseName = req.Name
 		version = release.Spec.Version
 		ownerRefs = []metav1.OwnerReference{
 			{
@@ -190,9 +190,10 @@ func (r *ReleaseReconciler) reconcileHMCTemplates(ctx context.Context, req ctrl.
 		}
 	}
 
+	hmcTemplatesName := utils.TemplatesChartFromReleaseName(releaseName)
 	helmChart := &sourcev1.HelmChart{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
+			Name:      hmcTemplatesName,
 			Namespace: r.SystemNamespace,
 		},
 	}
@@ -218,11 +219,11 @@ func (r *ReleaseReconciler) reconcileHMCTemplates(ctx context.Context, req ctrl.
 		return err
 	}
 	if operation == controllerutil.OperationResultCreated || operation == controllerutil.OperationResultUpdated {
-		l.Info(fmt.Sprintf("Successfully %s %s/%s HelmChart", operation, r.SystemNamespace, name))
+		l.Info(fmt.Sprintf("Successfully %s %s/%s HelmChart", operation, r.SystemNamespace, hmcTemplatesName))
 	}
 
 	if _, err := helm.ArtifactReady(helmChart); err != nil {
-		return fmt.Errorf("HelmChart %s/%s Artifact is not ready: %w", r.SystemNamespace, name, err)
+		return fmt.Errorf("HelmChart %s/%s Artifact is not ready: %w", r.SystemNamespace, hmcTemplatesName, err)
 	}
 
 	opts := helm.ReconcileHelmReleaseOpts{
@@ -244,12 +245,12 @@ func (r *ReleaseReconciler) reconcileHMCTemplates(ctx context.Context, req ctrl.
 		opts.Values = &apiextensionsv1.JSON{Raw: raw}
 	}
 
-	_, operation, err = helm.ReconcileHelmRelease(ctx, r.Client, name, r.SystemNamespace, opts)
+	_, operation, err = helm.ReconcileHelmRelease(ctx, r.Client, hmcTemplatesName, r.SystemNamespace, opts)
 	if err != nil {
 		return err
 	}
 	if operation == controllerutil.OperationResultCreated || operation == controllerutil.OperationResultUpdated {
-		l.Info(fmt.Sprintf("Successfully %s %s/%s HelmRelease", operation, r.SystemNamespace, name))
+		l.Info(fmt.Sprintf("Successfully %s %s/%s HelmRelease", operation, r.SystemNamespace, hmcTemplatesName))
 	}
 	return nil
 }
