@@ -264,6 +264,12 @@ func main() {
 		CreateRelease:         createRelease,
 		HMCTemplatesChartName: hmcTemplatesChartName,
 		SystemNamespace:       currentNamespace,
+		DefaultRegistryConfig: helm.DefaultRegistryConfig{
+			URL:               defaultRegistryURL,
+			RepoType:          determinedRepositoryType,
+			CredentialsSecret: registryCredentialsSecret,
+			Insecure:          insecureRegistry,
+		},
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Release")
 		os.Exit(1)
