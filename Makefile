@@ -1,5 +1,6 @@
 NAMESPACE ?= hmc-system
 VERSION ?= $(shell git describe --tags --always)
+FQDN_VERSION = $(patsubst v%,%,$(subst .,-, $(VERSION)))
 # Image URL to use all building/pushing image targets
 IMG ?= hmc/controller:latest
 IMG_REPO = $(shell echo $(IMG) | cut -d: -f1)
@@ -69,7 +70,8 @@ set-hmc-version: yq
 	$(YQ) eval '.version = "$(VERSION)"' -i $(PROVIDER_TEMPLATES_DIR)/hmc-templates/Chart.yaml
 	$(YQ) eval '.image.tag = "$(VERSION)"' -i $(PROVIDER_TEMPLATES_DIR)/hmc/values.yaml
 	$(YQ) eval '.spec.version = "$(VERSION)"' -i $(PROVIDER_TEMPLATES_DIR)/hmc-templates/files/release.yaml
-	$(YQ) eval '.metadata.name = "hmc-$(patsubst v%,%,$(subst .,-, $(VERSION)))"' -i $(PROVIDER_TEMPLATES_DIR)/hmc-templates/files/release.yaml
+	$(YQ) eval '.metadata.name = "hmc-$(FQDN_VERSION)"' -i $(PROVIDER_TEMPLATES_DIR)/hmc-templates/files/release.yaml
+	$(YQ) eval '.spec.hmc.template = "hmc-$(FQDN_VERSION)"' -i $(PROVIDER_TEMPLATES_DIR)/hmc-templates/files/release.yaml
 
 .PHONY: hmc-chart-release
 hmc-chart-release: set-hmc-version templates-generate ## Generate hmc helm chart

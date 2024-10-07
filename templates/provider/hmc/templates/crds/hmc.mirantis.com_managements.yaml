@@ -159,6 +159,9 @@ spec:
                 description: ObservedGeneration is the last observed generation.
                 format: int64
                 type: integer
+              release:
+                description: Release indicates the current Release object.
+                type: string
             type: object
         type: object
     served: true

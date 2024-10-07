@@ -1,7 +1,7 @@
 apiVersion: hmc.mirantis.com/v1alpha1
 kind: ServiceTemplate
 metadata:
-  name: ingress-nginx
+  name: ingress-nginx-4-11-0
   annotations:
     helm.sh/resource-policy: keep
 spec:

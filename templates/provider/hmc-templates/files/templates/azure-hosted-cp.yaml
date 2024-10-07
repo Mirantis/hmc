@@ -1,10 +1,10 @@
 apiVersion: hmc.mirantis.com/v1alpha1
 kind: ClusterTemplate
 metadata:
-  name: azure-hosted-cp
+  name: azure-hosted-cp-0-0-1
   annotations:
     helm.sh/resource-policy: keep
 spec:
   helm:
     chartName: azure-hosted-cp
-    chartVersion: 0.1.1
+    chartVersion: 0.0.1

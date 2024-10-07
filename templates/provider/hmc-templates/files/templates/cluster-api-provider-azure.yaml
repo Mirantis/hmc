@@ -1,7 +1,7 @@
 apiVersion: hmc.mirantis.com/v1alpha1
 kind: ProviderTemplate
 metadata:
-  name: cluster-api-provider-azure
+  name: cluster-api-provider-azure-0-0-1
   annotations:
     helm.sh/resource-policy: keep
 spec:
