@@ -53,6 +53,7 @@ type ReleaseReconciler struct {
 
 	CreateManagement bool
 	CreateRelease    bool
+	CreateTemplates  bool
 
 	HMCTemplatesChartName string
 	SystemNamespace       string
@@ -152,6 +153,10 @@ func (r *ReleaseReconciler) ensureManagement(ctx context.Context) error {
 
 func (r *ReleaseReconciler) reconcileHMCTemplates(ctx context.Context, req ctrl.Request) error {
 	l := ctrl.LoggerFrom(ctx)
+	if !r.CreateTemplates {
+		l.Info("Templates creation is disabled")
+		return nil
+	}
 	if initialReconcile(req) && !r.CreateRelease {
 		l.Info("Initial creation of HMC Release is skipped")
 		return nil
