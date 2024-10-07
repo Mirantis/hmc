@@ -16,7 +16,7 @@ require (
 	github.com/onsi/gomega v1.34.2
 	github.com/opencontainers/go-digest v1.0.1-0.20231025023718-d50d2fec9c98
 	github.com/projectsveltos/addon-controller v0.38.4
-	github.com/projectsveltos/libsveltos v0.38.4
+	github.com/projectsveltos/libsveltos v0.39.0
 	github.com/segmentio/analytics-go v3.1.0+incompatible
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.16.1
@@ -24,7 +24,7 @@ require (
 	k8s.io/apiextensions-apiserver v0.31.1
 	k8s.io/apimachinery v0.31.1
 	k8s.io/client-go v0.31.1
-	k8s.io/utils v0.0.0-20240902221715-702e33fdd3c3
+	k8s.io/utils v0.0.0-20240921022957-49e7df575cb6
 	sigs.k8s.io/cluster-api v1.8.3
 	sigs.k8s.io/controller-runtime v0.19.0
 	sigs.k8s.io/yaml v1.4.0
@@ -158,7 +158,7 @@ require (
 	golang.org/x/sync v0.8.0 // indirect
 	golang.org/x/sys v0.25.0 // indirect
 	golang.org/x/term v0.24.0 // indirect
-	golang.org/x/text v0.18.0 // indirect
+	golang.org/x/text v0.19.0 // indirect
 	golang.org/x/time v0.6.0 // indirect
 	golang.org/x/tools v0.25.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
