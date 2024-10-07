@@ -56,6 +56,8 @@ type ReleaseReconciler struct {
 
 	HMCTemplatesChartName string
 	SystemNamespace       string
+
+	DefaultRegistryConfig helm.DefaultRegistryConfig
 }
 
 func (r *ReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -150,8 +152,8 @@ func (r *ReleaseReconciler) ensureManagement(ctx context.Context) error {
 
 func (r *ReleaseReconciler) reconcileHMCTemplates(ctx context.Context, req ctrl.Request) error {
 	l := ctrl.LoggerFrom(ctx)
-	if !r.CreateRelease {
-		l.Info("Reconciling HMC Templates is skipped")
+	if initialReconcile(req) && !r.CreateRelease {
+		l.Info("Initial creation of HMC Release is skipped")
 		return nil
 	}
 	name := utils.ReleaseNameFromVersion(build.Version)
@@ -172,6 +174,14 @@ func (r *ReleaseReconciler) reconcileHMCTemplates(ctx context.Context, req ctrl.
 				Name:       release.Name,
 				UID:        release.UID,
 			},
+		}
+	}
+
+	if initialReconcile(req) {
+		err := helm.ReconcileHelmRepository(ctx, r.Client, defaultRepoName, r.SystemNamespace, r.DefaultRegistryConfig.HelmRepositorySpec())
+		if err != nil {
+			l.Error(err, "Failed to reconcile default HelmRepository", "namespace", r.SystemNamespace)
+			return err
 		}
 	}
 
