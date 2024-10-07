@@ -12,8 +12,8 @@ spec:
     listKind: ManagedClusterList
     plural: managedclusters
     shortNames:
-    - hmc-deploy
-    - deploy
+    - mcluster
+    - mcl
     singular: managedcluster
   scope: Namespaced
   versions:
