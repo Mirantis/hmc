@@ -20,6 +20,15 @@ func ReleaseNameFromVersion(version string) string {
 	return "hmc-" + strings.ReplaceAll(strings.TrimPrefix(version, "v"), ".", "-")
 }
 
+func ChartVersionFromVersion(version string) string {
+	index := strings.Index(version, "-")
+	cut := strings.TrimPrefix(version, "v")
+	if index >= 1 {
+		cut = cut[:index-1]
+	}
+	return cut
+}
+
 func TemplatesChartFromReleaseName(releaseName string) string {
 	return releaseName + "-tpl"
 }
