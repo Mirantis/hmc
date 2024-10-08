@@ -332,7 +332,7 @@ func wrappedComponents(mgmt *hmc.Management, release *hmc.Release) ([]component,
 			c.Template = release.ProviderTemplate(p.Name)
 		}
 
-		if c.Template == hmc.ProviderSveltosName {
+		if p.Name == hmc.ProviderSveltosName {
 			c.targetNamespace = hmc.ProviderSveltosTargetNamespace
 			c.createNamespace = hmc.ProviderSveltosCreateNamespace
 		}
