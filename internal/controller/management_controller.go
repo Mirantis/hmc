@@ -126,13 +126,13 @@ func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Manag
 		}, template)
 		if err != nil {
 			errMsg := fmt.Sprintf("Failed to get ProviderTemplate %s: %s", component.Template, err)
-			updateComponentsStatus(detectedComponents, &detectedProviders, component.helmReleaseName, template.Status, errMsg)
+			updateComponentsStatus(detectedComponents, &detectedProviders, component.helmReleaseName, component.Template, template.Status.Providers, errMsg)
 			errs = errors.Join(errs, errors.New(errMsg))
 			continue
 		}
 		if !template.Status.Valid {
 			errMsg := fmt.Sprintf("Template %s is not marked as valid", component.Template)
-			updateComponentsStatus(detectedComponents, &detectedProviders, component.helmReleaseName, template.Status, errMsg)
+			updateComponentsStatus(detectedComponents, &detectedProviders, component.helmReleaseName, component.Template, template.Status.Providers, errMsg)
 			errs = errors.Join(errs, errors.New(errMsg))
 			continue
 		}
@@ -146,11 +146,11 @@ func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Manag
 		})
 		if err != nil {
 			errMsg := fmt.Sprintf("error reconciling HelmRelease %s/%s: %s", r.SystemNamespace, component.Template, err)
-			updateComponentsStatus(detectedComponents, &detectedProviders, component.helmReleaseName, template.Status, errMsg)
+			updateComponentsStatus(detectedComponents, &detectedProviders, component.helmReleaseName, component.Template, template.Status.Providers, errMsg)
 			errs = errors.Join(errs, errors.New(errMsg))
 			continue
 		}
-		updateComponentsStatus(detectedComponents, &detectedProviders, component.helmReleaseName, template.Status, "")
+		updateComponentsStatus(detectedComponents, &detectedProviders, component.helmReleaseName, component.Template, template.Status.Providers, "")
 	}
 
 	management.Status.ObservedGeneration = management.Generation
@@ -412,18 +412,20 @@ func updateComponentsStatus(
 	components map[string]hmc.ComponentStatus,
 	providers *hmc.Providers,
 	componentName string,
-	templateStatus hmc.ProviderTemplateStatus,
+	templateName string,
+	templateProviders hmc.Providers,
 	err string,
 ) {
 	components[componentName] = hmc.ComponentStatus{
-		Error:   err,
-		Success: err == "",
+		Error:    err,
+		Success:  err == "",
+		Template: templateName,
 	}
 
 	if err == "" {
-		providers.InfrastructureProviders = append(providers.InfrastructureProviders, templateStatus.Providers.InfrastructureProviders...)
-		providers.BootstrapProviders = append(providers.BootstrapProviders, templateStatus.Providers.BootstrapProviders...)
-		providers.ControlPlaneProviders = append(providers.ControlPlaneProviders, templateStatus.Providers.ControlPlaneProviders...)
+		providers.InfrastructureProviders = append(providers.InfrastructureProviders, templateProviders.InfrastructureProviders...)
+		providers.BootstrapProviders = append(providers.BootstrapProviders, templateProviders.BootstrapProviders...)
+		providers.ControlPlaneProviders = append(providers.ControlPlaneProviders, templateProviders.ControlPlaneProviders...)
 	}
 }
 
