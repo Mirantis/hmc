@@ -17,6 +17,7 @@ package sveltos
 import (
 	"context"
 	"fmt"
+	"math"
 
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
 	"github.com/go-logr/logr"
@@ -33,16 +34,18 @@ import (
 type ReconcileProfileOpts struct {
 	OwnerReference *metav1.OwnerReference
 	HelmChartOpts  []HelmChartOpts
+	Priority       int32
+	StopOnConflict bool
 }
 
 type HelmChartOpts struct {
+	Values                *apiextensionsv1.JSON
 	RepositoryURL         string
 	RepositoryName        string
 	ChartName             string
 	ChartVersion          string
 	ReleaseName           string
 	ReleaseNamespace      string
-	Values                *apiextensionsv1.JSON
 	PlainHTTP             bool
 	InsecureSkipTLSVerify bool
 }
@@ -63,6 +66,11 @@ func ReconcileProfile(ctx context.Context,
 		},
 	}
 
+	tier, err := PriorityToTier(opts.Priority)
+	if err != nil {
+		return nil, err
+	}
+
 	operation, err := ctrl.CreateOrUpdate(ctx, cl, cp, func() error {
 		if cp.Labels == nil {
 			cp.Labels = make(map[string]string)
@@ -79,6 +87,8 @@ func ReconcileProfile(ctx context.Context,
 					MatchLabels: matchLabels,
 				},
 			},
+			Tier:               tier,
+			ContinueOnConflict: !opts.StopOnConflict,
 		}
 
 		for _, hc := range opts.HelmChartOpts {
@@ -139,4 +149,17 @@ func DeleteProfile(ctx context.Context, cl client.Client, namespace string, name
 	})
 
 	return client.IgnoreNotFound(err)
+}
+
+// PriorityToTier converts priority value to Sveltos tier value.
+func PriorityToTier(priority int32) (int32, error) {
+	var mini int32 = 1
+	maxi := math.MaxInt32 - mini
+
+	// This check is needed because Sveltos asserts a min value of 1 on tier.
+	if priority >= mini && priority <= maxi {
+		return math.MaxInt32 - priority, nil
+	}
+
+	return 0, fmt.Errorf("invalid value %d, priority has to be between %d and %d", priority, mini, maxi)
 }

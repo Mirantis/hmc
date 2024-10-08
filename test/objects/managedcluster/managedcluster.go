@@ -76,7 +76,7 @@ func WithConfig(config string) Opt {
 
 func WithServiceTemplate(templateName string) Opt {
 	return func(p *v1alpha1.ManagedCluster) {
-		p.Spec.Services = append(p.Spec.Services, v1alpha1.ManagedClusterServiceSpec{
+		p.Spec.Services = append(p.Spec.Services, v1alpha1.ServiceSpec{
 			Template: templateName,
 		})
 	}

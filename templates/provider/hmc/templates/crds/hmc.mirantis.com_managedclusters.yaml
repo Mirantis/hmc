@@ -68,13 +68,23 @@ spec:
                 description: DryRun specifies whether the template should be applied
                   after validation or only validated.
                 type: boolean
+              priority:
+                default: 100
+                description: |-
+                  Priority sets the priority for the services defined in this spec.
+                  Higher value means higher priority and lower means lower.
+                  In case of conflict with another object managing the service,
+                  the one with higher priority will get to deploy its services.
+                format: int32
+                maximum: 2147483646
+                minimum: 1
+                type: integer
               services:
                 description: |-
                   Services is a list of services created via ServiceTemplates
                   that could be installed on the target cluster.
                 items:
-                  description: ManagedClusterServiceSpec represents a Service within
-                    ManagedCluster
+                  description: ServiceSpec represents a Service to be managed
                   properties:
                     disable:
                       description: Disable can be set to disable handling of this
@@ -98,10 +108,19 @@ spec:
                       description: Values is the helm values to be passed to the template.
                       x-kubernetes-preserve-unknown-fields: true
                   required:
+                  - disable
                   - name
+                  - namespace
                   - template
                   type: object
                 type: array
+              stopOnConflict:
+                description: |-
+                  StopOnConflict specifies what to do in case of a conflict.
+                  E.g. If another object is already managing a service.
+                  By default the remaining services will be deployed even if conflict is detected.
+                  If set to true, the deployment will stop after encountering the first conflict.
+                type: boolean
               template:
                 description: Template is a reference to a Template object located
                   in the same namespace.

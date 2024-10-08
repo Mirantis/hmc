@@ -166,6 +166,25 @@ rules:
   resources:
   - profiles
   verbs: {{ include "rbac.editorVerbs" . | nindent 4 }}
+- apiGroups:
+  - hmc.mirantis.com
+  resources:
+  - multiclusterservices
+  verbs: {{ include "rbac.editorVerbs" . | nindent 4 }}
+- apiGroups:
+  - hmc.mirantis.com
+  resources:
+  - multiclusterservices/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - hmc.mirantis.com
+  resources:
+  - multiclusterservices/status
+  verbs:
+  - get
+  - patch
+  - update
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role

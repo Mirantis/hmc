@@ -64,26 +64,6 @@ const (
 	ProgressingReason string = "Progressing"
 )
 
-// ManagedClusterServiceSpec represents a Service within ManagedCluster
-type ManagedClusterServiceSpec struct {
-	// Template is a reference to a Template object located in the same namespace.
-	// +kubebuilder:validation:MinLength=1
-	Template string `json:"template"`
-	// Disable can be set to disable handling of this service.
-	// +optional
-	Disable bool `json:"disable"`
-	// Name is the chart release.
-	// +kubebuilder:validation:MinLength=1
-	Name string `json:"name"`
-	// Namespace is the namespace the release will be installed in.
-	// It will default to Name if not provided.
-	// +optional
-	Namespace string `json:"namespace"`
-	// Values is the helm values to be passed to the template.
-	// +optional
-	Values *apiextensionsv1.JSON `json:"values,omitempty"`
-}
-
 // ManagedClusterSpec defines the desired state of ManagedCluster
 type ManagedClusterSpec struct {
 	// Config allows to provide parameters for template customization.
@@ -94,14 +74,28 @@ type ManagedClusterSpec struct {
 	// +kubebuilder:validation:MinLength=1
 
 	// Template is a reference to a Template object located in the same namespace.
-	Template string `json:"template"`
-	// DryRun specifies whether the template should be applied after validation or only validated.
-	DryRun     bool   `json:"dryRun,omitempty"`
+	Template   string `json:"template"`
 	Credential string `json:"credential,omitempty"`
 	// Services is a list of services created via ServiceTemplates
 	// that could be installed on the target cluster.
-	// +optional
-	Services []ManagedClusterServiceSpec `json:"services,omitempty"`
+	Services []ServiceSpec `json:"services,omitempty"`
+
+	// +kubebuilder:default:=100
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=2147483646
+
+	// Priority sets the priority for the services defined in this spec.
+	// Higher value means higher priority and lower means lower.
+	// In case of conflict with another object managing the service,
+	// the one with higher priority will get to deploy its services.
+	Priority int32 `json:"priority,omitempty"`
+	// DryRun specifies whether the template should be applied after validation or only validated.
+	DryRun bool `json:"dryRun,omitempty"`
+	// StopOnConflict specifies what to do in case of a conflict.
+	// E.g. If another object is already managing a service.
+	// By default the remaining services will be deployed even if conflict is detected.
+	// If set to true, the deployment will stop after encountering the first conflict.
+	StopOnConflict bool `json:"stopOnConflict,omitempty"`
 }
 
 // ManagedClusterStatus defines the observed state of ManagedCluster
