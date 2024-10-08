@@ -101,12 +101,9 @@ type ManagedClusterSpec struct {
 
 // ManagedClusterStatus defines the observed state of ManagedCluster
 type ManagedClusterStatus struct {
-	// Currently compatible K8S version of the cluster. Being set only if
+	// Currently compatible exact Kubernetes version of the cluster. Being set only if
 	// provided by the corresponding ClusterTemplate.
-	KubertenesVersion string `json:"k8sVersion,omitempty"`
-	// Providers represent exposed CAPI providers with constrainted compatibility versions set.
-	// Propagated from the corresponding ClusterTemplate.
-	Providers ProvidersTupled `json:"providers,omitempty"`
+	KubernetesVersion string `json:"k8sVersion,omitempty"`
 	// Conditions contains details for the current state of the ManagedCluster
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 	// ObservedGeneration is the last observed generation.

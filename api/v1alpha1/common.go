@@ -33,22 +33,26 @@ type (
 	}
 
 	// Holds different types of CAPI providers with either
-	// an exact or constrainted version in the SemVer format. The requirement
+	// an exact or constrained version in the SemVer format. The requirement
 	// is determined by a consumer of this type.
 	ProvidersTupled struct {
-		// List of CAPI infrastructure providers with either an exact or constrainted version in the SemVer format.
+		// List of CAPI infrastructure providers with either an exact or constrained version in the SemVer format.
+		// Compatibility attributes are optional to be defined.
 		InfrastructureProviders []ProviderTuple `json:"infrastructure,omitempty"`
-		// List of CAPI bootstrap providers with either an exact or constrainted version in the SemVer format.
+		// List of CAPI bootstrap providers with either an exact or constrained version in the SemVer format.
+		// Compatibility attributes are optional to be defined.
 		BootstrapProviders []ProviderTuple `json:"bootstrap,omitempty"`
-		// List of CAPI control plane providers with either an exact or constrainted version in the SemVer format.
+		// List of CAPI control plane providers with either an exact or constrained version in the SemVer format.
+		// Compatibility attributes are optional to be defined.
 		ControlPlaneProviders []ProviderTuple `json:"controlPlane,omitempty"`
 	}
 
-	// Represents name of the provider with either an exact or constrainted version in the SemVer format.
+	// Represents name of the provider with either an exact or constrained version in the SemVer format.
 	ProviderTuple struct {
 		// Name of the provider.
 		Name string `json:"name,omitempty"`
-		// Compatibility restriction in the SemVer format (exact or constrainted version)
+		// Compatibility restriction in the SemVer format (exact or constrained version).
+		// Optional to be defined.
 		VersionOrConstraint string `json:"versionOrConstraint,omitempty"`
 	}
 )

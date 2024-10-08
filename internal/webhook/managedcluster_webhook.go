@@ -22,7 +22,6 @@ import (
 	"sort"
 
 	"github.com/Masterminds/semver/v3"
-	admissionv1 "k8s.io/api/admission/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -70,6 +69,10 @@ func (v *ManagedClusterValidator) ValidateCreate(ctx context.Context, obj runtim
 		return nil, fmt.Errorf("%s: %v", invalidManagedClusterMsg, err)
 	}
 
+	if err := validateK8sCompatibility(ctx, v.Client, template, managedCluster); err != nil {
+		return admission.Warnings{"Failed to validate k8s version compatibility with ServiceTemplates"}, fmt.Errorf("failed to validate k8s compatibility: %v", err)
+	}
+
 	return nil, nil
 }
 
@@ -89,16 +92,16 @@ func (v *ManagedClusterValidator) ValidateUpdate(ctx context.Context, _ runtime.
 		return nil, fmt.Errorf("%s: %v", invalidManagedClusterMsg, err)
 	}
 
-	if err := validateK8sCompatibility(ctx, v.Client, newManagedCluster); err != nil {
+	if err := validateK8sCompatibility(ctx, v.Client, template, newManagedCluster); err != nil {
 		return admission.Warnings{"Failed to validate k8s version compatibility with ServiceTemplates"}, fmt.Errorf("failed to validate k8s compatibility: %v", err)
 	}
 
 	return nil, nil
 }
 
-func validateK8sCompatibility(ctx context.Context, cl client.Client, mc *hmcv1alpha1.ManagedCluster) error {
-	if len(mc.Spec.Services) == 0 || mc.Status.KubertenesVersion == "" {
-		return nil
+func validateK8sCompatibility(ctx context.Context, cl client.Client, template *hmcv1alpha1.ClusterTemplate, mc *hmcv1alpha1.ManagedCluster) error {
+	if len(mc.Spec.Services) == 0 || template.Status.KubernetesVersion == "" {
+		return nil // nothing to do
 	}
 
 	svcTpls := new(hmcv1alpha1.ServiceTemplateList)
@@ -108,12 +111,12 @@ func validateK8sCompatibility(ctx context.Context, cl client.Client, mc *hmcv1al
 
 	svcTplName2KConstraint := make(map[string]string, len(svcTpls.Items))
 	for _, v := range svcTpls.Items {
-		svcTplName2KConstraint[v.Name] = v.Status.KubertenesConstraint
+		svcTplName2KConstraint[v.Name] = v.Status.KubernetesConstraint
 	}
 
-	mcVersion, err := semver.NewVersion(mc.Status.KubertenesVersion)
+	mcVersion, err := semver.NewVersion(template.Status.KubernetesVersion)
 	if err != nil { // should never happen
-		return fmt.Errorf("failed to parse k8s version %s of the ManagedCluster %s/%s: %w", mc.Status.KubertenesVersion, mc.Namespace, mc.Name, err)
+		return fmt.Errorf("failed to parse k8s version %s of the ManagedCluster %s/%s: %w", template.Status.KubernetesVersion, mc.Namespace, mc.Name, err)
 	}
 
 	for _, v := range mc.Spec.Services {
@@ -132,12 +135,12 @@ func validateK8sCompatibility(ctx context.Context, cl client.Client, mc *hmcv1al
 
 		tplConstraint, err := semver.NewConstraint(kc)
 		if err != nil { // should never happen
-			return fmt.Errorf("failed to parse k8s constrainted version %s of the ServiceTemplate %s/%s: %w", kc, mc.Namespace, v.Template, err)
+			return fmt.Errorf("failed to parse k8s constrained version %s of the ServiceTemplate %s/%s: %w", kc, mc.Namespace, v.Template, err)
 		}
 
 		if !tplConstraint.Check(mcVersion) {
-			return fmt.Errorf("k8s version %s of the ManagedCluster %s/%s does not satisfy constrainted version %s from the ServiceTemplate %s/%s",
-				mc.Status.KubertenesVersion, mc.Namespace, mc.Name,
+			return fmt.Errorf("k8s version %s of the ManagedCluster %s/%s does not satisfy constrained version %s from the ServiceTemplate %s/%s",
+				template.Status.KubernetesVersion, mc.Namespace, mc.Name,
 				kc, mc.Namespace, v.Template)
 		}
 	}
@@ -212,43 +215,26 @@ func (v *ManagedClusterValidator) verifyProviders(ctx context.Context, template 
 	)
 
 	var (
-		exposedProviders  = management.Status.AvailableProviders
-		requiredProviders = template.Status.Providers
+		exposedProviders                        = management.Status.AvailableProviders
+		requiredProviders                       = template.Status.Providers
+		wrongVersionProviders, missingProviders = make(map[string][]string, 3), make(map[string][]string, 3)
 
-		missingBootstrap, missingCP, missingInfra []string
-		wrongVersionProviders                     map[string][]string
+		err error
 	)
 
-	// on update we have to validate versions between exact the provider tpl and constraints from the cluster tpl
-	if req, _ := admission.RequestFromContext(ctx); req.Operation == admissionv1.Update {
-		wrongVersionProviders = make(map[string][]string, 3)
-		missing, wrongVers, err := getMissingProvidersWithWrongVersions(exposedProviders.BootstrapProviders, requiredProviders.BootstrapProviders)
-		if err != nil {
-			return err
-		}
-		wrongVersionProviders[bootstrapProviderType], missingBootstrap = wrongVers, missing
-
-		missing, wrongVers, err = getMissingProvidersWithWrongVersions(exposedProviders.ControlPlaneProviders, requiredProviders.ControlPlaneProviders)
-		if err != nil {
-			return err
-		}
-		wrongVersionProviders[controlPlateProviderType], missingCP = wrongVers, missing
-
-		missing, wrongVers, err = getMissingProvidersWithWrongVersions(exposedProviders.InfrastructureProviders, requiredProviders.InfrastructureProviders)
-		if err != nil {
-			return err
-		}
-		wrongVersionProviders[infraProviderType], missingInfra = wrongVers, missing
-	} else {
-		missingBootstrap = getMissingProviders(exposedProviders.BootstrapProviders, requiredProviders.BootstrapProviders)
-		missingCP = getMissingProviders(exposedProviders.ControlPlaneProviders, requiredProviders.ControlPlaneProviders)
-		missingInfra = getMissingProviders(exposedProviders.InfrastructureProviders, requiredProviders.InfrastructureProviders)
+	missingProviders[bootstrapProviderType], wrongVersionProviders[bootstrapProviderType], err = getMissingProvidersWithWrongVersions(exposedProviders.BootstrapProviders, requiredProviders.BootstrapProviders)
+	if err != nil {
+		return err
 	}
 
-	missingProviders := map[string][]string{
-		bootstrapProviderType:    missingBootstrap,
-		controlPlateProviderType: missingCP,
-		infraProviderType:        missingInfra,
+	missingProviders[controlPlateProviderType], wrongVersionProviders[controlPlateProviderType], err = getMissingProvidersWithWrongVersions(exposedProviders.ControlPlaneProviders, requiredProviders.ControlPlaneProviders)
+	if err != nil {
+		return err
+	}
+
+	missingProviders[infraProviderType], wrongVersionProviders[infraProviderType], err = getMissingProvidersWithWrongVersions(exposedProviders.InfrastructureProviders, requiredProviders.InfrastructureProviders)
+	if err != nil {
+		return err
 	}
 
 	errs := collectErrors(missingProviders, "one or more required %s providers are not deployed yet: %v")
@@ -273,11 +259,6 @@ func collectErrors(m map[string][]string, msgFormat string) (errs []error) {
 	}
 
 	return errs
-}
-
-func getMissingProviders(exposed, required []hmcv1alpha1.ProviderTuple) (missing []string) {
-	missing, _, _ = getMissingProvidersWithWrongVersions(exposed, required)
-	return missing
 }
 
 func getMissingProvidersWithWrongVersions(exposed, required []hmcv1alpha1.ProviderTuple) (missing, nonSatisfying []string, _ error) {

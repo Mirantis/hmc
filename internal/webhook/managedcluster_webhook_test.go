@@ -121,6 +121,65 @@ var (
 				),
 			},
 		},
+		{
+			name:           "provider template versions does not satisfy cluster template constraints",
+			managedCluster: managedcluster.NewManagedCluster(managedcluster.WithClusterTemplate(testTemplateName)),
+			existingObjects: []runtime.Object{
+				management.NewManagement(management.WithAvailableProviders(v1alpha1.ProvidersTupled{
+					InfrastructureProviders: []v1alpha1.ProviderTuple{{Name: "aws", VersionOrConstraint: "v1.0.0"}},
+					BootstrapProviders:      []v1alpha1.ProviderTuple{{Name: "k0s", VersionOrConstraint: "v1.0.0"}},
+					ControlPlaneProviders:   []v1alpha1.ProviderTuple{{Name: "k0s", VersionOrConstraint: "v1.0.0"}},
+				})),
+				template.NewClusterTemplate(
+					template.WithName(testTemplateName),
+					template.WithProvidersStatus(v1alpha1.ProvidersTupled{
+						InfrastructureProviders: []v1alpha1.ProviderTuple{{Name: "aws", VersionOrConstraint: ">=999.0.0"}},
+						BootstrapProviders:      []v1alpha1.ProviderTuple{{Name: "k0s", VersionOrConstraint: ">=999.0.0"}},
+						ControlPlaneProviders:   []v1alpha1.ProviderTuple{{Name: "k0s", VersionOrConstraint: ">=999.0.0"}},
+					}),
+					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
+				),
+			},
+			err: `the ManagedCluster is invalid: failed to verify providers: one or more required bootstrap providers does not satisfy constraints: [k0s v1.0.0 !~ >=999.0.0]
+one or more required control plane providers does not satisfy constraints: [k0s v1.0.0 !~ >=999.0.0]
+one or more required infrastructure providers does not satisfy constraints: [aws v1.0.0 !~ >=999.0.0]`,
+		},
+		{
+			name: "cluster template k8s version does not satisfy service template constraints",
+			managedCluster: managedcluster.NewManagedCluster(
+				managedcluster.WithClusterTemplate(testTemplateName),
+				managedcluster.WithServiceTemplate(testTemplateName),
+			),
+			existingObjects: []runtime.Object{
+				management.NewManagement(management.WithAvailableProviders(v1alpha1.ProvidersTupled{
+					InfrastructureProviders: []v1alpha1.ProviderTuple{{Name: "aws", VersionOrConstraint: "v1.0.0"}},
+					BootstrapProviders:      []v1alpha1.ProviderTuple{{Name: "k0s", VersionOrConstraint: "v1.0.0"}},
+					ControlPlaneProviders:   []v1alpha1.ProviderTuple{{Name: "k0s", VersionOrConstraint: "v1.0.0"}},
+				})),
+				template.NewClusterTemplate(
+					template.WithName(testTemplateName),
+					template.WithProvidersStatus(v1alpha1.ProvidersTupled{
+						InfrastructureProviders: []v1alpha1.ProviderTuple{{Name: "aws"}},
+						BootstrapProviders:      []v1alpha1.ProviderTuple{{Name: "k0s"}},
+						ControlPlaneProviders:   []v1alpha1.ProviderTuple{{Name: "k0s"}},
+					}),
+					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
+					template.WithClusterStatusK8sVersion("v1.30.0"),
+				),
+				template.NewServiceTemplate(
+					template.WithName(testTemplateName),
+					template.WithProvidersStatus(v1alpha1.Providers{
+						InfrastructureProviders: []string{"aws"},
+						BootstrapProviders:      []string{"k0s"},
+						ControlPlaneProviders:   []string{"k0s"},
+					}),
+					template.WithServiceK8sConstraint("<1.30"),
+					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
+				),
+			},
+			err:      fmt.Sprintf(`failed to validate k8s compatibility: k8s version v1.30.0 of the ManagedCluster default/%s does not satisfy constrained version <1.30 from the ServiceTemplate default/%s`, managedcluster.DefaultName, testTemplateName),
+			warnings: admission.Warnings{"Failed to validate k8s version compatibility with ServiceTemplates"},
+		},
 	}
 )
 
@@ -154,81 +213,12 @@ func TestManagedClusterValidateCreate(t *testing.T) {
 func TestManagedClusterValidateUpdate(t *testing.T) {
 	g := NewWithT(t)
 
-	updateTests := append(createAndUpdateTests[:0:0], createAndUpdateTests...)
-	updateTests = append(updateTests, []struct {
-		name            string
-		managedCluster  *v1alpha1.ManagedCluster
-		existingObjects []runtime.Object
-		err             string
-		warnings        admission.Warnings
-	}{
-		{
-			name:           "provider template versions does not satisfy cluster template constraints",
-			managedCluster: managedcluster.NewManagedCluster(managedcluster.WithClusterTemplate(testTemplateName)),
-			existingObjects: []runtime.Object{
-				management.NewManagement(management.WithAvailableProviders(v1alpha1.ProvidersTupled{
-					InfrastructureProviders: []v1alpha1.ProviderTuple{{Name: "aws", VersionOrConstraint: "v1.0.0"}},
-					BootstrapProviders:      []v1alpha1.ProviderTuple{{Name: "k0s", VersionOrConstraint: "v1.0.0"}},
-					ControlPlaneProviders:   []v1alpha1.ProviderTuple{{Name: "k0s", VersionOrConstraint: "v1.0.0"}},
-				})),
-				template.NewClusterTemplate(
-					template.WithName(testTemplateName),
-					template.WithProvidersStatus(v1alpha1.ProvidersTupled{
-						InfrastructureProviders: []v1alpha1.ProviderTuple{{Name: "aws", VersionOrConstraint: ">=999.0.0"}},
-						BootstrapProviders:      []v1alpha1.ProviderTuple{{Name: "k0s", VersionOrConstraint: ">=999.0.0"}},
-						ControlPlaneProviders:   []v1alpha1.ProviderTuple{{Name: "k0s", VersionOrConstraint: ">=999.0.0"}},
-					}),
-					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
-				),
-			},
-			err: `the ManagedCluster is invalid: failed to verify providers: one or more required bootstrap providers does not satisfy constraints: [k0s v1.0.0 !~ >=999.0.0]
-one or more required control plane providers does not satisfy constraints: [k0s v1.0.0 !~ >=999.0.0]
-one or more required infrastructure providers does not satisfy constraints: [aws v1.0.0 !~ >=999.0.0]`,
-		},
-		{
-			name: "cluster template k8s version does not satisfy service template constraints",
-			managedCluster: managedcluster.NewManagedCluster(
-				managedcluster.WithClusterTemplate(testTemplateName),
-				managedcluster.WithK8sVersionStatus("v1.30.0"),
-				managedcluster.WithServiceTemplate(testTemplateName),
-			),
-			existingObjects: []runtime.Object{
-				management.NewManagement(management.WithAvailableProviders(v1alpha1.ProvidersTupled{
-					InfrastructureProviders: []v1alpha1.ProviderTuple{{Name: "aws", VersionOrConstraint: "v1.0.0"}},
-					BootstrapProviders:      []v1alpha1.ProviderTuple{{Name: "k0s", VersionOrConstraint: "v1.0.0"}},
-					ControlPlaneProviders:   []v1alpha1.ProviderTuple{{Name: "k0s", VersionOrConstraint: "v1.0.0"}},
-				})),
-				template.NewClusterTemplate(
-					template.WithName(testTemplateName),
-					template.WithProvidersStatus(v1alpha1.ProvidersTupled{
-						InfrastructureProviders: []v1alpha1.ProviderTuple{{Name: "aws"}},
-						BootstrapProviders:      []v1alpha1.ProviderTuple{{Name: "k0s"}},
-						ControlPlaneProviders:   []v1alpha1.ProviderTuple{{Name: "k0s"}},
-					}),
-					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
-				),
-				template.NewServiceTemplate(
-					template.WithName(testTemplateName),
-					template.WithProvidersStatus(v1alpha1.Providers{
-						InfrastructureProviders: []string{"aws"},
-						BootstrapProviders:      []string{"k0s"},
-						ControlPlaneProviders:   []string{"k0s"},
-					}),
-					template.WithServiceK8sConstraint("<1.30"),
-					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
-				),
-			},
-			err:      fmt.Sprintf(`failed to validate k8s compatibility: k8s version v1.30.0 of the ManagedCluster default/managedcluster does not satisfy constrainted version <1.30 from the ServiceTemplate default/%s`, testTemplateName),
-			warnings: admission.Warnings{"Failed to validate k8s version compatibility with ServiceTemplates"},
-		},
-	}...)
-
 	ctx := admission.NewContextWithRequest(context.Background(), admission.Request{
 		AdmissionRequest: admissionv1.AdmissionRequest{
 			Operation: admissionv1.Update,
 		},
 	})
-	for _, tt := range updateTests {
+	for _, tt := range createAndUpdateTests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(tt.existingObjects...).Build()
 			validator := &ManagedClusterValidator{Client: c}

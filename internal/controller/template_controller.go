@@ -39,11 +39,11 @@ const (
 // TemplateReconciler reconciles a *Template object
 type TemplateReconciler struct {
 	client.Client
-	SystemNamespace string
-
-	DefaultRegistryConfig helm.DefaultRegistryConfig
 
 	downloadHelmChartFunc func(context.Context, *sourcev1.Artifact) (*chart.Chart, error)
+
+	SystemNamespace       string
+	DefaultRegistryConfig helm.DefaultRegistryConfig
 }
 
 type ClusterTemplateReconciler struct {

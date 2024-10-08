@@ -34,11 +34,11 @@ import (
 )
 
 type KubeClient struct {
-	Namespace string
-
 	Client         kubernetes.Interface
 	ExtendedClient apiextensionsclientset.Interface
 	Config         *rest.Config
+
+	Namespace string
 }
 
 // NewFromLocal creates a new instance of KubeClient from a given namespace

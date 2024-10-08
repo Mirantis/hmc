@@ -51,14 +51,14 @@ type ReleaseReconciler struct {
 
 	Config *rest.Config
 
-	CreateManagement bool
-	CreateRelease    bool
-	CreateTemplates  bool
-
 	HMCTemplatesChartName string
 	SystemNamespace       string
 
 	DefaultRegistryConfig helm.DefaultRegistryConfig
+
+	CreateManagement bool
+	CreateRelease    bool
+	CreateTemplates  bool
 }
 
 func (r *ReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {

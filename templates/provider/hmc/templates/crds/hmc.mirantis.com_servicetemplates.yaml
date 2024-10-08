@@ -108,8 +108,9 @@ spec:
                   cluster set in the SemVer format.
                 type: string
               providers:
-                description: Represents required CAPI providers. Should be set if
-                  not present in the Helm chart metadata.
+                description: |-
+                  Providers represent requested CAPI providers.
+                  Should be set if not present in the Helm chart metadata.
                 properties:
                   bootstrap:
                     description: BootstrapProviders is the list of CAPI bootstrap
@@ -186,7 +187,7 @@ spec:
                 format: int64
                 type: integer
               providers:
-                description: Represents exposed CAPI providers.
+                description: Providers represent requested CAPI providers.
                 properties:
                   bootstrap:
                     description: BootstrapProviders is the list of CAPI bootstrap

@@ -104,59 +104,66 @@ spec:
                   rule: (has(self.chartName) && !has(self.chartRef)) || (!has(self.chartName)
                     && has(self.chartRef))
               k8sVersion:
-                description: Compatible K8S version of the cluster set in the SemVer
-                  format.
+                description: Kubernetes exact version in the SemVer format provided
+                  by this ClusterTemplate.
                 type: string
               providers:
-                description: Providers represent required CAPI providers with constrainted
-                  compatibility versions set. Should be set if not present in the
-                  Helm chart metadata.
+                description: |-
+                  Providers represent required CAPI providers with constrained compatibility versions set.
+                  Should be set if not present in the Helm chart metadata.
+                  Compatibility attributes are optional to be defined.
                 properties:
                   bootstrap:
-                    description: List of CAPI bootstrap providers with either an exact
-                      or constrainted version in the SemVer format.
+                    description: |-
+                      List of CAPI bootstrap providers with either an exact or constrained version in the SemVer format.
+                      Compatibility attributes are optional to be defined.
                     items:
                       description: Represents name of the provider with either an
-                        exact or constrainted version in the SemVer format.
+                        exact or constrained version in the SemVer format.
                       properties:
                         name:
                           description: Name of the provider.
                           type: string
                         versionOrConstraint:
-                          description: Compatibility restriction in the SemVer format
-                            (exact or constrainted version)
+                          description: |-
+                            Compatibility restriction in the SemVer format (exact or constrained version).
+                            Optional to be defined.
                           type: string
                       type: object
                     type: array
                   controlPlane:
-                    description: List of CAPI control plane providers with either
-                      an exact or constrainted version in the SemVer format.
+                    description: |-
+                      List of CAPI control plane providers with either an exact or constrained version in the SemVer format.
+                      Compatibility attributes are optional to be defined.
                     items:
                       description: Represents name of the provider with either an
-                        exact or constrainted version in the SemVer format.
+                        exact or constrained version in the SemVer format.
                       properties:
                         name:
                           description: Name of the provider.
                           type: string
                         versionOrConstraint:
-                          description: Compatibility restriction in the SemVer format
-                            (exact or constrainted version)
+                          description: |-
+                            Compatibility restriction in the SemVer format (exact or constrained version).
+                            Optional to be defined.
                           type: string
                       type: object
                     type: array
                   infrastructure:
-                    description: List of CAPI infrastructure providers with either
-                      an exact or constrainted version in the SemVer format.
+                    description: |-
+                      List of CAPI infrastructure providers with either an exact or constrained version in the SemVer format.
+                      Compatibility attributes are optional to be defined.
                     items:
                       description: Represents name of the provider with either an
-                        exact or constrainted version in the SemVer format.
+                        exact or constrained version in the SemVer format.
                       properties:
                         name:
                           description: Name of the provider.
                           type: string
                         versionOrConstraint:
-                          description: Compatibility restriction in the SemVer format
-                            (exact or constrainted version)
+                          description: |-
+                            Compatibility restriction in the SemVer format (exact or constrained version).
+                            Optional to be defined.
                           type: string
                       type: object
                     type: array
@@ -209,62 +216,69 @@ spec:
                 description: Description contains information about the template.
                 type: string
               k8sVersion:
-                description: Compatible K8S version of the cluster set in the SemVer
-                  format.
+                description: Kubernetes exact version in the SemVer format provided
+                  by this ClusterTemplate.
                 type: string
               observedGeneration:
                 description: ObservedGeneration is the last observed generation.
                 format: int64
                 type: integer
               providers:
-                description: Providers represent exposed CAPI providers with constrainted
-                  compatibility versions set.
+                description: |-
+                  Providers represent required CAPI providers with constrained compatibility versions set
+                  if the latter has been given.
                 properties:
                   bootstrap:
-                    description: List of CAPI bootstrap providers with either an exact
-                      or constrainted version in the SemVer format.
+                    description: |-
+                      List of CAPI bootstrap providers with either an exact or constrained version in the SemVer format.
+                      Compatibility attributes are optional to be defined.
                     items:
                       description: Represents name of the provider with either an
-                        exact or constrainted version in the SemVer format.
+                        exact or constrained version in the SemVer format.
                       properties:
                         name:
                           description: Name of the provider.
                           type: string
                         versionOrConstraint:
-                          description: Compatibility restriction in the SemVer format
-                            (exact or constrainted version)
+                          description: |-
+                            Compatibility restriction in the SemVer format (exact or constrained version).
+                            Optional to be defined.
                           type: string
                       type: object
                     type: array
                   controlPlane:
-                    description: List of CAPI control plane providers with either
-                      an exact or constrainted version in the SemVer format.
+                    description: |-
+                      List of CAPI control plane providers with either an exact or constrained version in the SemVer format.
+                      Compatibility attributes are optional to be defined.
                     items:
                       description: Represents name of the provider with either an
-                        exact or constrainted version in the SemVer format.
+                        exact or constrained version in the SemVer format.
                       properties:
                         name:
                           description: Name of the provider.
                           type: string
                         versionOrConstraint:
-                          description: Compatibility restriction in the SemVer format
-                            (exact or constrainted version)
+                          description: |-
+                            Compatibility restriction in the SemVer format (exact or constrained version).
+                            Optional to be defined.
                           type: string
                       type: object
                     type: array
                   infrastructure:
-                    description: List of CAPI infrastructure providers with either
-                      an exact or constrainted version in the SemVer format.
+                    description: |-
+                      List of CAPI infrastructure providers with either an exact or constrained version in the SemVer format.
+                      Compatibility attributes are optional to be defined.
                     items:
                       description: Represents name of the provider with either an
-                        exact or constrainted version in the SemVer format.
+                        exact or constrained version in the SemVer format.
                       properties:
                         name:
                           description: Name of the provider.
                           type: string
                         versionOrConstraint:
-                          description: Compatibility restriction in the SemVer format
-                            (exact or constrainted version)
+                          description: |-
+                            Compatibility restriction in the SemVer format (exact or constrained version).
+                            Optional to be defined.
                           type: string
                       type: object
                     type: array
