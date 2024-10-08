@@ -126,13 +126,13 @@ func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Manag
 		}, template)
 		if err != nil {
 			errMsg := fmt.Sprintf("Failed to get ProviderTemplate %s: %s", component.Template, err)
-			updateComponentsStatus(detectedComponents, &detectedProviders, component.Template, template.Status, errMsg)
+			updateComponentsStatus(detectedComponents, &detectedProviders, component.helmReleaseName, template.Status, errMsg)
 			errs = errors.Join(errs, errors.New(errMsg))
 			continue
 		}
 		if !template.Status.Valid {
 			errMsg := fmt.Sprintf("Template %s is not marked as valid", component.Template)
-			updateComponentsStatus(detectedComponents, &detectedProviders, component.Template, template.Status, errMsg)
+			updateComponentsStatus(detectedComponents, &detectedProviders, component.helmReleaseName, template.Status, errMsg)
 			errs = errors.Join(errs, errors.New(errMsg))
 			continue
 		}
@@ -146,11 +146,11 @@ func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Manag
 		})
 		if err != nil {
 			errMsg := fmt.Sprintf("error reconciling HelmRelease %s/%s: %s", r.SystemNamespace, component.Template, err)
-			updateComponentsStatus(detectedComponents, &detectedProviders, component.Template, template.Status, errMsg)
+			updateComponentsStatus(detectedComponents, &detectedProviders, component.helmReleaseName, template.Status, errMsg)
 			errs = errors.Join(errs, errors.New(errMsg))
 			continue
 		}
-		updateComponentsStatus(detectedComponents, &detectedProviders, component.Template, template.Status, "")
+		updateComponentsStatus(detectedComponents, &detectedProviders, component.helmReleaseName, template.Status, "")
 	}
 
 	management.Status.ObservedGeneration = management.Generation
