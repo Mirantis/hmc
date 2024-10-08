@@ -106,10 +106,14 @@ func (r *ReleaseReconciler) ensureManagement(ctx context.Context) error {
 	if !apierrors.IsNotFound(err) {
 		return fmt.Errorf("failed to get %s Management object: %w", hmc.TemplateManagementName, err)
 	}
-	mgmtObj.Spec.Release, err = r.getCurrentReleaseName(ctx)
-	if err != nil {
-		return err
+
+	if r.CreateRelease {
+		mgmtObj.Spec.Release, err = r.getCurrentReleaseName(ctx)
+		if err != nil {
+			return err
+		}
 	}
+
 	if err := mgmtObj.Spec.SetProvidersDefaults(); err != nil {
 		return err
 	}
@@ -157,7 +161,7 @@ func (r *ReleaseReconciler) reconcileHMCTemplates(ctx context.Context, req ctrl.
 		l.Info("Templates creation is disabled")
 		return nil
 	}
-	if initialReconcile(req) && !r.CreateRelease {
+	if !r.CreateRelease || initialReconcile(req) {
 		l.Info("Initial creation of HMC Release is skipped")
 		return nil
 	}
@@ -206,7 +210,7 @@ func (r *ReleaseReconciler) reconcileHMCTemplates(ctx context.Context, req ctrl.
 		helmChart.Labels[hmc.HMCManagedLabelKey] = hmc.HMCManagedLabelValue
 		helmChart.Spec = sourcev1.HelmChartSpec{
 			Chart:   r.HMCTemplatesChartName,
-			Version: version,
+			Version: utils.ChartVersionFromVersion(version),
 			SourceRef: sourcev1.LocalHelmChartSourceReference{
 				Kind: sourcev1.HelmRepositoryKind,
 				Name: defaultRepoName,
