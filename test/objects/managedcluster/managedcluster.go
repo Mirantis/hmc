@@ -66,12 +66,6 @@ func WithClusterTemplate(templateName string) Opt {
 	}
 }
 
-func WithK8sVersionStatus(v string) Opt {
-	return func(managedCluster *v1alpha1.ManagedCluster) {
-		managedCluster.Status.KubertenesVersion = v
-	}
-}
-
 func WithConfig(config string) Opt {
 	return func(p *v1alpha1.ManagedCluster) {
 		p.Spec.Config = &apiextensionsv1.JSON{

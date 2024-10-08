@@ -72,8 +72,7 @@ func NewServiceTemplate(opts ...Opt) *v1alpha1.ServiceTemplate {
 func NewProviderTemplate(opts ...Opt) *v1alpha1.ProviderTemplate {
 	t := &v1alpha1.ProviderTemplate{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      DefaultName,
-			Namespace: DefaultNamespace,
+			Name: DefaultName,
 		},
 	}
 
@@ -127,7 +126,7 @@ func WithServiceK8sConstraint(v string) Opt {
 	return func(template Template) {
 		switch tt := template.(type) {
 		case *v1alpha1.ServiceTemplate:
-			tt.Status.KubertenesConstraint = v
+			tt.Status.KubernetesConstraint = v
 		default:
 			panic(fmt.Sprintf("unexpected obj typed %T, expected *ServiceTemplate", tt))
 		}
@@ -172,5 +171,35 @@ func WithConfigStatus(config string) Opt {
 		status.Config = &apiextensionsv1.JSON{
 			Raw: []byte(config),
 		}
+	}
+}
+
+func WithProviderStatusCAPIVersion(v string) Opt {
+	return func(template Template) {
+		pt, ok := template.(*v1alpha1.ProviderTemplate)
+		if !ok {
+			panic(fmt.Sprintf("unexpected type %T, expected ProviderTemplate", template))
+		}
+		pt.Status.CAPIVersion = v
+	}
+}
+
+func WithProviderStatusCAPIConstraint(v string) Opt {
+	return func(template Template) {
+		pt, ok := template.(*v1alpha1.ProviderTemplate)
+		if !ok {
+			panic(fmt.Sprintf("unexpected type %T, expected ProviderTemplate", template))
+		}
+		pt.Status.CAPIVersionConstraint = v
+	}
+}
+
+func WithClusterStatusK8sVersion(v string) Opt {
+	return func(template Template) {
+		ct, ok := template.(*v1alpha1.ClusterTemplate)
+		if !ok {
+			panic(fmt.Sprintf("unexpected type %T, expected ClusterTemplate", template))
+		}
+		ct.Status.KubernetesVersion = v
 	}
 }

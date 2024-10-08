@@ -75,3 +75,9 @@ func WithComponentsStatus(components map[string]v1alpha1.ComponentStatus) Opt {
 		p.Status.Components = components
 	}
 }
+
+func WithRelease(v string) Opt {
+	return func(management *v1alpha1.Management) {
+		management.Spec.Release = v
+	}
+}

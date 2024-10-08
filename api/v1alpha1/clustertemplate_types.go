@@ -31,17 +31,20 @@ const (
 // ClusterTemplateSpec defines the desired state of ClusterTemplate
 type ClusterTemplateSpec struct {
 	Helm HelmSpec `json:"helm"`
-	// Compatible K8S version of the cluster set in the SemVer format.
-	KubertenesVersion string `json:"k8sVersion,omitempty"`
-	// Providers represent required CAPI providers with constrainted compatibility versions set. Should be set if not present in the Helm chart metadata.
+	// Kubernetes exact version in the SemVer format provided by this ClusterTemplate.
+	KubernetesVersion string `json:"k8sVersion,omitempty"`
+	// Providers represent required CAPI providers with constrained compatibility versions set.
+	// Should be set if not present in the Helm chart metadata.
+	// Compatibility attributes are optional to be defined.
 	Providers ProvidersTupled `json:"providers,omitempty"`
 }
 
 // ClusterTemplateStatus defines the observed state of ClusterTemplate
 type ClusterTemplateStatus struct {
-	// Compatible K8S version of the cluster set in the SemVer format.
-	KubertenesVersion string `json:"k8sVersion,omitempty"`
-	// Providers represent exposed CAPI providers with constrainted compatibility versions set.
+	// Kubernetes exact version in the SemVer format provided by this ClusterTemplate.
+	KubernetesVersion string `json:"k8sVersion,omitempty"`
+	// Providers represent required CAPI providers with constrained compatibility versions set
+	// if the latter has been given.
 	Providers ProvidersTupled `json:"providers,omitempty"`
 
 	TemplateStatusCommon `json:",inline"`
@@ -67,8 +70,8 @@ func (t *ClusterTemplate) FillStatusWithProviders(annotations map[string]string)
 	}
 
 	kversion := annotations[ChartAnnotationKubernetesVersion]
-	if t.Spec.KubertenesVersion != "" {
-		kversion = t.Spec.KubertenesVersion
+	if t.Spec.KubernetesVersion != "" {
+		kversion = t.Spec.KubernetesVersion
 	}
 	if kversion == "" {
 		return nil
@@ -78,7 +81,7 @@ func (t *ClusterTemplate) FillStatusWithProviders(annotations map[string]string)
 		return fmt.Errorf("failed to parse kubernetes version %s: %w", kversion, err)
 	}
 
-	t.Status.KubertenesVersion = kversion
+	t.Status.KubernetesVersion = kversion
 
 	return nil
 }

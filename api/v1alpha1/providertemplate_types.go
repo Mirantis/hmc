@@ -21,23 +21,39 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// ChartAnnotationCAPIVersion is an annotation containing the CAPI exact version in the SemVer format associated with a ProviderTemplate.
-const ChartAnnotationCAPIVersion = "hmc.mirantis.com/capi-version"
+const (
+	// ChartAnnotationCAPIVersion is an annotation containing the CAPI exact version in the SemVer format associated with a ProviderTemplate.
+	ChartAnnotationCAPIVersion = "hmc.mirantis.com/capi-version"
+	// ChartAnnotationCAPIVersionConstraint is an annotation containing the CAPI version constraint in the SemVer format associated with a ProviderTemplate.
+	ChartAnnotationCAPIVersionConstraint = "hmc.mirantis.com/capi-version-constraint"
+)
+
+// +kubebuilder:validation:XValidation:rule="!(has(self.capiVersion) && has(self.capiVersionConstraint))", message="Either capiVersion or capiVersionConstraint may be set, but not both"
 
 // ProviderTemplateSpec defines the desired state of ProviderTemplate
 type ProviderTemplateSpec struct {
-	Helm HelmSpec `json:"helm"`
-	// Compatible CAPI provider version set in the SemVer format.
+	Helm HelmSpec `json:"helm,omitempty"`
+	// CAPI exact version in the SemVer format.
+	// Applicable only for the cluster-api ProviderTemplate itself.
 	CAPIVersion string `json:"capiVersion,omitempty"`
-	// Represents required CAPI providers with exact compatibility versions set. Should be set if not present in the Helm chart metadata.
+	// CAPI version constraint in the SemVer format indicating compatibility with the core CAPI.
+	// Not applicable for the cluster-api ProviderTemplate.
+	CAPIVersionConstraint string `json:"capiVersionConstraint,omitempty"`
+	// Providers represent exposed CAPI providers with exact compatibility versions set.
+	// Should be set if not present in the Helm chart metadata.
+	// Compatibility attributes are optional to be defined.
 	Providers ProvidersTupled `json:"providers,omitempty"`
 }
 
 // ProviderTemplateStatus defines the observed state of ProviderTemplate
 type ProviderTemplateStatus struct {
-	// Compatible CAPI provider version in the SemVer format.
+	// CAPI exact version in the SemVer format.
+	// Applicable only for the capi Template itself.
 	CAPIVersion string `json:"capiVersion,omitempty"`
-	// Providers represent exposed CAPI providers with exact compatibility versions set.
+	// CAPI version constraint in the SemVer format indicating compatibility with the core CAPI.
+	CAPIVersionConstraint string `json:"capiVersionConstraint,omitempty"`
+	// Providers represent exposed CAPI providers with exact compatibility versions set
+	// if the latter has been given.
 	Providers ProvidersTupled `json:"providers,omitempty"`
 
 	TemplateStatusCommon `json:",inline"`
@@ -62,19 +78,35 @@ func (t *ProviderTemplate) FillStatusWithProviders(annotations map[string]string
 		return fmt.Errorf("failed to parse ProviderTemplate infrastructure providers: %v", err)
 	}
 
-	capiVersion := annotations[ChartAnnotationCAPIVersion]
-	if t.Spec.CAPIVersion != "" {
-		capiVersion = t.Spec.CAPIVersion
-	}
-	if capiVersion == "" {
-		return nil
-	}
+	if t.Name == CoreCAPIName {
+		capiVersion := annotations[ChartAnnotationCAPIVersion]
+		if t.Spec.CAPIVersion != "" {
+			capiVersion = t.Spec.CAPIVersion
+		}
+		if capiVersion == "" {
+			return nil
+		}
 
-	if _, err := semver.NewVersion(capiVersion); err != nil {
-		return fmt.Errorf("failed to parse CAPI version %s: %w", capiVersion, err)
-	}
+		if _, err := semver.NewVersion(capiVersion); err != nil {
+			return fmt.Errorf("failed to parse CAPI version %s: %w", capiVersion, err)
+		}
 
-	t.Status.CAPIVersion = capiVersion
+		t.Status.CAPIVersion = capiVersion
+	} else {
+		capiConstraint := annotations[ChartAnnotationCAPIVersionConstraint]
+		if t.Spec.CAPIVersionConstraint != "" {
+			capiConstraint = t.Spec.CAPIVersionConstraint
+		}
+		if capiConstraint == "" {
+			return nil
+		}
+
+		if _, err := semver.NewConstraint(capiConstraint); err != nil {
+			return fmt.Errorf("failed to parse CAPI version constraint %s: %w", capiConstraint, err)
+		}
+
+		t.Status.CAPIVersionConstraint = capiConstraint
+	}
 
 	return nil
 }
