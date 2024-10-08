@@ -174,3 +174,13 @@ func WithConfigStatus(config string) Opt {
 		}
 	}
 }
+
+func WithStatusCAPIVersion(v string) Opt {
+	return func(template Template) {
+		pt, ok := template.(*v1alpha1.ProviderTemplate)
+		if !ok {
+			panic(fmt.Sprintf("unexpected type %T, expected ProviderTemplate", template))
+		}
+		pt.Status.CAPIVersion = v
+	}
+}

@@ -25,7 +25,7 @@ import (
 const (
 	// Denotes the servicetemplate resource Kind.
 	ServiceTemplateKind = "ServiceTemplate"
-	// ChartAnnotationKubernetesConstraint is an annotation containing the Kubernetes constrainted version in the SemVer format associated with a ServiceTemplate.
+	// ChartAnnotationKubernetesConstraint is an annotation containing the Kubernetes constrained version in the SemVer format associated with a ServiceTemplate.
 	ChartAnnotationKubernetesConstraint = "hmc.mirantis.com/k8s-version-constraint"
 )
 
@@ -34,7 +34,8 @@ type ServiceTemplateSpec struct {
 	Helm HelmSpec `json:"helm"`
 	// Constraint describing compatible K8S versions of the cluster set in the SemVer format.
 	KubertenesConstraint string `json:"k8sConstraint,omitempty"`
-	// Represents required CAPI providers. Should be set if not present in the Helm chart metadata.
+	// Providers represent required CAPI providers.
+	// Should be set if not present in the Helm chart metadata.
 	Providers Providers `json:"providers,omitempty"`
 }
 
@@ -42,7 +43,7 @@ type ServiceTemplateSpec struct {
 type ServiceTemplateStatus struct {
 	// Constraint describing compatible K8S versions of the cluster set in the SemVer format.
 	KubertenesConstraint string `json:"k8sConstraint,omitempty"`
-	// Represents exposed CAPI providers.
+	// Providers represent requested CAPI providers.
 	Providers Providers `json:"providers,omitempty"`
 
 	TemplateStatusCommon `json:",inline"`
@@ -65,17 +66,14 @@ func (t *ServiceTemplate) FillStatusWithProviders(annotations map[string]string)
 			pspec, anno = t.Spec.Providers.InfrastructureProviders, ChartAnnotationInfraProviders
 		}
 
-		if len(pspec) > 0 {
+		providers := annotations[anno]
+		if len(providers) == 0 {
 			return pspec
 		}
 
-		providers := annotations[anno]
-		if len(providers) == 0 {
-			return []string{}
-		}
-
-		splitted := strings.Split(providers, ",")
+		splitted := strings.Split(providers, multiProviderSeparator)
 		result := make([]string, 0, len(splitted))
+		result = append(result, pspec...)
 		for _, v := range splitted {
 			if c := strings.TrimSpace(v); c != "" {
 				result = append(result, c)

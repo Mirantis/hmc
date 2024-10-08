@@ -85,22 +85,23 @@ const (
 	infrastructureProvidersType
 )
 
+const multiProviderSeparator = ";"
+
 func parseProviders[T any](providersGetter interface{ GetSpecProviders() ProvidersTupled }, typ providersType, annotations map[string]string, validationFn func(string) (T, error)) ([]ProviderTuple, error) {
 	pspec, anno := getProvidersSpecAnno(providersGetter, typ)
-	if len(pspec) > 0 {
-		return pspec, nil
-	}
 
 	providers := annotations[anno]
 	if len(providers) == 0 {
-		return []ProviderTuple{}, nil
+		return pspec, nil
 	}
 
 	var (
-		splitted = strings.Split(providers, ",")
-		pstatus  = make([]ProviderTuple, 0, len(splitted))
+		splitted = strings.Split(providers, multiProviderSeparator)
+		pstatus  = make([]ProviderTuple, 0, len(splitted)+len(pspec))
 		merr     error
 	)
+	pstatus = append(pstatus, pspec...)
+
 	for _, v := range splitted {
 		v = strings.TrimSpace(v)
 		nVerOrC := strings.SplitN(v, " ", 2)

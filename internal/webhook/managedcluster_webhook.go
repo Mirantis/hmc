@@ -132,11 +132,11 @@ func validateK8sCompatibility(ctx context.Context, cl client.Client, mc *hmcv1al
 
 		tplConstraint, err := semver.NewConstraint(kc)
 		if err != nil { // should never happen
-			return fmt.Errorf("failed to parse k8s constrainted version %s of the ServiceTemplate %s/%s: %w", kc, mc.Namespace, v.Template, err)
+			return fmt.Errorf("failed to parse k8s constrained version %s of the ServiceTemplate %s/%s: %w", kc, mc.Namespace, v.Template, err)
 		}
 
 		if !tplConstraint.Check(mcVersion) {
-			return fmt.Errorf("k8s version %s of the ManagedCluster %s/%s does not satisfy constrainted version %s from the ServiceTemplate %s/%s",
+			return fmt.Errorf("k8s version %s of the ManagedCluster %s/%s does not satisfy constrained version %s from the ServiceTemplate %s/%s",
 				mc.Status.KubertenesVersion, mc.Namespace, mc.Name,
 				kc, mc.Namespace, v.Template)
 		}

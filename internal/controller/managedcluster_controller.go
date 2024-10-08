@@ -230,7 +230,6 @@ func (r *ManagedClusterReconciler) Update(ctx context.Context, managedCluster *h
 	}
 	// template is ok, propagate data from it
 	managedCluster.Status.KubertenesVersion = template.Status.KubertenesVersion
-	managedCluster.Status.Providers = template.Status.Providers
 
 	apimeta.SetStatusCondition(managedCluster.GetConditions(), metav1.Condition{
 		Type:    hmc.TemplateReadyCondition,

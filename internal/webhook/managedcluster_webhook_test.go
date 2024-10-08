@@ -218,7 +218,7 @@ one or more required infrastructure providers does not satisfy constraints: [aws
 					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
 				),
 			},
-			err:      fmt.Sprintf(`failed to validate k8s compatibility: k8s version v1.30.0 of the ManagedCluster default/managedcluster does not satisfy constrainted version <1.30 from the ServiceTemplate default/%s`, testTemplateName),
+			err:      fmt.Sprintf(`failed to validate k8s compatibility: k8s version v1.30.0 of the ManagedCluster default/managedcluster does not satisfy constrained version <1.30 from the ServiceTemplate default/%s`, testTemplateName),
 			warnings: admission.Warnings{"Failed to validate k8s version compatibility with ServiceTemplates"},
 		},
 	}...)

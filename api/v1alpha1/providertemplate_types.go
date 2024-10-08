@@ -27,17 +27,24 @@ const ChartAnnotationCAPIVersion = "hmc.mirantis.com/capi-version"
 // ProviderTemplateSpec defines the desired state of ProviderTemplate
 type ProviderTemplateSpec struct {
 	Helm HelmSpec `json:"helm"`
-	// Compatible CAPI provider version set in the SemVer format.
+	// CAPI exact version in the SemVer format required for this ProviderTemplate.
+	// For the CAPI component it is the actual current version of the component
+	// against which other Templates will be validated.
 	CAPIVersion string `json:"capiVersion,omitempty"`
-	// Represents required CAPI providers with exact compatibility versions set. Should be set if not present in the Helm chart metadata.
+	// Providers represent required CAPI providers with exact compatibility versions set.
+	// Should be set if not present in the Helm chart metadata.
+	// Compatibility attributes are optional to be defined.
 	Providers ProvidersTupled `json:"providers,omitempty"`
 }
 
 // ProviderTemplateStatus defines the observed state of ProviderTemplate
 type ProviderTemplateStatus struct {
-	// Compatible CAPI provider version in the SemVer format.
+	// CAPI exact version in the SemVer format required for this ProviderTemplate.
+	// For the CAPI component it is the actual current version of the component
+	// against which other Templates will be validated.
 	CAPIVersion string `json:"capiVersion,omitempty"`
-	// Providers represent exposed CAPI providers with exact compatibility versions set.
+	// Providers represent exposed CAPI providers with exact compatibility versions set
+	// if the latter has been given.
 	Providers ProvidersTupled `json:"providers,omitempty"`
 
 	TemplateStatusCommon `json:",inline"`
