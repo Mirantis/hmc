@@ -4,7 +4,7 @@ go 1.22.7
 
 require (
 	github.com/a8m/envsubst v1.4.2
-	github.com/cert-manager/cert-manager v1.15.3
+	github.com/cert-manager/cert-manager v1.16.0
 	github.com/fluxcd/helm-controller/api v1.1.0
 	github.com/fluxcd/pkg/apis/meta v1.6.1
 	github.com/fluxcd/pkg/runtime v0.49.1
@@ -34,6 +34,7 @@ require (
 	dario.cat/mergo v1.0.1 // indirect
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20240806141605-e8a1dd7889d6 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
+	github.com/Azure/go-ntlmssp v0.0.0-20221128193559-754e69321358 // indirect
 	github.com/BurntSushi/toml v1.4.0 // indirect
 	github.com/MakeNowJust/heredoc v1.0.0 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
@@ -69,8 +70,10 @@ require (
 	github.com/fluxcd/pkg/apis/kustomize v1.6.1 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
+	github.com/go-asn1-ber/asn1-ber v1.5.6 // indirect
 	github.com/go-errors/errors v1.5.1 // indirect
 	github.com/go-gorp/gorp/v3 v3.1.0 // indirect
+	github.com/go-ldap/ldap/v3 v3.4.8 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-logr/zapr v1.3.0 // indirect
 	github.com/go-openapi/jsonpointer v0.21.0 // indirect
