@@ -17,10 +17,8 @@ package controller
 import (
 	"context"
 
-	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
 )
@@ -28,16 +26,11 @@ import (
 // MultiClusterServiceReconciler reconciles a MultiClusterService object
 type MultiClusterServiceReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
 }
-
-// +kubebuilder:rbac:groups=hmc.mirantis.com.hmc.mirantis.com,resources=multiclusterservices,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=hmc.mirantis.com.hmc.mirantis.com,resources=multiclusterservices/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=hmc.mirantis.com.hmc.mirantis.com,resources=multiclusterservices/finalizers,verbs=update
 
 // Reconcile reconciles a MultiClusterService object.
 func (*MultiClusterServiceReconciler) Reconcile(ctx context.Context, _ ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+	_ = ctrl.LoggerFrom(ctx)
 
 	// TODO(https://github.com/Mirantis/hmc/issues/455): Implement me.
 

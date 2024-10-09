@@ -35,9 +35,9 @@ type ServiceSpec struct {
 	Name string `json:"name"`
 	// Namespace is the namespace the release will be installed in.
 	// It will default to Name if not provided.
-	Namespace string `json:"namespace"`
+	Namespace string `json:"namespace,omitempty"`
 	// Disable can be set to disable handling of this service.
-	Disable bool `json:"disable"`
+	Disable bool `json:"disable,omitempty"`
 }
 
 // MultiClusterServiceSpec defines the desired state of MultiClusterService
@@ -80,10 +80,11 @@ type MultiClusterServiceStatus struct {
 
 // MultiClusterService is the Schema for the multiclusterservices API
 type MultiClusterService struct {
-	Status            MultiClusterServiceStatus `json:"status,omitempty"`
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              MultiClusterServiceSpec `json:"spec,omitempty"`
+
+	Spec   MultiClusterServiceSpec   `json:"spec,omitempty"`
+	Status MultiClusterServiceStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true

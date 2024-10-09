@@ -127,9 +127,7 @@ spec:
                       description: Values is the helm values to be passed to the template.
                       x-kubernetes-preserve-unknown-fields: true
                   required:
-                  - disable
                   - name
-                  - namespace
                   - template
                   type: object
                 type: array

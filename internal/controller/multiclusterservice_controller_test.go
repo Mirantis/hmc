@@ -68,7 +68,6 @@ var _ = Describe("MultiClusterService Controller", func() {
 			By("Reconciling the created resource")
 			controllerReconciler := &MultiClusterServiceReconciler{
 				Client: k8sClient,
-				Scheme: k8sClient.Scheme(),
 			}
 
 			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
