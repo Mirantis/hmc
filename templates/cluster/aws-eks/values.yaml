@@ -1,0 +1,34 @@
+# Cluster parameters
+workersNumber: 1
+
+clusterNetwork:
+  pods:
+    cidrBlocks:
+      - "10.244.0.0/16"
+  services:
+    cidrBlocks:
+      - "10.96.0.0/12"
+
+# EKS cluster parameters
+region: ""
+sshKeyName: ""
+publicIP: false
+
+clusterIdentity:
+  name: "aws-cluster-identity"
+  kind: "AWSClusterStaticIdentity"
+
+# EKS machines parameters
+worker:
+  amiID: ""
+  iamInstanceProfile: nodes.cluster-api-provider-aws.sigs.k8s.io
+  instanceType: "t3.small"
+  rootVolumeSize: 30
+  imageLookup:
+    format: ""
+    org: ""
+    baseOS: ""
+
+# Kubernetes version
+kubernetes:
+  version: v1.30.4

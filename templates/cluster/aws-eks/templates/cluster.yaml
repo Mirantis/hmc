@@ -1,0 +1,17 @@
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: Cluster
+metadata:
+  name: {{ include "cluster.name" . }}
+spec:
+  {{- with .Values.clusterNetwork }}
+  clusterNetwork:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  controlPlaneRef:
+    apiVersion: controlplane.cluster.x-k8s.io/v1beta2
+    kind: AWSManagedControlPlane
+    name: {{ include "awsmanagedcontrolplane.name" .  }}
+  infrastructureRef:
+    apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+    kind: AWSManagedCluster
+    name: {{ include "cluster.name" . }}

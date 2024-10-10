@@ -1,0 +1,22 @@
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: AWSMachineTemplate
+metadata:
+  name: {{ include "awsmachinetemplate.worker.name" . }}
+spec:
+  template:
+    spec:
+      {{- if not (quote .Values.worker.amiID | empty) }}
+      ami:
+        id: {{ .Values.worker.amiID }}
+      {{- end }}
+      imageLookupFormat: {{ .Values.worker.imageLookup.format }}
+      imageLookupOrg: {{ .Values.worker.imageLookup.org }}
+      imageLookupBaseOS: {{ .Values.worker.imageLookup.baseOS }}
+      instanceType: {{ .Values.worker.instanceType }}
+      iamInstanceProfile: {{ .Values.worker.iamInstanceProfile }}
+      publicIP: {{ .Values.publicIP }}
+      rootVolume:
+        size: {{ .Values.worker.rootVolumeSize }}
+      {{- if not (quote .Values.sshKeyName | empty) }}
+      sshKeyName: {{ .Values.sshKeyName | quote }}
+      {{- end }}
