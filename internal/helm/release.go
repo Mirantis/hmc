@@ -38,8 +38,8 @@ type ReconcileHelmReleaseOpts struct {
 	OwnerReference    *metav1.OwnerReference
 	ChartRef          *hcv2.CrossNamespaceSourceReference
 	ReconcileInterval *time.Duration
-	DependsOn         []meta.NamespacedObjectReference
 	TargetNamespace   string
+	DependsOn         []meta.NamespacedObjectReference
 	CreateNamespace   bool
 }
 

@@ -51,14 +51,14 @@ type ReleaseReconciler struct {
 
 	Config *rest.Config
 
-	CreateManagement bool
-	CreateRelease    bool
-	CreateTemplates  bool
-
 	HMCTemplatesChartName string
 	SystemNamespace       string
 
 	DefaultRegistryConfig helm.DefaultRegistryConfig
+
+	CreateManagement bool
+	CreateRelease    bool
+	CreateTemplates  bool
 }
 
 func (r *ReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -110,9 +110,8 @@ func (r *ReleaseReconciler) ensureManagement(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if err := mgmtObj.Spec.SetProvidersDefaults(); err != nil {
-		return err
-	}
+	mgmtObj.Spec.Providers = hmc.GetDefaultProviders()
+
 	getter := helm.NewMemoryRESTClientGetter(r.Config, r.RESTMapper())
 	actionConfig := new(action.Configuration)
 	err = actionConfig.Init(getter, r.SystemNamespace, "secret", l.Info)

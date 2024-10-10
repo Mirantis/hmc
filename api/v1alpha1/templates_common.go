@@ -15,6 +15,10 @@
 package v1alpha1
 
 import (
+	"errors"
+	"fmt"
+	"strings"
+
 	helmcontrollerv2 "github.com/fluxcd/helm-controller/api/v2"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 )
@@ -27,15 +31,6 @@ const (
 	// ChartAnnotationControlPlaneProviders is an annotation containing the CAPI control plane providers associated with Template.
 	ChartAnnotationControlPlaneProviders = "hmc.mirantis.com/control-plane-providers"
 )
-
-// TemplateSpecCommon is a Template configuration common for all Template types
-type TemplateSpecCommon struct {
-	// Helm holds a reference to a Helm chart representing the HMC template
-	Helm HelmSpec `json:"helm"`
-	// Providers represent required/exposed CAPI providers depending on the template type.
-	// Should be set if not present in the Helm chart metadata.
-	Providers Providers `json:"providers,omitempty"`
-}
 
 // +kubebuilder:validation:XValidation:rule="(has(self.chartName) && !has(self.chartRef)) || (!has(self.chartName) && has(self.chartRef))", message="either chartName or chartRef must be set"
 
@@ -50,19 +45,27 @@ type HelmSpec struct {
 	ChartVersion string `json:"chartVersion,omitempty"`
 }
 
+func (s *HelmSpec) String() string {
+	if s.ChartRef != nil {
+		return s.ChartRef.Namespace + "/" + s.ChartRef.Name + ", Kind=" + s.ChartRef.Kind
+	}
+
+	return s.ChartName + ": " + s.ChartVersion
+}
+
 // TemplateStatusCommon defines the observed state of Template common for all Template types
 type TemplateStatusCommon struct {
-	TemplateValidationStatus `json:",inline"`
-	// Description contains information about the template.
-	Description string `json:"description,omitempty"`
 	// Config demonstrates available parameters for template customization,
 	// that can be used when creating ManagedCluster objects.
 	Config *apiextensionsv1.JSON `json:"config,omitempty"`
 	// ChartRef is a reference to a source controller resource containing the
 	// Helm chart representing the template.
 	ChartRef *helmcontrollerv2.CrossNamespaceSourceReference `json:"chartRef,omitempty"`
-	// Providers represent required/exposed CAPI providers depending on the template type.
-	Providers Providers `json:"providers,omitempty"`
+	// Description contains information about the template.
+	Description string `json:"description,omitempty"`
+
+	TemplateValidationStatus `json:",inline"`
+
 	// ObservedGeneration is the last observed generation.
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 }
@@ -72,4 +75,68 @@ type TemplateValidationStatus struct {
 	ValidationError string `json:"validationError,omitempty"`
 	// Valid indicates whether the template passed validation or not.
 	Valid bool `json:"valid"`
+}
+
+type providersType int
+
+const (
+	bootstrapProvidersType providersType = iota
+	controlPlaneProvidersType
+	infrastructureProvidersType
+)
+
+const multiProviderSeparator = ";"
+
+func parseProviders[T any](providersGetter interface{ GetSpecProviders() ProvidersTupled }, typ providersType, annotations map[string]string, validationFn func(string) (T, error)) ([]ProviderTuple, error) {
+	pspec, anno := getProvidersSpecAnno(providersGetter, typ)
+
+	providers := annotations[anno]
+	if len(providers) == 0 {
+		return pspec, nil
+	}
+
+	var (
+		splitted = strings.Split(providers, multiProviderSeparator)
+		pstatus  = make([]ProviderTuple, 0, len(splitted)+len(pspec))
+		merr     error
+	)
+	pstatus = append(pstatus, pspec...)
+
+	for _, v := range splitted {
+		v = strings.TrimSpace(v)
+		nVerOrC := strings.SplitN(v, " ", 2)
+		if len(nVerOrC) == 0 { // BCE (bound check elimination)
+			continue
+		}
+
+		n := ProviderTuple{Name: nVerOrC[0]}
+		if len(nVerOrC) < 2 {
+			pstatus = append(pstatus, n)
+			continue
+		}
+
+		ver := strings.TrimSpace(nVerOrC[1])
+		if _, err := validationFn(ver); err != nil { // validation
+			merr = errors.Join(merr, fmt.Errorf("failed to parse %s in the %s: %v", ver, v, err))
+			continue
+		}
+
+		n.VersionOrConstraint = ver
+		pstatus = append(pstatus, n)
+	}
+
+	return pstatus, merr
+}
+
+func getProvidersSpecAnno(providersGetter interface{ GetSpecProviders() ProvidersTupled }, typ providersType) (spec []ProviderTuple, annotation string) {
+	switch typ {
+	case bootstrapProvidersType:
+		return providersGetter.GetSpecProviders().BootstrapProviders, ChartAnnotationBootstrapProviders
+	case controlPlaneProvidersType:
+		return providersGetter.GetSpecProviders().ControlPlaneProviders, ChartAnnotationControlPlaneProviders
+	case infrastructureProvidersType:
+		return providersGetter.GetSpecProviders().InfrastructureProviders, ChartAnnotationInfraProviders
+	default:
+		return []ProviderTuple{}, ""
+	}
 }

@@ -47,7 +47,7 @@ func TestClusterTemplateValidateDelete(t *testing.T) {
 			template: tpl,
 			existingObjects: []runtime.Object{managedcluster.NewManagedCluster(
 				managedcluster.WithNamespace(namespace),
-				managedcluster.WithTemplate(tpl.Name),
+				managedcluster.WithClusterTemplate(tpl.Name),
 			)},
 			warnings: admission.Warnings{"The ClusterTemplate object can't be removed if ManagedCluster objects referencing it still exist"},
 			err:      "template deletion is forbidden",
@@ -57,7 +57,7 @@ func TestClusterTemplateValidateDelete(t *testing.T) {
 			template: tpl,
 			existingObjects: []runtime.Object{managedcluster.NewManagedCluster(
 				managedcluster.WithNamespace("new"),
-				managedcluster.WithTemplate(tpl.Name),
+				managedcluster.WithClusterTemplate(tpl.Name),
 			)},
 		},
 		{
@@ -68,7 +68,7 @@ func TestClusterTemplateValidateDelete(t *testing.T) {
 		{
 			name:            "should succeed",
 			template:        template.NewClusterTemplate(),
-			existingObjects: []runtime.Object{managedcluster.NewManagedCluster(managedcluster.WithTemplate(tplTest.Name))},
+			existingObjects: []runtime.Object{managedcluster.NewManagedCluster(managedcluster.WithClusterTemplate(tplTest.Name))},
 		},
 	}
 

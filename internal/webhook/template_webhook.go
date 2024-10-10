@@ -20,7 +20,6 @@ import (
 	"fmt"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -68,13 +67,10 @@ func (v *ClusterTemplateValidator) ValidateDelete(ctx context.Context, obj runti
 	}
 
 	managedClusters := &v1alpha1.ManagedClusterList{}
-	listOptions := client.ListOptions{
-		FieldSelector: fields.SelectorFromSet(fields.Set{v1alpha1.TemplateKey: template.Name}),
-		Limit:         1,
-		Namespace:     template.Namespace,
-	}
-	err := v.Client.List(ctx, managedClusters, &listOptions)
-	if err != nil {
+	if err := v.Client.List(ctx, managedClusters,
+		client.InNamespace(template.Namespace),
+		client.MatchingFields{v1alpha1.TemplateKey: template.Name},
+		client.Limit(1)); err != nil {
 		return nil, err
 	}
 
@@ -126,11 +122,10 @@ func (v *ServiceTemplateValidator) ValidateDelete(ctx context.Context, obj runti
 	}
 
 	managedClusters := &v1alpha1.ManagedClusterList{}
-	if err := v.Client.List(ctx, managedClusters, &client.ListOptions{
-		FieldSelector: fields.SelectorFromSet(fields.Set{v1alpha1.ServicesTemplateKey: tmpl.Name}),
-		Limit:         1,
-		Namespace:     tmpl.Namespace,
-	}); err != nil {
+	if err := v.Client.List(ctx, managedClusters,
+		client.InNamespace(tmpl.Namespace),
+		client.MatchingFields{v1alpha1.ServicesTemplateKey: tmpl.Name},
+		client.Limit(1)); err != nil {
 		return nil, err
 	}
 

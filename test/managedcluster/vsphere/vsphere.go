@@ -89,7 +89,7 @@ func CreateClusterIdentity(kc *kubeclient.KubeClient, secretName string, identit
 
 	result, err := client.Resource(gvr).Create(ctx, clusterIdentity, metav1.CreateOptions{})
 	if err != nil {
-		fmt.Printf("%+v", result) //nolint:revive // false-positive
+		fmt.Printf("%+v", result)
 		return fmt.Errorf("failed to create vsphereclusteridentity: %w", err)
 	}
 

@@ -63,6 +63,7 @@ spec:
                   the template and DryRun will be enabled.
                 x-kubernetes-preserve-unknown-fields: true
               credential:
+                description: Name reference to the related Credentials object.
                 type: string
               dryRun:
                 description: DryRun specifies whether the template should be applied
@@ -188,6 +189,11 @@ spec:
                   - type
                   type: object
                 type: array
+              k8sVersion:
+                description: |-
+                  Currently compatible exact Kubernetes version of the cluster. Being set only if
+                  provided by the corresponding ClusterTemplate.
+                type: string
               observedGeneration:
                 description: ObservedGeneration is the last observed generation.
                 format: int64

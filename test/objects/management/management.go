@@ -40,6 +40,12 @@ func NewManagement(opts ...Opt) *v1alpha1.Management {
 	return p
 }
 
+func WithStatusRelease(v string) Opt {
+	return func(management *v1alpha1.Management) {
+		management.Status.Release = v
+	}
+}
+
 func WithName(name string) Opt {
 	return func(p *v1alpha1.Management) {
 		p.Name = name
@@ -64,7 +70,7 @@ func WithProviders(providers []v1alpha1.Provider) Opt {
 	}
 }
 
-func WithAvailableProviders(providers v1alpha1.Providers) Opt {
+func WithAvailableProviders(providers v1alpha1.ProvidersTupled) Opt {
 	return func(p *v1alpha1.Management) {
 		p.Status.AvailableProviders = providers
 	}

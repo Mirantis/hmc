@@ -15,26 +15,102 @@
 package v1alpha1
 
 import (
+	"fmt"
+	"strings"
+
+	"github.com/Masterminds/semver/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const ServiceTemplateKind = "ServiceTemplate"
+const (
+	// Denotes the servicetemplate resource Kind.
+	ServiceTemplateKind = "ServiceTemplate"
+	// ChartAnnotationKubernetesConstraint is an annotation containing the Kubernetes constrained version in the SemVer format associated with a ServiceTemplate.
+	ChartAnnotationKubernetesConstraint = "hmc.mirantis.com/k8s-version-constraint"
+)
 
 // ServiceTemplateSpec defines the desired state of ServiceTemplate
 type ServiceTemplateSpec struct {
-	TemplateSpecCommon `json:",inline"`
+	Helm HelmSpec `json:"helm"`
+	// Constraint describing compatible K8S versions of the cluster set in the SemVer format.
+	KubertenesConstraint string `json:"k8sConstraint,omitempty"`
+	// Providers represent required CAPI providers.
+	// Should be set if not present in the Helm chart metadata.
+	Providers Providers `json:"providers,omitempty"`
 }
 
 // ServiceTemplateStatus defines the observed state of ServiceTemplate
 type ServiceTemplateStatus struct {
+	// Constraint describing compatible K8S versions of the cluster set in the SemVer format.
+	KubertenesConstraint string `json:"k8sConstraint,omitempty"`
+	// Providers represent requested CAPI providers.
+	Providers Providers `json:"providers,omitempty"`
+
 	TemplateStatusCommon `json:",inline"`
 }
 
-func (t *ServiceTemplate) GetSpec() *TemplateSpecCommon {
-	return &t.Spec.TemplateSpecCommon
+// FillStatusWithProviders sets the status of the template with providers
+// either from the spec or from the given annotations.
+func (t *ServiceTemplate) FillStatusWithProviders(annotations map[string]string) error {
+	parseProviders := func(typ providersType) []string {
+		var (
+			pspec []string
+			anno  string
+		)
+		switch typ {
+		case bootstrapProvidersType:
+			pspec, anno = t.Spec.Providers.BootstrapProviders, ChartAnnotationBootstrapProviders
+		case controlPlaneProvidersType:
+			pspec, anno = t.Spec.Providers.ControlPlaneProviders, ChartAnnotationControlPlaneProviders
+		case infrastructureProvidersType:
+			pspec, anno = t.Spec.Providers.InfrastructureProviders, ChartAnnotationInfraProviders
+		}
+
+		providers := annotations[anno]
+		if len(providers) == 0 {
+			return pspec
+		}
+
+		splitted := strings.Split(providers, multiProviderSeparator)
+		result := make([]string, 0, len(splitted))
+		result = append(result, pspec...)
+		for _, v := range splitted {
+			if c := strings.TrimSpace(v); c != "" {
+				result = append(result, c)
+			}
+		}
+
+		return result
+	}
+
+	t.Status.Providers.BootstrapProviders = parseProviders(bootstrapProvidersType)
+	t.Status.Providers.ControlPlaneProviders = parseProviders(controlPlaneProvidersType)
+	t.Status.Providers.InfrastructureProviders = parseProviders(infrastructureProvidersType)
+
+	kconstraint := annotations[ChartAnnotationKubernetesConstraint]
+	if t.Spec.KubertenesConstraint != "" {
+		kconstraint = t.Spec.KubertenesConstraint
+	}
+	if kconstraint == "" {
+		return nil
+	}
+
+	if _, err := semver.NewConstraint(kconstraint); err != nil {
+		return fmt.Errorf("failed to parse kubernetes constraint %s: %w", kconstraint, err)
+	}
+
+	t.Status.KubertenesConstraint = kconstraint
+
+	return nil
 }
 
-func (t *ServiceTemplate) GetStatus() *TemplateStatusCommon {
+// GetHelmSpec returns .spec.helm of the Template.
+func (t *ServiceTemplate) GetHelmSpec() *HelmSpec {
+	return &t.Spec.Helm
+}
+
+// GetCommonStatus returns common status of the Template.
+func (t *ServiceTemplate) GetCommonStatus() *TemplateStatusCommon {
 	return &t.Status.TemplateStatusCommon
 }
 

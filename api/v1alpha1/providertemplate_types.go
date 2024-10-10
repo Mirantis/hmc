@@ -15,24 +15,89 @@
 package v1alpha1
 
 import (
+	"fmt"
+
+	"github.com/Masterminds/semver/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// ChartAnnotationCAPIVersion is an annotation containing the CAPI exact version in the SemVer format associated with a ProviderTemplate.
+const ChartAnnotationCAPIVersion = "hmc.mirantis.com/capi-version"
+
 // ProviderTemplateSpec defines the desired state of ProviderTemplate
 type ProviderTemplateSpec struct {
-	TemplateSpecCommon `json:",inline"`
+	Helm HelmSpec `json:"helm"`
+	// CAPI exact version in the SemVer format required for this ProviderTemplate.
+	// For the CAPI component it is the actual current version of the component
+	// against which other Templates will be validated.
+	CAPIVersion string `json:"capiVersion,omitempty"`
+	// Providers represent required CAPI providers with exact compatibility versions set.
+	// Should be set if not present in the Helm chart metadata.
+	// Compatibility attributes are optional to be defined.
+	Providers ProvidersTupled `json:"providers,omitempty"`
 }
 
 // ProviderTemplateStatus defines the observed state of ProviderTemplate
 type ProviderTemplateStatus struct {
+	// CAPI exact version in the SemVer format required for this ProviderTemplate.
+	// For the CAPI component it is the actual current version of the component
+	// against which other Templates will be validated.
+	CAPIVersion string `json:"capiVersion,omitempty"`
+	// Providers represent exposed CAPI providers with exact compatibility versions set
+	// if the latter has been given.
+	Providers ProvidersTupled `json:"providers,omitempty"`
+
 	TemplateStatusCommon `json:",inline"`
 }
 
-func (t *ProviderTemplate) GetSpec() *TemplateSpecCommon {
-	return &t.Spec.TemplateSpecCommon
+// FillStatusWithProviders sets the status of the template with providers
+// either from the spec or from the given annotations.
+func (t *ProviderTemplate) FillStatusWithProviders(annotations map[string]string) error {
+	var err error
+	t.Status.Providers.BootstrapProviders, err = parseProviders(t, bootstrapProvidersType, annotations, semver.NewVersion)
+	if err != nil {
+		return fmt.Errorf("failed to parse ProviderTemplate bootstrap providers: %v", err)
+	}
+
+	t.Status.Providers.ControlPlaneProviders, err = parseProviders(t, controlPlaneProvidersType, annotations, semver.NewVersion)
+	if err != nil {
+		return fmt.Errorf("failed to parse ProviderTemplate controlPlane providers: %v", err)
+	}
+
+	t.Status.Providers.InfrastructureProviders, err = parseProviders(t, infrastructureProvidersType, annotations, semver.NewVersion)
+	if err != nil {
+		return fmt.Errorf("failed to parse ProviderTemplate infrastructure providers: %v", err)
+	}
+
+	capiVersion := annotations[ChartAnnotationCAPIVersion]
+	if t.Spec.CAPIVersion != "" {
+		capiVersion = t.Spec.CAPIVersion
+	}
+	if capiVersion == "" {
+		return nil
+	}
+
+	if _, err := semver.NewVersion(capiVersion); err != nil {
+		return fmt.Errorf("failed to parse CAPI version %s: %w", capiVersion, err)
+	}
+
+	t.Status.CAPIVersion = capiVersion
+
+	return nil
 }
 
-func (t *ProviderTemplate) GetStatus() *TemplateStatusCommon {
+// GetSpecProviders returns .spec.providers of the Template.
+func (t *ProviderTemplate) GetSpecProviders() ProvidersTupled {
+	return t.Spec.Providers
+}
+
+// GetHelmSpec returns .spec.helm of the Template.
+func (t *ProviderTemplate) GetHelmSpec() *HelmSpec {
+	return &t.Spec.Helm
+}
+
+// GetCommonStatus returns common status of the Template.
+func (t *ProviderTemplate) GetCommonStatus() *TemplateStatusCommon {
 	return &t.Status.TemplateStatusCommon
 }
 
