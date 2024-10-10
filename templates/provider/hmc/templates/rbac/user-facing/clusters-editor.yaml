@@ -8,8 +8,3 @@ rules:
     resources:
       - managedclusters
     verbs: {{ include "rbac.editorVerbs" . | nindent 6 }}
-  - apiGroups:
-      - hmc.mirantis.com
-    resources:
-      - multiclusterservices
-    verbs: {{ include "rbac.editorVerbs" . | nindent 6 }}
