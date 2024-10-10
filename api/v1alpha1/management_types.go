@@ -86,6 +86,13 @@ func (m *ManagementSpec) SetProvidersDefaults() error {
 	return nil
 }
 
+func (m *ManagementSpec) GetCoreTemplates() map[string]bool {
+	return map[string]bool{
+		m.Core.HMC.Template:  true,
+		m.Core.CAPI.Template: true,
+	}
+}
+
 // ManagementStatus defines the observed state of Management
 type ManagementStatus struct {
 	// ObservedGeneration is the last observed generation.

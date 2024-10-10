@@ -55,9 +55,11 @@ func NewServiceTemplate(opts ...Opt) *v1alpha1.ServiceTemplate {
 func NewProviderTemplate(opts ...Opt) *v1alpha1.ProviderTemplate {
 	templateState := NewTemplate(opts...)
 	return &v1alpha1.ProviderTemplate{
-		ObjectMeta: templateState.ObjectMeta,
-		Spec:       v1alpha1.ProviderTemplateSpec{TemplateSpecCommon: templateState.Spec},
-		Status:     v1alpha1.ProviderTemplateStatus{TemplateStatusCommon: templateState.Status},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: templateState.Name,
+		},
+		Spec:   v1alpha1.ProviderTemplateSpec{TemplateSpecCommon: templateState.Spec},
+		Status: v1alpha1.ProviderTemplateStatus{TemplateStatusCommon: templateState.Status},
 	}
 }
 
