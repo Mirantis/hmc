@@ -8,10 +8,3 @@ rules:
     resources:
       - templatemanagements
     verbs: {{ include "rbac.editorVerbs" . | nindent 6 }}
-  - apiGroups:
-      - hmc.mirantis.com
-    resources:
-      - servicetemplatechains
-      - clustertemplatechains
-    verbs: {{ include "rbac.viewerVerbs" . | nindent 6 }}
-      - create
