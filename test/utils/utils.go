@@ -27,6 +27,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
+const (
+	HMCControllerLabel = "app.kubernetes.io/name=hmc"
+)
+
 // Run executes the provided command within this context and returns it's
 // output. Run does not wait for the command to finish, use Wait instead.
 func Run(cmd *exec.Cmd) ([]byte, error) {

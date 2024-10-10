@@ -20,14 +20,13 @@ import (
 	"os"
 	"strings"
 
+	"github.com/Mirantis/hmc/test/utils"
 	"github.com/a8m/envsubst"
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	"github.com/Mirantis/hmc/internal/utils"
 )
 
 type ProviderType string
@@ -70,8 +69,38 @@ var vsphereStandaloneCPManagedClusterTemplateBytes []byte
 //go:embed resources/vsphere-hosted-cp.yaml.tpl
 var vsphereHostedCPManagedClusterTemplateBytes []byte
 
+func FilterAllProviders() []string {
+	return []string{
+		utils.HMCControllerLabel,
+		GetProviderLabel(ProviderAWS),
+		GetProviderLabel(ProviderAzure),
+		GetProviderLabel(ProviderCAPI),
+		GetProviderLabel(ProviderVSphere),
+	}
+}
+
 func GetProviderLabel(provider ProviderType) string {
 	return fmt.Sprintf("%s=%s", providerLabel, provider)
+}
+
+func setClusterName(templateName Template) {
+	var generatedName string
+
+	mcName := os.Getenv(EnvVarManagedClusterName)
+	if mcName == "" {
+		mcName = "e2e-test-" + uuid.New().String()[:8]
+	}
+
+	providerName := strings.Split(string(templateName), "-")[0]
+
+	// Append the provider name to the cluster name to ensure uniqueness between
+	// different deployed ManagedClusters.
+	generatedName = fmt.Sprintf("%s-%s", mcName, providerName)
+	if strings.Contains(string(templateName), "hosted") {
+		generatedName = fmt.Sprintf("%s-%s", mcName, "hosted")
+	}
+
+	GinkgoT().Setenv(EnvVarManagedClusterName, generatedName)
 }
 
 // GetUnstructured returns an unstructured ManagedCluster object based on the
@@ -79,21 +108,7 @@ func GetProviderLabel(provider ProviderType) string {
 func GetUnstructured(templateName Template) *unstructured.Unstructured {
 	GinkgoHelper()
 
-	generatedName := os.Getenv(EnvVarManagedClusterName)
-	if generatedName == "" {
-		generatedName = "e2e-test-" + uuid.New().String()[:8]
-		_, _ = fmt.Fprintf(GinkgoWriter, "Generated cluster name: %q\n", generatedName)
-		GinkgoT().Setenv(EnvVarManagedClusterName, generatedName)
-	} else {
-		_, _ = fmt.Fprintf(GinkgoWriter, "Using configured cluster name: %q\n", generatedName)
-	}
-
-	var hostedName string
-	if strings.Contains(string(templateName), "-hosted") {
-		hostedName = generatedName + "-hosted"
-		GinkgoT().Setenv(EnvVarHostedManagedClusterName, hostedName)
-		_, _ = fmt.Fprintf(GinkgoWriter, "Creating hosted ManagedCluster with name: %q\n", hostedName)
-	}
+	setClusterName(templateName)
 
 	var managedClusterTemplateBytes []byte
 	switch templateName {
@@ -119,10 +134,9 @@ func GetUnstructured(templateName Template) *unstructured.Unstructured {
 	case TemplateAzureStandaloneCP:
 		managedClusterTemplateBytes = azureStandaloneCPManagedClusterTemplateBytes
 	default:
-		Fail(fmt.Sprintf("unsupported template: %s", templateName))
+		Fail(fmt.Sprintf("Unsupported template: %s", templateName))
 	}
 
-	Expect(os.Setenv("NAMESPACE", utils.DefaultSystemNamespace)).NotTo(HaveOccurred())
 	managedClusterConfigBytes, err := envsubst.Bytes(managedClusterTemplateBytes)
 	Expect(err).NotTo(HaveOccurred(), "failed to substitute environment variables")
 

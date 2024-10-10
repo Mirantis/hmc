@@ -1,12 +1,13 @@
 apiVersion: hmc.mirantis.com/v1alpha1
 kind: ManagedCluster
 metadata:
-  name: ${MANAGED_CLUSTER_NAME}-aws
+  name: ${MANAGED_CLUSTER_NAME}
 spec:
-  template: aws-standalone-cp
+  template: aws-standalone-cp-0-0-1
+  credential: ${AWS_CLUSTER_IDENTITY}-cred
   config:
     clusterIdentity:
-      name: aws-cluster-identity
+      name:  ${AWS_CLUSTER_IDENTITY}
       namespace: ${NAMESPACE}
     region: ${AWS_REGION}
     publicIP: ${AWS_PUBLIC_IP:=true}
