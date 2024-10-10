@@ -2,9 +2,9 @@ apiVersion: v2
 name: projectsveltos
 description: A Helm chart to refer the official projectsveltos helm chart
 type: application
-version: 0.38.2
-appVersion: "0.38.2"
+version: 0.39.0
+appVersion: "0.39.0"
 dependencies:
   - name: projectsveltos
-    version: 0.38.2
+    version: 0.39.0
     repository: https://projectsveltos.github.io/helm-charts

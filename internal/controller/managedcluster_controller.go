@@ -399,6 +399,7 @@ func (r *ManagedClusterReconciler) updateServices(ctx context.Context, mc *hmc.M
 		}
 
 		opts = append(opts, sveltos.HelmChartOpts{
+			Values:        svc.Values,
 			RepositoryURL: source.Spec.URL,
 			// We don't have repository name so chart name becomes repository name.
 			RepositoryName: tmpl.Spec.Helm.ChartName,
@@ -413,7 +414,6 @@ func (r *ManagedClusterReconciler) updateServices(ctx context.Context, mc *hmc.M
 			}(),
 			ChartVersion: tmpl.Spec.Helm.ChartVersion,
 			ReleaseName:  svc.Name,
-			Values:       svc.Values,
 			ReleaseNamespace: func() string {
 				if svc.Namespace != "" {
 					return svc.Namespace
@@ -440,7 +440,9 @@ func (r *ManagedClusterReconciler) updateServices(ctx context.Context, mc *hmc.M
 				Name:       mc.Name,
 				UID:        mc.UID,
 			},
-			HelmChartOpts: opts,
+			HelmChartOpts:  opts,
+			Priority:       mc.Spec.Priority,
+			StopOnConflict: mc.Spec.StopOnConflict,
 		}); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to reconcile Profile: %w", err)
 	}

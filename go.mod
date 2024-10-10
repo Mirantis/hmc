@@ -18,6 +18,7 @@ require (
 	github.com/projectsveltos/addon-controller v0.39.0
 	github.com/projectsveltos/libsveltos v0.39.0
 	github.com/segmentio/analytics-go v3.1.0+incompatible
+	github.com/stretchr/testify v1.9.0
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.16.1
 	k8s.io/api v0.31.1
@@ -124,6 +125,7 @@ require (
 	github.com/opencontainers/image-spec v1.1.0 // indirect
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/prometheus/client_golang v1.20.4 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.60.0 // indirect
