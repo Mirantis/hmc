@@ -72,11 +72,7 @@ spec:
               namespace: kube-system
               values: |
                 config:
-                  enabled: true
-                  vcenter: {{ .Values.vsphere.server }}
-                  datacenter: {{ .Values.vsphere.datacenter }}
-                  username: "{{ .Values.vsphere.username }}"
-                  password: "{{ .Values.vsphere.password }}"
+                  enabled: false
                 daemonset:
                   tolerations:
                     - effect: NoSchedule
@@ -101,12 +97,7 @@ spec:
               namespace: kube-system
               values: |
                 vcenterConfig:
-                  enabled: true
-                  clusterID: {{ include "cluster.name" . }}
-                  vcenter: {{ .Values.vsphere.server }}
-                  user: "{{ .Values.vsphere.username }}"
-                  password: "{{ .Values.vsphere.password }}"
-                  datacenters: {{ .Values.vsphere.datacenter }}
+                  enabled: false
                 node:
                   kubeletPath: /var/lib/k0s/kubelet
                 defaultStorageClass:
