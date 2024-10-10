@@ -1,0 +1,11 @@
+apiVersion: hmc.mirantis.com/v1alpha1
+kind: ManagedCluster
+metadata:
+  name: eks-dev
+  namespace: ${NAMESPACE}
+spec:
+  config:
+    region: us-east-2
+    workersNumber: 1
+  template: aws-eks-0-0-1
+  credential: "aws-cluster-identity-cred"

@@ -1,0 +1,10 @@
+apiVersion: hmc.mirantis.com/v1alpha1
+kind: ClusterTemplate
+metadata:
+  name: aws-eks-0-0-1
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  helm:
+    chartName: aws-eks
+    chartVersion: 0.0.1
