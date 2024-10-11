@@ -1,13 +1,12 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: {{ include "hmc.fullname" . }}-templates-creator-role
+  name: {{ include "hmc.fullname" . }}-clustertemplates-creator-role
 rules:
   - apiGroups:
       - hmc.mirantis.com
     resources:
       - clustertemplates
-      - servicetemplates
     verbs: {{ include "rbac.viewerVerbs" . | nindent 6 }}
       - create
   - apiGroups:
