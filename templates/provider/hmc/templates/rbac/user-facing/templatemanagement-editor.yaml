@@ -2,6 +2,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: {{ include "hmc.fullname" . }}-templatemanagement-editor-role
+  labels:
+    hmc.mirantis.com/aggregate-to-global-admin: "true"
 rules:
   - apiGroups:
       - hmc.mirantis.com
