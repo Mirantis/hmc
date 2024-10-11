@@ -11,6 +11,7 @@ rules:
       - servicetemplates
     verbs: {{ include "rbac.viewerVerbs" . | nindent 6 }}
       - create
+      - delete
   - apiGroups:
       - helm.toolkit.fluxcd.io
     resources:

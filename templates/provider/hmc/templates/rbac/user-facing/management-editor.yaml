@@ -14,3 +14,4 @@ rules:
       - providertemplates
     verbs: {{ include "rbac.viewerVerbs" . | nindent 6 }}
       - create
+      - delete

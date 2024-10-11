@@ -9,6 +9,7 @@ rules:
       - clustertemplatechains
     verbs: {{ include "rbac.viewerVerbs" . | nindent 6 }}
       - create
+      - delete
   - apiGroups:
       - hmc.mirantis.com
     resources:
