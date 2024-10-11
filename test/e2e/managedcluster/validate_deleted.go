@@ -36,7 +36,7 @@ func validateClusterDeleted(ctx context.Context, kc *kubeclient.KubeClient, clus
 	if cluster != nil {
 		phase, _, _ := unstructured.NestedString(cluster.Object, "status", "phase")
 		if phase != "Deleting" {
-			// TODO: We should have a threshold error system for situations
+			// TODO(#474): We should have a threshold error system for situations
 			// like this, we probably don't want to wait the full Eventually
 			// for something like this, but we can't immediately fail the test
 			// either.

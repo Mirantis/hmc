@@ -12,6 +12,10 @@ on:
     paths-ignore:
       - 'config/**'
       - '**.md'
+  push:
+    tags:
+      - '*'
+
 env:
   GO_VERSION: '1.22'
   REGISTRY_REPO: 'oci://ghcr.io/mirantis/hmc/charts-ci'

@@ -114,10 +114,8 @@ spec:
                 images:
                   driver:
                     tag: v3.1.2
-                    repo: "registry.k8s.io/csi-vsphere/driver"
                   syncer:
                     tag: v3.1.2
-                    repo: "registry.k8s.io/csi-vsphere/syncer"
   machineTemplate:
     infrastructureRef:
       apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
