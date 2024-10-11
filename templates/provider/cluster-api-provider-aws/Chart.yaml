@@ -21,3 +21,5 @@ version: 0.0.1
 appVersion: "2.6.1"
 annotations:
   hmc.mirantis.com/infrastructure-providers: aws
+  hmc.mirantis.com/controlplane-providers: eks
+  hmc.mirantis.com/bootstrap-providers: eks

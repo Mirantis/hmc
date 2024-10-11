@@ -67,6 +67,14 @@ full explanation for each parameter visit
 [vSphere cluster parameters](cluster-parameters.md) and
 [vSphere machine parameters](machine-parameters.md).
 
+### EKS Provider Setup
+
+To properly deploy dev cluster you need to have the following variable set:
+
+- `DEV_PROVIDER` - should be "eks"
+
+The rest of deployment procedure is the same as for other providers.
+
 ## Deploy HMC
 
 Default provider which will be used to deploy cluster is AWS, if you want to use
