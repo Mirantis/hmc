@@ -123,19 +123,19 @@ func validateController(kc *kubeclient.KubeClient, labelSelector string, name st
 		return fmt.Errorf("expected at least %d %s controller deployments, got %d", controllerItems, name, len(deployList.Items))
 	}
 
-	deployment := deployList.Items[0]
-
-	// Ensure the deployment is not being deleted.
-	if deployment.DeletionTimestamp != nil {
-		return fmt.Errorf("controller pod: %s deletion timestamp should be nil, got: %v",
-			deployment.Name, deployment.DeletionTimestamp)
-	}
-	// Ensure the deployment is running and has the expected name.
-	if !strings.Contains(deployment.Name, "controller-manager") {
-		return fmt.Errorf("controller deployment name %s does not contain 'controller-manager'", deployment.Name)
-	}
-	if deployment.Status.ReadyReplicas < 1 {
-		return fmt.Errorf("controller deployment: %s does not yet have any ReadyReplicas", deployment.Name)
+	for _, deployment := range deployList.Items {
+		// Ensure the deployment is not being deleted.
+		if deployment.DeletionTimestamp != nil {
+			return fmt.Errorf("controller pod: %s deletion timestamp should be nil, got: %v",
+				deployment.Name, deployment.DeletionTimestamp)
+		}
+		// Ensure the deployment is running and has the expected name.
+		if !strings.Contains(deployment.Name, "controller-manager") {
+			return fmt.Errorf("controller deployment name %s does not contain 'controller-manager'", deployment.Name)
+		}
+		if deployment.Status.ReadyReplicas < 1 {
+			return fmt.Errorf("controller deployment: %s does not yet have any ReadyReplicas", deployment.Name)
+		}
 	}
 
 	return nil
