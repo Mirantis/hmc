@@ -51,8 +51,7 @@ func PatchHostedClusterReady(kc *kubeclient.KubeClient, provider ProviderType, c
 		version = "v1beta1"
 		resource = "azureclusters"
 	case ProviderVSphere:
-		version = "v1beta1"
-		resource = "vsphereclusters"
+		return
 	default:
 		Fail(fmt.Sprintf("unsupported provider: %s", provider))
 	}

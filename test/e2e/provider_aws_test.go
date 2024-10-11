@@ -98,8 +98,8 @@ var _ = Describe("AWS Templates", Label("provider:cloud", "provider:aws"), Order
 
 		// Download the KUBECONFIG for the standalone cluster and load it
 		// so we can call Make targets against this cluster.
-		// TODO: Ideally we shouldn't use Make here and should just convert
-		// these Make targets into Go code, but this will require a
+		// TODO(#472): Ideally we shouldn't use Make here and should just
+		// convert these Make targets into Go code, but this will require a
 		// helmclient.
 		var kubeCfgPath string
 		kubeCfgPath, kubecfgDeleteFunc = kc.WriteKubeconfig(context.Background(), clusterName)

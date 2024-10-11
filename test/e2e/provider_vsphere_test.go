@@ -59,7 +59,7 @@ var _ = Context("vSphere Templates", Label("provider:onprem", "provider:vsphere"
 		// VSphere doesn't have any form of cleanup outside of reconciling a
 		// cluster deletion so we need to keep the test active while we wait
 		// for CAPV to clean up the resources.
-		// TODO: Add an exterior cleanup mechanism for VSphere like
+		// TODO(#473) Add an exterior cleanup mechanism for VSphere like
 		// 'dev-aws-nuke' to clean up resources in the event that the test
 		// fails to do so.
 		if deleteFunc != nil && !noCleanup() {

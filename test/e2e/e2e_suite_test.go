@@ -105,16 +105,22 @@ func verifyControllersUp(kc *kubeclient.KubeClient) error {
 }
 
 func validateController(kc *kubeclient.KubeClient, labelSelector string, name string) error {
+	controllerItems := 1
+	if strings.Contains(labelSelector, managedcluster.GetProviderLabel(managedcluster.ProviderAzure)) {
+		// Azure provider has two controllers.
+		controllerItems = 2
+	}
+
 	deployList, err := kc.Client.AppsV1().Deployments(kc.Namespace).List(context.Background(), metav1.ListOptions{
 		LabelSelector: labelSelector,
-		Limit:         1,
+		Limit:         int64(controllerItems),
 	})
 	if err != nil {
 		return fmt.Errorf("failed to list %s controller deployments: %w", name, err)
 	}
 
-	if len(deployList.Items) < 1 {
-		return fmt.Errorf("expected at least 1 %s controller deployment", name)
+	if len(deployList.Items) < controllerItems {
+		return fmt.Errorf("expected at least %d %s controller deployments, got %d", controllerItems, name, len(deployList.Items))
 	}
 
 	deployment := deployList.Items[0]
