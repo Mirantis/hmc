@@ -70,6 +70,10 @@ func (v *ManagedClusterValidator) ValidateCreate(ctx context.Context, obj runtim
 		return admission.Warnings{"Failed to validate k8s version compatibility with ServiceTemplates"}, fmt.Errorf("failed to validate k8s compatibility: %v", err)
 	}
 
+	if err := v.validateCredential(ctx, managedCluster, template); err != nil {
+		return nil, fmt.Errorf("%s: %v", invalidManagedClusterMsg, err)
+	}
+
 	return nil, nil
 }
 
@@ -91,6 +95,10 @@ func (v *ManagedClusterValidator) ValidateUpdate(ctx context.Context, _ runtime.
 
 	if err := validateK8sCompatibility(ctx, v.Client, template, newManagedCluster); err != nil {
 		return admission.Warnings{"Failed to validate k8s version compatibility with ServiceTemplates"}, fmt.Errorf("failed to validate k8s compatibility: %v", err)
+	}
+
+	if err := v.validateCredential(ctx, newManagedCluster, template); err != nil {
+		return nil, fmt.Errorf("%s: %v", invalidManagedClusterMsg, err)
 	}
 
 	return nil, nil
@@ -178,10 +186,72 @@ func (v *ManagedClusterValidator) getManagedClusterTemplate(ctx context.Context,
 	return tpl, v.Get(ctx, client.ObjectKey{Namespace: templateNamespace, Name: templateName}, tpl)
 }
 
+func (v *ManagedClusterValidator) getManagedClusterCredential(ctx context.Context, credNamespace, credName string) (*hmcv1alpha1.Credential, error) {
+	cred := &hmcv1alpha1.Credential{}
+	credRef := client.ObjectKey{
+		Name:      credName,
+		Namespace: credNamespace,
+	}
+	if err := v.Get(ctx, credRef, cred); err != nil {
+		return nil, err
+	}
+	return cred, nil
+}
+
 func isTemplateValid(template *hmcv1alpha1.ClusterTemplate) error {
 	if !template.Status.Valid {
 		return fmt.Errorf("the template is not valid: %s", template.Status.ValidationError)
 	}
 
+	return nil
+}
+
+func (v *ManagedClusterValidator) validateCredential(ctx context.Context, managedCluster *hmcv1alpha1.ManagedCluster, template *hmcv1alpha1.ClusterTemplate) error {
+	infraProviders := template.Status.Providers.InfrastructureProviders
+
+	if len(infraProviders) == 0 {
+		return fmt.Errorf("template %q has no infrastructure providers defined", template.Name)
+	}
+
+	cred, err := v.getManagedClusterCredential(ctx, managedCluster.Namespace, managedCluster.Spec.Credential)
+	if err != nil {
+		return err
+	}
+
+	if cred.Status.State != hmcv1alpha1.CredentialReady {
+		return fmt.Errorf("credential is not Ready")
+	}
+
+	return isCredMatchTemplate(cred, template)
+}
+
+func isCredMatchTemplate(cred *hmcv1alpha1.Credential, template *hmcv1alpha1.ClusterTemplate) error {
+	idtyKind := cred.Spec.IdentityRef.Kind
+	infraProviders := template.Status.Providers.InfrastructureProviders
+
+	errMsg := func(idtyKind string, provider string) error {
+		return fmt.Errorf("wrong kind of the ClusterIdentity %q for provider %q", idtyKind, provider)
+	}
+
+	for _, provider := range infraProviders {
+		switch provider.Name {
+		case "aws":
+			if idtyKind != "AWSClusterStaticIdentity" &&
+				idtyKind != "AWSClusterRoleIdentity" &&
+				idtyKind != "AWSClusterControllerIdentity" {
+				return errMsg(idtyKind, provider.Name)
+			}
+		case "azure":
+			if idtyKind != "AzureClusterIdentity" {
+				return errMsg(idtyKind, provider.Name)
+			}
+		case "vsphere":
+			if idtyKind != "VSphereClusterIdentity" {
+				return errMsg(idtyKind, provider.Name)
+			}
+		default:
+			return fmt.Errorf("unsupported infrastructure provider %s", provider.Name)
+		}
+	}
 	return nil
 }
