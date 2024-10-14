@@ -81,3 +81,9 @@ func WithServiceTemplate(templateName string) Opt {
 		})
 	}
 }
+
+func WithCredential(credName string) Opt {
+	return func(p *v1alpha1.ManagedCluster) {
+		p.Spec.Credential = credName
+	}
+}

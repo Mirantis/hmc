@@ -303,8 +303,6 @@ func (r *ManagedClusterReconciler) Update(ctx context.Context, managedCluster *h
 			Reason:  hmc.FailedReason,
 			Message: "Credential is not in Ready state",
 		})
-		return ctrl.Result{},
-			fmt.Errorf("credential is not in Ready state")
 	}
 
 	apimeta.SetStatusCondition(managedCluster.GetConditions(), metav1.Condition{

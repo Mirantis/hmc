@@ -38,7 +38,8 @@ var _ = Describe("ManagedCluster Controller", func() {
 			managedClusterName      = "test-managed-cluster"
 			managedClusterNamespace = "test"
 
-			templateName = "test-template"
+			templateName   = "test-template"
+			credentialName = "test-credential"
 		)
 
 		ctx := context.Background()
@@ -50,6 +51,7 @@ var _ = Describe("ManagedCluster Controller", func() {
 		managedCluster := &hmc.ManagedCluster{}
 		template := &hmc.ClusterTemplate{}
 		management := &hmc.Management{}
+		credential := &hmc.Credential{}
 		namespace := &corev1.Namespace{}
 
 		BeforeEach(func() {
@@ -92,6 +94,13 @@ var _ = Describe("ManagedCluster Controller", func() {
 							Raw: []byte(`{"foo":"bar"}`),
 						},
 					},
+					Providers: hmc.ProvidersTupled{
+						InfrastructureProviders: []hmc.ProviderTuple{
+							{
+								Name: "aws",
+							},
+						},
+					},
 				}
 				Expect(k8sClient.Status().Update(ctx, template)).To(Succeed())
 			}
@@ -106,7 +115,40 @@ var _ = Describe("ManagedCluster Controller", func() {
 					Spec: hmc.ManagementSpec{},
 				}
 				Expect(k8sClient.Create(ctx, management)).To(Succeed())
+				management.Status = hmc.ManagementStatus{
+					AvailableProviders: hmc.ProvidersTupled{
+						InfrastructureProviders: []hmc.ProviderTuple{
+							{
+								Name: "aws",
+							},
+						},
+					},
+				}
+				Expect(k8sClient.Status().Update(ctx, management)).To(Succeed())
 			}
+			By("creating the custom resource for the Kind Credential")
+			err = k8sClient.Get(ctx, typeNamespacedName, credential)
+			if err != nil && errors.IsNotFound(err) {
+				credential = &hmc.Credential{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      credentialName,
+						Namespace: managedClusterNamespace,
+					},
+					Spec: hmc.CredentialSpec{
+						IdentityRef: &corev1.ObjectReference{
+							APIVersion: "infrastructure.cluster.x-k8s.io/v1beta2",
+							Kind:       "AWSClusterStaticIdentity",
+							Name:       "foo",
+						},
+					},
+				}
+				Expect(k8sClient.Create(ctx, credential)).To(Succeed())
+				credential.Status = hmc.CredentialStatus{
+					State: hmc.CredentialReady,
+				}
+				Expect(k8sClient.Status().Update(ctx, credential)).To(Succeed())
+			}
+
 			By("creating the custom resource for the Kind ManagedCluster")
 			err = k8sClient.Get(ctx, typeNamespacedName, managedCluster)
 			if err != nil && errors.IsNotFound(err) {
@@ -116,7 +158,8 @@ var _ = Describe("ManagedCluster Controller", func() {
 						Namespace: managedClusterNamespace,
 					},
 					Spec: hmc.ManagedClusterSpec{
-						Template: templateName,
+						Template:   templateName,
+						Credential: credentialName,
 					},
 				}
 				Expect(k8sClient.Create(ctx, managedCluster)).To(Succeed())
