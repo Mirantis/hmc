@@ -19,8 +19,6 @@ import (
 	"errors"
 	"fmt"
 
-	helmcontrollerv2 "github.com/fluxcd/helm-controller/api/v2"
-	sourcev1 "github.com/fluxcd/source-controller/api/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -115,14 +113,14 @@ func (r *TemplateChainReconciler) ReconcileTemplateChain(ctx context.Context, te
 			errs = errors.Join(errs, fmt.Errorf("source %s %s/%s is not found", templateChain.TemplateKind(), r.SystemNamespace, supportedTemplate.Name))
 			continue
 		}
+		if source.GetStatus().ChartRef == nil {
+			errs = errors.Join(errs, fmt.Errorf("source %s %s/%s does not have chart reference yet", templateChain.TemplateKind(), r.SystemNamespace, supportedTemplate.Name))
+			continue
+		}
 
 		templateSpec := hmc.TemplateSpecCommon{
 			Helm: hmc.HelmSpec{
-				ChartRef: &helmcontrollerv2.CrossNamespaceSourceReference{
-					Kind:      sourcev1.HelmChartKind,
-					Name:      source.GetSpec().Helm.ChartName,
-					Namespace: r.SystemNamespace,
-				},
+				ChartRef: source.GetStatus().ChartRef,
 			},
 		}
 
@@ -160,6 +158,9 @@ func (r *TemplateChainReconciler) ReconcileTemplateChain(ctx context.Context, te
 				errs = errors.Join(errs, err)
 			}
 		}
+	}
+	if errs != nil {
+		return ctrl.Result{}, errs
 	}
 	return ctrl.Result{}, nil
 }
