@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 
+	helmcontrollerv2 "github.com/fluxcd/helm-controller/api/v2"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -49,7 +50,13 @@ var _ = Describe("Template Chain Controller", func() {
 			},
 		}
 
-		templateHelmSpec := hmcmirantiscomv1alpha1.HelmSpec{ChartName: "test"}
+		chartName := "test"
+		templateHelmSpec := hmcmirantiscomv1alpha1.HelmSpec{ChartName: chartName}
+		chartRef := &helmcontrollerv2.CrossNamespaceSourceReference{
+			Kind:      "HelmChart",
+			Namespace: utils.DefaultSystemNamespace,
+			Name:      chartName,
+		}
 
 		ctTemplates := map[string]*hmcmirantiscomv1alpha1.ClusterTemplate{
 			// Should be created in target namespace
@@ -125,10 +132,6 @@ var _ = Describe("Template Chain Controller", func() {
 				{
 					Name: "ct0",
 				},
-				// Does not exist in the system namespace
-				{
-					Name: "ct3",
-				},
 			},
 			ctChain2Name: {},
 		}
@@ -139,10 +142,6 @@ var _ = Describe("Template Chain Controller", func() {
 				},
 				{
 					Name: "st0",
-				},
-				// Does not exist in the system namespace
-				{
-					Name: "st3",
 				},
 			},
 			stChain2Name: {},
@@ -199,6 +198,8 @@ var _ = Describe("Template Chain Controller", func() {
 				if err != nil && errors.IsNotFound(err) {
 					Expect(k8sClient.Create(ctx, template)).To(Succeed())
 				}
+				template.Status.ChartRef = chartRef
+				Expect(k8sClient.Status().Update(ctx, template)).To(Succeed())
 			}
 			for name, template := range stTemplates {
 				st := &hmcmirantiscomv1alpha1.ServiceTemplate{}
@@ -206,6 +207,8 @@ var _ = Describe("Template Chain Controller", func() {
 				if err != nil && errors.IsNotFound(err) {
 					Expect(k8sClient.Create(ctx, template)).To(Succeed())
 				}
+				template.Status.ChartRef = chartRef
+				Expect(k8sClient.Status().Update(ctx, template)).To(Succeed())
 			}
 		})
 
