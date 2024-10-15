@@ -1,0 +1,36 @@
+{{- if .Values.installBeachHeadServices }}
+apiVersion: source.toolkit.fluxcd.io/v1beta2
+kind: OCIRepository
+metadata:
+  name: nginx-ingress
+  labels:
+    hmc.mirantis.com/managed: "true"
+spec:
+  interval: 24h
+  url: oci://ghcr.io/nginxinc/charts/nginx-ingress
+  ref:
+    semver: "1.3.2"
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: {{ include "cluster.name" . }}-nginx-ingress
+  labels:
+    hmc.mirantis.com/managed: "true"
+spec:
+  targetNamespace: nginx-ingress
+  storageNamespace: nginx-ingress
+  kubeConfig:
+    secretRef:
+      name: {{ include "cluster.name" . }}-kubeconfig
+  interval: 10m
+  chartRef:
+    kind: OCIRepository
+    name: nginx-ingress
+  install:
+    createNamespace: true
+    remediation:
+      retries: -1
+  values:
+    fullnameOverride: nginx-ingress
+{{- end }}

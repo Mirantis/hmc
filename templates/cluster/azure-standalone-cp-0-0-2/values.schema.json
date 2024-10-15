@@ -1,0 +1,206 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "An HMC template to deploy a k0s cluster on Azure with bootstrapped control plane nodes.",
+  "type": "object",
+  "required": [
+    "controlPlaneNumber",
+    "workersNumber",
+    "location",
+    "subscriptionID",
+    "clusterIdentity"
+  ],
+  "properties": {
+    "controlPlaneNumber": {
+      "description": "The number of the control plane machines",
+      "type": "number",
+      "minimum": 1
+    },
+    "workersNumber": {
+      "description": "The number of the worker machines",
+      "type": "number",
+      "minimum": 1
+    },
+    "clusterNetwork": {
+      "type": "object",
+      "properties": {
+        "pods": {
+          "type": "object",
+          "properties": {
+            "cidrBlocks": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "uniqueItems": true
+            }
+          }
+        },
+        "services": {
+          "type": "object",
+          "properties": {
+            "cidrBlocks": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "uniqueItems": true
+            }
+          }
+        }
+      }
+    },
+    "location": {
+      "description": "Azure location to deploy the cluster in",
+      "type": "string"
+    },
+    "subscriptionID": {
+      "description": "Azure subscription ID which will be used for all resources",
+      "type": "string"
+    },
+    "bastion": {
+      "type": "object",
+      "description": "The configuration of the bastion host",
+      "required": [],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        }
+      }
+    },
+    "clusterIdentity": {
+      "type": "object",
+      "description": "AzureClusterIdentity object reference",
+      "required": [
+        "name",
+        "namespace"
+      ],
+      "properties": {
+        "name": {
+	  "description": "AzureClusterIdentity object name",
+          "type": "string"
+        },
+        "namespace": {
+	  "description": "AzureClusterIdentity object namespace",
+          "type": "string"
+        }
+      }
+    },
+    "controlPlane": {
+      "description": "The configuration of the control plane machines",
+      "type": "object",
+      "required": [
+        "vmSize"
+      ],
+      "properties": {
+	"sshPublicKey": {
+	  "description": "SSH public key in base64 format, which will be used on the machine.",
+          "type": "string"
+        },
+        "vmSize": {
+          "description": "The size of instance to create",
+          "type": "string"
+        },
+	"rootVolumeSize": {
+	  "description": "The size of the root volume of the instance (GB)",
+          "type": "integer"
+        },
+	"image": {
+	  "type": "object",
+	  "description": "Azure VM image configuration",
+	  "properties": {
+            "marketplace": {
+	      "description": "Azure Marketplace image reference",
+              "type": "object",
+              "required": [
+		"publisher",
+		"offer",
+		"sku",
+		"version"
+              ],
+              "properties": {
+		"publisher": {
+		  "type": "string"
+		},
+		"offer": {
+		  "type": "string"
+		},
+		"sku": {
+		  "type": "string"
+		},
+		"version": {
+		  "type": "string"
+		}
+              }
+            }
+	  }
+	}
+      }
+    },
+    "worker": {
+      "description": "The configuration of the worker machines",
+      "type": "object",
+      "required": [
+        "vmSize"
+      ],
+      "properties": {
+	"sshPublicKey": {
+	  "description": "SSH public key in base64 format, which will be used on the machine.",
+          "type": "string"
+        },
+        "vmSize": {
+          "description": "The size of instance to create",
+          "type": "string"
+        },
+	"rootVolumeSize": {
+	  "description": "The size of the root volume of the instance (GB)",
+          "type": "integer"
+        },
+	"image": {
+	  "type": "object",
+	  "description": "Azure VM image configuration",
+	  "properties": {
+            "marketplace": {
+	      "description": "Azure Marketplace image reference",
+              "type": "object",
+              "required": [
+		"publisher",
+		"offer",
+		"sku",
+		"version"
+              ],
+              "properties": {
+		"publisher": {
+		  "type": "string"
+		},
+		"offer": {
+		  "type": "string"
+		},
+		"sku": {
+		  "type": "string"
+		},
+		"version": {
+		  "type": "string"
+		}
+              }
+            }
+	  }
+	}
+      }
+    },
+    "k0s": {
+      "description": "K0s parameters",
+      "type": "object",
+      "required": [
+        "version"
+      ],
+      "properties": {
+        "version":{
+          "description": "K0s version to use",
+          "type": "string"
+        }
+      }
+    }
+  }
+}

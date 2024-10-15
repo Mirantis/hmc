@@ -1,0 +1,64 @@
+apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+kind: K0sControlPlane
+metadata:
+  name: {{ include "k0scontrolplane.name" . }}
+spec:
+  replicas: {{ .Values.controlPlaneNumber }}
+  version: {{ .Values.k0s.version }}
+  k0sConfigSpec:
+    args:
+      - --enable-worker
+      - --enable-cloud-provider
+      - --kubelet-extra-args="--cloud-provider=external"
+      - --disable-components=konnectivity-server
+    files:
+      - path: "/etc/kubernetes/azure.json"
+        permissions: "0644"
+        contentFrom:
+          secretRef:
+            key: control-plane-azure.json
+            name: {{ include "k0scontrolplane.name" . }}-0-azure-json
+    k0s:
+      apiVersion: k0s.k0sproject.io/v1beta1
+      kind: ClusterConfig
+      metadata:
+        name: k0s
+      spec:
+        api:
+          extraArgs:
+            anonymous-auth: "true"
+        network:
+          provider: calico
+          calico:
+            mode: vxlan
+        extensions:
+          helm:
+            repositories:
+              - name: cloud-provider-azure
+                url: https://raw.githubusercontent.com/kubernetes-sigs/cloud-provider-azure/master/helm/repo
+              - name: azuredisk-csi-driver
+                url: https://raw.githubusercontent.com/kubernetes-sigs/azuredisk-csi-driver/master/charts
+            charts:
+              - name: cloud-provider-azure
+                namespace: kube-system
+                chartname: cloud-provider-azure/cloud-provider-azure
+                version: 1.30.4
+                order: 1
+                values: |
+                  cloudControllerManager:
+                    nodeSelector:
+                      node-role.kubernetes.io/control-plane: "true"
+              - name: azuredisk-csi-driver
+                namespace: kube-system
+                chartname: azuredisk-csi-driver/azuredisk-csi-driver
+                version: 1.30.3
+                order: 2
+                values: |
+                  linux:
+                    kubelet: "/var/lib/k0s/kubelet"
+  machineTemplate:
+    infrastructureRef:
+      apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+      kind: AzureMachineTemplate
+      name: {{ include "azuremachinetemplate.controlplane.name" . }}
+      namespace: {{ .Release.Namespace }}

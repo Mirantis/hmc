@@ -1,0 +1,48 @@
+# Cluster parameters
+controlPlaneNumber: 3
+workersNumber: 2
+
+clusterNetwork:
+  pods:
+    cidrBlocks:
+    - "10.244.0.0/16"
+  services:
+    cidrBlocks:
+    - "10.96.0.0/12"
+
+# Azure cluster parameters
+location: ""
+subscriptionID: ""
+bastion:
+  enabled: false
+  bastionSpec:
+    azureBastion: {}
+clusterIdentity:
+  name: ""
+  namespace: hmc-system
+# Azure machines parameters
+controlPlane:
+  sshPublicKey: ""
+  vmSize: ""
+  rootVolumeSize: 30
+  image:
+    marketplace:
+      publisher: "cncf-upstream"
+      offer: "capi"
+      sku: "ubuntu-2204-gen1"
+      version: "130.3.20240717"
+
+worker:
+  sshPublicKey: ""
+  vmSize: ""
+  rootVolumeSize: 30
+  image:
+    marketplace:
+      publisher: "cncf-upstream"
+      offer: "capi"
+      sku: "ubuntu-2204-gen1"
+      version: "130.3.20240717"
+
+# K0s parameters
+k0s:
+  version: v1.30.4+k0s.0

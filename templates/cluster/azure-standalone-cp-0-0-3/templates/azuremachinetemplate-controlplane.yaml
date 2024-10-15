@@ -1,0 +1,20 @@
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: AzureMachineTemplate
+metadata:
+  name: {{ include "azuremachinetemplate.controlplane.name" . }}
+spec:
+  template:
+    spec:
+      osDisk:
+        diskSizeGB: {{ .Values.controlPlane.rootVolumeSize }}
+        osType: Linux
+      {{- if not (quote .Values.controlPlane.sshPublicKey | empty) }}
+      sshPublicKey: {{ .Values.controlPlane.sshPublicKey }}
+      {{- end }}
+      vmSize: {{ .Values.controlPlane.vmSize }}
+      {{- if not (quote .Values.controlPlane.image | empty) }}
+      {{- with .Values.controlPlane.image }}
+      image:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- end }}
