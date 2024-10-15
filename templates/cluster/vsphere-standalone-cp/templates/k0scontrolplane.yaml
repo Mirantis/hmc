@@ -34,41 +34,23 @@ spec:
         extensions:
           helm:
             repositories:
-            - name: kube-vip
-              url: https://kube-vip.github.io/helm-charts
             - name: vsphere-cpi
+              {{- if .Values.extensionsChartRepository }}
+              url: {{ .Values.extensionsChartRepository }}
+              {{- else }}
               url: https://kubernetes.github.io/cloud-provider-vsphere
-            - name: mirantis
+              {{- end }}
+            - name: vsphere-csi-driver
+              {{- if .Values.extensionsChartRepository }}
+              url: {{ .Values.extensionsChartRepository }}
+              {{- else }}
               url: https://charts.mirantis.com
+              {{- end }}
             charts:
-            - name: kube-vip
-              chartname: kube-vip/kube-vip
-              version: 0.6.1
-              order: 1
-              namespace: kube-system
-              values: |
-                config:
-                  address: {{ .Values.controlPlaneEndpointIP }}
-                env:
-                  svc_enable: "true"
-                  cp_enable: "true"
-                  lb_enable: "false"
-                nodeSelector:
-                  node-role.kubernetes.io/control-plane: "true"
-                tolerations:
-                  - effect: NoSchedule
-                    key: node-role.kubernetes.io/master
-                    operator: Exists
-                  - effect: NoSchedule
-                    key: node-role.kubernetes.io/control-plane
-                    operator: Exists
-                  - effect: NoSchedule
-                    key: node.cloudprovider.kubernetes.io/uninitialized
-                    value: "true"
             - name: vsphere-cpi
               chartname: vsphere-cpi/vsphere-cpi
               version: 1.31.0
-              order: 2
+              order: 1
               namespace: kube-system
               values: |
                 config:
@@ -78,6 +60,8 @@ spec:
                   username: "{{ .Values.vsphere.username }}"
                   password: "{{ .Values.vsphere.password }}"
                 daemonset:
+                  image: {{ .Values.image.repository }}/cloud-provider-vsphere
+                  affinity: null
                   tolerations:
                     - effect: NoSchedule
                       key: node.cloudprovider.kubernetes.io/uninitialized
@@ -97,7 +81,7 @@ spec:
             - name: vsphere-csi
               chartname: mirantis/vsphere-csi-driver
               version: 0.0.2
-              order: 3
+              order: 2
               namespace: kube-system
               values: |
                 vcenterConfig:
@@ -107,15 +91,31 @@ spec:
                   user: "{{ .Values.vsphere.username }}"
                   password: "{{ .Values.vsphere.password }}"
                   datacenters: {{ .Values.vsphere.datacenter }}
+                controller:
+                  nodeAffinity: null
                 node:
                   kubeletPath: /var/lib/k0s/kubelet
                 defaultStorageClass:
                   enabled: true
                 images:
                   driver:
+                    repo: {{ .Values.image.repository }}/csi-vsphere/driver
                     tag: v3.1.2
                   syncer:
+                    repo: {{ .Values.image.repository }}/csi-vsphere/syncer
                     tag: v3.1.2
+                  nodeDriverRegistrar:
+                    repo: {{ .Values.image.repository }}/sig-storage/csi-node-driver-registrar
+                  csiAttacher:
+                    repo: {{ .Values.image.repository }}/sig-storage/csi-attacher
+                  csiResizer:
+                    repo: {{ .Values.image.repository }}/sig-storage/csi-resizer
+                  csiProvisioner:
+                    repo: {{ .Values.image.repository }}/sig-storage/csi-provisioner
+                  csiSnapshotter:
+                    repo: {{ .Values.image.repository }}/sig-storage/csi-snapshotter
+                  livenessProbe:
+                    repo: {{ .Values.image.repository }}/csi-vsphere/livenessprobe
   machineTemplate:
     infrastructureRef:
       apiVersion: infrastructure.cluster.x-k8s.io/v1beta1

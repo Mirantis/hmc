@@ -48,3 +48,10 @@ worker:
 # K0s parameters
 k0s:
   version: v1.30.4+k0s.0
+
+image:
+  repository: ""
+
+# extensionsChartRepository specifies a custom Helm chart repository for
+# hosting k0s extension charts
+extensionsChartRepository: ""

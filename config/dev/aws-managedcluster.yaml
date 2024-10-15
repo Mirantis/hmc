@@ -1,7 +1,7 @@
 apiVersion: hmc.mirantis.com/v1alpha1
 kind: ManagedCluster
 metadata:
-  name: aws-dev
+  name: squizz-aws-dev
   namespace: ${NAMESPACE}
 spec:
   credential: aws-cluster-identity-cred
@@ -13,7 +13,7 @@ spec:
       instanceType: t3.small
     controlPlaneNumber: 1
     publicIP: true
-    region: us-west-2
+    region: us-west-1
     worker:
       instanceType: t3.small
     workersNumber: 1

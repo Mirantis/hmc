@@ -27,9 +27,17 @@ spec:
         helm:
           repositories:
           - name: aws-cloud-controller-manager
+            {{- if .Values.extensionsChartRepository }}
+            url: {{ .Values.extensionsChartRepository }}
+            {{- else }}
             url: https://kubernetes.github.io/cloud-provider-aws
+            {{- end }}
           - name: aws-ebs-csi-driver
+            {{- if .Values.extensionsChartRepository }}
+            url: {{ .Values.extensionsChartRepository }}
+            {{- else }}
             url: https://kubernetes-sigs.github.io/aws-ebs-csi-driver
+            {{- end }}
           charts:
           - name: aws-cloud-controller-manager
             namespace: kube-system
@@ -37,6 +45,7 @@ spec:
             version: "0.0.8"
             values: |
               image:
+                repository: {{ .Values.image.repository }}
                 tag: v1.30.3
               args:
                 - --v=2
@@ -53,6 +62,8 @@ spec:
             chartname: aws-ebs-csi-driver/aws-ebs-csi-driver
             version: 2.33.0
             values: |
+              image:
+                repository: {{ .Values.image.repository }}
               defaultStorageClass:
                 enabled: true
               node:

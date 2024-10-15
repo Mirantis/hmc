@@ -5,3 +5,6 @@ configSecret:
 
 config:
   AWS_B64ENCODED_CREDENTIALS: Cg==
+
+image:
+  repository: ""
