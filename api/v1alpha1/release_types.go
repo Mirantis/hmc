@@ -61,10 +61,10 @@ func (in *Release) ProviderTemplate(name string) string {
 type ReleaseStatus struct {
 	// Conditions contains details for the current state of the Release
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
-	// Ready indicates whether HMC is ready to be upgraded to this Release.
-	Ready bool `json:"ready,omitempty"`
 	// ObservedGeneration is the last observed generation.
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+	// Ready indicates whether HMC is ready to be upgraded to this Release.
+	Ready bool `json:"ready,omitempty"`
 }
 
 // +kubebuilder:object:root=true
