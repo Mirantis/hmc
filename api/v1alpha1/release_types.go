@@ -18,6 +18,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	ReleaseKind = "Release"
+
+	// TemplatesCreatedCondition indicates that all templates associated with the Release are created.
+	TemplatesCreatedCondition = "TemplatesCreated"
+)
+
 // ReleaseSpec defines the desired state of Release
 type ReleaseSpec struct {
 	// Version of the HMC Release in the semver format.
@@ -52,12 +59,12 @@ func (in *Release) ProviderTemplate(name string) string {
 
 // ReleaseStatus defines the observed state of Release
 type ReleaseStatus struct {
-	// Templates indicates the status of templates associated with the Release.
-	Templates ComponentStatus `json:"templates,omitempty"`
 	// Conditions contains details for the current state of the Release
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 	// Ready indicates whether HMC is ready to be upgraded to this Release.
 	Ready bool `json:"ready,omitempty"`
+	// ObservedGeneration is the last observed generation.
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 }
 
 // +kubebuilder:object:root=true

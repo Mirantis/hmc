@@ -145,26 +145,14 @@ spec:
                   - type
                   type: object
                 type: array
+              observedGeneration:
+                description: ObservedGeneration is the last observed generation.
+                format: int64
+                type: integer
               ready:
                 description: Ready indicates whether HMC is ready to be upgraded to
                   this Release.
                 type: boolean
-              templates:
-                description: Templates indicates the status of templates associated
-                  with the Release.
-                properties:
-                  error:
-                    description: Error stores as error message in case of failed installation
-                    type: string
-                  success:
-                    description: Success represents if a component installation was
-                      successful
-                    type: boolean
-                  template:
-                    description: Template is the name of the Template associated with
-                      this component.
-                    type: string
-                type: object
             type: object
         type: object
     served: true

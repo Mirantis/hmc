@@ -21,6 +21,20 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+const (
+	// SucceededReason indicates a condition or event observed a success, for example when declared desired state
+	// matches actual state, or a performed action succeeded.
+	SucceededReason string = "Succeeded"
+
+	// FailedReason indicates a condition or event observed a failure, for example when declared state does not match
+	// actual state, or a performed action failed.
+	FailedReason string = "Failed"
+
+	// ProgressingReason indicates a condition or event observed progression, for example when the reconciliation of a
+	// resource or an action has started.
+	ProgressingReason string = "Progressing"
+)
+
 type (
 	// Providers hold different types of CAPI providers.
 	Providers struct {
