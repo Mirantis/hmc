@@ -62,10 +62,6 @@ type ManagedClusterReconciler struct {
 	DynamicClient *dynamic.DynamicClient
 }
 
-type providerSchema struct {
-	machine, cluster schema.GroupVersionKind
-}
-
 var (
 	gvkAWSCluster = schema.GroupVersionKind{
 		Group:   "infrastructure.cluster.x-k8s.io",
@@ -608,24 +604,31 @@ func (r *ManagedClusterReconciler) releaseCluster(ctx context.Context, namespace
 		return err
 	}
 
-	providerGVKs := map[string]providerSchema{
-		"aws":   {machine: gvkMachine, cluster: gvkAWSCluster},
-		"azure": {machine: gvkMachine, cluster: gvkAzureCluster},
+	for _, provider := range providers.BootstrapProviders {
+		if provider.Name == "eks" {
+			// no need to do anything for EKS clusters
+			return nil
+		}
+	}
+
+	providerGVKs := map[string]schema.GroupVersionKind{
+		"aws":   gvkAWSCluster,
+		"azure": gvkAzureCluster,
 	}
 
 	// Associate the provider with it's GVK
-	for _, provider := range providers {
+	for _, provider := range providers.InfrastructureProviders {
 		gvk, ok := providerGVKs[provider.Name]
 		if !ok {
 			continue
 		}
 
-		cluster, err := r.getCluster(ctx, namespace, name, gvk.cluster)
+		cluster, err := r.getCluster(ctx, namespace, name, gvk)
 		if err != nil {
 			return err
 		}
 
-		found, err := r.machinesAvailable(ctx, namespace, cluster.Name, gvk.machine)
+		found, err := r.objectsAvailable(ctx, namespace, cluster.Name, gvkMachine)
 		if err != nil {
 			return err
 		}
@@ -638,15 +641,15 @@ func (r *ManagedClusterReconciler) releaseCluster(ctx context.Context, namespace
 	return nil
 }
 
-func (r *ManagedClusterReconciler) getProviders(ctx context.Context, templateNamespace, templateName string) ([]hmc.ProviderTuple, error) {
+func (r *ManagedClusterReconciler) getProviders(ctx context.Context, templateNamespace, templateName string) (hmc.ProvidersTupled, error) {
 	template := &hmc.ClusterTemplate{}
 	templateRef := client.ObjectKey{Name: templateName, Namespace: templateNamespace}
 	if err := r.Get(ctx, templateRef, template); err != nil {
 		ctrl.LoggerFrom(ctx).Error(err, "Failed to get ClusterTemplate", "template namespace", templateNamespace, "template name", templateName)
-		return nil, err
+		return hmc.ProvidersTupled{}, err
 	}
 
-	return template.Status.Providers.InfrastructureProviders, nil
+	return template.Status.Providers, nil
 }
 
 func (r *ManagedClusterReconciler) getCluster(ctx context.Context, namespace, name string, gvk schema.GroupVersionKind) (*metav1.PartialObjectMetadata, error) {
@@ -679,7 +682,7 @@ func (r *ManagedClusterReconciler) removeClusterFinalizer(ctx context.Context, c
 	return nil
 }
 
-func (r *ManagedClusterReconciler) machinesAvailable(ctx context.Context, namespace, clusterName string, gvk schema.GroupVersionKind) (bool, error) {
+func (r *ManagedClusterReconciler) objectsAvailable(ctx context.Context, namespace, clusterName string, gvk schema.GroupVersionKind) (bool, error) {
 	opts := &client.ListOptions{
 		LabelSelector: labels.SelectorFromSet(map[string]string{hmc.ClusterNameLabelKey: clusterName}),
 		Namespace:     namespace,
