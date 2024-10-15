@@ -84,65 +84,15 @@ var (
 			err: "the ManagedCluster is invalid: the template is not valid: validation error example",
 		},
 		{
-			name:           "should fail if one or more requested providers are not available yet",
-			managedCluster: managedcluster.NewManagedCluster(managedcluster.WithClusterTemplate(testTemplateName)),
-			existingObjects: []runtime.Object{
-				management.NewManagement(
-					management.WithAvailableProviders(v1alpha1.ProvidersTupled{
-						InfrastructureProviders: []v1alpha1.ProviderTuple{{Name: "aws"}},
-						BootstrapProviders:      []v1alpha1.ProviderTuple{{Name: "k0s"}},
-					}),
-				),
-				template.NewClusterTemplate(
-					template.WithName(testTemplateName),
-					template.WithProvidersStatus(v1alpha1.ProvidersTupled{
-						InfrastructureProviders: []v1alpha1.ProviderTuple{{Name: "azure"}},
-						BootstrapProviders:      []v1alpha1.ProviderTuple{{Name: "k0s"}},
-						ControlPlaneProviders:   []v1alpha1.ProviderTuple{{Name: "k0s"}},
-					}),
-					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
-				),
-			},
-			err: "the ManagedCluster is invalid: failed to verify providers: one or more required control plane providers are not deployed yet: [k0s]\none or more required infrastructure providers are not deployed yet: [azure]",
-		},
-		{
 			name:           "should succeed",
 			managedCluster: managedcluster.NewManagedCluster(managedcluster.WithClusterTemplate(testTemplateName)),
 			existingObjects: []runtime.Object{
 				mgmt,
 				template.NewClusterTemplate(
 					template.WithName(testTemplateName),
-					template.WithProvidersStatus(v1alpha1.ProvidersTupled{
-						InfrastructureProviders: []v1alpha1.ProviderTuple{{Name: "aws"}},
-						BootstrapProviders:      []v1alpha1.ProviderTuple{{Name: "k0s"}},
-						ControlPlaneProviders:   []v1alpha1.ProviderTuple{{Name: "k0s"}},
-					}),
 					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
 				),
 			},
-		},
-		{
-			name:           "provider template versions does not satisfy cluster template constraints",
-			managedCluster: managedcluster.NewManagedCluster(managedcluster.WithClusterTemplate(testTemplateName)),
-			existingObjects: []runtime.Object{
-				management.NewManagement(management.WithAvailableProviders(v1alpha1.ProvidersTupled{
-					InfrastructureProviders: []v1alpha1.ProviderTuple{{Name: "aws", VersionOrConstraint: "v1.0.0"}},
-					BootstrapProviders:      []v1alpha1.ProviderTuple{{Name: "k0s", VersionOrConstraint: "v1.0.0"}},
-					ControlPlaneProviders:   []v1alpha1.ProviderTuple{{Name: "k0s", VersionOrConstraint: "v1.0.0"}},
-				})),
-				template.NewClusterTemplate(
-					template.WithName(testTemplateName),
-					template.WithProvidersStatus(v1alpha1.ProvidersTupled{
-						InfrastructureProviders: []v1alpha1.ProviderTuple{{Name: "aws", VersionOrConstraint: ">=999.0.0"}},
-						BootstrapProviders:      []v1alpha1.ProviderTuple{{Name: "k0s", VersionOrConstraint: ">=999.0.0"}},
-						ControlPlaneProviders:   []v1alpha1.ProviderTuple{{Name: "k0s", VersionOrConstraint: ">=999.0.0"}},
-					}),
-					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
-				),
-			},
-			err: `the ManagedCluster is invalid: failed to verify providers: one or more required bootstrap providers does not satisfy constraints: [k0s v1.0.0 !~ >=999.0.0]
-one or more required control plane providers does not satisfy constraints: [k0s v1.0.0 !~ >=999.0.0]
-one or more required infrastructure providers does not satisfy constraints: [aws v1.0.0 !~ >=999.0.0]`,
 		},
 		{
 			name: "cluster template k8s version does not satisfy service template constraints",
@@ -158,21 +108,11 @@ one or more required infrastructure providers does not satisfy constraints: [aws
 				})),
 				template.NewClusterTemplate(
 					template.WithName(testTemplateName),
-					template.WithProvidersStatus(v1alpha1.ProvidersTupled{
-						InfrastructureProviders: []v1alpha1.ProviderTuple{{Name: "aws"}},
-						BootstrapProviders:      []v1alpha1.ProviderTuple{{Name: "k0s"}},
-						ControlPlaneProviders:   []v1alpha1.ProviderTuple{{Name: "k0s"}},
-					}),
 					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
 					template.WithClusterStatusK8sVersion("v1.30.0"),
 				),
 				template.NewServiceTemplate(
 					template.WithName(testTemplateName),
-					template.WithProvidersStatus(v1alpha1.Providers{
-						InfrastructureProviders: []string{"aws"},
-						BootstrapProviders:      []string{"k0s"},
-						ControlPlaneProviders:   []string{"k0s"},
-					}),
 					template.WithServiceK8sConstraint("<1.30"),
 					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
 				),

@@ -16,15 +16,18 @@ package controller
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	helmcontrollerv2 "github.com/fluxcd/helm-controller/api/v2"
 	sourcev1 "github.com/fluxcd/source-controller/api/v1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"helm.sh/helm/v3/pkg/chart"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	hmcmirantiscomv1alpha1 "github.com/Mirantis/hmc/api/v1alpha1"
@@ -32,11 +35,13 @@ import (
 
 var _ = Describe("Template Controller", func() {
 	Context("When reconciling a resource", func() {
-		const resourceName = "test-resource"
-		const helmRepoNamespace = "default"
-		const helmRepoName = "test-helmrepo"
-		const helmChartName = "test-helmchart"
-		const helmChartURL = "http://source-controller.hmc-system.svc.cluster.local./helmchart/hmc-system/test-chart/0.1.0.tar.gz"
+		const (
+			resourceName      = "test-resource"
+			helmRepoNamespace = metav1.NamespaceDefault
+			helmRepoName      = "test-helmrepo"
+			helmChartName     = "test-helmchart"
+			helmChartURL      = "http://source-controller.hmc-system.svc.cluster.local./helmchart/hmc-system/test-chart/0.1.0.tar.gz"
+		)
 
 		fakeDownloadHelmChartFunc := func(context.Context, *sourcev1.Artifact) (*chart.Chart, error) {
 			return &chart.Chart{
@@ -52,7 +57,7 @@ var _ = Describe("Template Controller", func() {
 
 		typeNamespacedName := types.NamespacedName{
 			Name:      resourceName,
-			Namespace: "default",
+			Namespace: metav1.NamespaceDefault,
 		}
 		clusterTemplate := &hmcmirantiscomv1alpha1.ClusterTemplate{}
 		serviceTemplate := &hmcmirantiscomv1alpha1.ServiceTemplate{}
@@ -71,7 +76,7 @@ var _ = Describe("Template Controller", func() {
 		BeforeEach(func() {
 			By("creating helm repository")
 			err := k8sClient.Get(ctx, types.NamespacedName{Name: helmRepoName, Namespace: helmRepoNamespace}, helmRepo)
-			if err != nil && errors.IsNotFound(err) {
+			if err != nil && apierrors.IsNotFound(err) {
 				helmRepo = &sourcev1.HelmRepository{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      helmRepoName,
@@ -86,7 +91,7 @@ var _ = Describe("Template Controller", func() {
 
 			By("creating helm chart")
 			err = k8sClient.Get(ctx, types.NamespacedName{Name: helmChartName, Namespace: helmRepoNamespace}, helmChart)
-			if err != nil && errors.IsNotFound(err) {
+			if err != nil && apierrors.IsNotFound(err) {
 				helmChart = &sourcev1.HelmChart{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      helmChartName,
@@ -112,11 +117,11 @@ var _ = Describe("Template Controller", func() {
 
 			By("creating the custom resource for the Kind ClusterTemplate")
 			err = k8sClient.Get(ctx, typeNamespacedName, clusterTemplate)
-			if err != nil && errors.IsNotFound(err) {
+			if err != nil && apierrors.IsNotFound(err) {
 				resource := &hmcmirantiscomv1alpha1.ClusterTemplate{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      resourceName,
-						Namespace: "default",
+						Namespace: metav1.NamespaceDefault,
 					},
 					Spec: hmcmirantiscomv1alpha1.ClusterTemplateSpec{Helm: helmSpec},
 				}
@@ -124,11 +129,11 @@ var _ = Describe("Template Controller", func() {
 			}
 			By("creating the custom resource for the Kind ServiceTemplate")
 			err = k8sClient.Get(ctx, typeNamespacedName, serviceTemplate)
-			if err != nil && errors.IsNotFound(err) {
+			if err != nil && apierrors.IsNotFound(err) {
 				resource := &hmcmirantiscomv1alpha1.ServiceTemplate{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      resourceName,
-						Namespace: "default",
+						Namespace: metav1.NamespaceDefault,
 					},
 					Spec: hmcmirantiscomv1alpha1.ServiceTemplateSpec{Helm: helmSpec},
 				}
@@ -136,11 +141,10 @@ var _ = Describe("Template Controller", func() {
 			}
 			By("creating the custom resource for the Kind ProviderTemplate")
 			err = k8sClient.Get(ctx, typeNamespacedName, providerTemplate)
-			if err != nil && errors.IsNotFound(err) {
+			if err != nil && apierrors.IsNotFound(err) {
 				resource := &hmcmirantiscomv1alpha1.ProviderTemplate{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      resourceName,
-						Namespace: "default",
+						Name: resourceName,
 					},
 					Spec: hmcmirantiscomv1alpha1.ProviderTemplateSpec{Helm: helmSpec},
 				}
@@ -170,6 +174,7 @@ var _ = Describe("Template Controller", func() {
 			By("Cleanup the specific resource instance ClusterTemplate")
 			Expect(k8sClient.Delete(ctx, providerTemplateResource)).To(Succeed())
 		})
+
 		It("should successfully reconcile the resource", func() {
 			templateReconciler := TemplateReconciler{
 				Client:                k8sClient,
@@ -189,6 +194,125 @@ var _ = Describe("Template Controller", func() {
 			providerTemplateReconciler := &ProviderTemplateReconciler{TemplateReconciler: templateReconciler}
 			_, err = providerTemplateReconciler.Reconcile(ctx, reconcile.Request{NamespacedName: typeNamespacedName})
 			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should successfully validate cluster templates providers compatibility attributes", func() {
+			const (
+				clusterTemplateName           = "cluster-template-test-name"
+				mgmtName                      = hmcmirantiscomv1alpha1.ManagementName
+				someProviderName              = "test-provider-name"
+				someProviderVersion           = "v1.0.0"
+				someProviderVersionConstraint = ">= 1.0.0 <2.0.0-0" // ^1.0.0
+
+				timeout  = time.Second * 10
+				interval = time.Millisecond * 250
+			)
+
+			// NOTE: the cluster template from BeforeEach cannot be reused because spec is immutable
+			By("Creating cluster template with constrained versions")
+			clusterTemplate = &hmcmirantiscomv1alpha1.ClusterTemplate{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      clusterTemplateName,
+					Namespace: metav1.NamespaceDefault,
+				},
+				Spec: hmcmirantiscomv1alpha1.ClusterTemplateSpec{
+					Helm: helmSpec,
+					Providers: hmcmirantiscomv1alpha1.ProvidersTupled{
+						BootstrapProviders: []hmcmirantiscomv1alpha1.ProviderTuple{
+							{
+								Name:                someProviderName,
+								VersionOrConstraint: someProviderVersionConstraint, // constraint
+							},
+						},
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, clusterTemplate)).To(Succeed())
+
+			By("Checking the cluster template has been updated")
+			Eventually(func() error {
+				if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(clusterTemplate), clusterTemplate); err != nil {
+					return err
+				}
+
+				if l := len(clusterTemplate.Spec.Providers.BootstrapProviders); l != 1 {
+					return fmt.Errorf("expected .spec.providers.bootstrapProviders length to be exactly 1, got %d", l)
+				}
+
+				if v := clusterTemplate.Spec.Providers.BootstrapProviders[0]; v.Name != someProviderName || v.VersionOrConstraint != someProviderVersionConstraint {
+					return fmt.Errorf("expected .spec.providers.bootstrapProviders[0] to be %s:%s, got %s:%s", someProviderName, someProviderVersionConstraint, v.Name, v.VersionOrConstraint)
+				}
+
+				return nil
+			}).WithTimeout(timeout).WithPolling(interval).Should(Succeed())
+
+			By("Creating a management cluster object with proper required versions in status")
+			// must set status here since it's controller by another ctrl
+			mgmt := &hmcmirantiscomv1alpha1.Management{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: mgmtName,
+				},
+			}
+			Expect(k8sClient.Create(ctx, mgmt)).To(Succeed())
+			mgmt.Status = hmcmirantiscomv1alpha1.ManagementStatus{
+				AvailableProviders: hmcmirantiscomv1alpha1.ProvidersTupled{
+					BootstrapProviders: []hmcmirantiscomv1alpha1.ProviderTuple{
+						{
+							Name:                someProviderName,
+							VersionOrConstraint: someProviderVersion, // version
+						},
+					},
+				},
+			}
+			Expect(k8sClient.Status().Update(ctx, mgmt)).To(Succeed())
+
+			By("Checking the management cluster appears")
+			Eventually(func() error {
+				if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(mgmt), mgmt); err != nil {
+					return err
+				}
+
+				if l := len(mgmt.Status.AvailableProviders.BootstrapProviders); l != 1 {
+					return fmt.Errorf("expected .status.availableProviders.bootstrapProviders length to be exactly 1, got %d", l)
+				}
+
+				if l := len(mgmt.Status.AvailableProviders.BootstrapProviders); l != 1 {
+					return fmt.Errorf("expected .status.availableProviders.bootstrapProviders length to be exactly 1, got %d", l)
+				}
+
+				if v := mgmt.Status.AvailableProviders.BootstrapProviders[0]; v.Name != someProviderName || v.VersionOrConstraint != someProviderVersion {
+					return fmt.Errorf("expected .status.availableProviders.bootstrapProviders[0] to be %s:%s, got %s:%s", someProviderName, someProviderVersionConstraint, v.Name, v.VersionOrConstraint)
+				}
+
+				return nil
+			}).WithTimeout(timeout).WithPolling(interval).Should(Succeed())
+
+			By("Reconciling the cluster template")
+			clusterTemplateReconciler := &ClusterTemplateReconciler{TemplateReconciler: TemplateReconciler{
+				Client:                k8sClient,
+				downloadHelmChartFunc: fakeDownloadHelmChartFunc,
+			}}
+			_, err := clusterTemplateReconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{
+				Name:      clusterTemplateName,
+				Namespace: metav1.NamespaceDefault,
+			}})
+			Expect(err).NotTo(HaveOccurred())
+
+			By("Having the valid cluster template status")
+			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(clusterTemplate), clusterTemplate)).To(Succeed())
+			Expect(clusterTemplate.Status.Valid && clusterTemplate.Status.ValidationError == "").To(BeTrue())
+			Expect(clusterTemplate.Status.Providers.BootstrapProviders).To(HaveLen(1))
+			Expect(clusterTemplate.Status.Providers.BootstrapProviders[0]).To(Equal(hmcmirantiscomv1alpha1.ProviderTuple{Name: someProviderName, VersionOrConstraint: someProviderVersionConstraint}))
+
+			By("Removing the created objects")
+			Expect(k8sClient.Delete(ctx, mgmt)).To(Succeed())
+			Expect(k8sClient.Delete(ctx, clusterTemplate)).To(Succeed())
+
+			By("Checking the created objects have been removed")
+			Eventually(func() bool {
+				return apierrors.IsNotFound(k8sClient.Get(ctx, client.ObjectKeyFromObject(mgmt), &hmcmirantiscomv1alpha1.Management{})) &&
+					apierrors.IsNotFound(k8sClient.Get(ctx, client.ObjectKeyFromObject(clusterTemplate), &hmcmirantiscomv1alpha1.ClusterTemplate{}))
+			}).WithTimeout(timeout).WithPolling(interval).Should(BeTrue())
 		})
 	})
 })

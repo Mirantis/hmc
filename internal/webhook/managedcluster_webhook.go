@@ -16,10 +16,7 @@ package webhook
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"slices"
-	"sort"
 
 	"github.com/Masterminds/semver/v3"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -65,7 +62,7 @@ func (v *ManagedClusterValidator) ValidateCreate(ctx context.Context, obj runtim
 		return nil, fmt.Errorf("%s: %v", invalidManagedClusterMsg, err)
 	}
 
-	if err := v.isTemplateValid(ctx, template); err != nil {
+	if err := isTemplateValid(template); err != nil {
 		return nil, fmt.Errorf("%s: %v", invalidManagedClusterMsg, err)
 	}
 
@@ -88,7 +85,7 @@ func (v *ManagedClusterValidator) ValidateUpdate(ctx context.Context, _ runtime.
 		return nil, fmt.Errorf("%s: %v", invalidManagedClusterMsg, err)
 	}
 
-	if err := v.isTemplateValid(ctx, template); err != nil {
+	if err := isTemplateValid(template); err != nil {
 		return nil, fmt.Errorf("%s: %v", invalidManagedClusterMsg, err)
 	}
 
@@ -104,16 +101,6 @@ func validateK8sCompatibility(ctx context.Context, cl client.Client, template *h
 		return nil // nothing to do
 	}
 
-	svcTpls := new(hmcv1alpha1.ServiceTemplateList)
-	if err := cl.List(ctx, svcTpls, client.InNamespace(mc.Namespace)); err != nil {
-		return fmt.Errorf("failed to list ServiceTemplates in %s namespace: %w", mc.Namespace, err)
-	}
-
-	svcTplName2KConstraint := make(map[string]string, len(svcTpls.Items))
-	for _, v := range svcTpls.Items {
-		svcTplName2KConstraint[v.Name] = v.Status.KubernetesConstraint
-	}
-
 	mcVersion, err := semver.NewVersion(template.Status.KubernetesVersion)
 	if err != nil { // should never happen
 		return fmt.Errorf("failed to parse k8s version %s of the ManagedCluster %s/%s: %w", template.Status.KubernetesVersion, mc.Namespace, mc.Name, err)
@@ -124,24 +111,25 @@ func validateK8sCompatibility(ctx context.Context, cl client.Client, template *h
 			continue
 		}
 
-		kc, ok := svcTplName2KConstraint[v.Template]
-		if !ok {
-			return fmt.Errorf("specified ServiceTemplate %s/%s is missing in the cluster", mc.Namespace, v.Template)
+		svcTpl := new(hmcv1alpha1.ServiceTemplate)
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: mc.Namespace, Name: v.Template}, svcTpl); err != nil {
+			return fmt.Errorf("failed to get ServiceTemplate %s/%s: %w", mc.Namespace, v.Template, err)
 		}
 
-		if kc == "" {
+		constraint := svcTpl.Status.KubernetesConstraint
+		if constraint == "" {
 			continue
 		}
 
-		tplConstraint, err := semver.NewConstraint(kc)
+		tplConstraint, err := semver.NewConstraint(constraint)
 		if err != nil { // should never happen
-			return fmt.Errorf("failed to parse k8s constrained version %s of the ServiceTemplate %s/%s: %w", kc, mc.Namespace, v.Template, err)
+			return fmt.Errorf("failed to parse k8s constrained version %s of the ServiceTemplate %s/%s: %w", constraint, mc.Namespace, v.Template, err)
 		}
 
 		if !tplConstraint.Check(mcVersion) {
 			return fmt.Errorf("k8s version %s of the ManagedCluster %s/%s does not satisfy constrained version %s from the ServiceTemplate %s/%s",
 				template.Status.KubernetesVersion, mc.Namespace, mc.Name,
-				kc, mc.Namespace, v.Template)
+				constraint, mc.Namespace, v.Template)
 		}
 	}
 
@@ -171,7 +159,7 @@ func (v *ManagedClusterValidator) Default(ctx context.Context, obj runtime.Objec
 		return fmt.Errorf("could not get template for the managedcluster: %v", err)
 	}
 
-	if err := v.isTemplateValid(ctx, template); err != nil {
+	if err := isTemplateValid(template); err != nil {
 		return fmt.Errorf("template is invalid: %v", err)
 	}
 
@@ -190,111 +178,10 @@ func (v *ManagedClusterValidator) getManagedClusterTemplate(ctx context.Context,
 	return tpl, v.Get(ctx, client.ObjectKey{Namespace: templateNamespace, Name: templateName}, tpl)
 }
 
-func (v *ManagedClusterValidator) isTemplateValid(ctx context.Context, template *hmcv1alpha1.ClusterTemplate) error {
+func isTemplateValid(template *hmcv1alpha1.ClusterTemplate) error {
 	if !template.Status.Valid {
 		return fmt.Errorf("the template is not valid: %s", template.Status.ValidationError)
 	}
 
-	if err := v.verifyProviders(ctx, template); err != nil {
-		return fmt.Errorf("failed to verify providers: %v", err)
-	}
-
 	return nil
-}
-
-func (v *ManagedClusterValidator) verifyProviders(ctx context.Context, template *hmcv1alpha1.ClusterTemplate) error {
-	management := new(hmcv1alpha1.Management)
-	if err := v.Get(ctx, client.ObjectKey{Name: hmcv1alpha1.ManagementName}, management); err != nil {
-		return err
-	}
-
-	const (
-		bootstrapProviderType    = "bootstrap"
-		controlPlateProviderType = "control plane"
-		infraProviderType        = "infrastructure"
-	)
-
-	var (
-		exposedProviders                        = management.Status.AvailableProviders
-		requiredProviders                       = template.Status.Providers
-		wrongVersionProviders, missingProviders = make(map[string][]string, 3), make(map[string][]string, 3)
-
-		err error
-	)
-
-	missingProviders[bootstrapProviderType], wrongVersionProviders[bootstrapProviderType], err = getMissingProvidersWithWrongVersions(exposedProviders.BootstrapProviders, requiredProviders.BootstrapProviders)
-	if err != nil {
-		return err
-	}
-
-	missingProviders[controlPlateProviderType], wrongVersionProviders[controlPlateProviderType], err = getMissingProvidersWithWrongVersions(exposedProviders.ControlPlaneProviders, requiredProviders.ControlPlaneProviders)
-	if err != nil {
-		return err
-	}
-
-	missingProviders[infraProviderType], wrongVersionProviders[infraProviderType], err = getMissingProvidersWithWrongVersions(exposedProviders.InfrastructureProviders, requiredProviders.InfrastructureProviders)
-	if err != nil {
-		return err
-	}
-
-	errs := collectErrors(missingProviders, "one or more required %s providers are not deployed yet: %v")
-	errs = append(errs, collectErrors(wrongVersionProviders, "one or more required %s providers does not satisfy constraints: %v")...)
-	if len(errs) > 0 {
-		sort.Slice(errs, func(i, j int) bool {
-			return errs[i].Error() < errs[j].Error()
-		})
-
-		return errors.Join(errs...)
-	}
-
-	return nil
-}
-
-func collectErrors(m map[string][]string, msgFormat string) (errs []error) {
-	for providerType, missing := range m {
-		if len(missing) > 0 {
-			slices.Sort(missing)
-			errs = append(errs, fmt.Errorf(msgFormat, providerType, missing))
-		}
-	}
-
-	return errs
-}
-
-func getMissingProvidersWithWrongVersions(exposed, required []hmcv1alpha1.ProviderTuple) (missing, nonSatisfying []string, _ error) {
-	exposedSet := make(map[string]hmcv1alpha1.ProviderTuple, len(exposed))
-	for _, v := range exposed {
-		exposedSet[v.Name] = v
-	}
-
-	var merr error
-	for _, reqWithConstraint := range required {
-		exposedWithExactVer, ok := exposedSet[reqWithConstraint.Name]
-		if !ok {
-			missing = append(missing, reqWithConstraint.Name)
-			continue
-		}
-
-		if exposedWithExactVer.VersionOrConstraint == "" || reqWithConstraint.VersionOrConstraint == "" {
-			continue
-		}
-
-		exactVer, err := semver.NewVersion(exposedWithExactVer.VersionOrConstraint)
-		if err != nil {
-			merr = errors.Join(merr, fmt.Errorf("failed to parse version %s of the provider %s: %w", exposedWithExactVer.VersionOrConstraint, exposedWithExactVer.Name, err))
-			continue
-		}
-
-		requiredC, err := semver.NewConstraint(reqWithConstraint.VersionOrConstraint)
-		if err != nil {
-			merr = errors.Join(merr, fmt.Errorf("failed to parse constraint %s of the provider %s: %w", exposedWithExactVer.VersionOrConstraint, exposedWithExactVer.Name, err))
-			continue
-		}
-
-		if !requiredC.Check(exactVer) {
-			nonSatisfying = append(nonSatisfying, fmt.Sprintf("%s %s !~ %s", reqWithConstraint.Name, exposedWithExactVer.VersionOrConstraint, reqWithConstraint.VersionOrConstraint))
-		}
-	}
-
-	return missing, nonSatisfying, merr
 }

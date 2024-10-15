@@ -17,8 +17,12 @@ package controller
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"slices"
+	"time"
 
+	"github.com/Masterminds/semver/v3"
 	helmcontrollerv2 "github.com/fluxcd/helm-controller/api/v2"
 	sourcev1 "github.com/fluxcd/source-controller/api/v1"
 	"helm.sh/helm/v3/pkg/chart"
@@ -26,7 +30,9 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
 	"github.com/Mirantis/hmc/internal/helm"
@@ -34,6 +40,8 @@ import (
 
 const (
 	defaultRepoName = "hmc-templates"
+
+	defaultRequeueTime = 1 * time.Minute
 )
 
 // TemplateReconciler reconciles a *Template object
@@ -73,7 +81,24 @@ func (r *ClusterTemplateReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, err
 	}
 
-	return r.ReconcileTemplate(ctx, clusterTemplate)
+	result, err := r.ReconcileTemplate(ctx, clusterTemplate)
+	if err != nil {
+		l.Error(err, "failed to reconcile template")
+		return result, err
+	}
+
+	l.Info("Validating template compatibility attributes")
+	if err := r.validateCompatibilityAttrs(ctx, clusterTemplate); err != nil {
+		if apierrors.IsNotFound(err) {
+			l.Info("Validation cannot be performed until Management cluster appears", "requeue in", defaultRequeueTime)
+			return ctrl.Result{RequeueAfter: defaultRequeueTime}, nil
+		}
+
+		l.Error(err, "failed to validate compatibility attributes")
+		return ctrl.Result{}, err
+	}
+
+	return result, nil
 }
 
 func (r *ServiceTemplateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -189,7 +214,7 @@ func (r *TemplateReconciler) ReconcileTemplate(ctx context.Context, template tem
 	}
 
 	l.Info("Validating Helm chart")
-	if err = helmChart.Validate(); err != nil {
+	if err := helmChart.Validate(); err != nil {
 		l.Error(err, "Helm chart validation failed")
 		_ = r.updateStatus(ctx, template, err.Error())
 		return ctrl.Result{}, err
@@ -301,23 +326,115 @@ func (r *TemplateReconciler) getHelmChartFromChartRef(ctx context.Context, chart
 	return helmChart, nil
 }
 
+func (r *ClusterTemplateReconciler) validateCompatibilityAttrs(ctx context.Context, template *hmc.ClusterTemplate) error {
+	management := new(hmc.Management)
+	if err := r.Client.Get(ctx, client.ObjectKey{Name: hmc.ManagementName}, management); err != nil {
+		if apierrors.IsNotFound(err) {
+			_ = r.updateStatus(ctx, template, "Waiting for Management creation to complete validation")
+			return err
+		}
+
+		err = fmt.Errorf("failed to get Management: %v", err)
+		_ = r.updateStatus(ctx, template, err.Error())
+		return err
+	}
+
+	exposedProviders, requiredProviders := management.Status.AvailableProviders, template.Status.Providers
+
+	ctrl.LoggerFrom(ctx).V(1).Info("providers to check", "exposed", exposedProviders, "required", requiredProviders)
+
+	var merr error
+	missing, wrong, parsing := collectMissingProvidersWithWrongVersions("bootstrap", exposedProviders.BootstrapProviders, requiredProviders.BootstrapProviders)
+	merr = errors.Join(merr, missing, wrong, parsing)
+
+	missing, wrong, parsing = collectMissingProvidersWithWrongVersions("control plane", exposedProviders.ControlPlaneProviders, requiredProviders.ControlPlaneProviders)
+	merr = errors.Join(merr, missing, wrong, parsing)
+
+	missing, wrong, parsing = collectMissingProvidersWithWrongVersions("infrastructure", exposedProviders.InfrastructureProviders, requiredProviders.InfrastructureProviders)
+	merr = errors.Join(merr, missing, wrong, parsing)
+
+	if merr != nil {
+		_ = r.updateStatus(ctx, template, merr.Error())
+		return merr
+	}
+
+	return r.updateStatus(ctx, template, "")
+}
+
+// collectMissingProvidersWithWrongVersions returns collected errors for missing providers, providers with
+// wrong versions that do not satisfy the corresponding constraints, and parsing errors respectevly.
+func collectMissingProvidersWithWrongVersions(typ string, exposed, required []hmc.ProviderTuple) (missingErr, nonSatisfyingErr, parsingErr error) {
+	exposedSet := make(map[string]hmc.ProviderTuple, len(exposed))
+	for _, v := range exposed {
+		exposedSet[v.Name] = v
+	}
+
+	var missing, nonSatisfying []string
+	for _, reqWithConstraint := range required {
+		exposedWithExactVer, ok := exposedSet[reqWithConstraint.Name]
+		if !ok {
+			missing = append(missing, reqWithConstraint.Name)
+			continue
+		}
+
+		version := exposedWithExactVer.VersionOrConstraint
+		constraint := reqWithConstraint.VersionOrConstraint
+
+		if version == "" || constraint == "" {
+			continue
+		}
+
+		exactVer, err := semver.NewVersion(version)
+		if err != nil {
+			parsingErr = errors.Join(parsingErr, fmt.Errorf("failed to parse version %s of the provider %s: %w", version, exposedWithExactVer.Name, err))
+			continue
+		}
+
+		requiredC, err := semver.NewConstraint(constraint)
+		if err != nil {
+			parsingErr = errors.Join(parsingErr, fmt.Errorf("failed to parse constraint %s of the provider %s: %w", version, exposedWithExactVer.Name, err))
+			continue
+		}
+
+		if !requiredC.Check(exactVer) {
+			nonSatisfying = append(nonSatisfying, fmt.Sprintf("%s %s !~ %s", reqWithConstraint.Name, version, constraint))
+		}
+	}
+
+	if len(missing) > 0 {
+		slices.Sort(missing)
+		missingErr = fmt.Errorf("one or more required %s providers are not deployed yet: %v", typ, missing)
+	}
+
+	if len(nonSatisfying) > 0 {
+		slices.Sort(nonSatisfying)
+		nonSatisfyingErr = fmt.Errorf("one or more required %s providers does not satisfy constraints: %v", typ, nonSatisfying)
+	}
+
+	if parsingErr != nil {
+		parsingErr = fmt.Errorf("one or more errors parsing %s providers' versions and constraints : %v", typ, parsingErr)
+	}
+
+	return missingErr, nonSatisfyingErr, parsingErr
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *ClusterTemplateReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&hmc.ClusterTemplate{}).
+		For(&hmc.ClusterTemplate{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Complete(r)
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ServiceTemplateReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&hmc.ServiceTemplate{}).
+		For(&hmc.ServiceTemplate{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Complete(r)
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ProviderTemplateReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&hmc.ProviderTemplate{}).
+		For(&hmc.ProviderTemplate{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Complete(r)
 }
