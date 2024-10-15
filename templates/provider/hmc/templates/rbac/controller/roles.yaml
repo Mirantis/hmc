@@ -57,6 +57,12 @@ rules:
 - apiGroups:
   - hmc.mirantis.com
   resources:
+  - releases/status
+  verbs:
+  - update
+- apiGroups:
+  - hmc.mirantis.com
+  resources:
   - managements/finalizers
   verbs:
   - update

@@ -21,14 +21,18 @@ import (
 	"fmt"
 
 	hcv2 "github.com/fluxcd/helm-controller/api/v2"
+	fluxmeta "github.com/fluxcd/pkg/apis/meta"
+	fluxconditions "github.com/fluxcd/pkg/runtime/conditions"
 	sourcev1 "github.com/fluxcd/source-controller/api/v1"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chartutil"
 	"helm.sh/helm/v3/pkg/storage/driver"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -61,18 +65,31 @@ type ReleaseReconciler struct {
 	CreateTemplates  bool
 }
 
-func (r *ReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *ReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, err error) {
 	l := ctrl.LoggerFrom(ctx).WithValues("controller", "ReleaseController")
 	l.Info("Reconciling Release")
 	defer l.Info("Release reconcile is finished")
 
-	err := r.reconcileHMCTemplates(ctx, req)
+	release := &hmc.Release{}
+	if req.Name != "" {
+		if err := r.Client.Get(ctx, req.NamespacedName, release); err != nil {
+			l.Error(err, "failed to get Release")
+			return ctrl.Result{}, err
+		}
+		defer func() {
+			release.Status.ObservedGeneration = release.Generation
+			err = errors.Join(err, r.Status().Update(ctx, release))
+		}()
+	}
+
+	err = r.reconcileHMCTemplates(ctx, release.Name, release.Spec.Version, release.UID)
+	r.updateTemplatesCondition(release, err)
 	if err != nil {
 		l.Error(err, "failed to reconcile HMC Templates")
 		return ctrl.Result{}, err
 	}
 
-	if initialReconcile(req) {
+	if release.Name == "" {
 		if err := r.ensureManagement(ctx); err != nil {
 			l.Error(err, "failed to get or create Management object")
 			return ctrl.Result{}, err
@@ -81,8 +98,23 @@ func (r *ReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	return ctrl.Result{}, nil
 }
 
-func initialReconcile(req ctrl.Request) bool {
-	return req.Name == ""
+func (r *ReleaseReconciler) updateTemplatesCondition(release *hmc.Release, err error) {
+	condition := metav1.Condition{
+		Type:               hmc.TemplatesCreatedCondition,
+		Status:             metav1.ConditionTrue,
+		ObservedGeneration: release.Generation,
+		Reason:             hmc.SucceededReason,
+		Message:            "All templates have been created",
+	}
+	if !r.CreateTemplates {
+		condition.Message = "Templates creation is disabled"
+	}
+	if err != nil {
+		condition.Status = metav1.ConditionFalse
+		condition.Message = err.Error()
+		condition.Reason = hmc.FailedReason
+	}
+	meta.SetStatusCondition(&release.Status.Conditions, condition)
 }
 
 func (r *ReleaseReconciler) ensureManagement(ctx context.Context) error {
@@ -150,42 +182,33 @@ func (r *ReleaseReconciler) ensureManagement(ctx context.Context) error {
 	return nil
 }
 
-func (r *ReleaseReconciler) reconcileHMCTemplates(ctx context.Context, req ctrl.Request) error {
+func (r *ReleaseReconciler) reconcileHMCTemplates(ctx context.Context, releaseName, releaseVersion string, releaseUID types.UID) error {
 	l := ctrl.LoggerFrom(ctx)
 	if !r.CreateTemplates {
 		l.Info("Templates creation is disabled")
 		return nil
 	}
-	if initialReconcile(req) && !r.CreateRelease {
+	if releaseName == "" && !r.CreateRelease {
 		l.Info("Initial creation of HMC Release is skipped")
 		return nil
 	}
-	releaseName := utils.ReleaseNameFromVersion(build.Version)
-	version := build.Version
 	var ownerRefs []metav1.OwnerReference
-	release := &hmc.Release{}
-	if !initialReconcile(req) {
-		if err := r.Client.Get(ctx, req.NamespacedName, release); err != nil {
-			l.Error(err, "failed to get Release")
-			return err
-		}
-		releaseName = req.Name
-		version = release.Spec.Version
-		ownerRefs = []metav1.OwnerReference{
-			{
-				APIVersion: hmc.GroupVersion.String(),
-				Kind:       release.Kind,
-				Name:       release.Name,
-				UID:        release.UID,
-			},
-		}
-	}
-
-	if initialReconcile(req) {
+	if releaseName == "" {
+		releaseName = utils.ReleaseNameFromVersion(build.Version)
+		releaseVersion = build.Version
 		err := helm.ReconcileHelmRepository(ctx, r.Client, defaultRepoName, r.SystemNamespace, r.DefaultRegistryConfig.HelmRepositorySpec())
 		if err != nil {
 			l.Error(err, "Failed to reconcile default HelmRepository", "namespace", r.SystemNamespace)
 			return err
+		}
+	} else {
+		ownerRefs = []metav1.OwnerReference{
+			{
+				APIVersion: hmc.GroupVersion.String(),
+				Kind:       hmc.ReleaseKind,
+				Name:       releaseName,
+				UID:        releaseUID,
+			},
 		}
 	}
 
@@ -205,7 +228,7 @@ func (r *ReleaseReconciler) reconcileHMCTemplates(ctx context.Context, req ctrl.
 		helmChart.Labels[hmc.HMCManagedLabelKey] = hmc.HMCManagedLabelValue
 		helmChart.Spec = sourcev1.HelmChartSpec{
 			Chart:   r.HMCTemplatesChartName,
-			Version: version,
+			Version: releaseVersion,
 			SourceRef: sourcev1.LocalHelmChartSourceReference{
 				Kind: sourcev1.HelmRepositoryKind,
 				Name: defaultRepoName,
@@ -221,10 +244,6 @@ func (r *ReleaseReconciler) reconcileHMCTemplates(ctx context.Context, req ctrl.
 		l.Info(fmt.Sprintf("Successfully %s %s/%s HelmChart", operation, r.SystemNamespace, hmcTemplatesName))
 	}
 
-	if _, err := helm.ArtifactReady(helmChart); err != nil {
-		return fmt.Errorf("HelmChart %s/%s Artifact is not ready: %w", r.SystemNamespace, hmcTemplatesName, err)
-	}
-
 	opts := helm.ReconcileHelmReleaseOpts{
 		ChartRef: &hcv2.CrossNamespaceSourceReference{
 			Kind:      helmChart.Kind,
@@ -233,7 +252,7 @@ func (r *ReleaseReconciler) reconcileHMCTemplates(ctx context.Context, req ctrl.
 		},
 	}
 
-	if initialReconcile(req) {
+	if releaseName == "" {
 		createReleaseValues := map[string]any{
 			"createRelease": true,
 		}
@@ -244,12 +263,19 @@ func (r *ReleaseReconciler) reconcileHMCTemplates(ctx context.Context, req ctrl.
 		opts.Values = &apiextensionsv1.JSON{Raw: raw}
 	}
 
-	_, operation, err = helm.ReconcileHelmRelease(ctx, r.Client, hmcTemplatesName, r.SystemNamespace, opts)
+	hr, operation, err := helm.ReconcileHelmRelease(ctx, r.Client, hmcTemplatesName, r.SystemNamespace, opts)
 	if err != nil {
 		return err
 	}
 	if operation == controllerutil.OperationResultCreated || operation == controllerutil.OperationResultUpdated {
 		l.Info(fmt.Sprintf("Successfully %s %s/%s HelmRelease", operation, r.SystemNamespace, hmcTemplatesName))
+	}
+	hrReadyCondition := fluxconditions.Get(hr, fluxmeta.ReadyCondition)
+	if hrReadyCondition == nil || hrReadyCondition.ObservedGeneration != hr.Generation {
+		return fmt.Errorf("HelmRelease %s/%s is not ready yet. Waiting for reconciliation", r.SystemNamespace, hmcTemplatesName)
+	}
+	if hrReadyCondition.Status == metav1.ConditionFalse {
+		return fmt.Errorf("HelmRelease %s/%s is not ready yet. %s", r.SystemNamespace, hmcTemplatesName, hrReadyCondition.Message)
 	}
 	return nil
 }
