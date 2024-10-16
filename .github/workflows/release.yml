@@ -50,5 +50,7 @@ jobs:
         with:
           generate_release_notes: true
           prerelease: ${{ contains(github.ref_name, '-') }}
-          files: dist/install.yaml
+          files: |
+            dist/install.yaml
+            templates/provider/hmc-templates/files/release.yaml
           draft: true
