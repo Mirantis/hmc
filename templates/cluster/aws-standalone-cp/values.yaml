@@ -51,3 +51,10 @@ k0s:
 # Optionally install applications defined under
 # templates/beachheadservices into target cluster
 installBeachHeadServices: false
+
+image:
+  repository: ""
+
+# extensionsChartRepository specifies a custom Helm chart repository for
+# hosting k0s extension charts
+extensionsChartRepository: ""

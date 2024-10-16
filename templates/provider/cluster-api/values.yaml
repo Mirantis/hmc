@@ -3,4 +3,7 @@ configSecret:
   name: ""
   namespace: ""
 
+image:
+  repository: ""
+
 config: {}

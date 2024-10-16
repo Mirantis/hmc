@@ -35,9 +35,17 @@ spec:
           helm:
             repositories:
               - name: cloud-provider-azure
+                {{- if .Values.extensionsChartRepository }}
+                url: {{ .Values.extensionsChartRepository }}
+                {{- else }}
                 url: https://raw.githubusercontent.com/kubernetes-sigs/cloud-provider-azure/master/helm/repo
+                {{- end }}
               - name: azuredisk-csi-driver
+                {{- if .Values.extensionsChartRepository }}
+                url: {{ .Values.extensionsChartRepository }}
+                {{- else }}
                 url: https://raw.githubusercontent.com/kubernetes-sigs/azuredisk-csi-driver/master/charts
+                {{- end }}
             charts:
               - name: cloud-provider-azure
                 namespace: kube-system
@@ -46,14 +54,17 @@ spec:
                 order: 1
                 values: |
                   cloudControllerManager:
+                    imageRepository: {{ .Values.image.repository }}
                     nodeSelector:
-                      node-role.kubernetes.io/control-plane: "true"
+                      node-role.kubernetes.io/control-plane: null
               - name: azuredisk-csi-driver
                 namespace: kube-system
                 chartname: azuredisk-csi-driver/azuredisk-csi-driver
                 version: 1.30.3
                 order: 2
                 values: |
+                  image:
+                    baseRepo: {{ .Values.image.repository }}
                   linux:
                     kubelet: "/var/lib/k0s/kubelet"
   machineTemplate:
