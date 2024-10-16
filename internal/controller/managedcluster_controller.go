@@ -48,7 +48,6 @@ import (
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
 	"github.com/Mirantis/hmc/internal/helm"
 	"github.com/Mirantis/hmc/internal/telemetry"
-	"github.com/Mirantis/hmc/internal/utils"
 )
 
 const (
@@ -377,65 +376,12 @@ func (r *ManagedClusterReconciler) Update(ctx context.Context, managedCluster *h
 // updateServices reconciles services provided in ManagedCluster.Spec.Services.
 // TODO(https://github.com/Mirantis/hmc/issues/361): Set status to ManagedCluster object at appropriate places.
 func (r *ManagedClusterReconciler) updateServices(ctx context.Context, mc *hmc.ManagedCluster) (ctrl.Result, error) {
-	l := ctrl.LoggerFrom(ctx)
-	opts := []sveltos.HelmChartOpts{}
-
-	// NOTE: The Profile object will be updated with no helm
-	// charts if len(mc.Spec.Services) == 0. This will result in the
-	// helm charts being uninstalled on matching clusters if
-	// Profile originally had len(m.Spec.Sevices) > 0.
-	for _, svc := range mc.Spec.Services {
-		if svc.Disable {
-			l.Info(fmt.Sprintf("Skip adding Template (%s) to Profile (%s) because Disable=true", svc.Template, mc.Name))
-			continue
-		}
-
-		tmpl := &hmc.ServiceTemplate{}
-		tmplRef := client.ObjectKey{Name: svc.Template, Namespace: mc.Namespace}
-		if err := r.Get(ctx, tmplRef, tmpl); err != nil {
-			return ctrl.Result{}, fmt.Errorf("failed to get Template (%s): %w", tmplRef.String(), err)
-		}
-
-		source, err := r.getServiceTemplateSource(ctx, tmpl)
-		if err != nil {
-			return ctrl.Result{}, fmt.Errorf("could not get repository url: %w", err)
-		}
-
-		opts = append(opts, sveltos.HelmChartOpts{
-			Values:        svc.Values,
-			RepositoryURL: source.Spec.URL,
-			// We don't have repository name so chart name becomes repository name.
-			RepositoryName: tmpl.Spec.Helm.ChartName,
-			ChartName: func() string {
-				if source.Spec.Type == utils.RegistryTypeOCI {
-					return tmpl.Spec.Helm.ChartName
-				}
-				// Sveltos accepts ChartName in <repository>/<chart> format for non-OCI.
-				// We don't have a repository name, so we can use <chart>/<chart> instead.
-				// See: https://projectsveltos.github.io/sveltos/addons/helm_charts/.
-				return fmt.Sprintf("%s/%s", tmpl.Spec.Helm.ChartName, tmpl.Spec.Helm.ChartName)
-			}(),
-			ChartVersion: tmpl.Spec.Helm.ChartVersion,
-			ReleaseName:  svc.Name,
-			ReleaseNamespace: func() string {
-				if svc.Namespace != "" {
-					return svc.Namespace
-				}
-				return svc.Name
-			}(),
-			// The reason it is passed to PlainHTTP instead of InsecureSkipTLSVerify is because
-			// the source.Spec.Insecure field is meant to be used for connecting to repositories
-			// over plain HTTP, which is different than what InsecureSkipTLSVerify is meant for.
-			// See: https://github.com/fluxcd/source-controller/pull/1288
-			PlainHTTP: source.Spec.Insecure,
-		})
+	opts, err := helmChartOpts(ctx, r.Client, mc.Namespace, mc.Spec.Services)
+	if err != nil {
+		return ctrl.Result{}, err
 	}
 
 	if _, err := sveltos.ReconcileProfile(ctx, r.Client, mc.Namespace, mc.Name,
-		map[string]string{
-			hmc.FluxHelmChartNamespaceKey: mc.Namespace,
-			hmc.FluxHelmChartNameKey:      mc.Name,
-		},
 		sveltos.ReconcileProfileOpts{
 			OwnerReference: &metav1.OwnerReference{
 				APIVersion: hmc.GroupVersion.String(),
@@ -443,8 +389,14 @@ func (r *ManagedClusterReconciler) updateServices(ctx context.Context, mc *hmc.M
 				Name:       mc.Name,
 				UID:        mc.UID,
 			},
+			LabelSelector: metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					hmc.FluxHelmChartNamespaceKey: mc.Namespace,
+					hmc.FluxHelmChartNameKey:      mc.Name,
+				},
+			},
 			HelmChartOpts:  opts,
-			Priority:       mc.Spec.Priority,
+			Priority:       mc.Spec.ServicesPriority,
 			StopOnConflict: mc.Spec.StopOnConflict,
 		}); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to reconcile Profile: %w", err)
@@ -456,36 +408,6 @@ func (r *ManagedClusterReconciler) updateServices(ctx context.Context, mc *hmc.M
 	// This will be automatically resolved once setting status is implemented (https://github.com/Mirantis/hmc/issues/361),
 	// as it is likely that some execution path in the function will have to return with a requeue to fetch latest status.
 	return ctrl.Result{RequeueAfter: DefaultRequeueInterval}, nil
-}
-
-// getServiceTemplateSource returns the source (HelmRepository) used by the ServiceTemplate.
-// It is fetched by querying for ServiceTemplate -> HelmChart -> HelmRepository.
-func (r *ManagedClusterReconciler) getServiceTemplateSource(ctx context.Context, tmpl *hmc.ServiceTemplate) (*sourcev1.HelmRepository, error) {
-	tmplRef := client.ObjectKey{Namespace: tmpl.Namespace, Name: tmpl.Name}
-
-	if tmpl.Status.ChartRef == nil {
-		return nil, fmt.Errorf("status for ServiceTemplate (%s) has not been updated yet", tmplRef.String())
-	}
-
-	hc := &sourcev1.HelmChart{}
-	if err := r.Get(ctx, client.ObjectKey{
-		Namespace: tmpl.Status.ChartRef.Namespace,
-		Name:      tmpl.Status.ChartRef.Name,
-	}, hc); err != nil {
-		return nil, fmt.Errorf("failed to get HelmChart (%s): %w", tmplRef.String(), err)
-	}
-
-	repo := &sourcev1.HelmRepository{}
-	if err := r.Get(ctx, client.ObjectKey{
-		// Using chart's namespace because it's source
-		// (helm repository in this case) should be within the same namespace.
-		Namespace: hc.Namespace,
-		Name:      hc.Spec.SourceRef.Name,
-	}, repo); err != nil {
-		return nil, fmt.Errorf("failed to get HelmRepository (%s): %w", tmplRef.String(), err)
-	}
-
-	return repo, nil
 }
 
 func validateReleaseWithValues(ctx context.Context, actionConfig *action.Configuration, managedCluster *hmc.ManagedCluster, hcChart *chart.Chart) error {
@@ -584,6 +506,11 @@ func (r *ManagedClusterReconciler) Delete(ctx context.Context, managedCluster *h
 		return ctrl.Result{}, err
 	}
 
+	// Without explicitly deleting the Profile object, we run into a race condition
+	// which prevents Sveltos objects from being removed from the management cluster.
+	// It is detailed in https://github.com/projectsveltos/addon-controller/issues/732.
+	// We may try to remove the explicit call to Delete once a fix for it has been merged.
+	// TODO(https://github.com/Mirantis/hmc/issues/526).
 	err = sveltos.DeleteProfile(ctx, r.Client, managedCluster.Namespace, managedCluster.Name)
 	if err != nil {
 		return ctrl.Result{}, err

@@ -19,6 +19,7 @@ spec:
     workersNumber: 1
     installBeachHeadServices: false
   template: aws-standalone-cp-0-0-2
+  servicesPriority: 100
   services:
     - template: kyverno-3-2-6
       name: kyverno
