@@ -18,7 +18,6 @@ const (
 	// Common
 	EnvVarManagedClusterName       = "MANAGED_CLUSTER_NAME"
 	EnvVarHostedManagedClusterName = "HOSTED_MANAGED_CLUSTER_NAME"
-	EnvVarInstallBeachHeadServices = "INSTALL_BEACH_HEAD_SERVICES"
 	EnvVarControlPlaneNumber       = "CONTROL_PLANE_NUMBER"
 	EnvVarWorkerNumber             = "WORKER_NUMBER"
 	EnvVarNamespace                = "NAMESPACE"

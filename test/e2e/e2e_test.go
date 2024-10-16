@@ -132,7 +132,6 @@ var _ = Describe("controller", Ordered, func() {
 			// Deploy standalone with an xlarge instance since it will also be
 			// hosting the hosted cluster.
 			GinkgoT().Setenv(managedcluster.EnvVarAWSInstanceType, "t3.xlarge")
-			GinkgoT().Setenv(managedcluster.EnvVarInstallBeachHeadServices, "false")
 
 			templateBy(managedcluster.TemplateAWSStandaloneCP, "creating a ManagedCluster")
 			sd := managedcluster.GetUnstructured(managedcluster.TemplateAWSStandaloneCP)

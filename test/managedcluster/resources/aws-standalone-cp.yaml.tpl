@@ -16,6 +16,5 @@ spec:
       instanceType: ${AWS_INSTANCE_TYPE:=t3.small}
     worker:
       instanceType: ${AWS_INSTANCE_TYPE:=t3.small}
-    installBeachHeadServices: ${INSTALL_BEACH_HEAD_SERVICES:=true}
 
 

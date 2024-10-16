@@ -47,7 +47,3 @@ worker:
 # K0s parameters
 k0s:
   version: v1.30.4+k0s.0
-
-# Optionally install applications defined under
-# templates/beachheadservices into target cluster
-installBeachHeadServices: false
