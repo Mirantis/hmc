@@ -71,13 +71,16 @@ type ManagedClusterSpec struct {
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=2147483646
 
-	// Priority sets the priority for the services defined in this spec.
+	// ServicesPriority sets the priority for the services defined in this spec.
 	// Higher value means higher priority and lower means lower.
 	// In case of conflict with another object managing the service,
 	// the one with higher priority will get to deploy its services.
-	Priority int32 `json:"priority,omitempty"`
+	ServicesPriority int32 `json:"servicesPriority,omitempty"`
 	// DryRun specifies whether the template should be applied after validation or only validated.
 	DryRun bool `json:"dryRun,omitempty"`
+
+	// +kubebuilder:default:=false
+
 	// StopOnConflict specifies what to do in case of a conflict.
 	// E.g. If another object is already managing a service.
 	// By default the remaining services will be deployed even if conflict is detected.
