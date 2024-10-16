@@ -1,0 +1,23 @@
+apiVersion: v2
+name: aws-standalone-cp
+description: |
+  An HMC template to deploy a k0s cluster on AWS with bootstrapped control plane nodes.
+  Upgrade sequences: 
+  * 0.0.1 -> 0.0.2
+    Diff:
+    * aws-ebs-csi-driver: bumped 2.33.0 -> 2.35.1
+    * aws-cloud-controller-manager: enabled more verbose logging (v=2 -> v=10)
+type: application
+# This is the chart version. This version number should be incremented each time you make changes
+# to the chart and its templates, including the app version.
+# Versions are expected to follow Semantic Versioning (https://semver.org/)
+version: 0.0.2
+# This is the version number of the application being deployed. This version number should be
+# incremented each time you make changes to the application. Versions are not expected to
+# follow Semantic Versioning. They should reflect the version the application is using.
+# It is recommended to use it with quotes.
+appVersion: "1.31.1+k0s.0"
+annotations:
+  hmc.mirantis.com/infrastructure-providers: aws
+  hmc.mirantis.com/control-plane-providers: k0s
+  hmc.mirantis.com/bootstrap-providers: k0s

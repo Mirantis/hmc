@@ -43,7 +43,7 @@ spec:
                   image:
                     tag: v1.30.3
                   args:
-                    - --v=2
+                    - --v=10
                     - --cloud-provider=aws
                     - --cluster-cidr={{ first .Values.clusterNetwork.pods.cidrBlocks }}
                     - --allocate-node-cidrs=true
@@ -51,7 +51,7 @@ spec:
               - name: aws-ebs-csi-driver
                 namespace: kube-system
                 chartname: aws-ebs-csi-driver/aws-ebs-csi-driver
-                version: 2.33.0
+                version: 2.35.1
                 values: |
                   defaultStorageClass:
                     enabled: true

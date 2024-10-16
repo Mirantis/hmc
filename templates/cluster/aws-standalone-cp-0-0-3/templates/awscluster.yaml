@@ -1,0 +1,26 @@
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: AWSCluster
+metadata:
+  name: {{ include "cluster.name" . }}
+  annotations:
+    aws.cluster.x-k8s.io/external-resource-gc: "true"
+spec:
+  region: {{ .Values.region }}
+  identityRef:
+    kind: {{ .Values.clusterIdentity.kind }}
+    name: {{ .Values.clusterIdentity.name }}
+  controlPlaneLoadBalancer:
+    healthCheckProtocol: TCP
+  network:
+    additionalControlPlaneIngressRules:
+      - description: "k0s controller join API"
+        protocol: tcp
+        fromPort: 9443
+        toPort: 9443
+  {{- if not (quote .Values.sshKeyName | empty) }}
+  sshKeyName: {{ .Values.sshKeyName | quote }}
+  {{- end }}
+  {{- with .Values.bastion }}
+  bastion:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
