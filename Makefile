@@ -132,6 +132,9 @@ add-license: addlicense
 TEMPLATES_DIR := templates
 PROVIDER_TEMPLATES_DIR := $(TEMPLATES_DIR)/provider
 CHARTS_PACKAGE_DIR ?= $(LOCALBIN)/charts
+EXTENSION_CHARTS_PACKAGE_DIR ?= $(LOCALBIN)/charts/extensions
+$(EXTENSION_CHARTS_PACKAGE_DIR): | $(LOCALBIN)
+	mkdir -p $(EXTENSION_CHARTS_PACKAGE_DIR)
 $(CHARTS_PACKAGE_DIR): | $(LOCALBIN)
 	rm -rf $(CHARTS_PACKAGE_DIR)
 	mkdir -p $(CHARTS_PACKAGE_DIR)
@@ -143,8 +146,29 @@ $(IMAGES_PACKAGE_DIR): | $(LOCALBIN)
 TEMPLATE_FOLDERS = $(patsubst $(TEMPLATES_DIR)/%,%,$(wildcard $(TEMPLATES_DIR)/*))
 
 .PHONY: helm-package
-helm-package: $(CHARTS_PACKAGE_DIR) helm ## Package Helm charts used by HMC.
+helm-package: $(CHARTS_PACKAGE_DIR) $(EXTENSION_CHARTS_PACKAGE_DIR) helm
 	@make $(patsubst %,package-%-tmpl,$(TEMPLATE_FOLDERS))
+	@for template in $$(find $(TEMPLATES_DIR) -name 'k0s*.yaml'); do \
+		if [[ $$template == *"k0smotron"* ]]; then \
+			extensions_path=".spec.k0sConfig.spec.extensions.helm"; \
+		else \
+			extensions_path=".spec.k0sConfigSpec.k0s.spec.extensions.helm"; \
+		fi; \
+		repos=$$(grep -vw "{{" $$template | $(YQ) e "$$extensions_path.repositories[] | [.url, .name] | join(\";\")"); \
+		for repo in $$repos; do \
+				url=$$(echo $$repo | cut -d';' -f1); \
+				name=$$(echo $$repo | cut -d';' -f2); \
+				version=$$(grep -vw "{{" $$template | $(YQ) e "$$extensions_path.charts[] | select(.name == \"$$name\") | .version"); \
+				if [[ $$url == "" ]] || [[ $$name == "" ]] || [[ $$version == "" ]]; then \
+					echo "Error: Cannot construct Helm pull command from url: $$url, name: $$name, version: $$version: one or more vars is not populated"; \
+					exit 1; \
+				fi; \
+				if [[ ! $$(find $(EXTENSION_CHARTS_PACKAGE_DIR) -name $$name-$$version*.tgz) ]]; then \
+					echo "Helm chart $$name from $$url with version $$version"; \
+					$(HELM) pull --repo $$url --version $$version $$name -d $(EXTENSION_CHARTS_PACKAGE_DIR); \
+				fi; \
+		done; \
+	done
 
 .PHONY: bundle-images
 bundle-images: $(IMAGES_PACKAGE_DIR) ## Create a tarball with all images used by HMC.
