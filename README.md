@@ -1,14 +1,17 @@
-# Mirantis Hybrid Multi Cluster
+# Mirantis Hybrid Multi Cluster (HMC), Codename: Project 0x2A
 
 ## Overview
 
-Mirantis Hybrid Multi Cluster is part of Mirantis Project 2A which is focused on delivering a 
+Mirantis Hybrid Multi Cluster is part of Mirantis Project 0x2A which is focused on delivering a 
 open source approach to providing an enterprise grade multi-cluster kubernetes managment solution
-based entirely on standard open source tooling.
+based entirely on standard open source tooling that works across private or public clouds.
+
+We like to say that Project 0x2A (42) is the answer to life, the universe, and everything ...
+Or, at least, the Kubernetes sprawl we find ourselves faced with in real life!
 
 ## Documentation
 
-Detailed documentation is available in [Project 2A Docs](https://mirantis.github.io/project-2a-docs/)
+Detailed documentation is available in [Project 0x2A Docs](https://mirantis.github.io/project-2a-docs/)
 
 ## Installation
 
