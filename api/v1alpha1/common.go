@@ -150,11 +150,11 @@ func (c ProvidersTupled) BootstrapProvidersNames() []string {
 }
 
 func (c ProvidersTupled) ControlPlaneProvidersNames() []string {
-	return c.names(bootstrapProvidersType)
+	return c.names(controlPlaneProvidersType)
 }
 
 func (c ProvidersTupled) InfrastructureProvidersNames() []string {
-	return c.names(bootstrapProvidersType)
+	return c.names(infrastructureProvidersType)
 }
 
 func (c ProvidersTupled) names(typ providersType) []string {
