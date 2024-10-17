@@ -22,6 +22,9 @@ import (
 )
 
 const (
+	// Denotes the providertemplate resource Kind.
+	ProviderTemplateKind = "ProviderTemplate"
+
 	// ChartAnnotationCAPIVersion is an annotation containing the CAPI exact version in the SemVer format associated with a ProviderTemplate.
 	ChartAnnotationCAPIVersion = "hmc.mirantis.com/capi-version"
 	// ChartAnnotationCAPIVersionConstraint is an annotation containing the CAPI version constraint in the SemVer format associated with a ProviderTemplate.
