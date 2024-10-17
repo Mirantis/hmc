@@ -252,7 +252,7 @@ func (r *ReleaseReconciler) reconcileHMCTemplates(ctx context.Context, releaseNa
 		},
 	}
 
-	if releaseName == "" {
+	if releaseName == "" || r.CreateRelease {
 		createReleaseValues := map[string]any{
 			"createRelease": true,
 		}
