@@ -60,7 +60,8 @@ jobs:
       - name: Get outputs
         id: vars
         run: |
-          echo "version=$(git describe --tags --always)" >> $GITHUB_OUTPUT
+          GIT_VERSION=$(git describe --tags --always)
+          echo "version=${GIT_VERSION:1}" >> $GITHUB_OUTPUT
           echo "clustername=ci-$(date +%s | cut -b6-10)" >> $GITHUB_OUTPUT
       - name: Build and push HMC controller image
         uses: docker/build-push-action@v6
