@@ -130,20 +130,56 @@ lint-fix: golangci-lint ## Run golangci-lint linter and perform fixes
 add-license: addlicense
 	$(ADDLICENSE) -c "" -ignore ".github/**" -ignore "config/**" -ignore "templates/**" -ignore ".*" -y 2024 .
 
-##@ Build
+##@ Package
 
 TEMPLATES_DIR := templates
 PROVIDER_TEMPLATES_DIR := $(TEMPLATES_DIR)/provider
 CHARTS_PACKAGE_DIR ?= $(LOCALBIN)/charts
+EXTENSION_CHARTS_PACKAGE_DIR ?= $(LOCALBIN)/charts/extensions
+$(EXTENSION_CHARTS_PACKAGE_DIR): | $(LOCALBIN)
+	mkdir -p $(EXTENSION_CHARTS_PACKAGE_DIR)
 $(CHARTS_PACKAGE_DIR): | $(LOCALBIN)
 	rm -rf $(CHARTS_PACKAGE_DIR)
 	mkdir -p $(CHARTS_PACKAGE_DIR)
+IMAGES_PACKAGE_DIR ?= $(LOCALBIN)/images
+$(IMAGES_PACKAGE_DIR): | $(LOCALBIN)
+	rm -rf $(IMAGES_PACKAGE_DIR)
+	mkdir -p $(IMAGES_PACKAGE_DIR)
 
 TEMPLATE_FOLDERS = $(patsubst $(TEMPLATES_DIR)/%,%,$(wildcard $(TEMPLATES_DIR)/*))
 
 .PHONY: helm-package
-helm-package: $(CHARTS_PACKAGE_DIR) helm
+helm-package: $(CHARTS_PACKAGE_DIR) $(EXTENSION_CHARTS_PACKAGE_DIR) helm
 	@make $(patsubst %,package-%-tmpl,$(TEMPLATE_FOLDERS))
+	@for template in $$(find $(TEMPLATES_DIR) -name 'k0s*.yaml'); do \
+		if [[ $$template == *"k0smotron"* ]]; then \
+			extensions_path=".spec.k0sConfig.spec.extensions.helm"; \
+		else \
+			extensions_path=".spec.k0sConfigSpec.k0s.spec.extensions.helm"; \
+		fi; \
+		repos=$$(grep -vw "{{" $$template | $(YQ) e "$$extensions_path.repositories[] | [.url, .name] | join(\";\")"); \
+		for repo in $$repos; do \
+				url=$$(echo $$repo | cut -d';' -f1); \
+				name=$$(echo $$repo | cut -d';' -f2); \
+				version=$$(grep -vw "{{" $$template | $(YQ) e "$$extensions_path.charts[] | select(.name == \"$$name\") | .version"); \
+				if [[ $$url == "" ]] || [[ $$name == "" ]] || [[ $$version == "" ]]; then \
+					echo "Error: Cannot construct Helm pull command from url: $$url, name: $$name, version: $$version: one or more vars is not populated"; \
+					exit 1; \
+				fi; \
+				if [[ ! $$(find $(EXTENSION_CHARTS_PACKAGE_DIR) -name $$name-$$version*.tgz) ]]; then \
+					echo "Helm chart $$name from $$url with version $$version"; \
+					$(HELM) pull --repo $$url --version $$version $$name -d $(EXTENSION_CHARTS_PACKAGE_DIR); \
+				fi; \
+		done; \
+	done
+
+.PHONY: bundle-images
+bundle-images: dev-apply $(IMAGES_PACKAGE_DIR) ## Create a tarball with all images used by HMC.
+	@BUNDLE_TARBALL=$(IMAGES_PACKAGE_DIR)/hmc-images-$(VERSION).tgz EXTENSIONS_BUNDLE_TARBALL=$(IMAGES_PACKAGE_DIR)/hmc-extension-images-$(VERSION).tgz IMG=$(IMG) KUBECTL=$(KUBECTL) YQ=$(YQ) HELM=$(HELM) NAMESPACE=$(NAMESPACE) TEMPLATES_DIR=$(TEMPLATES_DIR) KIND_CLUSTER_NAME=$(KIND_CLUSTER_NAME) bash -c "./scripts/bundle-images.sh"
+
+.PHONY: airgap-package
+airgap-package: helm-package bundle-images ## Create a tarball with all images and Helm charts used by HMC, useful for deploying in air-gapped environments.
+	tar -czf hmc-charts-images-$(VERSION).tgz $(CHARTS_PACKAGE_DIR) $(IMAGES_PACKAGE_DIR)
 
 package-%-tmpl:
 	@make TEMPLATES_SUBDIR=$(TEMPLATES_DIR)/$* $(patsubst %,package-chart-%,$(shell ls $(TEMPLATES_DIR)/$*))
@@ -154,6 +190,8 @@ lint-chart-%:
 
 package-chart-%: lint-chart-%
 	$(HELM) package --destination $(CHARTS_PACKAGE_DIR) $(TEMPLATES_SUBDIR)/$*
+
+##@ Build
 
 LD_FLAGS?= -s -w
 LD_FLAGS += -X github.com/Mirantis/hmc/internal/build.Version=$(VERSION)
@@ -362,6 +400,9 @@ dev-azure-nuke: envsubst azure-nuke ## Warning: Destructive! Nuke all Azure reso
 
 .PHONY: cli-install
 cli-install: clusterawsadm clusterctl cloud-nuke envsubst yq awscli ## Install the necessary CLI tools for deployment, development and testing.
+
+.PHONY: airgap-package
+airgap-package: ## Generate Helm chart and Docker image tarballs for air-gapped environments.
 
 ##@ Dependencies
 
