@@ -19,6 +19,7 @@
 # `make bundle-images` which will perform some additional steps outside of
 # this scripts functionality.
 # Usage: make bundle-images
+set -x
 
 if [ "$YQ" == "" ] ||
     [ "$IMG" == "" ] ||
@@ -27,6 +28,7 @@ if [ "$YQ" == "" ] ||
     [ "$KIND_CLUSTER_NAME" == "" ] ||
     [ "$NAMESPACE" == "" ] ||
     [ "$BUNDLE_TARBALL" == "" ] ||
+    [ "$EXTENSIONS_BUNDLE_TARBALL" == "" ] ||
     [ "$TEMPLATES_DIR" == "" ];
     then
         echo "This script should not be run directly.  Use 'make bundle-images' instead."
@@ -35,6 +37,7 @@ fi
 
 LABEL_KEY="cluster.x-k8s.io/provider"
 IMAGES_BUNDLED="$IMG"
+EXTENSION_IMAGES_BUNDLED=""
 
 echo -e "\nBundling images for HMC, this may take awhile...\n"
 
@@ -69,6 +72,18 @@ function wait_for_deploy_exist() {
     done
 }
 
+function bundle_images() {
+    local images=$1
+    local tarball=$2
+
+    echo "Bundling images into $tarball..."
+    docker save -o $tarball $images
+    if [[ $? -ne 0 ]]; then
+        echo "Error: Failed to bundle images into $tarball"
+        exit 1
+    fi
+}
+
 
 function ctrl_c() {
         echo "Caught CTRL-C, exiting..."
@@ -81,10 +96,11 @@ echo -e "\nVerifying provider Deployments are ready...\n"
 # across the deployments.
 for TEMPLATE in $(find $TEMPLATES_DIR -name 'provider.yaml');
 do
-    PROVIDER_YAML=$(grep -P '(?=.*Provider)(?=.*kind)' -A 2 $TEMPLATE | grep -v '\--')
+    RESULT=$(perl -nle 'print if m{(?=.*Provider)(?=.*kind)}' $TEMPLATE)
+    PROVIDER_YAML=$(grep "$RESULT" -A2 $TEMPLATE)
     PROVIDER_KIND=$(echo -e "$PROVIDER_YAML" | $YQ e '.kind' -)
     PROVIDER_NAME=$(echo -e "$PROVIDER_YAML" | $YQ e '.metadata.name' -)
-    PROVIDER_KIND_TOLOWER=$(echo ${PROVIDER_KIND,,})
+    PROVIDER_KIND_TOLOWER=$(echo ${PROVIDER_KIND} | tr '[:upper:]' '[:lower:]')
 
     if [[ $PROVIDER_NAME == "" ]]; then
         echo "Error: Cannot determine provider Name from $TEMPLATE"
@@ -194,31 +210,28 @@ do
                 exit 1
             fi
 
-            IMAGES_BUNDLED="$IMAGES_BUNDLED $IMAGE"
+            EXTENSION_IMAGES_BUNDLED="$EXTENSION_IMAGES_BUNDLED $IMAGE"
         done
     done
 done
 
-echo -e "\nSaving bundled images to $BUNDLE_TARBALL...\n"
+echo -e "\nSaving images...\n"
 IMAGES_BUNDLED_UNIQ=$(echo "$IMAGES_BUNDLED" | tr ' ' '\n' | sort -u)
 IMAGE_IDS=
 
-for IMAGE in $IMAGES_BUNDLED_UNIQ;
-do
-    docker inspect $IMAGE --format '{{ .Id }}'
-    if [[ $? -ne 0 ]]; then
-        echo "Error: Failed to get image ID for $IMAGE"
-        exit 1
-    fi
-    IMAGE_IDS="$IMAGE_IDS $IMAGE"
-done
+bundle_images "$IMAGES_BUNDLED_UNIQ" $BUNDLE_TARBALL
 
-docker save -o $BUNDLE_TARBALL $IMAGE_IDS
+if [[ $EXTENSION_IMAGES_BUNDLED != "" ]]; then
+    EXTENSION_IMAGES_BUNDLED_UNIQ=$(echo "$EXTENSION_IMAGES_BUNDLED" | tr ' ' '\n' | sort -u)
+    EXTENSION_IMAGE_IDS=
 
-echo -e "\nCleaning up pulled images...\n"
+    bundle_images "$EXTENSION_IMAGES_BUNDLED_UNIQ" $EXTENSIONS_BUNDLE_TARBALL
+fi
 
-Cleanup the images bundled by removing them from the local image cache.
-for IMAGE in $IMAGES_BUNDLED_UNIQ;
+echo -e "\nCleaning up all pulled images...\n"
+# Cleanup the images bundled by removing them from the local image cache.
+ALL_IMAGES="$IMAGES_BUNDLED_UNIQ $EXTENSION_IMAGES_BUNDLED_UNIQ"
+for IMAGE in $ALL_IMAGES;
 do
     echo "Removing $IMAGE from local image cache..."
     docker rmi $IMAGE
