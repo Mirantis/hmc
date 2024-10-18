@@ -118,62 +118,20 @@ spec:
                   Providers represent exposed CAPI providers with exact compatibility versions set.
                   Should be set if not present in the Helm chart metadata.
                   Compatibility attributes are optional to be defined.
-                properties:
-                  bootstrap:
-                    description: |-
-                      List of CAPI bootstrap providers with either an exact or constrained version in the SemVer format.
-                      Compatibility attributes are optional to be defined.
-                    items:
-                      description: Represents name of the provider with either an
-                        exact or constrained version in the SemVer format.
-                      properties:
-                        name:
-                          description: Name of the provider.
-                          type: string
-                        versionOrConstraint:
-                          description: |-
-                            Compatibility restriction in the SemVer format (exact or constrained version).
-                            Optional to be defined.
-                          type: string
-                      type: object
-                    type: array
-                  controlPlane:
-                    description: |-
-                      List of CAPI control plane providers with either an exact or constrained version in the SemVer format.
-                      Compatibility attributes are optional to be defined.
-                    items:
-                      description: Represents name of the provider with either an
-                        exact or constrained version in the SemVer format.
-                      properties:
-                        name:
-                          description: Name of the provider.
-                          type: string
-                        versionOrConstraint:
-                          description: |-
-                            Compatibility restriction in the SemVer format (exact or constrained version).
-                            Optional to be defined.
-                          type: string
-                      type: object
-                    type: array
-                  infrastructure:
-                    description: |-
-                      List of CAPI infrastructure providers with either an exact or constrained version in the SemVer format.
-                      Compatibility attributes are optional to be defined.
-                    items:
-                      description: Represents name of the provider with either an
-                        exact or constrained version in the SemVer format.
-                      properties:
-                        name:
-                          description: Name of the provider.
-                          type: string
-                        versionOrConstraint:
-                          description: |-
-                            Compatibility restriction in the SemVer format (exact or constrained version).
-                            Optional to be defined.
-                          type: string
-                      type: object
-                    type: array
-                type: object
+                items:
+                  description: Represents name of the provider with either an exact
+                    or constrained version in the SemVer format.
+                  properties:
+                    name:
+                      description: Name of the provider.
+                      type: string
+                    versionOrConstraint:
+                      description: |-
+                        Compatibility restriction in the SemVer format (exact or constrained version).
+                        Optional to be defined.
+                      type: string
+                  type: object
+                type: array
             type: object
             x-kubernetes-validations:
             - message: Spec is immutable
@@ -239,62 +197,20 @@ spec:
                 description: |-
                   Providers represent exposed CAPI providers with exact compatibility versions set
                   if the latter has been given.
-                properties:
-                  bootstrap:
-                    description: |-
-                      List of CAPI bootstrap providers with either an exact or constrained version in the SemVer format.
-                      Compatibility attributes are optional to be defined.
-                    items:
-                      description: Represents name of the provider with either an
-                        exact or constrained version in the SemVer format.
-                      properties:
-                        name:
-                          description: Name of the provider.
-                          type: string
-                        versionOrConstraint:
-                          description: |-
-                            Compatibility restriction in the SemVer format (exact or constrained version).
-                            Optional to be defined.
-                          type: string
-                      type: object
-                    type: array
-                  controlPlane:
-                    description: |-
-                      List of CAPI control plane providers with either an exact or constrained version in the SemVer format.
-                      Compatibility attributes are optional to be defined.
-                    items:
-                      description: Represents name of the provider with either an
-                        exact or constrained version in the SemVer format.
-                      properties:
-                        name:
-                          description: Name of the provider.
-                          type: string
-                        versionOrConstraint:
-                          description: |-
-                            Compatibility restriction in the SemVer format (exact or constrained version).
-                            Optional to be defined.
-                          type: string
-                      type: object
-                    type: array
-                  infrastructure:
-                    description: |-
-                      List of CAPI infrastructure providers with either an exact or constrained version in the SemVer format.
-                      Compatibility attributes are optional to be defined.
-                    items:
-                      description: Represents name of the provider with either an
-                        exact or constrained version in the SemVer format.
-                      properties:
-                        name:
-                          description: Name of the provider.
-                          type: string
-                        versionOrConstraint:
-                          description: |-
-                            Compatibility restriction in the SemVer format (exact or constrained version).
-                            Optional to be defined.
-                          type: string
-                      type: object
-                    type: array
-                type: object
+                items:
+                  description: Represents name of the provider with either an exact
+                    or constrained version in the SemVer format.
+                  properties:
+                    name:
+                      description: Name of the provider.
+                      type: string
+                    versionOrConstraint:
+                      description: |-
+                        Compatibility restriction in the SemVer format (exact or constrained version).
+                        Optional to be defined.
+                      type: string
+                  type: object
+                type: array
               valid:
                 description: Valid indicates whether the template passed validation
                   or not.

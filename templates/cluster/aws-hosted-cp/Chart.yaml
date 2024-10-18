@@ -14,6 +14,4 @@ version: 0.0.2
 # It is recommended to use it with quotes.
 appVersion: "v1.31.1+k0s.1"
 annotations:
-  hmc.mirantis.com/infrastructure-providers: aws
-  hmc.mirantis.com/control-plane-providers: k0smotron
-  hmc.mirantis.com/bootstrap-providers: k0s
+  cluster.x-k8s.io/provider: infrastructure-aws; control-plane-k0smotron; bootstrap-k0s

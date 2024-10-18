@@ -111,26 +111,9 @@ spec:
                 description: |-
                   Providers represent requested CAPI providers.
                   Should be set if not present in the Helm chart metadata.
-                properties:
-                  bootstrap:
-                    description: BootstrapProviders is the list of CAPI bootstrap
-                      providers
-                    items:
-                      type: string
-                    type: array
-                  controlPlane:
-                    description: ControlPlaneProviders is the list of CAPI control
-                      plane providers
-                    items:
-                      type: string
-                    type: array
-                  infrastructure:
-                    description: InfrastructureProviders is the list of CAPI infrastructure
-                      providers
-                    items:
-                      type: string
-                    type: array
-                type: object
+                items:
+                  type: string
+                type: array
             required:
             - helm
             type: object
@@ -188,26 +171,9 @@ spec:
                 type: integer
               providers:
                 description: Providers represent requested CAPI providers.
-                properties:
-                  bootstrap:
-                    description: BootstrapProviders is the list of CAPI bootstrap
-                      providers
-                    items:
-                      type: string
-                    type: array
-                  controlPlane:
-                    description: ControlPlaneProviders is the list of CAPI control
-                      plane providers
-                    items:
-                      type: string
-                    type: array
-                  infrastructure:
-                    description: InfrastructureProviders is the list of CAPI infrastructure
-                      providers
-                    items:
-                      type: string
-                    type: array
-                type: object
+                items:
+                  type: string
+                type: array
               valid:
                 description: Valid indicates whether the template passed validation
                   or not.

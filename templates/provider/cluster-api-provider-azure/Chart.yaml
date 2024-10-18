@@ -20,4 +20,4 @@ version: 0.0.2
 # It is recommended to use it with quotes.
 appVersion: "1.17.0"
 annotations:
-  hmc.mirantis.com/infrastructure-providers: azure
+  cluster.x-k8s.io/provider: infrastructure-azure

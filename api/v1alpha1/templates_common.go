@@ -24,12 +24,9 @@ import (
 )
 
 const (
-	// ChartAnnotationInfraProviders is an annotation containing the CAPI infrastructure providers associated with Template.
-	ChartAnnotationInfraProviders = "hmc.mirantis.com/infrastructure-providers"
-	// ChartAnnotationBootstrapProviders is an annotation containing the CAPI bootstrap providers associated with Template.
-	ChartAnnotationBootstrapProviders = "hmc.mirantis.com/bootstrap-providers"
-	// ChartAnnotationControlPlaneProviders is an annotation containing the CAPI control plane providers associated with Template.
-	ChartAnnotationControlPlaneProviders = "hmc.mirantis.com/control-plane-providers"
+	// ChartAnnotationProviderName is the annotation set on components in a Template.
+	// This annotations allows to identify all the components belonging to a provider.
+	ChartAnnotationProviderName = "cluster.x-k8s.io/provider"
 )
 
 // +kubebuilder:validation:XValidation:rule="(has(self.chartName) && !has(self.chartRef)) || (!has(self.chartName) && has(self.chartRef))", message="either chartName or chartRef must be set"
@@ -77,30 +74,26 @@ type TemplateValidationStatus struct {
 	Valid bool `json:"valid"`
 }
 
-type providersType int
-
-const (
-	bootstrapProvidersType providersType = iota
-	controlPlaneProvidersType
-	infrastructureProvidersType
-)
-
+// TODO (zerospiel): change to comma as part of the [Contracts support].
+//
+// [Contracts support]: https://github.com/Mirantis/hmc/issues/496
 const multiProviderSeparator = ";"
 
-func parseProviders[T any](providersGetter interface{ GetSpecProviders() ProvidersTupled }, typ providersType, annotations map[string]string, validationFn func(string) (T, error)) ([]ProviderTuple, error) {
-	pspec, anno := getProvidersSpecAnno(providersGetter, typ)
-
-	providers := annotations[anno]
+// TODO (zerospiel): move to the template-ctrl?
+func parseProviders[T any](providersGetter interface{ GetSpecProviders() ProvidersTupled }, annotations map[string]string, validationFn func(string) (T, error)) ([]ProviderTuple, error) {
+	providers := annotations[ChartAnnotationProviderName]
 	if len(providers) == 0 {
-		return pspec, nil
+		return providersGetter.GetSpecProviders(), nil
 	}
 
 	var (
+		ps = providersGetter.GetSpecProviders()
+
 		splitted = strings.Split(providers, multiProviderSeparator)
-		pstatus  = make([]ProviderTuple, 0, len(splitted)+len(pspec))
+		pstatus  = make([]ProviderTuple, 0, len(splitted)+len(ps))
 		merr     error
 	)
-	pstatus = append(pstatus, pspec...)
+	pstatus = append(pstatus, ps...)
 
 	for _, v := range splitted {
 		v = strings.TrimSpace(v)
@@ -126,17 +119,4 @@ func parseProviders[T any](providersGetter interface{ GetSpecProviders() Provide
 	}
 
 	return pstatus, merr
-}
-
-func getProvidersSpecAnno(providersGetter interface{ GetSpecProviders() ProvidersTupled }, typ providersType) (spec []ProviderTuple, annotation string) {
-	switch typ {
-	case bootstrapProvidersType:
-		return providersGetter.GetSpecProviders().BootstrapProviders, ChartAnnotationBootstrapProviders
-	case controlPlaneProvidersType:
-		return providersGetter.GetSpecProviders().ControlPlaneProviders, ChartAnnotationControlPlaneProviders
-	case infrastructureProvidersType:
-		return providersGetter.GetSpecProviders().InfrastructureProviders, ChartAnnotationInfraProviders
-	default:
-		return []ProviderTuple{}, ""
-	}
 }

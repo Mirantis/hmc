@@ -52,40 +52,19 @@ type ServiceTemplateStatus struct {
 // FillStatusWithProviders sets the status of the template with providers
 // either from the spec or from the given annotations.
 func (t *ServiceTemplate) FillStatusWithProviders(annotations map[string]string) error {
-	parseProviders := func(typ providersType) []string {
-		var (
-			pspec []string
-			anno  string
-		)
-		switch typ {
-		case bootstrapProvidersType:
-			pspec, anno = t.Spec.Providers.BootstrapProviders, ChartAnnotationBootstrapProviders
-		case controlPlaneProvidersType:
-			pspec, anno = t.Spec.Providers.ControlPlaneProviders, ChartAnnotationControlPlaneProviders
-		case infrastructureProvidersType:
-			pspec, anno = t.Spec.Providers.InfrastructureProviders, ChartAnnotationInfraProviders
-		}
-
-		providers := annotations[anno]
-		if len(providers) == 0 {
-			return pspec
-		}
-
+	providers := annotations[ChartAnnotationProviderName]
+	if len(providers) == 0 {
+		t.Status.Providers = t.Spec.Providers
+	} else {
 		splitted := strings.Split(providers, multiProviderSeparator)
-		result := make([]string, 0, len(splitted))
-		result = append(result, pspec...)
+		t.Status.Providers = make([]string, 0, len(splitted))
+		t.Status.Providers = append(t.Status.Providers, t.Spec.Providers...)
 		for _, v := range splitted {
 			if c := strings.TrimSpace(v); c != "" {
-				result = append(result, c)
+				t.Status.Providers = append(t.Status.Providers, c)
 			}
 		}
-
-		return result
 	}
-
-	t.Status.Providers.BootstrapProviders = parseProviders(bootstrapProvidersType)
-	t.Status.Providers.ControlPlaneProviders = parseProviders(controlPlaneProvidersType)
-	t.Status.Providers.InfrastructureProviders = parseProviders(infrastructureProvidersType)
 
 	kconstraint := annotations[ChartAnnotationKubernetesConstraint]
 	if t.Spec.KubernetesConstraint != "" {

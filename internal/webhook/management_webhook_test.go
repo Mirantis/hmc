@@ -46,7 +46,7 @@ func TestManagementValidateUpdate(t *testing.T) {
 	)
 
 	providerAwsDefaultTpl := v1alpha1.Provider{
-		Name: "aws",
+		Name: "infrastructure-aws",
 		Component: v1alpha1.Component{
 			Template: template.DefaultName,
 		},
