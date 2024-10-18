@@ -15,6 +15,8 @@
 package e2e
 
 import (
+	"fmt"
+
 	. "github.com/onsi/ginkgo/v2"
 )
 
@@ -25,5 +27,7 @@ var _ = Describe("Controller", Label("controller"), Ordered, func() {
 	// atleast smoke test the controller outside of the larger provider e2e
 	// tests.  When the controller actually has more specific tests this should
 	// be removed.
-	It("dummy It so that BeforeSuite/AfterSuite are ran", func() {})
+	It("dummy It so that BeforeSuite/AfterSuite are ran", func() {
+		_, _ = fmt.Printf("Running dummy test for controller")
+	})
 })
