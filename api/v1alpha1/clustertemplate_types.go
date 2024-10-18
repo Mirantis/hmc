@@ -54,19 +54,9 @@ type ClusterTemplateStatus struct {
 // either from the spec or from the given annotations.
 func (t *ClusterTemplate) FillStatusWithProviders(annotations map[string]string) error {
 	var err error
-	t.Status.Providers.BootstrapProviders, err = parseProviders(t, bootstrapProvidersType, annotations, semver.NewConstraint)
+	t.Status.Providers, err = parseProviders(t, annotations, semver.NewConstraint)
 	if err != nil {
-		return fmt.Errorf("failed to parse ClusterTemplate bootstrap providers: %v", err)
-	}
-
-	t.Status.Providers.ControlPlaneProviders, err = parseProviders(t, controlPlaneProvidersType, annotations, semver.NewConstraint)
-	if err != nil {
-		return fmt.Errorf("failed to parse ClusterTemplate controlPlane providers: %v", err)
-	}
-
-	t.Status.Providers.InfrastructureProviders, err = parseProviders(t, infrastructureProvidersType, annotations, semver.NewConstraint)
-	if err != nil {
-		return fmt.Errorf("failed to parse ClusterTemplate infrastructure providers: %v", err)
+		return fmt.Errorf("failed to parse ClusterTemplate providers: %v", err)
 	}
 
 	kversion := annotations[ChartAnnotationKubernetesVersion]

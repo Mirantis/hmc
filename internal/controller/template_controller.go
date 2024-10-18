@@ -344,13 +344,7 @@ func (r *ClusterTemplateReconciler) validateCompatibilityAttrs(ctx context.Conte
 	ctrl.LoggerFrom(ctx).V(1).Info("providers to check", "exposed", exposedProviders, "required", requiredProviders)
 
 	var merr error
-	missing, wrong, parsing := collectMissingProvidersWithWrongVersions("bootstrap", exposedProviders.BootstrapProviders, requiredProviders.BootstrapProviders)
-	merr = errors.Join(merr, missing, wrong, parsing)
-
-	missing, wrong, parsing = collectMissingProvidersWithWrongVersions("control plane", exposedProviders.ControlPlaneProviders, requiredProviders.ControlPlaneProviders)
-	merr = errors.Join(merr, missing, wrong, parsing)
-
-	missing, wrong, parsing = collectMissingProvidersWithWrongVersions("infrastructure", exposedProviders.InfrastructureProviders, requiredProviders.InfrastructureProviders)
+	missing, wrong, parsing := collectMissingProvidersWithWrongVersions(exposedProviders, requiredProviders)
 	merr = errors.Join(merr, missing, wrong, parsing)
 
 	if merr != nil {
@@ -363,7 +357,7 @@ func (r *ClusterTemplateReconciler) validateCompatibilityAttrs(ctx context.Conte
 
 // collectMissingProvidersWithWrongVersions returns collected errors for missing providers, providers with
 // wrong versions that do not satisfy the corresponding constraints, and parsing errors respectevly.
-func collectMissingProvidersWithWrongVersions(typ string, exposed, required []hmc.ProviderTuple) (missingErr, nonSatisfyingErr, parsingErr error) {
+func collectMissingProvidersWithWrongVersions(exposed, required []hmc.ProviderTuple) (missingErr, nonSatisfyingErr, parsingErr error) {
 	exposedSet := make(map[string]hmc.ProviderTuple, len(exposed))
 	for _, v := range exposed {
 		exposedSet[v.Name] = v
@@ -403,16 +397,16 @@ func collectMissingProvidersWithWrongVersions(typ string, exposed, required []hm
 
 	if len(missing) > 0 {
 		slices.Sort(missing)
-		missingErr = fmt.Errorf("one or more required %s providers are not deployed yet: %v", typ, missing)
+		missingErr = fmt.Errorf("one or more required providers are not deployed yet: %v", missing)
 	}
 
 	if len(nonSatisfying) > 0 {
 		slices.Sort(nonSatisfying)
-		nonSatisfyingErr = fmt.Errorf("one or more required %s providers does not satisfy constraints: %v", typ, nonSatisfying)
+		nonSatisfyingErr = fmt.Errorf("one or more required providers does not satisfy constraints: %v", nonSatisfying)
 	}
 
 	if parsingErr != nil {
-		parsingErr = fmt.Errorf("one or more errors parsing %s providers' versions and constraints : %v", typ, parsingErr)
+		parsingErr = fmt.Errorf("one or more errors parsing providers' versions and constraints : %v", parsingErr)
 	}
 
 	return missingErr, nonSatisfyingErr, parsingErr
