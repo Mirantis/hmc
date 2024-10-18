@@ -95,8 +95,13 @@ type ManagedClusterStatus struct {
 	// Currently compatible exact Kubernetes version of the cluster. Being set only if
 	// provided by the corresponding ClusterTemplate.
 	KubernetesVersion string `json:"k8sVersion,omitempty"`
-	// Conditions contains details for the current state of the ManagedCluster
+	// Conditions contains details for the current state of the ManagedCluster.
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
+
+	// AvailableUpgrades is the list of ClusterTemplate names to which
+	// this cluster can be upgraded. It can be an empty array, which means no upgrades are
+	// available.
+	AvailableUpgrades []AvailableUpgrade `json:"availableUpgrades,omitempty"`
 	// ObservedGeneration is the last observed generation.
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 }

@@ -211,6 +211,14 @@ func getCurrentTemplates(ctx context.Context, cl client.Client, templateKind, sy
 	return systemTemplates, managedTemplates, nil
 }
 
+func getTemplateNamesManagedByChain(chain templateChain) []string {
+	result := make([]string, 0, len(chain.GetSpec().SupportedTemplates))
+	for _, template := range chain.GetSpec().SupportedTemplates {
+		result = append(result, template.Name)
+	}
+	return result
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *ClusterTemplateChainReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
