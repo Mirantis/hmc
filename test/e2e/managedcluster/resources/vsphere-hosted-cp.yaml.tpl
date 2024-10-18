@@ -3,7 +3,7 @@ kind: ManagedCluster
 metadata:
   name: ${MANAGED_CLUSTER_NAME}
 spec:
-  template: vsphere-hosted-cp-0-0-1
+  template: vsphere-hosted-cp-0-0-2
   credential: ${VSPHERE_CLUSTER_IDENTITY}-cred
   config:
     controlPlaneNumber: ${CONTROL_PLANE_NUMBER:=1}

@@ -3,7 +3,7 @@ kind: ManagedCluster
 metadata:
   name: ${MANAGED_CLUSTER_NAME}
 spec:
-  template: aws-standalone-cp-0-0-1
+  template: aws-standalone-cp-0-0-2
   credential: ${AWS_CLUSTER_IDENTITY}-cred
   config:
     clusterIdentity:
@@ -17,5 +17,3 @@ spec:
       instanceType: ${AWS_INSTANCE_TYPE:=t3.small}
     worker:
       instanceType: ${AWS_INSTANCE_TYPE:=t3.small}
-
-
