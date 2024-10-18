@@ -19,6 +19,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	// MultiClusterServiceFinalizer is finalizer applied to MultiClusterService objects.
+	MultiClusterServiceFinalizer = "hmc.mirantis.com/multicluster-service"
+	// MultiClusterServiceKind is the string representation of a MultiClusterServiceKind.
+	MultiClusterServiceKind = "MultiClusterService"
+)
+
 // ServiceSpec represents a Service to be managed
 type ServiceSpec struct {
 	// Values is the helm values to be passed to the template.
@@ -52,11 +59,14 @@ type MultiClusterServiceSpec struct {
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=2147483646
 
-	// Priority sets the priority for the services defined in this spec.
+	// ServicesPriority sets the priority for the services defined in this spec.
 	// Higher value means higher priority and lower means lower.
 	// In case of conflict with another object managing the service,
 	// the one with higher priority will get to deploy its services.
-	Priority int32 `json:"priority,omitempty"`
+	ServicesPriority int32 `json:"servicesPriority,omitempty"`
+
+	// +kubebuilder:default:=false
+
 	// StopOnConflict specifies what to do in case of a conflict.
 	// E.g. If another object is already managing a service.
 	// By default the remaining services will be deployed even if conflict is detected.
