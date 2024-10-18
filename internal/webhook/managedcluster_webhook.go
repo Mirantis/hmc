@@ -16,7 +16,9 @@ package webhook
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/Masterminds/semver/v3"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -35,6 +37,8 @@ type ManagedClusterValidator struct {
 }
 
 const invalidManagedClusterMsg = "the ManagedCluster is invalid"
+
+var errClusterUpgradeForbidden = errors.New("cluster upgrade is forbidden")
 
 func (v *ManagedClusterValidator) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	v.Client = mgr.GetClient()
@@ -87,12 +91,21 @@ func (v *ManagedClusterValidator) ValidateUpdate(ctx context.Context, oldObj run
 	if !ok {
 		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected ManagedCluster but got a %T", newObj))
 	}
-	template, err := v.getManagedClusterTemplate(ctx, newManagedCluster.Namespace, newManagedCluster.Spec.Template)
+	oldTemplate := oldManagedCluster.Spec.Template
+	newTemplate := newManagedCluster.Spec.Template
+
+	template, err := v.getManagedClusterTemplate(ctx, newManagedCluster.Namespace, newTemplate)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %v", invalidManagedClusterMsg, err)
 	}
 
-	if oldManagedCluster.Spec.Template != newManagedCluster.Spec.Template {
+	if oldTemplate != newTemplate {
+		isUpgradeAvailable := vaidateAvailableUpgrade(oldManagedCluster, newTemplate)
+		if !isUpgradeAvailable {
+			msg := fmt.Sprintf("Cluster can't be upgraded from %s to %s. This upgrade sequence is not allowed", oldTemplate, newTemplate)
+			return admission.Warnings{msg}, errClusterUpgradeForbidden
+		}
+
 		if err := isTemplateValid(template); err != nil {
 			return nil, fmt.Errorf("%s: %v", invalidManagedClusterMsg, err)
 		}
@@ -107,6 +120,22 @@ func (v *ManagedClusterValidator) ValidateUpdate(ctx context.Context, oldObj run
 	}
 
 	return nil, nil
+}
+
+func vaidateAvailableUpgrade(oldManagedCluster *hmcv1alpha1.ManagedCluster, newTemplate string) bool {
+	if oldManagedCluster.Status.AvailableUpgrades == nil {
+		return true
+	}
+	availableUpgrades := *oldManagedCluster.Status.AvailableUpgrades
+	if len(availableUpgrades) == 0 {
+		return false
+	}
+	if slices.ContainsFunc(availableUpgrades, func(au hmcv1alpha1.AvailableUpgrade) bool {
+		return newTemplate == au.Name
+	}) {
+		return true
+	}
+	return false
 }
 
 func validateK8sCompatibility(ctx context.Context, cl client.Client, template *hmcv1alpha1.ClusterTemplate, mc *hmcv1alpha1.ManagedCluster) error {
