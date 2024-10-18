@@ -64,7 +64,7 @@ func WithProviders(providers []v1alpha1.Provider) Opt {
 	}
 }
 
-func WithAvailableProviders(providers v1alpha1.ProvidersTupled) Opt {
+func WithAvailableProviders(providers v1alpha1.Providers) Opt {
 	return func(p *v1alpha1.Management) {
 		p.Status.AvailableProviders = providers
 	}

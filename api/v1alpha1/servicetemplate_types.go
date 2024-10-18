@@ -57,11 +57,11 @@ func (t *ServiceTemplate) FillStatusWithProviders(annotations map[string]string)
 		t.Status.Providers = t.Spec.Providers
 	} else {
 		splitted := strings.Split(providers, multiProviderSeparator)
-		t.Status.Providers = make([]string, 0, len(splitted))
+		t.Status.Providers = make(Providers, 0, len(splitted))
 		t.Status.Providers = append(t.Status.Providers, t.Spec.Providers...)
 		for _, v := range splitted {
 			if c := strings.TrimSpace(v); c != "" {
-				t.Status.Providers = append(t.Status.Providers, c)
+				t.Status.Providers = append(t.Status.Providers, NameContract{Name: c})
 			}
 		}
 	}
