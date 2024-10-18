@@ -112,7 +112,20 @@ spec:
                   Providers represent requested CAPI providers.
                   Should be set if not present in the Helm chart metadata.
                 items:
-                  type: string
+                  description: Represents name of the provider with either an exact
+                    or constrained version in the SemVer format.
+                  properties:
+                    contractVersion:
+                      description: |-
+                        Compatibility restriction in the [CAPI provider format]. The value is an underscore-delimited (_) list of versions.
+                        Optional to be defined.
+
+                        [CAPI provider format]: https://cluster-api.sigs.k8s.io/developer/providers/contracts#api-version-labels
+                      type: string
+                    name:
+                      description: Name of the provider.
+                      type: string
+                  type: object
                 type: array
             required:
             - helm
@@ -172,7 +185,20 @@ spec:
               providers:
                 description: Providers represent requested CAPI providers.
                 items:
-                  type: string
+                  description: Represents name of the provider with either an exact
+                    or constrained version in the SemVer format.
+                  properties:
+                    contractVersion:
+                      description: |-
+                        Compatibility restriction in the [CAPI provider format]. The value is an underscore-delimited (_) list of versions.
+                        Optional to be defined.
+
+                        [CAPI provider format]: https://cluster-api.sigs.k8s.io/developer/providers/contracts#api-version-labels
+                      type: string
+                    name:
+                      description: Name of the provider.
+                      type: string
+                  type: object
                 type: array
               valid:
                 description: Valid indicates whether the template passed validation
