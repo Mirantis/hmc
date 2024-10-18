@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -29,11 +30,18 @@ import (
 	"github.com/Mirantis/hmc/api/v1alpha1"
 )
 
-type ClusterTemplateValidator struct {
+var errTemplateDeletionForbidden = errors.New("template deletion is forbidden")
+
+type TemplateValidator struct {
 	client.Client
+
+	SystemNamespace string
+	InjectUserInfo  func(*admission.Request)
 }
 
-var errTemplateDeletionForbidden = errors.New("template deletion is forbidden")
+type ClusterTemplateValidator struct {
+	TemplateValidator
+}
 
 func (v *ClusterTemplateValidator) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	v.Client = mgr.GetClient()
@@ -65,17 +73,12 @@ func (v *ClusterTemplateValidator) ValidateDelete(ctx context.Context, obj runti
 	if !ok {
 		return admission.Warnings{"Wrong object"}, apierrors.NewBadRequest(fmt.Sprintf("expected ClusterTemplate but got a %T", obj))
 	}
-
-	managedClusters := &v1alpha1.ManagedClusterList{}
-	if err := v.Client.List(ctx, managedClusters,
-		client.InNamespace(template.Namespace),
-		client.MatchingFields{v1alpha1.TemplateKey: template.Name},
-		client.Limit(1)); err != nil {
-		return nil, err
+	deletionAllowed, warnings, err := v.isTemplateDeletionAllowed(ctx, template)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check if the ClusterTemplate %s/%s is allowed to be deleted: %v", template.Namespace, template.Name, err)
 	}
-
-	if len(managedClusters.Items) > 0 {
-		return admission.Warnings{"The ClusterTemplate object can't be removed if ManagedCluster objects referencing it still exist"}, errTemplateDeletionForbidden
+	if !deletionAllowed {
+		return warnings, errTemplateDeletionForbidden
 	}
 
 	return nil, nil
@@ -87,7 +90,7 @@ func (*ClusterTemplateValidator) Default(context.Context, runtime.Object) error 
 }
 
 type ServiceTemplateValidator struct {
-	client.Client
+	TemplateValidator
 }
 
 func (v *ServiceTemplateValidator) SetupWebhookWithManager(mgr ctrl.Manager) error {
@@ -116,21 +119,17 @@ func (*ServiceTemplateValidator) ValidateUpdate(_ context.Context, _ runtime.Obj
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
 func (v *ServiceTemplateValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	tmpl, ok := obj.(*v1alpha1.ServiceTemplate)
+	template, ok := obj.(*v1alpha1.ServiceTemplate)
 	if !ok {
 		return admission.Warnings{"Wrong object"}, apierrors.NewBadRequest(fmt.Sprintf("expected ServiceTemplate but got a %T", obj))
 	}
 
-	managedClusters := &v1alpha1.ManagedClusterList{}
-	if err := v.Client.List(ctx, managedClusters,
-		client.InNamespace(tmpl.Namespace),
-		client.MatchingFields{v1alpha1.ServicesTemplateKey: tmpl.Name},
-		client.Limit(1)); err != nil {
-		return nil, err
+	deletionAllowed, warnings, err := v.isTemplateDeletionAllowed(ctx, template)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check if the ServiceTemplate %s/%s is allowed to be deleted: %v", template.Namespace, template.Name, err)
 	}
-
-	if len(managedClusters.Items) > 0 {
-		return admission.Warnings{"The ServiceTemplate object can't be removed if ManagedCluster objects referencing it still exist"}, errTemplateDeletionForbidden
+	if !deletionAllowed {
+		return warnings, errTemplateDeletionForbidden
 	}
 
 	return nil, nil
@@ -142,7 +141,7 @@ func (*ServiceTemplateValidator) Default(_ context.Context, _ runtime.Object) er
 }
 
 type ProviderTemplateValidator struct {
-	client.Client
+	TemplateValidator
 }
 
 func (v *ProviderTemplateValidator) SetupWebhookWithManager(mgr ctrl.Manager) error {
@@ -170,11 +169,129 @@ func (*ProviderTemplateValidator) ValidateUpdate(_ context.Context, _ runtime.Ob
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
-func (*ProviderTemplateValidator) ValidateDelete(_ context.Context, _ runtime.Object) (admission.Warnings, error) {
+func (v *ProviderTemplateValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+	template, ok := obj.(*v1alpha1.ProviderTemplate)
+	if !ok {
+		return admission.Warnings{"Wrong object"}, apierrors.NewBadRequest(fmt.Sprintf("expected ProviderTemplate but got a %T", obj))
+	}
+	deletionAllowed, warnings, err := v.isTemplateDeletionAllowed(ctx, template)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check if the ProviderTemplate %s is allowed to be deleted: %v", template.Name, err)
+	}
+	if !deletionAllowed {
+		return warnings, errTemplateDeletionForbidden
+	}
 	return nil, nil
 }
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type.
 func (*ProviderTemplateValidator) Default(_ context.Context, _ runtime.Object) error {
 	return nil
+}
+
+func (v TemplateValidator) isTemplateDeletionAllowed(ctx context.Context, template client.Object) (bool, admission.Warnings, error) {
+	req, err := admission.RequestFromContext(ctx)
+	if err != nil {
+		return false, nil, err
+	}
+	if v.InjectUserInfo != nil {
+		v.InjectUserInfo(&req)
+	}
+
+	triggeredByController := false
+	if serviceAccountIsEqual(req, os.Getenv(ServiceAccountEnvName)) {
+		triggeredByController = true
+	}
+
+	// Forbid template deletion if the template is managed by the TemplateManagement
+	if !triggeredByController && templateManagedByHMC(template) {
+		return false, nil, nil
+	}
+
+	// Forbid template deletion if it's in use by cluster or by chain
+	kind := template.GetObjectKind().GroupVersionKind().Kind
+	if kind == v1alpha1.ClusterTemplateKind || kind == v1alpha1.ServiceTemplateKind {
+		inUseByCluster, err := v.templateInUseByCluster(ctx, template)
+		if err != nil {
+			return false, nil, err
+		}
+		if inUseByCluster {
+			return false, admission.Warnings{fmt.Sprintf("The %s object can't be removed if ManagedCluster objects referencing it still exist", kind)}, nil
+		}
+		inUseByChain, err := v.templateInUseByTemplateChain(ctx, template)
+		if err != nil {
+			return false, nil, err
+		}
+		if inUseByChain {
+			return false, admission.Warnings{fmt.Sprintf("The %s object can't be removed if %s object referencing it exists", kind, getTemplateChainKind(template))}, nil
+		}
+	}
+	return true, nil, nil
+}
+
+func (v TemplateValidator) templateInUseByCluster(ctx context.Context, template client.Object) (bool, error) {
+	var key string
+	kind := template.GetObjectKind().GroupVersionKind().Kind
+
+	if kind == v1alpha1.ClusterTemplateKind {
+		key = v1alpha1.TemplateKey
+	}
+	if kind == v1alpha1.ServiceTemplateKind {
+		key = v1alpha1.ServicesTemplateKey
+	}
+
+	managedClusters := &v1alpha1.ManagedClusterList{}
+	if err := v.Client.List(ctx, managedClusters,
+		client.InNamespace(template.GetNamespace()),
+		client.MatchingFields{key: template.GetName()},
+		client.Limit(1)); err != nil {
+		return false, err
+	}
+	if len(managedClusters.Items) > 0 {
+		return true, nil
+	}
+	return false, nil
+}
+
+func (v TemplateValidator) templateInUseByTemplateChain(ctx context.Context, template client.Object) (bool, error) {
+	listOpts := []client.ListOption{
+		client.InNamespace(template.GetNamespace()),
+		client.MatchingFields{v1alpha1.SupportedTemplateKey: template.GetName()},
+		client.Limit(1),
+	}
+	templateChainKind := getTemplateChainKind(template)
+	if templateChainKind == v1alpha1.ClusterTemplateChainKind {
+		chainList := &v1alpha1.ClusterTemplateChainList{}
+		if err := v.Client.List(ctx, chainList, listOpts...); err != nil {
+			return false, err
+		}
+		if len(chainList.Items) > 0 {
+			return true, nil
+		}
+	}
+	if templateChainKind == v1alpha1.ServiceTemplateChainKind {
+		chainList := &v1alpha1.ServiceTemplateChainList{}
+		if err := v.Client.List(ctx, chainList, listOpts...); err != nil {
+			return false, err
+		}
+		if len(chainList.Items) > 0 {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func templateManagedByHMC(template client.Object) bool {
+	return template.GetLabels()[v1alpha1.HMCManagedLabelKey] == v1alpha1.HMCManagedLabelValue
+}
+
+func getTemplateChainKind(template client.Object) string {
+	kind := template.GetObjectKind().GroupVersionKind().Kind
+	if kind == v1alpha1.ClusterTemplateKind {
+		return v1alpha1.ClusterTemplateChainKind
+	}
+	if kind == v1alpha1.ServiceTemplateKind {
+		return v1alpha1.ServiceTemplateChainKind
+	}
+	return ""
 }
