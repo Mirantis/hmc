@@ -63,19 +63,9 @@ type ProviderTemplateStatus struct {
 // either from the spec or from the given annotations.
 func (t *ProviderTemplate) FillStatusWithProviders(annotations map[string]string) error {
 	var err error
-	t.Status.Providers.BootstrapProviders, err = parseProviders(t, bootstrapProvidersType, annotations, semver.NewVersion)
+	t.Status.Providers, err = parseProviders(t, annotations, semver.NewVersion)
 	if err != nil {
-		return fmt.Errorf("failed to parse ProviderTemplate bootstrap providers: %v", err)
-	}
-
-	t.Status.Providers.ControlPlaneProviders, err = parseProviders(t, controlPlaneProvidersType, annotations, semver.NewVersion)
-	if err != nil {
-		return fmt.Errorf("failed to parse ProviderTemplate controlPlane providers: %v", err)
-	}
-
-	t.Status.Providers.InfrastructureProviders, err = parseProviders(t, infrastructureProvidersType, annotations, semver.NewVersion)
-	if err != nil {
-		return fmt.Errorf("failed to parse ProviderTemplate infrastructure providers: %v", err)
+		return fmt.Errorf("failed to parse ProviderTemplate providers: %v", err)
 	}
 
 	if t.Name == CoreCAPIName {

@@ -35,16 +35,14 @@ func TrackManagedClusterCreate(id, managedClusterID, template string, dryRun boo
 	return TrackEvent(managedClusterCreateEvent, id, props)
 }
 
-func TrackManagedClusterHeartbeat(id, managedClusterID, clusterID, template, templateHelmChartVersion, infrastructureProvider, bootstrapProvider, controlPlaneProvider string) error {
+func TrackManagedClusterHeartbeat(id, managedClusterID, clusterID, template, templateHelmChartVersion string, providers []string) error {
 	props := map[string]any{
 		"hmcVersion":               build.Version,
 		"managedClusterID":         managedClusterID,
 		"clusterID":                clusterID,
 		"template":                 template,
 		"templateHelmChartVersion": templateHelmChartVersion,
-		"infrastructureProvider":   infrastructureProvider,
-		"bootstrapProvider":        bootstrapProvider,
-		"controlPlaneProvider":     controlPlaneProvider,
+		"providers":                providers,
 	}
 	return TrackEvent(managedClusterHeartbeatEvent, id, props)
 }

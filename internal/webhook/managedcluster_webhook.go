@@ -17,6 +17,7 @@ package webhook
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/Masterminds/semver/v3"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -212,9 +213,19 @@ func isTemplateValid(template *hmcv1alpha1.ClusterTemplate) error {
 }
 
 func (v *ManagedClusterValidator) validateCredential(ctx context.Context, managedCluster *hmcv1alpha1.ManagedCluster, template *hmcv1alpha1.ClusterTemplate) error {
-	infraProviders := template.Status.Providers.InfrastructureProviders
+	if len(template.Status.Providers) == 0 {
+		return fmt.Errorf("template %q has no providers defined", template.Name)
+	}
 
-	if len(infraProviders) == 0 {
+	hasInfra := false
+	for _, v := range template.Status.Providers {
+		if strings.HasPrefix(v.Name, "infrastructure-") {
+			hasInfra = true
+			break
+		}
+	}
+
+	if !hasInfra {
 		return fmt.Errorf("template %q has no infrastructure providers defined", template.Name)
 	}
 
@@ -232,31 +243,33 @@ func (v *ManagedClusterValidator) validateCredential(ctx context.Context, manage
 
 func isCredMatchTemplate(cred *hmcv1alpha1.Credential, template *hmcv1alpha1.ClusterTemplate) error {
 	idtyKind := cred.Spec.IdentityRef.Kind
-	infraProviders := template.Status.Providers.InfrastructureProviders
 
-	errMsg := func(idtyKind string, provider string) error {
+	errMsg := func(provider string) error {
 		return fmt.Errorf("wrong kind of the ClusterIdentity %q for provider %q", idtyKind, provider)
 	}
 
-	for _, provider := range infraProviders {
+	for _, provider := range template.Status.Providers {
 		switch provider.Name {
-		case "aws":
+		case "infrastructure-aws":
 			if idtyKind != "AWSClusterStaticIdentity" &&
 				idtyKind != "AWSClusterRoleIdentity" &&
 				idtyKind != "AWSClusterControllerIdentity" {
-				return errMsg(idtyKind, provider.Name)
+				return errMsg(provider.Name)
 			}
-		case "azure":
+		case "infrastructure-azure":
 			if idtyKind != "AzureClusterIdentity" {
-				return errMsg(idtyKind, provider.Name)
+				return errMsg(provider.Name)
 			}
-		case "vsphere":
+		case "infrastructure-vsphere":
 			if idtyKind != "VSphereClusterIdentity" {
-				return errMsg(idtyKind, provider.Name)
+				return errMsg(provider.Name)
 			}
 		default:
-			return fmt.Errorf("unsupported infrastructure provider %s", provider.Name)
+			if strings.HasPrefix(provider.Name, "infrastructure-") {
+				return fmt.Errorf("unsupported infrastructure provider %s", provider.Name)
+			}
 		}
 	}
+
 	return nil
 }
