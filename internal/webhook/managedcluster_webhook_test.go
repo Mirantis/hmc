@@ -21,11 +21,13 @@ import (
 
 	. "github.com/onsi/gomega"
 	admissionv1 "k8s.io/api/admission/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/Mirantis/hmc/api/v1alpha1"
+	"github.com/Mirantis/hmc/test/objects/credential"
 	"github.com/Mirantis/hmc/test/objects/managedcluster"
 	"github.com/Mirantis/hmc/test/objects/management"
 	"github.com/Mirantis/hmc/test/objects/template"
@@ -33,8 +35,9 @@ import (
 )
 
 var (
-	testTemplateName = "template-test"
-	testNamespace    = "test"
+	testTemplateName   = "template-test"
+	testCredentialName = "cred-test"
+	testNamespace      = "test"
 
 	mgmt = management.NewManagement(
 		management.WithAvailableProviders(v1alpha1.ProvidersTupled{
@@ -42,6 +45,16 @@ var (
 			BootstrapProviders:      []v1alpha1.ProviderTuple{{Name: "k0s"}},
 			ControlPlaneProviders:   []v1alpha1.ProviderTuple{{Name: "k0s"}},
 		}),
+	)
+
+	cred = credential.NewCredential(
+		credential.WithName(testCredentialName),
+		credential.WithState(v1alpha1.CredentialReady),
+		credential.WithIdentityRef(
+			&corev1.ObjectReference{
+				Kind: "AWSClusterStaticIdentity",
+				Name: "awsclid",
+			}),
 	)
 
 	createAndUpdateTests = []struct {
@@ -57,10 +70,14 @@ var (
 			err:            "the ManagedCluster is invalid: clustertemplates.hmc.mirantis.com \"\" not found",
 		},
 		{
-			name:           "should fail if the ClusterTemplate is not found in the ManagedCluster's namespace",
-			managedCluster: managedcluster.NewManagedCluster(managedcluster.WithClusterTemplate(testTemplateName)),
+			name: "should fail if the ClusterTemplate is not found in the ManagedCluster's namespace",
+			managedCluster: managedcluster.NewManagedCluster(
+				managedcluster.WithClusterTemplate(testTemplateName),
+				managedcluster.WithCredential(testCredentialName),
+			),
 			existingObjects: []runtime.Object{
 				mgmt,
+				cred,
 				template.NewClusterTemplate(
 					template.WithName(testTemplateName),
 					template.WithNamespace(testNamespace),
@@ -69,10 +86,14 @@ var (
 			err: fmt.Sprintf("the ManagedCluster is invalid: clustertemplates.hmc.mirantis.com \"%s\" not found", testTemplateName),
 		},
 		{
-			name:           "should fail if the cluster template was found but is invalid (some validation error)",
-			managedCluster: managedcluster.NewManagedCluster(managedcluster.WithClusterTemplate(testTemplateName)),
+			name: "should fail if the cluster template was found but is invalid (some validation error)",
+			managedCluster: managedcluster.NewManagedCluster(
+				managedcluster.WithClusterTemplate(testTemplateName),
+				managedcluster.WithCredential(testCredentialName),
+			),
 			existingObjects: []runtime.Object{
 				mgmt,
+				cred,
 				template.NewClusterTemplate(
 					template.WithName(testTemplateName),
 					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{
@@ -84,12 +105,21 @@ var (
 			err: "the ManagedCluster is invalid: the template is not valid: validation error example",
 		},
 		{
-			name:           "should succeed",
-			managedCluster: managedcluster.NewManagedCluster(managedcluster.WithClusterTemplate(testTemplateName)),
+			name: "should succeed",
+			managedCluster: managedcluster.NewManagedCluster(
+				managedcluster.WithClusterTemplate(testTemplateName),
+				managedcluster.WithCredential(testCredentialName),
+			),
 			existingObjects: []runtime.Object{
 				mgmt,
+				cred,
 				template.NewClusterTemplate(
 					template.WithName(testTemplateName),
+					template.WithProvidersStatus(v1alpha1.ProvidersTupled{
+						InfrastructureProviders: []v1alpha1.ProviderTuple{{Name: "aws"}},
+						BootstrapProviders:      []v1alpha1.ProviderTuple{{Name: "k0s"}},
+						ControlPlaneProviders:   []v1alpha1.ProviderTuple{{Name: "k0s"}},
+					}),
 					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
 				),
 			},
@@ -101,6 +131,7 @@ var (
 				managedcluster.WithServiceTemplate(testTemplateName),
 			),
 			existingObjects: []runtime.Object{
+				cred,
 				management.NewManagement(management.WithAvailableProviders(v1alpha1.ProvidersTupled{
 					InfrastructureProviders: []v1alpha1.ProviderTuple{{Name: "aws", VersionOrConstraint: "v1.0.0"}},
 					BootstrapProviders:      []v1alpha1.ProviderTuple{{Name: "k0s", VersionOrConstraint: "v1.0.0"}},
@@ -119,6 +150,79 @@ var (
 			},
 			err:      fmt.Sprintf(`failed to validate k8s compatibility: k8s version v1.30.0 of the ManagedCluster default/%s does not satisfy constrained version <1.30 from the ServiceTemplate default/%s`, managedcluster.DefaultName, testTemplateName),
 			warnings: admission.Warnings{"Failed to validate k8s version compatibility with ServiceTemplates"},
+		},
+		{
+			name:           "should fail if the credential is unset",
+			managedCluster: managedcluster.NewManagedCluster(managedcluster.WithClusterTemplate(testTemplateName)),
+			existingObjects: []runtime.Object{
+				mgmt,
+				template.NewClusterTemplate(
+					template.WithName(testTemplateName),
+					template.WithProvidersStatus(v1alpha1.ProvidersTupled{
+						InfrastructureProviders: []v1alpha1.ProviderTuple{{Name: "aws"}},
+						BootstrapProviders:      []v1alpha1.ProviderTuple{{Name: "k0s"}},
+						ControlPlaneProviders:   []v1alpha1.ProviderTuple{{Name: "k0s"}},
+					}),
+					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
+				),
+			},
+			err: "the ManagedCluster is invalid: credentials.hmc.mirantis.com \"\" not found",
+		},
+		{
+			name: "should fail if credential is not Ready",
+			managedCluster: managedcluster.NewManagedCluster(
+				managedcluster.WithClusterTemplate(testTemplateName),
+				managedcluster.WithCredential(testCredentialName),
+			),
+			existingObjects: []runtime.Object{
+				mgmt,
+				credential.NewCredential(
+					credential.WithName(testCredentialName),
+					credential.WithState(v1alpha1.CredentialNotFound),
+					credential.WithIdentityRef(
+						&corev1.ObjectReference{
+							Kind: "AWSClusterStaticIdentity",
+							Name: "awsclid",
+						}),
+				),
+				template.NewClusterTemplate(
+					template.WithName(testTemplateName),
+					template.WithProvidersStatus(v1alpha1.ProvidersTupled{
+						InfrastructureProviders: []v1alpha1.ProviderTuple{{Name: "aws"}},
+						BootstrapProviders:      []v1alpha1.ProviderTuple{{Name: "k0s"}},
+						ControlPlaneProviders:   []v1alpha1.ProviderTuple{{Name: "k0s"}},
+					}),
+					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
+				),
+			},
+			err: "the ManagedCluster is invalid: credential is not Ready",
+		},
+		{
+			name: "should fail if credential and template providers doesn't match",
+			managedCluster: managedcluster.NewManagedCluster(
+				managedcluster.WithClusterTemplate(testTemplateName),
+				managedcluster.WithCredential(testCredentialName),
+			),
+			existingObjects: []runtime.Object{
+				cred,
+				management.NewManagement(
+					management.WithAvailableProviders(v1alpha1.ProvidersTupled{
+						InfrastructureProviders: []v1alpha1.ProviderTuple{{Name: "azure"}},
+						BootstrapProviders:      []v1alpha1.ProviderTuple{{Name: "k0s"}},
+						ControlPlaneProviders:   []v1alpha1.ProviderTuple{{Name: "k0s"}},
+					}),
+				),
+				template.NewClusterTemplate(
+					template.WithName(testTemplateName),
+					template.WithProvidersStatus(v1alpha1.ProvidersTupled{
+						InfrastructureProviders: []v1alpha1.ProviderTuple{{Name: "azure"}},
+						BootstrapProviders:      []v1alpha1.ProviderTuple{{Name: "k0s"}},
+						ControlPlaneProviders:   []v1alpha1.ProviderTuple{{Name: "k0s"}},
+					}),
+					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
+				),
+			},
+			err: "the ManagedCluster is invalid: wrong kind of the ClusterIdentity \"AWSClusterStaticIdentity\" for provider \"azure\"",
 		},
 	}
 )
