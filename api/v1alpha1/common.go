@@ -71,7 +71,15 @@ func SetupIndexers(ctx context.Context, mgr ctrl.Manager) error {
 		return err
 	}
 
-	return SetupManagedClusterServicesIndexer(ctx, mgr)
+	if err := SetupManagedClusterServicesIndexer(ctx, mgr); err != nil {
+		return err
+	}
+
+	if err := SetupClusterTemplateChainIndexer(ctx, mgr); err != nil {
+		return err
+	}
+
+	return SetupServiceTemplateChainIndexer(ctx, mgr)
 }
 
 const TemplateKey = ".spec.template"
@@ -120,4 +128,33 @@ func ExtractServiceTemplateName(rawObj client.Object) []string {
 	}
 
 	return templates
+}
+
+const SupportedTemplateKey = ".spec.supportedTemplates[].Name"
+
+func SetupClusterTemplateChainIndexer(ctx context.Context, mgr ctrl.Manager) error {
+	return mgr.GetFieldIndexer().IndexField(ctx, &ClusterTemplateChain{}, SupportedTemplateKey, ExtractSupportedTemplatesNames)
+}
+
+func SetupServiceTemplateChainIndexer(ctx context.Context, mgr ctrl.Manager) error {
+	return mgr.GetFieldIndexer().IndexField(ctx, &ServiceTemplateChain{}, SupportedTemplateKey, ExtractSupportedTemplatesNames)
+}
+
+func ExtractSupportedTemplatesNames(rawObj client.Object) []string {
+	chainSpec := TemplateChainSpec{}
+	switch chain := rawObj.(type) {
+	case *ClusterTemplateChain:
+		chainSpec = chain.Spec
+	case *ServiceTemplateChain:
+		chainSpec = chain.Spec
+	default:
+		return nil
+	}
+
+	supportedTemplates := make([]string, 0, len(chainSpec.SupportedTemplates))
+	for _, t := range chainSpec.SupportedTemplates {
+		supportedTemplates = append(supportedTemplates, t.Name)
+	}
+
+	return supportedTemplates
 }

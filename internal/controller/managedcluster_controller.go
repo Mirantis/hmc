@@ -1008,22 +1008,31 @@ func (r *ManagedClusterReconciler) setAvailableUpgrades(ctx context.Context, man
 	if template == nil {
 		return nil
 	}
-	chainName := template.Labels[HMCManagedByChainLabelKey]
-	if chainName == "" {
-		return nil
-	}
-	chain := &hmc.ClusterTemplateChain{}
-	err := r.Get(ctx, types.NamespacedName{Namespace: template.Namespace, Name: chainName}, chain)
+	chains := &hmc.ClusterTemplateChainList{}
+	err := r.List(ctx, chains,
+		client.InNamespace(template.Namespace),
+		client.MatchingFields{hmc.SupportedTemplateKey: template.GetName()},
+	)
 	if err != nil {
 		return err
 	}
 
-	for _, supportedTemplate := range chain.Spec.SupportedTemplates {
-		if supportedTemplate.Name == template.Name {
-			managedCluster.Status.AvailableUpgrades = supportedTemplate.AvailableUpgrades
-			return nil
+	availableUpgradesMap := make(map[string]hmc.AvailableUpgrade)
+	for _, chain := range chains.Items {
+		for _, supportedTemplate := range chain.Spec.SupportedTemplates {
+			if supportedTemplate.Name == template.Name {
+				for _, availableUpgrade := range supportedTemplate.AvailableUpgrades {
+					availableUpgradesMap[availableUpgrade.Name] = availableUpgrade
+				}
+			}
 		}
 	}
+	availableUpgrades := make([]hmc.AvailableUpgrade, 0, len(availableUpgradesMap))
+	for _, availableUpgrade := range availableUpgradesMap {
+		availableUpgrades = append(availableUpgrades, availableUpgrade)
+	}
+
+	managedCluster.Status.AvailableUpgrades = availableUpgrades
 	return nil
 }
 
