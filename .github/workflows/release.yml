@@ -14,6 +14,10 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Set version
+        run: |
+          TAG=${{ github.ref_name }}
+          echo "VERSION=${TAG#v}" >> $GITHUB_ENV
       - name: Set up Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -28,17 +32,17 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           build-args: |
-            LD_FLAGS=-s -w -X github.com/Mirantis/hmc/internal/build.Version=${{ github.ref_name }} -X github.com/Mirantis/hmc/internal/telemetry.segmentToken=${{ secrets.SEGMENT_TOKEN }}
+            LD_FLAGS=-s -w -X github.com/Mirantis/hmc/internal/build.Version=${{ env.VERSION }} -X github.com/Mirantis/hmc/internal/telemetry.segmentToken=${{ secrets.SEGMENT_TOKEN }}
           context: .
           platforms: linux/amd64,linux/arm64
           tags: |
-            ghcr.io/mirantis/hmc/controller:${{ github.ref_name }}
+            ghcr.io/mirantis/hmc/controller:${{ env.VERSION }}
           push: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Prepare HMC chart
-        run: VERSION="${{ github.ref_name }}" make hmc-chart-release
+        run: VERSION="${{ env.VERSION }}" make hmc-chart-release
       - name: Push charts to GHCR
         run: REGISTRY_REPO="oci://ghcr.io/mirantis/hmc/charts" make helm-push
 
@@ -49,7 +53,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
-          prerelease: ${{ contains(github.ref_name, '-') }}
+          prerelease: ${{ contains(env.VERSION, '-') }}
           files: |
             dist/install.yaml
             templates/provider/hmc-templates/files/release.yaml
