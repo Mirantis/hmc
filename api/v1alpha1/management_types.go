@@ -93,7 +93,7 @@ type ManagementStatus struct {
 	Release string `json:"release,omitempty"`
 	// AvailableProviders holds all CAPI providers available along with
 	// their exact compatibility versions if specified in ProviderTemplates on the Management cluster.
-	AvailableProviders ProvidersTupled `json:"availableProviders,omitempty"`
+	AvailableProviders Providers `json:"availableProviders,omitempty"`
 	// ObservedGeneration is the last observed generation.
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 }

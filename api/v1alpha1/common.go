@@ -36,29 +36,20 @@ const (
 )
 
 type (
-	// TODO (zerospiel): unite with the versioned as part of the [Contracts support].
+	// Holds different types of CAPI providers with [compatible contract versions].
 	//
-	// [Contracts support]: https://github.com/Mirantis/hmc/issues/496
-
-	// Providers hold different types of CAPI providers.
-	Providers []string
-
-	// Holds different types of CAPI providers with either
-	// an exact or constrained version in the SemVer format. The requirement
-	// is determined by a consumer of this type.
-
-	// Holds different types of CAPI providers with either
-	// an exact or constrained version in the SemVer format. The requirement
-	// is determined by a consumer of this type.
-	ProvidersTupled []ProviderTuple
+	// [compatible contract versions]: https://cluster-api.sigs.k8s.io/developer/providers/contracts
+	Providers []NameContract
 
 	// Represents name of the provider with either an exact or constrained version in the SemVer format.
-	ProviderTuple struct {
+	NameContract struct {
 		// Name of the provider.
 		Name string `json:"name,omitempty"`
-		// Compatibility restriction in the SemVer format (exact or constrained version).
+		// Compatibility restriction in the [CAPI provider format]. The value is an underscore-delimited (_) list of versions.
 		// Optional to be defined.
-		VersionOrConstraint string `json:"versionOrConstraint,omitempty"`
+		//
+		// [CAPI provider format]: https://cluster-api.sigs.k8s.io/developer/providers/contracts#api-version-labels
+		ContractVersion string `json:"contractVersion,omitempty"`
 	}
 )
 
@@ -137,7 +128,7 @@ func ExtractServiceTemplateName(rawObj client.Object) []string {
 }
 
 // Names flattens the underlaying slice to provider names slice and returns it.
-func (c ProvidersTupled) Names() []string {
+func (c Providers) Names() []string {
 	nn := make([]string, len(c))
 	for i, v := range c {
 		nn[i] = v.Name

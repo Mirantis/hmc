@@ -109,20 +109,22 @@ spec:
                 type: string
               providers:
                 description: |-
-                  Providers represent required CAPI providers with constrained compatibility versions set.
+                  Providers represent required CAPI providers with supported contract versions.
                   Should be set if not present in the Helm chart metadata.
                   Compatibility attributes are optional to be defined.
                 items:
                   description: Represents name of the provider with either an exact
                     or constrained version in the SemVer format.
                   properties:
+                    contractVersion:
+                      description: |-
+                        Compatibility restriction in the [CAPI provider format]. The value is an underscore-delimited (_) list of versions.
+                        Optional to be defined.
+
+                        [CAPI provider format]: https://cluster-api.sigs.k8s.io/developer/providers/contracts#api-version-labels
+                      type: string
                     name:
                       description: Name of the provider.
-                      type: string
-                    versionOrConstraint:
-                      description: |-
-                        Compatibility restriction in the SemVer format (exact or constrained version).
-                        Optional to be defined.
                       type: string
                   type: object
                 type: array
@@ -183,19 +185,21 @@ spec:
                 type: integer
               providers:
                 description: |-
-                  Providers represent required CAPI providers with constrained compatibility versions set
+                  Providers represent required CAPI providers with supported contract versions
                   if the latter has been given.
                 items:
                   description: Represents name of the provider with either an exact
                     or constrained version in the SemVer format.
                   properties:
+                    contractVersion:
+                      description: |-
+                        Compatibility restriction in the [CAPI provider format]. The value is an underscore-delimited (_) list of versions.
+                        Optional to be defined.
+
+                        [CAPI provider format]: https://cluster-api.sigs.k8s.io/developer/providers/contracts#api-version-labels
+                      type: string
                     name:
                       description: Name of the provider.
-                      type: string
-                    versionOrConstraint:
-                      description: |-
-                        Compatibility restriction in the SemVer format (exact or constrained version).
-                        Optional to be defined.
                       type: string
                   type: object
                 type: array

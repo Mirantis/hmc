@@ -107,7 +107,7 @@ func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Manag
 	}
 
 	var errs error
-	detectedProviders := hmc.ProvidersTupled{}
+	detectedProviders := hmc.Providers{}
 	detectedComponents := make(map[string]hmc.ComponentStatus)
 
 	err := r.enableAdditionalComponents(ctx, management)
@@ -414,10 +414,10 @@ func (r *ManagementReconciler) enableAdditionalComponents(ctx context.Context, m
 
 func updateComponentsStatus(
 	components map[string]hmc.ComponentStatus,
-	providers *hmc.ProvidersTupled,
+	providers *hmc.Providers,
 	componentName string,
 	templateName string,
-	templateProviders hmc.ProvidersTupled,
+	templateProviders hmc.Providers,
 	err string,
 ) {
 	components[componentName] = hmc.ComponentStatus{
@@ -426,9 +426,13 @@ func updateComponentsStatus(
 		Template: templateName,
 	}
 
+	// TODO: do we actually need to partially include supported versions? The validation is taking
+	// place only when the actual provider template had been created, so either we have to perform
+	// validation here in the controller or change templates status via the validation webhook.
+	// Or just use the fixed versions, so no partially supported contracts would exist.
 	if err == "" {
 		*providers = append(*providers, templateProviders...)
-		slices.SortFunc(*providers, func(a, b hmc.ProviderTuple) int { return strings.Compare(a.Name, b.Name) })
+		slices.SortFunc(*providers, func(a, b hmc.NameContract) int { return strings.Compare(a.Name, b.Name) })
 		*providers = slices.Compact(*providers)
 	}
 }

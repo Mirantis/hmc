@@ -20,9 +20,9 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	helmcontrollerv2 "github.com/fluxcd/helm-controller/api/v2"
 	sourcev1 "github.com/fluxcd/source-controller/api/v1"
 	"helm.sh/helm/v3/pkg/chart"
@@ -344,8 +344,8 @@ func (r *ClusterTemplateReconciler) validateCompatibilityAttrs(ctx context.Conte
 	ctrl.LoggerFrom(ctx).V(1).Info("providers to check", "exposed", exposedProviders, "required", requiredProviders)
 
 	var merr error
-	missing, wrong, parsing := collectMissingProvidersWithWrongVersions(exposedProviders, requiredProviders)
-	merr = errors.Join(merr, missing, wrong, parsing)
+	missing, wrong := collectMissingProvidersWithWrongVersions(exposedProviders, requiredProviders)
+	merr = errors.Join(merr, missing, wrong)
 
 	if merr != nil {
 		_ = r.updateStatus(ctx, template, merr.Error())
@@ -355,43 +355,36 @@ func (r *ClusterTemplateReconciler) validateCompatibilityAttrs(ctx context.Conte
 	return r.updateStatus(ctx, template, "")
 }
 
-// collectMissingProvidersWithWrongVersions returns collected errors for missing providers, providers with
-// wrong versions that do not satisfy the corresponding constraints, and parsing errors respectevly.
-func collectMissingProvidersWithWrongVersions(exposed, required []hmc.ProviderTuple) (missingErr, nonSatisfyingErr, parsingErr error) {
-	exposedSet := make(map[string]hmc.ProviderTuple, len(exposed))
+// collectMissingProvidersWithWrongVersions returns collected errors for missing providers and providers with
+// unsatisfying contract versions.
+func collectMissingProvidersWithWrongVersions(exposed, required []hmc.NameContract) (missingErr, nonSatisfyingErr error) {
+	exposed2Contracts := make(map[string][]string, len(exposed))
 	for _, v := range exposed {
-		exposedSet[v.Name] = v
+		if v.ContractVersion != "" {
+			exposed2Contracts[v.Name] = strings.Split(v.ContractVersion, "_")
+		} else {
+			exposed2Contracts[v.Name] = nil
+		}
 	}
 
 	var missing, nonSatisfying []string
-	for _, reqWithConstraint := range required {
-		exposedWithExactVer, ok := exposedSet[reqWithConstraint.Name]
+	for _, requiredProvider := range required {
+		exposedContracts, ok := exposed2Contracts[requiredProvider.Name]
 		if !ok {
-			missing = append(missing, reqWithConstraint.Name)
+			missing = append(missing, requiredProvider.Name)
 			continue
 		}
 
-		version := exposedWithExactVer.VersionOrConstraint
-		constraint := reqWithConstraint.VersionOrConstraint
-
-		if version == "" || constraint == "" {
+		if len(exposedContracts) == 0 || requiredProvider.ContractVersion == "" {
 			continue
 		}
 
-		exactVer, err := semver.NewVersion(version)
-		if err != nil {
-			parsingErr = errors.Join(parsingErr, fmt.Errorf("failed to parse version %s of the provider %s: %w", version, exposedWithExactVer.Name, err))
-			continue
-		}
+		requiredContracts := strings.Split(requiredProvider.ContractVersion, "_") // must be only one, but better to check twice
 
-		requiredC, err := semver.NewConstraint(constraint)
-		if err != nil {
-			parsingErr = errors.Join(parsingErr, fmt.Errorf("failed to parse constraint %s of the provider %s: %w", version, exposedWithExactVer.Name, err))
-			continue
-		}
-
-		if !requiredC.Check(exactVer) {
-			nonSatisfying = append(nonSatisfying, fmt.Sprintf("%s %s !~ %s", reqWithConstraint.Name, version, constraint))
+		for _, rc := range requiredContracts {
+			if !slices.Contains(exposedContracts, rc) {
+				nonSatisfying = append(nonSatisfying, fmt.Sprintf("%s %s !~ %v", requiredProvider.Name, rc, exposedContracts))
+			}
 		}
 	}
 
@@ -405,11 +398,7 @@ func collectMissingProvidersWithWrongVersions(exposed, required []hmc.ProviderTu
 		nonSatisfyingErr = fmt.Errorf("one or more required providers does not satisfy constraints: %v", nonSatisfying)
 	}
 
-	if parsingErr != nil {
-		parsingErr = fmt.Errorf("one or more errors parsing providers' versions and constraints : %v", parsingErr)
-	}
-
-	return missingErr, nonSatisfyingErr, parsingErr
+	return missingErr, nonSatisfyingErr
 }
 
 // SetupWithManager sets up the controller with the Manager.
