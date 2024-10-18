@@ -15,8 +15,6 @@
 package v1alpha1
 
 import (
-	"errors"
-	"fmt"
 	"strings"
 
 	helmcontrollerv2 "github.com/fluxcd/helm-controller/api/v2"
@@ -74,49 +72,36 @@ type TemplateValidationStatus struct {
 	Valid bool `json:"valid"`
 }
 
-// TODO (zerospiel): change to comma as part of the [Contracts support].
-//
-// [Contracts support]: https://github.com/Mirantis/hmc/issues/496
-const multiProviderSeparator = ";"
+const multiProviderSeparator = ","
 
-// TODO (zerospiel): move to the template-ctrl?
-func parseProviders[T any](providersGetter interface{ GetSpecProviders() ProvidersTupled }, annotations map[string]string, validationFn func(string) (T, error)) ([]ProviderTuple, error) {
+func parseProviders(providersGetter interface{ GetSpecProviders() Providers }, annotations map[string]string) []NameContract {
 	providers := annotations[ChartAnnotationProviderName]
 	if len(providers) == 0 {
-		return providersGetter.GetSpecProviders(), nil
+		return providersGetter.GetSpecProviders()
 	}
 
 	var (
 		ps = providersGetter.GetSpecProviders()
 
 		splitted = strings.Split(providers, multiProviderSeparator)
-		pstatus  = make([]ProviderTuple, 0, len(splitted)+len(ps))
-		merr     error
+		pstatus  = make([]NameContract, 0, len(splitted)+len(ps))
 	)
 	pstatus = append(pstatus, ps...)
 
 	for _, v := range splitted {
 		v = strings.TrimSpace(v)
-		nVerOrC := strings.SplitN(v, " ", 2)
-		if len(nVerOrC) == 0 { // BCE (bound check elimination)
+		nameContract := strings.SplitN(v, " ", 2)
+		if len(nameContract) == 0 { // BCE (bound check elimination)
 			continue
 		}
 
-		n := ProviderTuple{Name: nVerOrC[0]}
-		if len(nVerOrC) < 2 {
-			pstatus = append(pstatus, n)
-			continue
+		n := NameContract{Name: nameContract[0]}
+		if len(nameContract) > 1 {
+			n.ContractVersion = nameContract[1]
 		}
 
-		ver := strings.TrimSpace(nVerOrC[1])
-		if _, err := validationFn(ver); err != nil { // validation
-			merr = errors.Join(merr, fmt.Errorf("failed to parse %s in the %s: %v", ver, v, err))
-			continue
-		}
-
-		n.VersionOrConstraint = ver
 		pstatus = append(pstatus, n)
 	}
 
-	return pstatus, merr
+	return pstatus
 }

@@ -33,19 +33,19 @@ type ClusterTemplateSpec struct {
 	Helm HelmSpec `json:"helm"`
 	// Kubernetes exact version in the SemVer format provided by this ClusterTemplate.
 	KubernetesVersion string `json:"k8sVersion,omitempty"`
-	// Providers represent required CAPI providers with constrained compatibility versions set.
+	// Providers represent required CAPI providers with supported contract versions.
 	// Should be set if not present in the Helm chart metadata.
 	// Compatibility attributes are optional to be defined.
-	Providers ProvidersTupled `json:"providers,omitempty"`
+	Providers Providers `json:"providers,omitempty"`
 }
 
 // ClusterTemplateStatus defines the observed state of ClusterTemplate
 type ClusterTemplateStatus struct {
 	// Kubernetes exact version in the SemVer format provided by this ClusterTemplate.
 	KubernetesVersion string `json:"k8sVersion,omitempty"`
-	// Providers represent required CAPI providers with constrained compatibility versions set
+	// Providers represent required CAPI providers with supported contract versions
 	// if the latter has been given.
-	Providers ProvidersTupled `json:"providers,omitempty"`
+	Providers Providers `json:"providers,omitempty"`
 
 	TemplateStatusCommon `json:",inline"`
 }
@@ -53,11 +53,7 @@ type ClusterTemplateStatus struct {
 // FillStatusWithProviders sets the status of the template with providers
 // either from the spec or from the given annotations.
 func (t *ClusterTemplate) FillStatusWithProviders(annotations map[string]string) error {
-	var err error
-	t.Status.Providers, err = parseProviders(t, annotations, semver.NewConstraint)
-	if err != nil {
-		return fmt.Errorf("failed to parse ClusterTemplate providers: %v", err)
-	}
+	t.Status.Providers = parseProviders(t, annotations)
 
 	kversion := annotations[ChartAnnotationKubernetesVersion]
 	if t.Spec.KubernetesVersion != "" {
@@ -77,7 +73,7 @@ func (t *ClusterTemplate) FillStatusWithProviders(annotations map[string]string)
 }
 
 // GetSpecProviders returns .spec.providers of the Template.
-func (t *ClusterTemplate) GetSpecProviders() ProvidersTupled {
+func (t *ClusterTemplate) GetSpecProviders() Providers {
 	return t.Spec.Providers
 }
 
