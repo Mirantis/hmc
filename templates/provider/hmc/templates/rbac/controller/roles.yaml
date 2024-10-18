@@ -171,6 +171,7 @@ rules:
   - config.projectsveltos.io
   resources:
   - profiles
+  - clusterprofiles
   verbs: {{ include "rbac.editorVerbs" . | nindent 4 }}
 - apiGroups:
   - hmc.mirantis.com

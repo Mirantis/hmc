@@ -1,0 +1,13 @@
+apiVersion: hmc.mirantis.com/v1alpha1
+kind: MultiClusterService
+metadata:
+  name: global-ingress
+spec:
+  servicesPriority: 1000
+  clusterSelector:
+    matchLabels:
+      app.kubernetes.io/managed-by: Helm
+  services:
+    - template: ingress-nginx-4-11-3
+      name: ingress-nginx
+      namespace: ingress-nginx
