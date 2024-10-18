@@ -1,5 +1,6 @@
 NAMESPACE ?= hmc-system
-VERSION ?= $(patsubst v%,%,$(shell git describe --tags --always))
+VERSION ?= $(shell git describe --tags --always)
+VERSION := $(patsubst v%,%,$(VERSION))
 FQDN_VERSION = $(subst .,-,$(VERSION))
 # Image URL to use all building/pushing image targets
 IMG ?= hmc/controller:latest
