@@ -39,7 +39,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -1011,22 +1010,31 @@ func (r *ManagedClusterReconciler) setAvailableUpgrades(ctx context.Context, man
 	if template == nil {
 		return nil
 	}
-	chainName := template.Labels[HMCManagedByChainLabelKey]
-	if chainName == "" {
-		return nil
-	}
-	chain := &hmc.ClusterTemplateChain{}
-	err := r.Get(ctx, types.NamespacedName{Namespace: template.Namespace, Name: chainName}, chain)
+	chains := &hmc.ClusterTemplateChainList{}
+	err := r.List(ctx, chains,
+		client.InNamespace(template.Namespace),
+		client.MatchingFields{hmc.SupportedTemplateKey: template.GetName()},
+	)
 	if err != nil {
 		return err
 	}
 
-	for _, supportedTemplate := range chain.Spec.SupportedTemplates {
-		if supportedTemplate.Name == template.Name {
-			managedCluster.Status.AvailableUpgrades = supportedTemplate.AvailableUpgrades
-			return nil
+	availableUpgradesMap := make(map[string]hmc.AvailableUpgrade)
+	for _, chain := range chains.Items {
+		for _, supportedTemplate := range chain.Spec.SupportedTemplates {
+			if supportedTemplate.Name == template.Name {
+				for _, availableUpgrade := range supportedTemplate.AvailableUpgrades {
+					availableUpgradesMap[availableUpgrade.Name] = availableUpgrade
+				}
+			}
 		}
 	}
+	availableUpgrades := make([]hmc.AvailableUpgrade, 0, len(availableUpgradesMap))
+	for _, availableUpgrade := range availableUpgradesMap {
+		availableUpgrades = append(availableUpgrades, availableUpgrade)
+	}
+
+	managedCluster.Status.AvailableUpgrades = availableUpgrades
 	return nil
 }
 
@@ -1057,7 +1065,7 @@ func (r *ManagedClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				templates := &hmc.ClusterTemplateList{}
 				err := r.Client.List(ctx, templates,
 					client.InNamespace(o.GetNamespace()),
-					client.MatchingLabels{HMCManagedByChainLabelKey: o.GetName()})
+					client.MatchingLabels{hmc.HMCManagedByChainLabelKey: o.GetName()})
 				if err != nil {
 					return []ctrl.Request{}
 				}

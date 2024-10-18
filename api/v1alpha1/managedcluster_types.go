@@ -31,6 +31,8 @@ const (
 	HMCManagedLabelKey   = "hmc.mirantis.com/managed"
 	HMCManagedLabelValue = "true"
 
+	HMCManagedByChainLabelKey = "hmc.mirantis.com/managed-by-chain"
+
 	ClusterNameLabelKey = "cluster.x-k8s.io/cluster-name"
 )
 
