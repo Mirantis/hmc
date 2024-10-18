@@ -37,7 +37,9 @@ import (
 var (
 	testTemplateName   = "template-test"
 	testCredentialName = "cred-test"
-	testNamespace      = "test"
+	newTemplateName    = "new-template-name"
+
+	testNamespace = "test"
 
 	mgmt = management.NewManagement(
 		management.WithAvailableProviders(v1alpha1.ProvidersTupled{
@@ -56,8 +58,18 @@ var (
 				Name: "awsclid",
 			}),
 	)
+)
 
-	createAndUpdateTests = []struct {
+func TestManagedClusterValidateCreate(t *testing.T) {
+	g := NewWithT(t)
+
+	ctx := admission.NewContextWithRequest(context.Background(), admission.Request{
+		AdmissionRequest: admissionv1.AdmissionRequest{
+			Operation: admissionv1.Create,
+		},
+	})
+
+	tests := []struct {
 		name            string
 		managedCluster  *v1alpha1.ManagedCluster
 		existingObjects []runtime.Object
@@ -225,17 +237,7 @@ var (
 			err: "the ManagedCluster is invalid: wrong kind of the ClusterIdentity \"AWSClusterStaticIdentity\" for provider \"azure\"",
 		},
 	}
-)
-
-func TestManagedClusterValidateCreate(t *testing.T) {
-	g := NewWithT(t)
-
-	ctx := admission.NewContextWithRequest(context.Background(), admission.Request{
-		AdmissionRequest: admissionv1.AdmissionRequest{
-			Operation: admissionv1.Create,
-		},
-	})
-	for _, tt := range createAndUpdateTests {
+	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(tt.existingObjects...).Build()
 			validator := &ManagedClusterValidator{Client: c}
@@ -262,11 +264,66 @@ func TestManagedClusterValidateUpdate(t *testing.T) {
 			Operation: admissionv1.Update,
 		},
 	})
-	for _, tt := range createAndUpdateTests {
+
+	tests := []struct {
+		name              string
+		oldManagedCluster *v1alpha1.ManagedCluster
+		newManagedCluster *v1alpha1.ManagedCluster
+		existingObjects   []runtime.Object
+		err               string
+		warnings          admission.Warnings
+	}{
+		{
+			name:              "should fail if the new cluster template was found but is invalid (some validation error)",
+			oldManagedCluster: managedcluster.NewManagedCluster(managedcluster.WithClusterTemplate(testTemplateName)),
+			newManagedCluster: managedcluster.NewManagedCluster(managedcluster.WithClusterTemplate(newTemplateName)),
+			existingObjects: []runtime.Object{
+				mgmt,
+				template.NewClusterTemplate(
+					template.WithName(newTemplateName),
+					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{
+						Valid:           false,
+						ValidationError: "validation error example",
+					}),
+				),
+			},
+			err: "the ManagedCluster is invalid: the template is not valid: validation error example",
+		},
+		{
+			name: "should succeed if template is not changed",
+			oldManagedCluster: managedcluster.NewManagedCluster(
+				managedcluster.WithClusterTemplate(testTemplateName),
+				managedcluster.WithConfig(`{"foo":"bar"}`),
+				managedcluster.WithCredential(testCredentialName),
+			),
+			newManagedCluster: managedcluster.NewManagedCluster(
+				managedcluster.WithClusterTemplate(testTemplateName),
+				managedcluster.WithConfig(`{"a":"b"}`),
+				managedcluster.WithCredential(testCredentialName),
+			),
+			existingObjects: []runtime.Object{
+				mgmt,
+				cred,
+				template.NewClusterTemplate(
+					template.WithName(testTemplateName),
+					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{
+						Valid:           false,
+						ValidationError: "validation error example",
+					}),
+					template.WithProvidersStatus(v1alpha1.ProvidersTupled{
+						InfrastructureProviders: []v1alpha1.ProviderTuple{{Name: "aws"}},
+						BootstrapProviders:      []v1alpha1.ProviderTuple{{Name: "k0s"}},
+						ControlPlaneProviders:   []v1alpha1.ProviderTuple{{Name: "k0s"}},
+					}),
+				),
+			},
+		},
+	}
+	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(tt.existingObjects...).Build()
 			validator := &ManagedClusterValidator{Client: c}
-			warn, err := validator.ValidateUpdate(ctx, managedcluster.NewManagedCluster(), tt.managedCluster)
+			warn, err := validator.ValidateUpdate(ctx, tt.oldManagedCluster, tt.newManagedCluster)
 			if tt.err != "" {
 				g.Expect(err).To(HaveOccurred())
 				if err.Error() != tt.err {
