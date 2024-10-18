@@ -23,7 +23,6 @@ import (
 	texttemplate "text/template"
 	"time"
 
-	"github.com/Mirantis/hmc/internal/sveltos"
 	hcv2 "github.com/fluxcd/helm-controller/api/v2"
 	fluxmeta "github.com/fluxcd/pkg/apis/meta"
 	fluxconditions "github.com/fluxcd/pkg/runtime/conditions"
@@ -54,6 +53,7 @@ import (
 
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
 	"github.com/Mirantis/hmc/internal/helm"
+	"github.com/Mirantis/hmc/internal/sveltos"
 	"github.com/Mirantis/hmc/internal/telemetry"
 )
 
@@ -373,9 +373,9 @@ func (r *ManagedClusterReconciler) Update(ctx context.Context, managedCluster *h
 			return ctrl.Result{RequeueAfter: DefaultRequeueInterval}, nil
 		}
 
-		result, err := r.reconcileCredentialPropagation(ctx, managedCluster)
+		err = r.reconcileCredentialPropagation(ctx, managedCluster)
 		if err != nil {
-			return result, err
+			return ctrl.Result{}, err
 		}
 
 		return r.updateServices(ctx, managedCluster)
@@ -634,14 +634,13 @@ func (r *ManagedClusterReconciler) objectsAvailable(ctx context.Context, namespa
 	return len(itemsList.Items) != 0, nil
 }
 
-func (r *ManagedClusterReconciler) reconcileCredentialPropagation(ctx context.Context, managedCluster *hmc.ManagedCluster) (ctrl.Result, error) {
+func (r *ManagedClusterReconciler) reconcileCredentialPropagation(ctx context.Context, managedCluster *hmc.ManagedCluster) error {
 	l := ctrl.LoggerFrom(ctx)
 	l.Info("Reconciling CCM credentials propagation")
 
 	providers, err := r.getProviders(ctx, managedCluster.Namespace, managedCluster.Spec.Template)
 	if err != nil {
-		return ctrl.Result{},
-			fmt.Errorf("failed to get cluster providers for cluster %s/%s: %s", managedCluster.Namespace, managedCluster.Name, err)
+		return fmt.Errorf("failed to get cluster providers for cluster %s/%s: %s", managedCluster.Namespace, managedCluster.Name, err)
 	}
 
 	kubeconfSecret := &corev1.Secret{}
@@ -649,8 +648,7 @@ func (r *ManagedClusterReconciler) reconcileCredentialPropagation(ctx context.Co
 		Name:      fmt.Sprintf("%s-kubeconfig", managedCluster.Name),
 		Namespace: managedCluster.Namespace,
 	}, kubeconfSecret); err != nil {
-		return ctrl.Result{},
-			fmt.Errorf("failed to get kubeconfig secret for cluster %s/%s: %s", managedCluster.Namespace, managedCluster.Name, err)
+		return fmt.Errorf("failed to get kubeconfig secret for cluster %s/%s: %s", managedCluster.Namespace, managedCluster.Name, err)
 	}
 
 	for _, provider := range providers.InfrastructureProviders {
@@ -669,7 +667,7 @@ func (r *ManagedClusterReconciler) reconcileCredentialPropagation(ctx context.Co
 					Reason:  hmc.FailedReason,
 					Message: errMsg,
 				})
-				return ctrl.Result{}, errors.New(errMsg)
+				return errors.New(errMsg)
 			}
 			apimeta.SetStatusCondition(managedCluster.GetConditions(), metav1.Condition{
 				Type:    hmc.CredentialsPropagatedCondition,
@@ -689,7 +687,7 @@ func (r *ManagedClusterReconciler) reconcileCredentialPropagation(ctx context.Co
 					Reason:  hmc.FailedReason,
 					Message: errMsg,
 				})
-				return ctrl.Result{}, errors.New(errMsg)
+				return errors.New(errMsg)
 			}
 			apimeta.SetStatusCondition(managedCluster.GetConditions(), metav1.Condition{
 				Type:    hmc.CredentialsPropagatedCondition,
@@ -710,7 +708,7 @@ func (r *ManagedClusterReconciler) reconcileCredentialPropagation(ctx context.Co
 		}
 	}
 	l.Info("CCM credentials reconcile finished")
-	return ctrl.Result{}, nil
+	return nil
 }
 
 func (r *ManagedClusterReconciler) propagateAzureSecrets(ctx context.Context, managedCluster *hmc.ManagedCluster, kubeconfSecret *corev1.Secret) error {
