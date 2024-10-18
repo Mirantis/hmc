@@ -34,10 +34,6 @@ memory: 4096
 vmTemplate: ""
 network: ""
 
-# K0s parameters
-k0s:
-  version: v1.30.4+k0s.0
-
 # K0smotron parameters
 k0smotron:
   service:
@@ -47,4 +43,4 @@ k0smotron:
 
 # K0s parameters
 k0s:
-  version: v1.30.4+k0s.0
+  version: v1.31.1+k0s.1
