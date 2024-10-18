@@ -78,23 +78,28 @@ func (v *ManagedClusterValidator) ValidateCreate(ctx context.Context, obj runtim
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type.
-func (v *ManagedClusterValidator) ValidateUpdate(ctx context.Context, _ runtime.Object, newObj runtime.Object) (admission.Warnings, error) {
+func (v *ManagedClusterValidator) ValidateUpdate(ctx context.Context, oldObj runtime.Object, newObj runtime.Object) (admission.Warnings, error) {
+	oldManagedCluster, ok := oldObj.(*hmcv1alpha1.ManagedCluster)
+	if !ok {
+		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected ManagedCluster but got a %T", oldObj))
+	}
 	newManagedCluster, ok := newObj.(*hmcv1alpha1.ManagedCluster)
 	if !ok {
 		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected ManagedCluster but got a %T", newObj))
 	}
-
 	template, err := v.getManagedClusterTemplate(ctx, newManagedCluster.Namespace, newManagedCluster.Spec.Template)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %v", invalidManagedClusterMsg, err)
 	}
 
-	if err := isTemplateValid(template); err != nil {
-		return nil, fmt.Errorf("%s: %v", invalidManagedClusterMsg, err)
-	}
+	if oldManagedCluster.Spec.Template != newManagedCluster.Spec.Template {
+		if err := isTemplateValid(template); err != nil {
+			return nil, fmt.Errorf("%s: %v", invalidManagedClusterMsg, err)
+		}
 
-	if err := validateK8sCompatibility(ctx, v.Client, template, newManagedCluster); err != nil {
-		return admission.Warnings{"Failed to validate k8s version compatibility with ServiceTemplates"}, fmt.Errorf("failed to validate k8s compatibility: %v", err)
+		if err := validateK8sCompatibility(ctx, v.Client, template, newManagedCluster); err != nil {
+			return admission.Warnings{"Failed to validate k8s version compatibility with ServiceTemplates"}, fmt.Errorf("failed to validate k8s compatibility: %v", err)
+		}
 	}
 
 	if err := v.validateCredential(ctx, newManagedCluster, template); err != nil {
