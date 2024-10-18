@@ -20,9 +20,9 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	helmcontrollerv2 "github.com/fluxcd/helm-controller/api/v2"
 	sourcev1 "github.com/fluxcd/source-controller/api/v1"
 	"helm.sh/helm/v3/pkg/chart"
@@ -344,14 +344,8 @@ func (r *ClusterTemplateReconciler) validateCompatibilityAttrs(ctx context.Conte
 	ctrl.LoggerFrom(ctx).V(1).Info("providers to check", "exposed", exposedProviders, "required", requiredProviders)
 
 	var merr error
-	missing, wrong, parsing := collectMissingProvidersWithWrongVersions("bootstrap", exposedProviders.BootstrapProviders, requiredProviders.BootstrapProviders)
-	merr = errors.Join(merr, missing, wrong, parsing)
-
-	missing, wrong, parsing = collectMissingProvidersWithWrongVersions("control plane", exposedProviders.ControlPlaneProviders, requiredProviders.ControlPlaneProviders)
-	merr = errors.Join(merr, missing, wrong, parsing)
-
-	missing, wrong, parsing = collectMissingProvidersWithWrongVersions("infrastructure", exposedProviders.InfrastructureProviders, requiredProviders.InfrastructureProviders)
-	merr = errors.Join(merr, missing, wrong, parsing)
+	missing, wrong := collectMissingProvidersWithWrongVersions(exposedProviders, requiredProviders)
+	merr = errors.Join(merr, missing, wrong)
 
 	if merr != nil {
 		_ = r.updateStatus(ctx, template, merr.Error())
@@ -361,61 +355,50 @@ func (r *ClusterTemplateReconciler) validateCompatibilityAttrs(ctx context.Conte
 	return r.updateStatus(ctx, template, "")
 }
 
-// collectMissingProvidersWithWrongVersions returns collected errors for missing providers, providers with
-// wrong versions that do not satisfy the corresponding constraints, and parsing errors respectevly.
-func collectMissingProvidersWithWrongVersions(typ string, exposed, required []hmc.ProviderTuple) (missingErr, nonSatisfyingErr, parsingErr error) {
-	exposedSet := make(map[string]hmc.ProviderTuple, len(exposed))
+// collectMissingProvidersWithWrongVersions returns collected errors for missing providers and providers with
+// unsatisfying contract versions.
+func collectMissingProvidersWithWrongVersions(exposed, required []hmc.NameContract) (missingErr, nonSatisfyingErr error) {
+	exposed2Contracts := make(map[string][]string, len(exposed))
 	for _, v := range exposed {
-		exposedSet[v.Name] = v
+		if v.ContractVersion != "" {
+			exposed2Contracts[v.Name] = strings.Split(v.ContractVersion, "_")
+		} else {
+			exposed2Contracts[v.Name] = nil
+		}
 	}
 
 	var missing, nonSatisfying []string
-	for _, reqWithConstraint := range required {
-		exposedWithExactVer, ok := exposedSet[reqWithConstraint.Name]
+	for _, requiredProvider := range required {
+		exposedContracts, ok := exposed2Contracts[requiredProvider.Name]
 		if !ok {
-			missing = append(missing, reqWithConstraint.Name)
+			missing = append(missing, requiredProvider.Name)
 			continue
 		}
 
-		version := exposedWithExactVer.VersionOrConstraint
-		constraint := reqWithConstraint.VersionOrConstraint
-
-		if version == "" || constraint == "" {
+		if len(exposedContracts) == 0 || requiredProvider.ContractVersion == "" {
 			continue
 		}
 
-		exactVer, err := semver.NewVersion(version)
-		if err != nil {
-			parsingErr = errors.Join(parsingErr, fmt.Errorf("failed to parse version %s of the provider %s: %w", version, exposedWithExactVer.Name, err))
-			continue
-		}
+		requiredContracts := strings.Split(requiredProvider.ContractVersion, "_") // must be only one, but better to check twice
 
-		requiredC, err := semver.NewConstraint(constraint)
-		if err != nil {
-			parsingErr = errors.Join(parsingErr, fmt.Errorf("failed to parse constraint %s of the provider %s: %w", version, exposedWithExactVer.Name, err))
-			continue
-		}
-
-		if !requiredC.Check(exactVer) {
-			nonSatisfying = append(nonSatisfying, fmt.Sprintf("%s %s !~ %s", reqWithConstraint.Name, version, constraint))
+		for _, rc := range requiredContracts {
+			if !slices.Contains(exposedContracts, rc) {
+				nonSatisfying = append(nonSatisfying, fmt.Sprintf("%s %s !~ %v", requiredProvider.Name, rc, exposedContracts))
+			}
 		}
 	}
 
 	if len(missing) > 0 {
 		slices.Sort(missing)
-		missingErr = fmt.Errorf("one or more required %s providers are not deployed yet: %v", typ, missing)
+		missingErr = fmt.Errorf("one or more required providers are not deployed yet: %v", missing)
 	}
 
 	if len(nonSatisfying) > 0 {
 		slices.Sort(nonSatisfying)
-		nonSatisfyingErr = fmt.Errorf("one or more required %s providers does not satisfy constraints: %v", typ, nonSatisfying)
+		nonSatisfyingErr = fmt.Errorf("one or more required providers does not satisfy constraints: %v", nonSatisfying)
 	}
 
-	if parsingErr != nil {
-		parsingErr = fmt.Errorf("one or more errors parsing %s providers' versions and constraints : %v", typ, parsingErr)
-	}
-
-	return missingErr, nonSatisfyingErr, parsingErr
+	return missingErr, nonSatisfyingErr
 }
 
 // SetupWithManager sets up the controller with the Manager.

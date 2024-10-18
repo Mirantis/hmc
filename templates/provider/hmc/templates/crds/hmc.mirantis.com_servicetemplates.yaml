@@ -111,26 +111,22 @@ spec:
                 description: |-
                   Providers represent requested CAPI providers.
                   Should be set if not present in the Helm chart metadata.
-                properties:
-                  bootstrap:
-                    description: BootstrapProviders is the list of CAPI bootstrap
-                      providers
-                    items:
+                items:
+                  description: Represents name of the provider with either an exact
+                    or constrained version in the SemVer format.
+                  properties:
+                    contractVersion:
+                      description: |-
+                        Compatibility restriction in the [CAPI provider format]. The value is an underscore-delimited (_) list of versions.
+                        Optional to be defined.
+
+                        [CAPI provider format]: https://cluster-api.sigs.k8s.io/developer/providers/contracts#api-version-labels
                       type: string
-                    type: array
-                  controlPlane:
-                    description: ControlPlaneProviders is the list of CAPI control
-                      plane providers
-                    items:
+                    name:
+                      description: Name of the provider.
                       type: string
-                    type: array
-                  infrastructure:
-                    description: InfrastructureProviders is the list of CAPI infrastructure
-                      providers
-                    items:
-                      type: string
-                    type: array
-                type: object
+                  type: object
+                type: array
             required:
             - helm
             type: object
@@ -188,26 +184,22 @@ spec:
                 type: integer
               providers:
                 description: Providers represent requested CAPI providers.
-                properties:
-                  bootstrap:
-                    description: BootstrapProviders is the list of CAPI bootstrap
-                      providers
-                    items:
+                items:
+                  description: Represents name of the provider with either an exact
+                    or constrained version in the SemVer format.
+                  properties:
+                    contractVersion:
+                      description: |-
+                        Compatibility restriction in the [CAPI provider format]. The value is an underscore-delimited (_) list of versions.
+                        Optional to be defined.
+
+                        [CAPI provider format]: https://cluster-api.sigs.k8s.io/developer/providers/contracts#api-version-labels
                       type: string
-                    type: array
-                  controlPlane:
-                    description: ControlPlaneProviders is the list of CAPI control
-                      plane providers
-                    items:
+                    name:
+                      description: Name of the provider.
                       type: string
-                    type: array
-                  infrastructure:
-                    description: InfrastructureProviders is the list of CAPI infrastructure
-                      providers
-                    items:
-                      type: string
-                    type: array
-                type: object
+                  type: object
+                type: array
               valid:
                 description: Valid indicates whether the template passed validation
                   or not.

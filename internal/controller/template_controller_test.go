@@ -198,11 +198,11 @@ var _ = Describe("Template Controller", func() {
 
 		It("should successfully validate cluster templates providers compatibility attributes", func() {
 			const (
-				clusterTemplateName           = "cluster-template-test-name"
-				mgmtName                      = hmcmirantiscomv1alpha1.ManagementName
-				someProviderName              = "test-provider-name"
-				someProviderVersion           = "v1.0.0"
-				someProviderVersionConstraint = ">= 1.0.0 <2.0.0-0" // ^1.0.0
+				clusterTemplateName  = "cluster-template-test-name"
+				mgmtName             = hmcmirantiscomv1alpha1.ManagementName
+				someProviderName     = "test-provider-name"
+				someRequiredContract = "v1beta1"
+				someExposedContract  = "v1beta1_v1beta2"
 
 				timeout  = time.Second * 10
 				interval = time.Millisecond * 250
@@ -217,12 +217,10 @@ var _ = Describe("Template Controller", func() {
 				},
 				Spec: hmcmirantiscomv1alpha1.ClusterTemplateSpec{
 					Helm: helmSpec,
-					Providers: hmcmirantiscomv1alpha1.ProvidersTupled{
-						BootstrapProviders: []hmcmirantiscomv1alpha1.ProviderTuple{
-							{
-								Name:                someProviderName,
-								VersionOrConstraint: someProviderVersionConstraint, // constraint
-							},
+					Providers: []hmcmirantiscomv1alpha1.NameContract{
+						{
+							Name:            someProviderName,
+							ContractVersion: someRequiredContract,
 						},
 					},
 				},
@@ -235,12 +233,12 @@ var _ = Describe("Template Controller", func() {
 					return err
 				}
 
-				if l := len(clusterTemplate.Spec.Providers.BootstrapProviders); l != 1 {
-					return fmt.Errorf("expected .spec.providers.bootstrapProviders length to be exactly 1, got %d", l)
+				if l := len(clusterTemplate.Spec.Providers); l != 1 {
+					return fmt.Errorf("expected .spec.providers length to be exactly 1, got %d", l)
 				}
 
-				if v := clusterTemplate.Spec.Providers.BootstrapProviders[0]; v.Name != someProviderName || v.VersionOrConstraint != someProviderVersionConstraint {
-					return fmt.Errorf("expected .spec.providers.bootstrapProviders[0] to be %s:%s, got %s:%s", someProviderName, someProviderVersionConstraint, v.Name, v.VersionOrConstraint)
+				if v := clusterTemplate.Spec.Providers[0]; v.Name != someProviderName || v.ContractVersion != someRequiredContract {
+					return fmt.Errorf("expected .spec.providers[0] to be %s:%s, got %s:%s", someProviderName, someRequiredContract, v.Name, v.ContractVersion)
 				}
 
 				return nil
@@ -255,12 +253,10 @@ var _ = Describe("Template Controller", func() {
 			}
 			Expect(k8sClient.Create(ctx, mgmt)).To(Succeed())
 			mgmt.Status = hmcmirantiscomv1alpha1.ManagementStatus{
-				AvailableProviders: hmcmirantiscomv1alpha1.ProvidersTupled{
-					BootstrapProviders: []hmcmirantiscomv1alpha1.ProviderTuple{
-						{
-							Name:                someProviderName,
-							VersionOrConstraint: someProviderVersion, // version
-						},
+				AvailableProviders: []hmcmirantiscomv1alpha1.NameContract{
+					{
+						Name:            someProviderName,
+						ContractVersion: someExposedContract,
 					},
 				},
 			}
@@ -272,16 +268,12 @@ var _ = Describe("Template Controller", func() {
 					return err
 				}
 
-				if l := len(mgmt.Status.AvailableProviders.BootstrapProviders); l != 1 {
-					return fmt.Errorf("expected .status.availableProviders.bootstrapProviders length to be exactly 1, got %d", l)
+				if l := len(mgmt.Status.AvailableProviders); l != 1 {
+					return fmt.Errorf("expected .status.availableProviders length to be exactly 1, got %d", l)
 				}
 
-				if l := len(mgmt.Status.AvailableProviders.BootstrapProviders); l != 1 {
-					return fmt.Errorf("expected .status.availableProviders.bootstrapProviders length to be exactly 1, got %d", l)
-				}
-
-				if v := mgmt.Status.AvailableProviders.BootstrapProviders[0]; v.Name != someProviderName || v.VersionOrConstraint != someProviderVersion {
-					return fmt.Errorf("expected .status.availableProviders.bootstrapProviders[0] to be %s:%s, got %s:%s", someProviderName, someProviderVersionConstraint, v.Name, v.VersionOrConstraint)
+				if v := mgmt.Status.AvailableProviders[0]; v.Name != someProviderName || v.ContractVersion != someExposedContract {
+					return fmt.Errorf("expected .status.availableProviders[0] to be %s:%s, got %s:%s", someProviderName, someExposedContract, v.Name, v.ContractVersion)
 				}
 
 				return nil
@@ -301,8 +293,8 @@ var _ = Describe("Template Controller", func() {
 			By("Having the valid cluster template status")
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(clusterTemplate), clusterTemplate)).To(Succeed())
 			Expect(clusterTemplate.Status.Valid && clusterTemplate.Status.ValidationError == "").To(BeTrue())
-			Expect(clusterTemplate.Status.Providers.BootstrapProviders).To(HaveLen(1))
-			Expect(clusterTemplate.Status.Providers.BootstrapProviders[0]).To(Equal(hmcmirantiscomv1alpha1.ProviderTuple{Name: someProviderName, VersionOrConstraint: someProviderVersionConstraint}))
+			Expect(clusterTemplate.Status.Providers).To(HaveLen(1))
+			Expect(clusterTemplate.Status.Providers[0]).To(Equal(hmcmirantiscomv1alpha1.NameContract{Name: someProviderName, ContractVersion: someRequiredContract}))
 
 			By("Removing the created objects")
 			Expect(k8sClient.Delete(ctx, mgmt)).To(Succeed())

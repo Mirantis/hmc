@@ -18,6 +18,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
+	"strings"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -26,7 +28,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	"github.com/Masterminds/semver/v3"
 	hmcv1alpha1 "github.com/Mirantis/hmc/api/v1alpha1"
 )
 
@@ -78,19 +79,18 @@ func (v *ManagementValidator) ValidateUpdate(ctx context.Context, _, newObj runt
 		capiTplName = mgmt.Spec.Core.CAPI.Template
 	}
 
-	capiTpl := new(hmcv1alpha1.ProviderTemplate)
-	if err := v.Get(ctx, client.ObjectKey{Name: capiTplName}, capiTpl); err != nil {
-		return nil, fmt.Errorf("failed to get ProviderTemplate %s: %w", capiTplName, err)
-	}
+	supportedCAPIContractVersions := []string{"v1alpha3", "v1alpha4", "v1beta1"}
+	// TODO: i think it's better to just have a simple list instead of parcing a CRD on each update event + less groups for the rbac
+	// clusterCAPI := new(crdv1.CustomResourceDefinition)
+	// if err := v.Get(ctx, client.ObjectKey{Name: "clusters.cluster.x-k8s.io"}, clusterCAPI); err != nil {
+	// 	return nil, fmt.Errorf("failed to get Cluster CRD: %w", err)
+	// }
 
-	if capiTpl.Status.CAPIVersion == "" {
-		return nil, nil // nothing to validate against
-	}
-
-	capiRequiredVersion, err := semver.NewVersion(capiTpl.Status.CAPIVersion)
-	if err != nil { // should never happen
-		return nil, fmt.Errorf("%s: invalid CAPI version %s in the ProviderTemplate %s to be validated against: %v", invalidMgmtMsg, capiTpl.Status.CAPIVersion, capiTpl.Name, err)
-	}
+	// supportedCAPIContractVersions := make([]string, len(clusterCAPI.Spec.Versions))
+	// for _, v := range clusterCAPI.Spec.Versions {
+	// 	// TODO: we can actually skip the depreceted just in case
+	// 	supportedCAPIContractVersions = append(supportedCAPIContractVersions, v.Name)
+	// }
 
 	var wrongVersions error
 	for _, p := range mgmt.Spec.Providers {
@@ -99,7 +99,7 @@ func (v *ManagementValidator) ValidateUpdate(ctx context.Context, _, newObj runt
 			tplName = release.ProviderTemplate(p.Name)
 		}
 
-		if tplName == capiTpl.Name { // skip capi itself
+		if tplName == capiTplName { // skip capi itself
 			continue
 		}
 
@@ -108,22 +108,20 @@ func (v *ManagementValidator) ValidateUpdate(ctx context.Context, _, newObj runt
 			return nil, fmt.Errorf("failed to get ProviderTemplate %s: %w", tplName, err)
 		}
 
-		if pTpl.Status.CAPIVersionConstraint == "" {
+		if pTpl.Status.CAPIContractVersion == "" {
 			continue
 		}
 
-		constraint, err := semver.NewConstraint(pTpl.Status.CAPIVersionConstraint)
-		if err != nil { // should never happen
-			return nil, fmt.Errorf("%s: invalid CAPI version constraint %s in the ProviderTemplate %s: %v", invalidMgmtMsg, pTpl.Status.CAPIVersionConstraint, pTpl.Name, err)
-		}
-
-		if !constraint.Check(capiRequiredVersion) {
-			wrongVersions = errors.Join(wrongVersions, fmt.Errorf("core CAPI version %s does not satisfy ProviderTemplate %s constraint %s", capiRequiredVersion, pTpl.Name, constraint))
+		expectedCAPIContractVersions := strings.Split(pTpl.Status.CAPIContractVersion, "_")
+		for _, ev := range expectedCAPIContractVersions {
+			if !slices.Contains(supportedCAPIContractVersions, ev) {
+				wrongVersions = errors.Join(wrongVersions, fmt.Errorf("core CAPI contract versions %v does not support ProviderTemplate %s contract %s", supportedCAPIContractVersions, pTpl.Name, ev))
+			}
 		}
 	}
 
 	if wrongVersions != nil {
-		return admission.Warnings{"The Management object has incompatible CAPI versions ProviderTemplates"}, fmt.Errorf("%s: %s", invalidMgmtMsg, wrongVersions)
+		return admission.Warnings{"The Management object has incompatible CAPI contract versions in ProviderTemplates"}, fmt.Errorf("%s: %s", invalidMgmtMsg, wrongVersions)
 	}
 
 	return nil, nil
