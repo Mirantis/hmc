@@ -192,6 +192,7 @@ func (r *ReleaseReconciler) reconcileHMCTemplates(ctx context.Context, releaseNa
 		l.Info("Initial creation of HMC Release is skipped")
 		return nil
 	}
+	initialInstall := releaseName == ""
 	var ownerRefs []metav1.OwnerReference
 	if releaseName == "" {
 		releaseName = utils.ReleaseNameFromVersion(build.Version)
@@ -252,7 +253,7 @@ func (r *ReleaseReconciler) reconcileHMCTemplates(ctx context.Context, releaseNa
 		},
 	}
 
-	if releaseName == "" {
+	if initialInstall {
 		createReleaseValues := map[string]any{
 			"createRelease": true,
 		}
