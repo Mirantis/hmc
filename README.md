@@ -2,12 +2,14 @@
 
 ## Overview
 
-Mirantis Hybrid Multi Cluster is part of Mirantis Project 0x2A which is focused on delivering a 
-open source approach to providing an enterprise grade multi-cluster kubernetes managment solution
-based entirely on standard open source tooling that works across private or public clouds.
+Mirantis Hybrid Multi Cluster is part of Mirantis Project 0x2A which is focused
+on delivering a open source approach to providing an enterprise grade
+multi-cluster kubernetes managment solution based entirely on standard open
+source tooling that works across private or public clouds.
 
-We like to say that Project 0x2A (42) is the answer to life, the universe, and everything ...
-Or, at least, the Kubernetes sprawl we find ourselves faced with in real life!
+We like to say that Project 0x2A (42) is the answer to life, the universe, and
+everything ...  Or, at least, the Kubernetes sprawl we find ourselves faced with
+in real life!
 
 ## Documentation
 
@@ -15,19 +17,26 @@ Detailed documentation is available in [Project 0x2A Docs](https://mirantis.gith
 
 ## Installation
 
-### TLDR
+### TL;DR
 
-> kubectl apply -f https://github.com/Mirantis/hmc/releases/download/v0.0.1/install.yaml
+```bash
+kubectl apply -f https://github.com/Mirantis/hmc/releases/download/v0.0.3/install.yaml
+```
 
 or install using `helm`
 
-> helm install hmc oci://ghcr.io/mirantis/hmc/charts/hmc --version v0.0.1 -n hmc-system --create-namespace
+```bash
+helm install hmc oci://ghcr.io/mirantis/hmc/charts/hmc --version 0.0.3 -n hmc-system --create-namespace
+```
 
-Then follow the [Deploy a managed cluster](#deploy-a-managed-cluster) guide to create a managed cluster.
+Then follow the [Deploy a managed cluster](#deploy-a-managed-cluster) guide to
+create a managed cluster.
 
-> Note: The HMC installation using Kubernetes manifests does not allow customization of the deployment. To apply a custom HMC configuration, install HMC using the Helm chart.
-> deployment. If the custom HMC configuration should be applied, install HMC using
-> the Helm chart.
+> [!NOTE]
+> The HMC installation using Kubernetes manifests does not allow
+> customization of the deployment. To apply a custom HMC configuration, install
+> HMC using the Helm chart.  deployment. If the custom HMC configuration should
+> be applied, install HMC using the Helm chart.
 
 ### Development guide
 
@@ -43,11 +52,12 @@ Mirantis Hybrid Container Cloud requires the following:
 Optionally, the following CLIs may be helpful:
 
 1. `helm` (required only when installing HMC using `helm`).
-2. `clusterctl` (to handle the lifecycle of the managed clusters). 
+2. `clusterctl` (to handle the lifecycle of the managed clusters).
 
 ### Providers configuration
 
-Full details on the provider configuration can be found in the Project 2A Docs, see [Documentation](#documentation)
+Full details on the provider configuration can be found in the Project 2A Docs,
+see [Documentation](#documentation)
 
 ### Installation
 
@@ -59,7 +69,8 @@ helm install hmc oci://ghcr.io/mirantis/hmc/charts/hmc --version <hmc-version> -
 
 #### Extended Management configuration
 
-By default, the Hybrid Container Cloud is being deployed with the following configuration:
+By default, the Hybrid Container Cloud is being deployed with the following
+configuration:
 
 ```yaml
 apiVersion: hmc.mirantis.com/v1alpha1
@@ -86,15 +97,16 @@ There are two options to override the default management configuration of HMC:
 
     `kubectl --kubeconfig <path-to-management-kubeconfig> edit management`
 
-2. Deploy HMC skipping the default `Management` object creation and provide your own `Management`
-configuration:
+2. Deploy HMC skipping the default `Management` object creation and provide your
+own `Management` configuration:
 
    * Create `management.yaml` file and configure core components and providers.
    See [Management API](api/v1alpha1/management_types.go).
 
    * Specify `--create-management=false` controller argument and install HMC:
 
-    If installing using `helm` add the following parameter to the `helm install` command:
+    If installing using `helm` add the following parameter to the `helm install`
+    command:
 
     `--set="controller.createManagement=false"`
 
@@ -106,20 +118,25 @@ configuration:
 
 To deploy a managed cluster:
 
-1. Select the `Template` you want to use for the deployment. To list all available templates, run:
+1. Select the `ClusterTemplate` you want to use for the deployment. To list all
+   available templates, run:
 
 ```bash
 export KUBECONFIG=<path-to-management-kubeconfig>
 
-kubectl get template -n hmc-system -o go-template='{{ range .items }}{{ if eq .status.type "deployment" }}{{ .metadata.name }}{{ printf "\n" }}{{ end }}{{ end }}'
+kubectl get clustertemplate -n hmc-system
 ```
 
-If you want to deploy hostded control plate template, make sure to check additional notes on Hosted control plane in 2A Docs, see [Documentation](#documentation).
+If you want to deploy hostded control plate template, make sure to check
+additional notes on Hosted control plane in 2A Docs, see
+[Documentation](#documentation).
 
 2. Create the file with the `ManagedCluster` configuration:
 
-> Substitute the parameters enclosed in angle brackets with the corresponding values.\
-> Enable the `dryRun` flag if required. For details, see [Dry run](#dry-run).
+> [!NOTE]
+> Substitute the parameters enclosed in angle brackets with the corresponding
+> values. Enable the `dryRun` flag if required.
+> For details, see [Dryrun](#dry-run).
 
 ```yaml
 apiVersion: hmc.mirantis.com/v1alpha1
@@ -142,15 +159,18 @@ spec:
 
 `kubectl -n <managedcluster-namespace> get managedcluster <managedcluster-name> -o=yaml`
 
-5. Wait for infrastructure to be provisioned and the cluster to be deployed (the provisioning starts only when
-`spec.dryRun` is disabled):
+5. Wait for infrastructure to be provisioned and the cluster to be deployed (the
+provisioning starts only when `spec.dryRun` is disabled):
 
-   `kubectl -n <managedcluster-namespace> get cluster <managedcluster-name> -o=yaml`
+```bash
+kubectl -n <managedcluster-namespace> get cluster <managedcluster-name> -o=yaml
+```
 
-> You may also watch the process with the `clusterctl describe` command (requires the `clusterctl` CLI to be installed):
-> ```
-> clusterctl describe cluster <managedcluster-name> -n <managedcluster-namespace> --show-conditions all
-> ```
+> [!NOTE]
+> You may also watch the process with the `clusterctl describe` command
+> (requires the `clusterctl` CLI to be installed): ``` clusterctl describe
+> cluster <managedcluster-name> -n <managedcluster-namespace> --show-conditions
+> all ```
 
 6. Retrieve the `kubeconfig` of your managed cluster:
 
@@ -162,8 +182,9 @@ kubectl get secret -n hmc-system <managedcluster-name>-kubeconfig -o=jsonpath={.
 
 HMC `ManagedCluster` supports two modes: with and without (default) `dryRun`.
 
-If no configuration (`spec.config`) provided, the `ManagedCluster` object will be populated with defaults
-(default configuration can be found in the corresponding `Template` status) and automatically marked as `dryRun`.
+If no configuration (`spec.config`) provided, the `ManagedCluster` object will
+be populated with defaults (default configuration can be found in the
+corresponding `Template` status) and automatically marked as `dryRun`.
 
 Here is an example of the `ManagedCluster` object with default configuration:
 
@@ -201,8 +222,9 @@ spec:
   dryRun: true
 ```
 
-After you adjust your configuration and ensure that it passes validation (`TemplateReady` condition
-from `status.conditions`), remove the `spec.dryRun` flag to proceed with the deployment.
+After you adjust your configuration and ensure that it passes validation
+(`TemplateReady` condition from `status.conditions`), remove the `spec.dryRun`
+flag to proceed with the deployment.
 
 Here is an example of a `ManagedCluster` object that passed the validation:
 
@@ -248,15 +270,23 @@ spec:
 ## Cleanup
 
 1. Remove the Management object:
-  
-`kubectl delete management.hmc hmc`
 
-> Note: make sure you have no HMC ManagedCluster objects left in the cluster prior to Management deletion
+```bash
+kubectl delete management.hmc hmc
+```
+
+> [!NOTE]
+> Make sure you have no HMC ManagedCluster objects left in the cluster prior to
+> Management deletion
 
 2. Remove the `hmc` Helm release:
 
-`helm uninstall hmc -n hmc-system`
+```bash
+helm uninstall hmc -n hmc-system
+```
 
 3. Remove the `hmc-system` namespace:
 
-`kubectl delete ns hmc-system`
+```bash
+kubectl delete ns hmc-system
+```
