@@ -162,9 +162,8 @@ func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Manag
 
 		if component.Template != hmc.CoreHMCName {
 			if err := r.checkProviderStatus(ctx, component.Template); err != nil {
-				errMsg := err.Error()
-				updateComponentsStatus(detectedComponents, &detectedProviders, detectedContracts, component.helmReleaseName, component.Template, template.Status.Providers, template.Status.CAPIContracts, errMsg)
-				errs = errors.Join(errs, errors.New(errMsg))
+				updateComponentsStatus(detectedComponents, &detectedProviders, detectedContracts, component.helmReleaseName, component.Template, template.Status.Providers, template.Status.CAPIContracts, err.Error())
+				errs = errors.Join(errs, err)
 				continue
 			}
 		}
@@ -243,7 +242,7 @@ func (r *ManagementReconciler) checkProviderStatus(ctx context.Context, provider
 			Resource: resourceType,
 		}
 
-		name, kind, conditions, err := status.ConditionsFromResource(ctx, r.DynamicClient, gvr,
+		resourceConditions, err := status.GetResourceConditions(ctx, r.DynamicClient, gvr,
 			labels.SelectorFromSet(map[string]string{hmc.FluxHelmChartNameKey: providerTemplateName}).String(),
 		)
 		if err != nil {
@@ -257,7 +256,7 @@ func (r *ManagementReconciler) checkProviderStatus(ctx context.Context, provider
 		}
 
 		var falseConditionTypes []string
-		for _, condition := range conditions {
+		for _, condition := range resourceConditions.Conditions {
 			if condition.Status != metav1.ConditionTrue {
 				falseConditionTypes = append(falseConditionTypes, condition.Type)
 			}
@@ -265,7 +264,7 @@ func (r *ManagementReconciler) checkProviderStatus(ctx context.Context, provider
 
 		if len(falseConditionTypes) > 0 {
 			errs = errors.Join(fmt.Errorf("%s: %s is not yet ready, has false conditions: %s",
-				name, kind, strings.Join(falseConditionTypes, ", ")))
+				resourceConditions.Name, resourceConditions.Kind, strings.Join(falseConditionTypes, ", ")))
 		}
 	}
 

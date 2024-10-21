@@ -72,42 +72,51 @@ func (e ResourceNotFoundError) Error() string {
 	return fmt.Sprintf("no %s found, ignoring since object must be deleted or not yet created", e.Resource)
 }
 
-// ConditionsFromResource fetches the conditions from a resource identified by
+type ResourceConditions struct {
+	Kind       string
+	Name       string
+	Conditions []metav1.Condition
+}
+
+// GetResourceConditions fetches the conditions from a resource identified by
 // the provided GroupVersionResource and labelSelector.  The function returns
-// the name and kind of the resource and a slice of metav1.Condition.  If the
-// resource is not found, returns a ResourceNotFoundError which can be checked
-// by the caller to prevent reconciliation loops.
-//
-//nolint:revive
-func ConditionsFromResource(
+// a ResourceConditions struct containing the name/kind of the resource
+// and the conditions.
+// If the resource is not found, returns a ResourceNotFoundError which can be
+// checked by the caller to prevent reconciliation loops.
+func GetResourceConditions(
 	ctx context.Context, dynamicClient dynamic.Interface,
 	gvr schema.GroupVersionResource, labelSelector string,
-) (string, string, []metav1.Condition, error) {
-	list, err := dynamicClient.Resource(gvr).List(ctx, metav1.ListOptions{LabelSelector: labelSelector})
+) (resourceConditions *ResourceConditions, err error) {
+	list, err := dynamicClient.Resource(gvr).List(ctx, metav1.ListOptions{LabelSelector: labelSelector, Limit: 2})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			return "", "", nil, ResourceNotFoundError{Resource: gvr.Resource}
+			return nil, ResourceNotFoundError{Resource: gvr.Resource}
 		}
 
-		return "", "", nil, fmt.Errorf("failed to list %s: %w", gvr.Resource, err)
+		return nil, fmt.Errorf("failed to list %s: %w", gvr.Resource, err)
 	}
 
 	if len(list.Items) == 0 {
-		return "", "", nil, ResourceNotFoundError{Resource: gvr.Resource}
+		return nil, ResourceNotFoundError{Resource: gvr.Resource}
 	}
 
 	if len(list.Items) > 1 {
-		return "", "", nil, fmt.Errorf("expected to find only one of resource: %s with label: %q, found: %d",
+		return nil, fmt.Errorf("expected to find only one of resource: %s with label: %q, found: %d",
 			gvr.Resource, labelSelector, len(list.Items))
 	}
 
 	kind, name := ObjKindName(&list.Items[0])
 	conditions, err := ConditionsFromUnstructured(&list.Items[0])
 	if err != nil {
-		return "", "", nil, fmt.Errorf("failed to get conditions: %w", err)
+		return nil, fmt.Errorf("failed to get conditions: %w", err)
 	}
 
-	return kind, name, conditions, nil
+	return &ResourceConditions{
+		Kind:       kind,
+		Name:       name,
+		Conditions: conditions,
+	}, nil
 }
 
 func ObjKindName(unstrObj *unstructured.Unstructured) (name string, kind string) {

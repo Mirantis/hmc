@@ -109,7 +109,7 @@ func (r *ManagedClusterReconciler) setStatusFromClusterStatus(
 ) (bool, error) {
 	l := ctrl.LoggerFrom(ctx)
 
-	_, _, conditions, err := status.ConditionsFromResource(ctx, r.DynamicClient, schema.GroupVersionResource{
+	resourceConditions, err := status.GetResourceConditions(ctx, r.DynamicClient, schema.GroupVersionResource{
 		Group:    "cluster.x-k8s.io",
 		Version:  "v1beta1",
 		Resource: "clusters",
@@ -124,7 +124,7 @@ func (r *ManagedClusterReconciler) setStatusFromClusterStatus(
 	}
 
 	allConditionsComplete := true
-	for _, metaCondition := range conditions {
+	for _, metaCondition := range resourceConditions.Conditions {
 		if metaCondition.Status != "True" {
 			allConditionsComplete = false
 		}
