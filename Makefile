@@ -9,13 +9,8 @@ IMG_TAG = $(shell echo $(IMG) | cut -d: -f2)
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.29.0
 
-os = $(shell uname|tr DL dl)
-OS := $(strip ${os})
-
-ARCH := $(shell uname -m)
-ifeq ($(ARCH),x86_64)
-	ARCH := amd64
-endif
+HOSTOS := $(shell go env GOHOSTOS)
+HOSTARCH := $(shell go env GOHOSTARCH)
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -434,23 +429,23 @@ helm: $(HELM) ## Download helm locally if necessary.
 HELM_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3"
 $(HELM): | $(LOCALBIN)
 	rm -f $(LOCALBIN)/helm-*
-	curl -s $(HELM_INSTALL_SCRIPT) | USE_SUDO=false HELM_INSTALL_DIR=$(LOCALBIN) DESIRED_VERSION=$(HELM_VERSION) BINARY_NAME=helm-$(HELM_VERSION) PATH="$(LOCALBIN):$(PATH)" bash
+	curl -s --fail $(HELM_INSTALL_SCRIPT) | USE_SUDO=false HELM_INSTALL_DIR=$(LOCALBIN) DESIRED_VERSION=$(HELM_VERSION) BINARY_NAME=helm-$(HELM_VERSION) PATH="$(LOCALBIN):$(PATH)" bash
 
 $(FLUX_HELM_CRD): $(EXTERNAL_CRD_DIR)
 	rm -f $(FLUX_HELM_CRD)
-	curl -s https://raw.githubusercontent.com/fluxcd/helm-controller/$(FLUX_HELM_VERSION)/config/crd/bases/helm.toolkit.fluxcd.io_helmreleases.yaml > $(FLUX_HELM_CRD)
+	curl -s --fail https://raw.githubusercontent.com/fluxcd/helm-controller/$(FLUX_HELM_VERSION)/config/crd/bases/helm.toolkit.fluxcd.io_helmreleases.yaml > $(FLUX_HELM_CRD)
 
 $(FLUX_SOURCE_CHART_CRD): $(EXTERNAL_CRD_DIR)
 	rm -f $(FLUX_SOURCE_CHART_CRD)
-	curl -s https://raw.githubusercontent.com/fluxcd/source-controller/$(FLUX_SOURCE_VERSION)/config/crd/bases/source.toolkit.fluxcd.io_helmcharts.yaml > $(FLUX_SOURCE_CHART_CRD)
+	curl -s --fail https://raw.githubusercontent.com/fluxcd/source-controller/$(FLUX_SOURCE_VERSION)/config/crd/bases/source.toolkit.fluxcd.io_helmcharts.yaml > $(FLUX_SOURCE_CHART_CRD)
 
 $(FLUX_SOURCE_REPO_CRD): $(EXTERNAL_CRD_DIR)
 	rm -f $(FLUX_SOURCE_REPO_CRD)
-	curl -s https://raw.githubusercontent.com/fluxcd/source-controller/$(FLUX_SOURCE_VERSION)/config/crd/bases/source.toolkit.fluxcd.io_helmrepositories.yaml > $(FLUX_SOURCE_REPO_CRD)
+	curl -s --fail https://raw.githubusercontent.com/fluxcd/source-controller/$(FLUX_SOURCE_VERSION)/config/crd/bases/source.toolkit.fluxcd.io_helmrepositories.yaml > $(FLUX_SOURCE_REPO_CRD)
 
 $(SVELTOS_CRD): $(EXTERNAL_CRD_DIR)
 	rm -f $(SVELTOS_CRD)
-	curl -s https://raw.githubusercontent.com/projectsveltos/sveltos/$(SVELTOS_VERSION)/manifest/crds/sveltos_crds.yaml > $(SVELTOS_CRD)
+	curl -s --fail https://raw.githubusercontent.com/projectsveltos/sveltos/$(SVELTOS_VERSION)/manifest/crds/sveltos_crds.yaml > $(SVELTOS_CRD)
 
 .PHONY: external-crd
 external-crd: $(FLUX_HELM_CRD) $(FLUX_SOURCE_CHART_CRD) $(FLUX_SOURCE_REPO_CRD) $(SVELTOS_CRD)
@@ -468,19 +463,20 @@ $(YQ): | $(LOCALBIN)
 .PHONY: cloud-nuke
 cloud-nuke: $(CLOUDNUKE) ## Download cloud-nuke locally if necessary.
 $(CLOUDNUKE): | $(LOCALBIN)
-	curl -sL https://github.com/gruntwork-io/cloud-nuke/releases/download/$(CLOUDNUKE_VERSION)/cloud-nuke_$(OS)_$(ARCH) -o $(CLOUDNUKE)
+	curl -sL --fail https://github.com/gruntwork-io/cloud-nuke/releases/download/$(CLOUDNUKE_VERSION)/cloud-nuke_$(HOSTOS)_$(HOSTARCH) -o $(CLOUDNUKE) && \
 	chmod +x $(CLOUDNUKE)
 
 .PHONY: azure-nuke
 azure-nuke: $(AZURENUKE) ## Download azure-nuke locally if necessary.
 $(AZURENUKE): | $(LOCALBIN)
-	curl -sL https://github.com/ekristen/azure-nuke/releases/download/$(AZURENUKE_VERSION)/azure-nuke-$(AZURENUKE_VERSION)-$(OS)-$(ARCH).tar.gz -o /tmp/azure-nuke.tar.gz
-	tar xvf /tmp/azure-nuke.tar.gz -C $(LOCALBIN) azure-nuke
+	curl -sL --fail https://github.com/ekristen/azure-nuke/releases/download/$(AZURENUKE_VERSION)/azure-nuke-$(AZURENUKE_VERSION)-$(HOSTOS)-$(HOSTARCH).tar.gz | \
+	tar xvzf - --to-stdout azure-nuke > $(LOCALBIN)/azure-nuke && \
+	chmod +x $(LOCALBIN)/azure-nuke
 
 .PHONY: clusterawsadm
 clusterawsadm: $(CLUSTERAWSADM) ## Download clusterawsadm locally if necessary.
 $(CLUSTERAWSADM): | $(LOCALBIN)
-	curl -sL https://github.com/kubernetes-sigs/cluster-api-provider-aws/releases/download/$(CLUSTERAWSADM_VERSION)/clusterawsadm_$(CLUSTERAWSADM_VERSION)_$(OS)_$(ARCH) -o $(CLUSTERAWSADM)
+	curl -sL --fail https://github.com/kubernetes-sigs/cluster-api-provider-aws/releases/download/$(CLUSTERAWSADM_VERSION)/clusterawsadm_$(CLUSTERAWSADM_VERSION)_$(HOSTOS)_$(HOSTARCH) -o $(CLUSTERAWSADM) && \
 	chmod +x $(CLUSTERAWSADM)
 
 .PHONY: clusterctl
@@ -501,20 +497,20 @@ $(ENVSUBST): | $(LOCALBIN)
 .PHONY: awscli
 awscli: $(AWSCLI)
 $(AWSCLI): | $(LOCALBIN)
-	@if [ $(OS) == "linux" ]; then \
-		curl "https://awscli.amazonaws.com/awscli-exe-linux-$(shell uname -m)-$(AWSCLI_VERSION).zip" -o "/tmp/awscliv2.zip"; \
-		unzip -oqq /tmp/awscliv2.zip -d /tmp; \
+	@if [ $(HOSTOS) == "linux" ]; then \
+		curl --fail "https://awscli.amazonaws.com/awscli-exe-linux-$(shell uname -m)-$(AWSCLI_VERSION).zip" -o "/tmp/awscliv2.zip" && \
+		unzip -oqq /tmp/awscliv2.zip -d /tmp && \
 		/tmp/aws/install -i $(LOCALBIN)/aws-cli -b $(LOCALBIN) --update; \
 	fi; \
-	if [ $(OS) == "darwin" ]; then \
-			curl "https://awscli.amazonaws.com/AWSCLIV2.pkg" -o "AWSCLIV2.pkg"; \
-			LOCALBIN="$(LOCALBIN)" $(ENVSUBST) -i ./scripts/awscli-darwin-install.xml.tpl > choices.xml; \
-			sudo installer -pkg AWSCLIV2.pkg -target $(LOCALBIN) -applyChoiceChangesXML ./choices.xml; \
-			ln -s $(LOCALBIN)/aws-cli/aws $(LOCALBIN)/aws; \
-			rm AWSCLIV2.pkg && rm ./choices.xml; \
+	if [ $(HOSTOS) == "darwin" ]; then \
+		curl --fail "https://awscli.amazonaws.com/AWSCLIV2.pkg" -o "AWSCLIV2.pkg" && \
+		LOCALBIN="$(LOCALBIN)" $(ENVSUBST) -i ./scripts/awscli-darwin-install.xml.tpl > choices.xml && \
+		sudo installer -pkg AWSCLIV2.pkg -target $(LOCALBIN) -applyChoiceChangesXML ./choices.xml && \
+		ln -s $(LOCALBIN)/aws-cli/aws $(LOCALBIN)/aws && \
+		rm AWSCLIV2.pkg && rm ./choices.xml; \
 	fi; \
-	if [ $(OS) == "windows" ]; then \
-		echo "Installing to $(LOCALBIN) on Windows is not yet implemented"; \
+	if [ $(HOSTOS) == "windows" ]; then \
+		echo "Installing to $(LOCALBIN) on Windows is not yet implemented" && \
 		exit 1; \
 	fi; \
 
