@@ -27,14 +27,14 @@ spec:
         extensions:
           helm:
             repositories:
-              - name: cloud-provider-azure
-                url: https://raw.githubusercontent.com/kubernetes-sigs/cloud-provider-azure/master/helm/repo
+              - name: mirantis
+                url: https://charts.mirantis.com
               - name: azuredisk-csi-driver
                 url: https://raw.githubusercontent.com/kubernetes-sigs/azuredisk-csi-driver/master/charts
             charts:
               - name: cloud-provider-azure
                 namespace: kube-system
-                chartname: cloud-provider-azure/cloud-provider-azure
+                chartname: mirantis/cloud-provider-azure
                 version: 1.31.2
                 order: 1
                 values: |
