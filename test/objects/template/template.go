@@ -174,13 +174,28 @@ func WithConfigStatus(config string) Opt {
 	}
 }
 
-func WithProviderStatusCAPIContract(v string) Opt {
+func WithProviderStatusCAPIContracts(coreAndProvidersContracts ...string) Opt {
+	if len(coreAndProvidersContracts)&1 != 0 {
+		panic("non even number of arguments")
+	}
+
 	return func(template Template) {
+		if len(coreAndProvidersContracts) == 0 {
+			return
+		}
+
 		pt, ok := template.(*v1alpha1.ProviderTemplate)
 		if !ok {
 			panic(fmt.Sprintf("unexpected type %T, expected ProviderTemplate", template))
 		}
-		pt.Status.CAPIContractVersion = v
+
+		if pt.Status.CAPIContracts == nil {
+			pt.Status.CAPIContracts = make(v1alpha1.CompatibilityContracts)
+		}
+
+		for i := 0; i < len(coreAndProvidersContracts)/2; i++ {
+			pt.Status.CAPIContracts[coreAndProvidersContracts[i*2]] = coreAndProvidersContracts[i*2+1]
+		}
 	}
 }
 

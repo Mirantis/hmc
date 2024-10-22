@@ -18,8 +18,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"slices"
-	"strings"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -79,18 +77,18 @@ func (v *ManagementValidator) ValidateUpdate(ctx context.Context, _, newObj runt
 		capiTplName = mgmt.Spec.Core.CAPI.Template
 	}
 
-	supportedCAPIContractVersions := []string{"v1alpha3", "v1alpha4", "v1beta1"}
-	// TODO: i think it's better to just have a simple list instead of parcing a CRD on each update event + less groups for the rbac
-	// clusterCAPI := new(crdv1.CustomResourceDefinition)
-	// if err := v.Get(ctx, client.ObjectKey{Name: "clusters.cluster.x-k8s.io"}, clusterCAPI); err != nil {
-	// 	return nil, fmt.Errorf("failed to get Cluster CRD: %w", err)
-	// }
+	capiTpl := new(hmcv1alpha1.ProviderTemplate)
+	if err := v.Get(ctx, client.ObjectKey{Name: capiTplName}, capiTpl); err != nil {
+		return nil, fmt.Errorf("failed to get ProviderTemplate %s: %w", capiTplName, err)
+	}
 
-	// supportedCAPIContractVersions := make([]string, len(clusterCAPI.Spec.Versions))
-	// for _, v := range clusterCAPI.Spec.Versions {
-	// 	// TODO: we can actually skip the depreceted just in case
-	// 	supportedCAPIContractVersions = append(supportedCAPIContractVersions, v.Name)
-	// }
+	if len(capiTpl.Status.CAPIContracts) == 0 {
+		return nil, nil // nothing to validate against
+	}
+
+	if !capiTpl.Status.Valid {
+		return nil, fmt.Errorf("%s: not valid ProviderTemplate %s", invalidMgmtMsg, capiTpl.Name)
+	}
 
 	var wrongVersions error
 	for _, p := range mgmt.Spec.Providers {
@@ -99,7 +97,7 @@ func (v *ManagementValidator) ValidateUpdate(ctx context.Context, _, newObj runt
 			tplName = release.ProviderTemplate(p.Name)
 		}
 
-		if tplName == capiTplName { // skip capi itself
+		if tplName == capiTpl.Name { // skip capi itself
 			continue
 		}
 
@@ -108,14 +106,17 @@ func (v *ManagementValidator) ValidateUpdate(ctx context.Context, _, newObj runt
 			return nil, fmt.Errorf("failed to get ProviderTemplate %s: %w", tplName, err)
 		}
 
-		if pTpl.Status.CAPIContractVersion == "" {
+		if len(pTpl.Status.CAPIContracts) == 0 {
 			continue
 		}
 
-		expectedCAPIContractVersions := strings.Split(pTpl.Status.CAPIContractVersion, "_")
-		for _, ev := range expectedCAPIContractVersions {
-			if !slices.Contains(supportedCAPIContractVersions, ev) {
-				wrongVersions = errors.Join(wrongVersions, fmt.Errorf("core CAPI contract versions %v does not support ProviderTemplate %s contract %s", supportedCAPIContractVersions, pTpl.Name, ev))
+		if !pTpl.Status.Valid {
+			return nil, fmt.Errorf("%s: not valid ProviderTemplate %s", invalidMgmtMsg, tplName)
+		}
+
+		for capi := range capiTpl.Status.CAPIContracts {
+			if _, ok := pTpl.Status.CAPIContracts[capi]; !ok {
+				wrongVersions = errors.Join(wrongVersions, fmt.Errorf("core CAPI contract version %s does not support ProviderTemplate %s", capi, pTpl.Name))
 			}
 		}
 	}

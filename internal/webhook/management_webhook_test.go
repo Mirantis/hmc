@@ -39,9 +39,12 @@ func TestManagementValidateUpdate(t *testing.T) {
 	ctx := admission.NewContextWithRequest(context.Background(), admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{Operation: admissionv1.Update}})
 
 	const (
-		contractVersionValid   = "v1alpha4_v1beta1"
-		contractVersionInvalid = "v1alpha1_v1alpha4_v1beta1"
+		someContractVersion = "v1alpha4_v1beta1"
+		capiVersion         = "v1beta1"
+		capiVersionOther    = "v1alpha3"
 	)
+
+	validStatus := v1alpha1.TemplateValidationStatus{Valid: true}
 
 	providerAwsDefaultTpl := v1alpha1.Provider{
 		Name: "infrastructure-aws",
@@ -49,8 +52,6 @@ func TestManagementValidateUpdate(t *testing.T) {
 			Template: template.DefaultName,
 		},
 	}
-
-	supportedCAPIContractVersions := []string{"v1alpha3", "v1alpha4", "v1beta1"}
 
 	tests := []struct {
 		name            string
@@ -64,13 +65,46 @@ func TestManagementValidateUpdate(t *testing.T) {
 			management: management.NewManagement(),
 		},
 		{
-			name: "no providertemplates having providers in mgmt spec, should fail",
+			name:            "no capi providertemplate, should fail",
+			management:      management.NewManagement(management.WithRelease(release.DefaultName)),
+			existingObjects: []runtime.Object{release.New()},
+			err:             fmt.Sprintf(`failed to get ProviderTemplate %s: providertemplates.hmc.mirantis.com "%s" not found`, release.DefaultCAPITemplateName, release.DefaultCAPITemplateName),
+		},
+		{
+			name:       "capi providertemplate without capi version set, should succeed",
+			management: management.NewManagement(management.WithRelease(release.DefaultName)),
+			existingObjects: []runtime.Object{
+				release.New(),
+				template.NewProviderTemplate(template.WithName(release.DefaultCAPITemplateName)),
+			},
+		},
+		{
+			name:       "capi providertemplate is not valid, should fail",
+			management: management.NewManagement(management.WithRelease(release.DefaultName)),
+			existingObjects: []runtime.Object{
+				release.New(),
+				template.NewProviderTemplate(
+					template.WithName(release.DefaultCAPITemplateName),
+					template.WithProviderStatusCAPIContracts(capiVersion, ""),
+				),
+			},
+			err: fmt.Sprintf("the Management is invalid: not valid ProviderTemplate %s", release.DefaultCAPITemplateName),
+		},
+		{
+			name: "no providertemplates that declared in mgmt spec.providers, should fail",
 			management: management.NewManagement(
 				management.WithRelease(release.DefaultName),
 				management.WithProviders([]v1alpha1.Provider{providerAwsDefaultTpl}),
 			),
-			existingObjects: []runtime.Object{release.New()},
-			err:             fmt.Sprintf(`failed to get ProviderTemplate %s: providertemplates.hmc.mirantis.com "%s" not found`, template.DefaultName, template.DefaultName),
+			existingObjects: []runtime.Object{
+				release.New(),
+				template.NewProviderTemplate(
+					template.WithName(release.DefaultCAPITemplateName),
+					template.WithProviderStatusCAPIContracts(capiVersion, ""),
+					template.WithValidationStatus(validStatus),
+				),
+			},
+			err: fmt.Sprintf(`failed to get ProviderTemplate %s: providertemplates.hmc.mirantis.com "%s" not found`, template.DefaultName, template.DefaultName),
 		},
 		{
 			name: "providertemplates without specified capi contracts, should succeed",
@@ -82,9 +116,30 @@ func TestManagementValidateUpdate(t *testing.T) {
 				release.New(),
 				template.NewProviderTemplate(
 					template.WithName(release.DefaultCAPITemplateName),
+					template.WithProviderStatusCAPIContracts(capiVersion, ""),
+					template.WithValidationStatus(validStatus),
 				),
 				template.NewProviderTemplate(),
 			},
+		},
+		{
+			name: "providertemplates is not ready, should succeed",
+			management: management.NewManagement(
+				management.WithRelease(release.DefaultName),
+				management.WithProviders([]v1alpha1.Provider{providerAwsDefaultTpl}),
+			),
+			existingObjects: []runtime.Object{
+				release.New(),
+				template.NewProviderTemplate(
+					template.WithName(release.DefaultCAPITemplateName),
+					template.WithProviderStatusCAPIContracts(capiVersion, ""),
+					template.WithValidationStatus(validStatus),
+				),
+				template.NewProviderTemplate(
+					template.WithProviderStatusCAPIContracts(capiVersionOther, someContractVersion),
+				),
+			},
+			err: fmt.Sprintf("the Management is invalid: not valid ProviderTemplate %s", template.DefaultName),
 		},
 		{
 			name: "providertemplates do not match capi contracts, should fail",
@@ -96,13 +151,16 @@ func TestManagementValidateUpdate(t *testing.T) {
 				release.New(),
 				template.NewProviderTemplate(
 					template.WithName(release.DefaultCAPITemplateName),
+					template.WithProviderStatusCAPIContracts(capiVersion, ""),
+					template.WithValidationStatus(validStatus),
 				),
 				template.NewProviderTemplate(
-					template.WithProviderStatusCAPIContract(contractVersionInvalid),
+					template.WithProviderStatusCAPIContracts(capiVersionOther, someContractVersion),
+					template.WithValidationStatus(validStatus),
 				),
 			},
 			warnings: admission.Warnings{"The Management object has incompatible CAPI contract versions in ProviderTemplates"},
-			err:      fmt.Sprintf("the Management is invalid: core CAPI contract versions %v does not support ProviderTemplate %s contract %s", supportedCAPIContractVersions, template.DefaultName, "v1alpha1"),
+			err:      fmt.Sprintf("the Management is invalid: core CAPI contract version %s does not support ProviderTemplate %s", capiVersion, template.DefaultName),
 		},
 		{
 			name: "providertemplates match capi contracts, should succeed",
@@ -114,9 +172,12 @@ func TestManagementValidateUpdate(t *testing.T) {
 				release.New(),
 				template.NewProviderTemplate(
 					template.WithName(release.DefaultCAPITemplateName),
+					template.WithProviderStatusCAPIContracts(capiVersion, ""),
+					template.WithValidationStatus(validStatus),
 				),
 				template.NewProviderTemplate(
-					template.WithProviderStatusCAPIContract(contractVersionValid),
+					template.WithProviderStatusCAPIContracts(capiVersion, someContractVersion),
+					template.WithValidationStatus(validStatus),
 				),
 			},
 		},

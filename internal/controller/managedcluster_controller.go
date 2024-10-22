@@ -585,10 +585,14 @@ func (r *ManagedClusterReconciler) getInfraProvidersNames(ctx context.Context, t
 		return nil, err
 	}
 
-	ips := make([]string, 0, len(template.Status.Providers))
+	const infraPrefix = "infrastructure-"
+	var (
+		ips     = make([]string, 0, len(template.Status.Providers))
+		lprefix = len(infraPrefix)
+	)
 	for _, v := range template.Status.Providers {
-		if strings.HasPrefix(v.Name, "infrastructure-") {
-			ips = append(ips, v.Name)
+		if idx := strings.Index(v, infraPrefix); idx > -1 {
+			ips = append(ips, v[idx+lprefix:])
 		}
 	}
 

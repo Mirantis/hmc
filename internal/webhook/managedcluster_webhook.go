@@ -219,7 +219,7 @@ func (v *ManagedClusterValidator) validateCredential(ctx context.Context, manage
 
 	hasInfra := false
 	for _, v := range template.Status.Providers {
-		if strings.HasPrefix(v.Name, "infrastructure-") {
+		if strings.HasPrefix(v, "infrastructure-") {
 			hasInfra = true
 			break
 		}
@@ -249,24 +249,24 @@ func isCredMatchTemplate(cred *hmcv1alpha1.Credential, template *hmcv1alpha1.Clu
 	}
 
 	for _, provider := range template.Status.Providers {
-		switch provider.Name {
+		switch provider {
 		case "infrastructure-aws":
 			if idtyKind != "AWSClusterStaticIdentity" &&
 				idtyKind != "AWSClusterRoleIdentity" &&
 				idtyKind != "AWSClusterControllerIdentity" {
-				return errMsg(provider.Name)
+				return errMsg(provider)
 			}
 		case "infrastructure-azure":
 			if idtyKind != "AzureClusterIdentity" {
-				return errMsg(provider.Name)
+				return errMsg(provider)
 			}
 		case "infrastructure-vsphere":
 			if idtyKind != "VSphereClusterIdentity" {
-				return errMsg(provider.Name)
+				return errMsg(provider)
 			}
 		default:
-			if strings.HasPrefix(provider.Name, "infrastructure-") {
-				return fmt.Errorf("unsupported infrastructure provider %s", provider.Name)
+			if strings.HasPrefix(provider, "infrastructure-") {
+				return fmt.Errorf("unsupported infrastructure provider %s", provider)
 			}
 		}
 	}

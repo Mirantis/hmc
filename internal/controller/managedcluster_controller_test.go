@@ -94,7 +94,7 @@ var _ = Describe("ManagedCluster Controller", func() {
 							Raw: []byte(`{"foo":"bar"}`),
 						},
 					},
-					Providers: hmc.Providers{{Name: "infrastructure-aws"}},
+					Providers: hmc.Providers{"infrastructure-aws"},
 				}
 				Expect(k8sClient.Status().Update(ctx, template)).To(Succeed())
 			}
@@ -110,7 +110,7 @@ var _ = Describe("ManagedCluster Controller", func() {
 				}
 				Expect(k8sClient.Create(ctx, management)).To(Succeed())
 				management.Status = hmc.ManagementStatus{
-					AvailableProviders: hmc.Providers{{Name: "infrastructure-aws"}},
+					AvailableProviders: hmc.Providers{"infrastructure-aws"},
 				}
 				Expect(k8sClient.Status().Update(ctx, management)).To(Succeed())
 			}

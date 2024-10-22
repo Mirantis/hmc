@@ -36,23 +36,16 @@ const (
 )
 
 type (
-	// Holds different types of CAPI providers with [compatible contract versions].
-	//
-	// [compatible contract versions]: https://cluster-api.sigs.k8s.io/developer/providers/contracts
-	Providers []NameContract
+	// Holds different types of CAPI providers.
+	Providers []string
 
-	// Represents name of the provider with its provider compatibility [contract versions].
+	// Holds key-value pairs with compatibility [contract versions],
+	// where the key is the core CAPI contract version,
+	// and the value is an underscore-delimited (_) list of provider contract versions
+	// supported by the core CAPI.
 	//
 	// [contract versions]: https://cluster-api.sigs.k8s.io/developer/providers/contracts
-	NameContract struct {
-		// Name of the provider.
-		Name string `json:"name,omitempty"`
-		// Compatibility restriction in the [CAPI provider format]. The value is an underscore-delimited (_) list of versions.
-		// Optional to be defined.
-		//
-		// [CAPI provider format]: https://cluster-api.sigs.k8s.io/developer/providers/contracts#api-version-labels
-		ContractVersion string `json:"contractVersion,omitempty"`
-	}
+	CompatibilityContracts map[string]string
 )
 
 const (
@@ -127,13 +120,4 @@ func ExtractServiceTemplateName(rawObj client.Object) []string {
 	}
 
 	return templates
-}
-
-// Names flattens the underlaying slice to provider names slice and returns it.
-func (c Providers) Names() []string {
-	nn := make([]string, len(c))
-	for i, v := range c {
-		nn[i] = v.Name
-	}
-	return nn
 }

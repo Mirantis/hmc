@@ -13,4 +13,4 @@ version: 0.0.3
 # It is recommended to use it with quotes.
 appVersion: "1.31.1+k0s.1"
 annotations:
-  cluster.x-k8s.io/provider: infrastructure-azure; control-plane-k0s; bootstrap-k0s
+  cluster.x-k8s.io/provider: infrastructure-azure, control-plane-k0smotron, bootstrap-k0smotron
