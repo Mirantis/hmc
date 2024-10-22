@@ -242,7 +242,7 @@ func (r *ManagementReconciler) checkProviderStatus(ctx context.Context, provider
 			Resource: resourceType,
 		}
 
-		resourceConditions, err := status.GetResourceConditions(ctx, r.DynamicClient, gvr,
+		resourceConditions, err := status.GetResourceConditions(ctx, r.SystemNamespace, r.DynamicClient, gvr,
 			labels.SelectorFromSet(map[string]string{hmc.FluxHelmChartNameKey: providerTemplateName}).String(),
 		)
 		if err != nil {

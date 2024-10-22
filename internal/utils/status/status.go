@@ -85,10 +85,12 @@ type ResourceConditions struct {
 // If the resource is not found, returns a ResourceNotFoundError which can be
 // checked by the caller to prevent reconciliation loops.
 func GetResourceConditions(
-	ctx context.Context, dynamicClient dynamic.Interface,
+	ctx context.Context, namespace string, dynamicClient dynamic.Interface,
 	gvr schema.GroupVersionResource, labelSelector string,
 ) (resourceConditions *ResourceConditions, err error) {
-	list, err := dynamicClient.Resource(gvr).List(ctx, metav1.ListOptions{LabelSelector: labelSelector, Limit: 2})
+	list, err := dynamicClient.Resource(gvr).Namespace(namespace).List(ctx, metav1.ListOptions{
+		LabelSelector: labelSelector, Limit: 2,
+	})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil, ResourceNotFoundError{Resource: gvr.Resource}
