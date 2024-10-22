@@ -16,34 +16,127 @@ package webhook
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	. "github.com/onsi/gomega"
+	admissionv1 "k8s.io/api/admission/v1"
+	authenticationv1 "k8s.io/api/authentication/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/Mirantis/hmc/api/v1alpha1"
 	"github.com/Mirantis/hmc/test/objects/managedcluster"
+	"github.com/Mirantis/hmc/test/objects/release"
 	"github.com/Mirantis/hmc/test/objects/template"
+	tc "github.com/Mirantis/hmc/test/objects/templatechain"
+	tm "github.com/Mirantis/hmc/test/objects/templatemanagement"
 	"github.com/Mirantis/hmc/test/scheme"
 )
 
-func TestClusterTemplateValidateDelete(t *testing.T) {
+const (
+	namespace             = "test-ns"
+	systemNamespace       = "hmc"
+	tmName                = "test-tm"
+	hmcServiceAccountName = "hmc-controller-manager"
+)
+
+func TestProviderTemplateValidateDelete(t *testing.T) {
 	ctx := context.Background()
-	namespace := "test"
-	tpl := template.NewClusterTemplate(template.WithName("testTemplateFail"), template.WithNamespace(namespace))
-	tplTest := template.NewClusterTemplate(template.WithName("testTemplate"), template.WithNamespace(namespace))
+	tmpl := template.NewProviderTemplate(template.WithName("mytemplate"))
+
+	releaseName := "hmc-0-0-3"
 
 	tests := []struct {
-		name            string
+		title           string
+		template        *v1alpha1.ProviderTemplate
+		existingObjects []runtime.Object
+		userInfo        authenticationv1.UserInfo
+		warnings        admission.Warnings
+		err             string
+	}{
+		{
+			title:           "should fail if the deletion was triggered by user and the source Release object exists",
+			template:        template.NewProviderTemplate(template.WithReleaseLabel(releaseName)),
+			existingObjects: []runtime.Object{release.New(release.WithName(releaseName))},
+			warnings:        admission.Warnings{fmt.Sprintf("ProviderTemplate object can't be removed since it's part of the %s release", releaseName)},
+			err:             errTemplateDeletionForbidden.Error(),
+		},
+		{
+			title:    "should succeed if the deletion was triggered by user and the source Release object does not exist",
+			template: template.NewProviderTemplate(template.WithReleaseLabel(releaseName)),
+		},
+		{
+			title:           "should succeed if the controller triggers the deletion",
+			template:        tmpl,
+			existingObjects: []runtime.Object{release.New(release.WithName(releaseName))},
+			userInfo:        authenticationv1.UserInfo{Username: fmt.Sprintf("system:serviceaccount:%s:%s", systemNamespace, hmcServiceAccountName)},
+		},
+		{
+			title:           "should succeed if the ProviderTemplate is not a part of HMC Release",
+			template:        tmpl,
+			existingObjects: []runtime.Object{release.New(release.WithName(releaseName))},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.title, func(t *testing.T) {
+			g := NewWithT(t)
+
+			c := fake.
+				NewClientBuilder().
+				WithScheme(scheme.Scheme).
+				WithRuntimeObjects(tt.existingObjects...).
+				WithIndex(&v1alpha1.ManagedCluster{}, v1alpha1.ServicesTemplateKey, v1alpha1.ExtractServiceTemplateName).
+				WithIndex(&v1alpha1.ServiceTemplateChain{}, v1alpha1.SupportedTemplateKey, v1alpha1.ExtractSupportedTemplatesNames).
+				Build()
+
+			validator := &ProviderTemplateValidator{
+				TemplateValidator{
+					Client:          c,
+					SystemNamespace: systemNamespace,
+				},
+			}
+
+			t.Setenv(ServiceAccountEnvName, hmcServiceAccountName)
+
+			req := admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					UserInfo: tt.userInfo,
+				},
+			}
+			warn, err := validator.ValidateDelete(admission.NewContextWithRequest(ctx, req), tt.template)
+			if tt.err != "" {
+				g.Expect(err).To(MatchError(tt.err))
+			} else {
+				g.Expect(err).To(Succeed())
+			}
+
+			if len(tt.warnings) > 0 {
+				g.Expect(warn).To(Equal(tt.warnings))
+			} else {
+				g.Expect(warn).To(BeEmpty())
+			}
+		})
+	}
+}
+
+func TestClusterTemplateValidateDelete(t *testing.T) {
+	ctx := context.Background()
+
+	tpl := template.NewClusterTemplate(template.WithName("testTemplateFail"), template.WithNamespace(namespace))
+
+	tests := []struct {
+		title           string
 		template        *v1alpha1.ClusterTemplate
 		existingObjects []runtime.Object
+		userInfo        authenticationv1.UserInfo
 		err             string
 		warnings        admission.Warnings
 	}{
 		{
-			name:     "should fail if ManagedCluster objects exist in the same namespace",
+			title:    "should fail if ManagedCluster object referencing the template exists in the same namespace",
 			template: tpl,
 			existingObjects: []runtime.Object{managedcluster.NewManagedCluster(
 				managedcluster.WithNamespace(namespace),
@@ -53,7 +146,27 @@ func TestClusterTemplateValidateDelete(t *testing.T) {
 			err:      "template deletion is forbidden",
 		},
 		{
-			name:     "should succeed if some ManagedCluster from another namespace references the template",
+			title:    "should fail if one or more ClusterTemplateChain object references the template",
+			template: tpl,
+			existingObjects: []runtime.Object{tc.NewClusterTemplateChain(tc.WithNamespace(tpl.Namespace), tc.WithSupportedTemplates(
+				[]v1alpha1.SupportedTemplate{
+					{
+						Name: tpl.Name,
+					},
+				}),
+			)},
+			warnings: admission.Warnings{"The ClusterTemplate object can't be removed if ClusterTemplateChain object referencing it exists"},
+			err:      "template deletion is forbidden",
+		},
+		{
+			title:           "should fail if the template is managed by HMC and the user triggered the deletion",
+			template:        template.NewClusterTemplate(template.ManagedByHMC()),
+			existingObjects: []runtime.Object{tm.NewTemplateManagement(tm.WithName(tmName))},
+			warnings:        admission.Warnings{"The Template is managed by the TemplateManagement and ClusterTemplateChain"},
+			err:             "template deletion is forbidden",
+		},
+		{
+			title:    "should succeed if some ManagedCluster from another namespace references the template",
 			template: tpl,
 			existingObjects: []runtime.Object{managedcluster.NewManagedCluster(
 				managedcluster.WithNamespace("new"),
@@ -61,28 +174,48 @@ func TestClusterTemplateValidateDelete(t *testing.T) {
 			)},
 		},
 		{
-			name:            "should be OK because of a different cluster",
-			template:        tpl,
-			existingObjects: []runtime.Object{managedcluster.NewManagedCluster()},
+			title:           "should succeed if the template is managed by HMC and the controller triggered the deletion",
+			template:        template.NewClusterTemplate(template.ManagedByHMC()),
+			userInfo:        authenticationv1.UserInfo{Username: fmt.Sprintf("system:serviceaccount:%s:%s", systemNamespace, hmcServiceAccountName)},
+			existingObjects: []runtime.Object{tm.NewTemplateManagement(tm.WithName(tmName))},
 		},
 		{
-			name:            "should succeed",
-			template:        template.NewClusterTemplate(),
-			existingObjects: []runtime.Object{managedcluster.NewManagedCluster(managedcluster.WithClusterTemplate(tplTest.Name))},
+			title:           "should succeed if the template is not managed by HMC",
+			template:        tpl,
+			existingObjects: []runtime.Object{tm.NewTemplateManagement(tm.WithName(tmName))},
+		},
+		{
+			title:           "should succeed because no cluster references the template",
+			template:        tpl,
+			existingObjects: []runtime.Object{managedcluster.NewManagedCluster()},
 		},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+		t.Run(tt.title, func(t *testing.T) {
 			g := NewWithT(t)
 
 			c := fake.NewClientBuilder().
 				WithScheme(scheme.Scheme).
 				WithRuntimeObjects(tt.existingObjects...).
-				WithIndex(tt.existingObjects[0], v1alpha1.TemplateKey, v1alpha1.ExtractTemplateName).
+				WithIndex(&v1alpha1.ManagedCluster{}, v1alpha1.TemplateKey, v1alpha1.ExtractTemplateName).
+				WithIndex(&v1alpha1.ClusterTemplateChain{}, v1alpha1.SupportedTemplateKey, v1alpha1.ExtractSupportedTemplatesNames).
 				Build()
-			validator := &ClusterTemplateValidator{Client: c}
-			warn, err := validator.ValidateDelete(ctx, tt.template)
+			validator := &ClusterTemplateValidator{
+				TemplateValidator: TemplateValidator{
+					Client:          c,
+					SystemNamespace: systemNamespace,
+				},
+			}
+
+			t.Setenv(ServiceAccountEnvName, hmcServiceAccountName)
+
+			req := admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					UserInfo: tt.userInfo,
+				},
+			}
+			warn, err := validator.ValidateDelete(admission.NewContextWithRequest(ctx, req), tt.template)
 			if tt.err != "" {
 				g.Expect(err).To(MatchError(tt.err))
 			} else {
@@ -106,6 +239,7 @@ func TestServiceTemplateValidateDelete(t *testing.T) {
 		title           string
 		template        *v1alpha1.ServiceTemplate
 		existingObjects []runtime.Object
+		userInfo        authenticationv1.UserInfo
 		warnings        admission.Warnings
 		err             string
 	}{
@@ -122,6 +256,26 @@ func TestServiceTemplateValidateDelete(t *testing.T) {
 			err:      errTemplateDeletionForbidden.Error(),
 		},
 		{
+			title:    "should fail if one or more ServiceTemplateChain object references the template",
+			template: tmpl,
+			existingObjects: []runtime.Object{tc.NewServiceTemplateChain(tc.WithNamespace(tmpl.Namespace), tc.WithSupportedTemplates(
+				[]v1alpha1.SupportedTemplate{
+					{
+						Name: tmpl.Name,
+					},
+				}),
+			)},
+			warnings: admission.Warnings{"The ServiceTemplate object can't be removed if ServiceTemplateChain object referencing it exists"},
+			err:      "template deletion is forbidden",
+		},
+		{
+			title:           "should fail if the template is managed by HMC and the user triggered the deletion",
+			template:        template.NewServiceTemplate(template.ManagedByHMC()),
+			existingObjects: []runtime.Object{tm.NewTemplateManagement(tm.WithName(tmName))},
+			warnings:        admission.Warnings{"The Template is managed by the TemplateManagement and ServiceTemplateChain"},
+			err:             "template deletion is forbidden",
+		},
+		{
 			title:    "should succeed if managedCluster referencing ServiceTemplate is another namespace",
 			template: tmpl,
 			existingObjects: []runtime.Object{
@@ -132,7 +286,18 @@ func TestServiceTemplateValidateDelete(t *testing.T) {
 			},
 		},
 		{
-			title:           "should be OK because of a different cluster",
+			title:           "should succeed if the template is managed by HMC and the controller triggered the deletion",
+			template:        template.NewServiceTemplate(template.ManagedByHMC()),
+			userInfo:        authenticationv1.UserInfo{Username: fmt.Sprintf("system:serviceaccount:%s:%s", systemNamespace, hmcServiceAccountName)},
+			existingObjects: []runtime.Object{tm.NewTemplateManagement(tm.WithName(tmName))},
+		},
+		{
+			title:           "should succeed if the template is not managed by HMC",
+			template:        tmpl,
+			existingObjects: []runtime.Object{tm.NewTemplateManagement(tm.WithName(tmName))},
+		},
+		{
+			title:           "should succeed because no cluster references the template",
 			template:        tmpl,
 			existingObjects: []runtime.Object{managedcluster.NewManagedCluster()},
 		},
@@ -146,10 +311,25 @@ func TestServiceTemplateValidateDelete(t *testing.T) {
 				NewClientBuilder().
 				WithScheme(scheme.Scheme).
 				WithRuntimeObjects(tt.existingObjects...).
-				WithIndex(tt.existingObjects[0], v1alpha1.ServicesTemplateKey, v1alpha1.ExtractServiceTemplateName).
+				WithIndex(&v1alpha1.ManagedCluster{}, v1alpha1.ServicesTemplateKey, v1alpha1.ExtractServiceTemplateName).
+				WithIndex(&v1alpha1.ServiceTemplateChain{}, v1alpha1.SupportedTemplateKey, v1alpha1.ExtractSupportedTemplatesNames).
 				Build()
-			validator := &ServiceTemplateValidator{Client: c}
-			warn, err := validator.ValidateDelete(ctx, tt.template)
+
+			validator := &ServiceTemplateValidator{
+				TemplateValidator{
+					Client:          c,
+					SystemNamespace: systemNamespace,
+				},
+			}
+
+			t.Setenv(ServiceAccountEnvName, hmcServiceAccountName)
+
+			req := admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					UserInfo: tt.userInfo,
+				},
+			}
+			warn, err := validator.ValidateDelete(admission.NewContextWithRequest(ctx, req), tt.template)
 			if tt.err != "" {
 				g.Expect(err).To(MatchError(tt.err))
 			} else {

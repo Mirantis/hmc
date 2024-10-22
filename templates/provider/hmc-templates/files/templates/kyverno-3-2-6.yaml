@@ -2,6 +2,8 @@ apiVersion: hmc.mirantis.com/v1alpha1
 kind: ServiceTemplate
 metadata:
   name: kyverno-3-2-6
+  labels:
+    hmc.mirantis.com/release: hmc-0-0-3
   annotations:
     helm.sh/resource-policy: keep
 spec:
