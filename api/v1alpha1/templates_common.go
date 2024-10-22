@@ -15,6 +15,9 @@
 package v1alpha1
 
 import (
+	"errors"
+	"fmt"
+	"slices"
 	"strings"
 
 	helmcontrollerv2 "github.com/fluxcd/helm-controller/api/v2"
@@ -25,6 +28,8 @@ const (
 	// ChartAnnotationProviderName is the annotation set on components in a Template.
 	// This annotations allows to identify all the components belonging to a provider.
 	ChartAnnotationProviderName = "cluster.x-k8s.io/provider"
+
+	chartAnnoCAPIPrefix = "cluster.x-k8s.io/"
 )
 
 // +kubebuilder:validation:XValidation:rule="(has(self.chartName) && !has(self.chartRef)) || (!has(self.chartName) && has(self.chartRef))", message="either chartName or chartRef must be set"
@@ -72,36 +77,77 @@ type TemplateValidationStatus struct {
 	Valid bool `json:"valid"`
 }
 
-const multiProviderSeparator = ","
+func getProvidersList(providersGetter interface{ GetSpecProviders() Providers }, annotations map[string]string) Providers {
+	const multiProviderSeparator = ","
 
-func parseProviders(providersGetter interface{ GetSpecProviders() Providers }, annotations map[string]string) []NameContract {
+	if spec := providersGetter.GetSpecProviders(); len(spec) > 0 {
+		slices.Sort(spec)
+		return slices.Compact(spec)
+	}
+
 	providers := annotations[ChartAnnotationProviderName]
 	if len(providers) == 0 {
-		return providersGetter.GetSpecProviders()
+		return Providers{}
 	}
 
 	var (
-		ps = providersGetter.GetSpecProviders()
-
 		splitted = strings.Split(providers, multiProviderSeparator)
-		pstatus  = make([]NameContract, 0, len(splitted)+len(ps))
+		pstatus  = make([]string, 0, len(splitted))
 	)
-	pstatus = append(pstatus, ps...)
-
 	for _, v := range splitted {
-		v = strings.TrimSpace(v)
-		nameContract := strings.SplitN(v, " ", 2)
-		if len(nameContract) == 0 { // BCE (bound check elimination)
+		if c := strings.TrimSpace(v); c != "" {
+			pstatus = append(pstatus, c)
+		}
+	}
+
+	slices.Sort(pstatus)
+	return slices.Compact(pstatus)
+}
+
+func getCAPIContracts(contractsGetter interface{ GetContracts() CompatibilityContracts }, annotations map[string]string) (_ CompatibilityContracts, merr error) {
+	contractsStatus := make(map[string]string)
+
+	// spec preceding the annos
+	if contracts := contractsGetter.GetContracts(); len(contracts) > 0 {
+		for capiContract, providerContract := range contracts {
+			if !isCAPIContractSingleVersion(capiContract) {
+				merr = errors.Join(merr, fmt.Errorf("incorrect CAPI contract version %s in the spec", capiContract))
+				continue
+			}
+
+			if providerContract != "" && !isCAPIContractVersion(providerContract) { // special case for either CAPI or deliberately set empty
+				merr = errors.Join(merr, fmt.Errorf("incorrect provider contract version %s in the spec for the %s CAPI contract version", providerContract, capiContract))
+				continue
+			}
+
+			contractsStatus[capiContract] = providerContract
+		}
+
+		return contractsStatus, merr
+	}
+
+	for k, providerContract := range annotations {
+		idx := strings.Index(k, chartAnnoCAPIPrefix)
+		if idx < 0 {
 			continue
 		}
 
-		n := NameContract{Name: nameContract[0]}
-		if len(nameContract) > 1 {
-			n.ContractVersion = nameContract[1]
-		}
+		capiContract := k[idx+len(chartAnnoCAPIPrefix):]
+		if isCAPIContractSingleVersion(capiContract) {
+			if providerContract == "" { // special case for either CAPI or deliberately set empty
+				contractsStatus[capiContract] = ""
+				continue
+			}
 
-		pstatus = append(pstatus, n)
+			if isCAPIContractVersion(providerContract) {
+				contractsStatus[capiContract] = providerContract
+			} else {
+				// since we parsed capi contract version,
+				// then treat the provider's invalid version as an error
+				merr = errors.Join(merr, fmt.Errorf("incorrect provider contract version %s given for the %s CAPI contract version annotation", providerContract, k))
+			}
+		}
 	}
 
-	return pstatus
+	return contractsStatus, merr
 }

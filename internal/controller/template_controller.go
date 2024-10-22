@@ -341,11 +341,51 @@ func (r *ClusterTemplateReconciler) validateCompatibilityAttrs(ctx context.Conte
 
 	exposedProviders, requiredProviders := management.Status.AvailableProviders, template.Status.Providers
 
-	ctrl.LoggerFrom(ctx).V(1).Info("providers to check", "exposed", exposedProviders, "required", requiredProviders)
+	ctrl.LoggerFrom(ctx).V(1).Info("providers to check", "exposed", exposedProviders, "required", requiredProviders,
+		"exposed_capi_contract_versions", management.Status.CAPIContracts, "required_capi_contract_versions", template.Status.CAPIContracts)
 
-	var merr error
-	missing, wrong := collectMissingProvidersWithWrongVersions(exposedProviders, requiredProviders)
-	merr = errors.Join(merr, missing, wrong)
+	var (
+		merr          error
+		missing       []string
+		nonSatisfying []string
+	)
+	for _, v := range requiredProviders {
+		if !slices.Contains(exposedProviders, v) {
+			missing = append(missing, v)
+			continue
+		}
+
+		providerCAPIContracts, ok := management.Status.CAPIContracts[v]
+		if !ok {
+			continue // both the provider and cluster templates contract versions must be set for the validation
+		}
+
+		// already validated contract versions format
+		for capi, providerReq := range template.Status.CAPIContracts {
+			providerSupported, ok := providerCAPIContracts[capi]
+			if !ok {
+				// TODO (zerospiel): should we also consider it as a missing error? capi req from cluster missing in provider tpl
+				continue
+			}
+
+			providerSupportedContracts := strings.Split(providerSupported, "_")
+			for _, v := range strings.Split(providerReq, "_") {
+				if !slices.Contains(providerSupportedContracts, v) {
+					nonSatisfying = append(nonSatisfying, v)
+				}
+			}
+		}
+	}
+
+	if len(missing) > 0 {
+		slices.Sort(missing)
+		merr = errors.Join(merr, fmt.Errorf("one or more required providers are not deployed yet: %v", missing))
+	}
+
+	if len(nonSatisfying) > 0 {
+		slices.Sort(nonSatisfying)
+		merr = errors.Join(merr, fmt.Errorf("one or more required provider contract versions does not satisfy deployed: %v", nonSatisfying))
+	}
 
 	if merr != nil {
 		_ = r.updateStatus(ctx, template, merr.Error())
@@ -353,52 +393,6 @@ func (r *ClusterTemplateReconciler) validateCompatibilityAttrs(ctx context.Conte
 	}
 
 	return r.updateStatus(ctx, template, "")
-}
-
-// collectMissingProvidersWithWrongVersions returns collected errors for missing providers and providers with
-// unsatisfying contract versions.
-func collectMissingProvidersWithWrongVersions(exposed, required []hmc.NameContract) (missingErr, nonSatisfyingErr error) {
-	exposed2Contracts := make(map[string][]string, len(exposed))
-	for _, v := range exposed {
-		if v.ContractVersion != "" {
-			exposed2Contracts[v.Name] = strings.Split(v.ContractVersion, "_")
-		} else {
-			exposed2Contracts[v.Name] = nil
-		}
-	}
-
-	var missing, nonSatisfying []string
-	for _, requiredProvider := range required {
-		exposedContracts, ok := exposed2Contracts[requiredProvider.Name]
-		if !ok {
-			missing = append(missing, requiredProvider.Name)
-			continue
-		}
-
-		if len(exposedContracts) == 0 || requiredProvider.ContractVersion == "" {
-			continue
-		}
-
-		requiredContracts := strings.Split(requiredProvider.ContractVersion, "_") // must be only one, but better to check twice
-
-		for _, rc := range requiredContracts {
-			if !slices.Contains(exposedContracts, rc) {
-				nonSatisfying = append(nonSatisfying, fmt.Sprintf("%s %s !~ %v", requiredProvider.Name, rc, exposedContracts))
-			}
-		}
-	}
-
-	if len(missing) > 0 {
-		slices.Sort(missing)
-		missingErr = fmt.Errorf("one or more required providers are not deployed yet: %v", missing)
-	}
-
-	if len(nonSatisfying) > 0 {
-		slices.Sort(nonSatisfying)
-		nonSatisfyingErr = fmt.Errorf("one or more required providers does not satisfy constraints: %v", nonSatisfying)
-	}
-
-	return missingErr, nonSatisfyingErr
 }
 
 // SetupWithManager sets up the controller with the Manager.

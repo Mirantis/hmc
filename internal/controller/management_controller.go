@@ -20,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"slices"
-	"strings"
 
 	fluxv2 "github.com/fluxcd/helm-controller/api/v2"
 	"github.com/fluxcd/pkg/apis/meta"
@@ -106,9 +105,13 @@ func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Manag
 		return ctrl.Result{}, err
 	}
 
-	var errs error
-	detectedProviders := hmc.Providers{}
-	detectedComponents := make(map[string]hmc.ComponentStatus)
+	var (
+		errs error
+
+		detectedProviders  = hmc.Providers{}
+		detectedComponents = make(map[string]hmc.ComponentStatus)
+		detectedContracts  = make(map[string]hmc.CompatibilityContracts)
+	)
 
 	err := r.enableAdditionalComponents(ctx, management)
 	if err != nil {
@@ -128,13 +131,13 @@ func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Manag
 		}, template)
 		if err != nil {
 			errMsg := fmt.Sprintf("Failed to get ProviderTemplate %s: %s", component.Template, err)
-			updateComponentsStatus(detectedComponents, &detectedProviders, component.helmReleaseName, component.Template, template.Status.Providers, errMsg)
+			updateComponentsStatus(detectedComponents, &detectedProviders, detectedContracts, component.helmReleaseName, component.Template, template.Status.Providers, template.Status.CAPIContracts, errMsg)
 			errs = errors.Join(errs, errors.New(errMsg))
 			continue
 		}
 		if !template.Status.Valid {
 			errMsg := fmt.Sprintf("Template %s is not marked as valid", component.Template)
-			updateComponentsStatus(detectedComponents, &detectedProviders, component.helmReleaseName, component.Template, template.Status.Providers, errMsg)
+			updateComponentsStatus(detectedComponents, &detectedProviders, detectedContracts, component.helmReleaseName, component.Template, template.Status.Providers, template.Status.CAPIContracts, errMsg)
 			errs = errors.Join(errs, errors.New(errMsg))
 			continue
 		}
@@ -148,15 +151,16 @@ func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Manag
 		})
 		if err != nil {
 			errMsg := fmt.Sprintf("error reconciling HelmRelease %s/%s: %s", r.SystemNamespace, component.Template, err)
-			updateComponentsStatus(detectedComponents, &detectedProviders, component.helmReleaseName, component.Template, template.Status.Providers, errMsg)
+			updateComponentsStatus(detectedComponents, &detectedProviders, detectedContracts, component.helmReleaseName, component.Template, template.Status.Providers, template.Status.CAPIContracts, errMsg)
 			errs = errors.Join(errs, errors.New(errMsg))
 			continue
 		}
-		updateComponentsStatus(detectedComponents, &detectedProviders, component.helmReleaseName, component.Template, template.Status.Providers, "")
+		updateComponentsStatus(detectedComponents, &detectedProviders, detectedContracts, component.helmReleaseName, component.Template, template.Status.Providers, template.Status.CAPIContracts, "")
 	}
 
 	management.Status.ObservedGeneration = management.Generation
 	management.Status.AvailableProviders = detectedProviders
+	management.Status.CAPIContracts = detectedContracts
 	management.Status.Components = detectedComponents
 	management.Status.Release = management.Spec.Release
 	if err := r.Status().Update(ctx, management); err != nil {
@@ -415,9 +419,11 @@ func (r *ManagementReconciler) enableAdditionalComponents(ctx context.Context, m
 func updateComponentsStatus(
 	components map[string]hmc.ComponentStatus,
 	providers *hmc.Providers,
+	capiContracts map[string]hmc.CompatibilityContracts,
 	componentName string,
 	templateName string,
 	templateProviders hmc.Providers,
+	templateContracts hmc.CompatibilityContracts,
 	err string,
 ) {
 	components[componentName] = hmc.ComponentStatus{
@@ -426,14 +432,14 @@ func updateComponentsStatus(
 		Template: templateName,
 	}
 
-	// TODO: do we actually need to partially include supported versions? The validation is taking
-	// place only when the actual provider template had been created, so either we have to perform
-	// validation here in the controller or change templates status via the validation webhook.
-	// Or just use the fixed versions, so no partially supported contracts would exist.
 	if err == "" {
 		*providers = append(*providers, templateProviders...)
-		slices.SortFunc(*providers, func(a, b hmc.NameContract) int { return strings.Compare(a.Name, b.Name) })
+		slices.Sort(*providers)
 		*providers = slices.Compact(*providers)
+
+		for _, v := range templateProviders {
+			capiContracts[v] = templateContracts // TODO (zerospiel): not sure whether it's okay to overwrite if the same provider
+		}
 	}
 }
 

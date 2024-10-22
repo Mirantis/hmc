@@ -87,6 +87,13 @@ func GetDefaultProviders() []Provider {
 
 // ManagementStatus defines the observed state of Management
 type ManagementStatus struct {
+	// For each CAPI provider name holds its compatibility [contract versions]
+	// in a key-value pairs, where the key is the core CAPI contract version,
+	// and the value is an underscore-delimited (_) list of provider contract versions
+	// supported by the core CAPI.
+	//
+	// [contract versions]: https://cluster-api.sigs.k8s.io/developer/providers/contracts
+	CAPIContracts map[string]CompatibilityContracts `json:"capiContracts,omitempty"`
 	// Components indicates the status of installed HMC components and CAPI providers.
 	Components map[string]ComponentStatus `json:"components,omitempty"`
 	// Release indicates the current Release object.

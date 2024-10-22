@@ -56,14 +56,17 @@ spec:
           spec:
             description: ProviderTemplateSpec defines the desired state of ProviderTemplate
             properties:
-              capiContractVersion:
+              capiContracts:
+                additionalProperties:
+                  type: string
                 description: |-
-                  CAPI [contract version] indicating compatibility with the core CAPI.
-                  Currently supported versions: v1alpha3_v1alpha4_v1beta1.
-                  The field is not applicable for the cluster-api ProviderTemplate.
+                  Holds key-value pairs with compatibility [contract versions],
+                  where the key is the core CAPI contract version,
+                  and the value is an underscore-delimited (_) list of provider contract versions
+                  supported by the core CAPI.
 
-                  [contract version]: https://cluster-api.sigs.k8s.io/developer/providers/contracts
-                type: string
+                  [contract versions]: https://cluster-api.sigs.k8s.io/developer/providers/contracts
+                type: object
               helm:
                 description: HelmSpec references a Helm chart representing the HMC
                   template
@@ -117,22 +120,7 @@ spec:
                   Should be set if not present in the Helm chart metadata.
                   Supported contract versions are optional to be defined.
                 items:
-                  description: |-
-                    Represents name of the provider with its provider compatibility [contract versions].
-
-                    [contract versions]: https://cluster-api.sigs.k8s.io/developer/providers/contracts
-                  properties:
-                    contractVersion:
-                      description: |-
-                        Compatibility restriction in the [CAPI provider format]. The value is an underscore-delimited (_) list of versions.
-                        Optional to be defined.
-
-                        [CAPI provider format]: https://cluster-api.sigs.k8s.io/developer/providers/contracts#api-version-labels
-                      type: string
-                    name:
-                      description: Name of the provider.
-                      type: string
-                  type: object
+                  type: string
                 type: array
             type: object
             x-kubernetes-validations:
@@ -141,13 +129,17 @@ spec:
           status:
             description: ProviderTemplateStatus defines the observed state of ProviderTemplate
             properties:
-              capiContractVersion:
+              capiContracts:
+                additionalProperties:
+                  type: string
                 description: |-
-                  CAPI [contract version] indicating compatibility with the core CAPI.
-                  Currently supported versions: v1alpha3_v1alpha4_v1beta1.
+                  Holds key-value pairs with compatibility [contract versions],
+                  where the key is the core CAPI contract version,
+                  and the value is an underscore-delimited (_) list of provider contract versions
+                  supported by the core CAPI.
 
-                  [contract version]: https://cluster-api.sigs.k8s.io/developer/providers/contracts
-                type: string
+                  [contract versions]: https://cluster-api.sigs.k8s.io/developer/providers/contracts
+                type: object
               chartRef:
                 description: |-
                   ChartRef is a reference to a source controller resource containing the
@@ -195,22 +187,7 @@ spec:
                   Providers represent exposed CAPI providers with supported contract versions
                   if the latter has been given.
                 items:
-                  description: |-
-                    Represents name of the provider with its provider compatibility [contract versions].
-
-                    [contract versions]: https://cluster-api.sigs.k8s.io/developer/providers/contracts
-                  properties:
-                    contractVersion:
-                      description: |-
-                        Compatibility restriction in the [CAPI provider format]. The value is an underscore-delimited (_) list of versions.
-                        Optional to be defined.
-
-                        [CAPI provider format]: https://cluster-api.sigs.k8s.io/developer/providers/contracts#api-version-labels
-                      type: string
-                    name:
-                      description: Name of the provider.
-                      type: string
-                  type: object
+                  type: string
                 type: array
               valid:
                 description: Valid indicates whether the template passed validation

@@ -30,7 +30,8 @@ const (
 
 // ClusterTemplateSpec defines the desired state of ClusterTemplate
 type ClusterTemplateSpec struct {
-	Helm HelmSpec `json:"helm"`
+	Helm          HelmSpec               `json:"helm"`
+	CAPIContracts CompatibilityContracts `json:"capiContracts,omitempty"`
 	// Kubernetes exact version in the SemVer format provided by this ClusterTemplate.
 	KubernetesVersion string `json:"k8sVersion,omitempty"`
 	// Providers represent required CAPI providers with supported contract versions.
@@ -41,6 +42,7 @@ type ClusterTemplateSpec struct {
 
 // ClusterTemplateStatus defines the observed state of ClusterTemplate
 type ClusterTemplateStatus struct {
+	CAPIContracts CompatibilityContracts `json:"capiContracts,omitempty"`
 	// Kubernetes exact version in the SemVer format provided by this ClusterTemplate.
 	KubernetesVersion string `json:"k8sVersion,omitempty"`
 	// Providers represent required CAPI providers with supported contract versions
@@ -53,7 +55,14 @@ type ClusterTemplateStatus struct {
 // FillStatusWithProviders sets the status of the template with providers
 // either from the spec or from the given annotations.
 func (t *ClusterTemplate) FillStatusWithProviders(annotations map[string]string) error {
-	t.Status.Providers = parseProviders(t, annotations)
+	t.Status.Providers = getProvidersList(t, annotations)
+
+	contractsStatus, err := getCAPIContracts(t, annotations)
+	if err != nil {
+		return fmt.Errorf("failed to get CAPI contract versions for ClusterTemplate %s/%s: %v", t.GetNamespace(), t.GetName(), err)
+	}
+
+	t.Status.CAPIContracts = contractsStatus
 
 	kversion := annotations[ChartAnnotationKubernetesVersion]
 	if t.Spec.KubernetesVersion != "" {
@@ -64,12 +73,17 @@ func (t *ClusterTemplate) FillStatusWithProviders(annotations map[string]string)
 	}
 
 	if _, err := semver.NewVersion(kversion); err != nil {
-		return fmt.Errorf("failed to parse kubernetes version %s: %w", kversion, err)
+		return fmt.Errorf("failed to parse kubernetes version %s for ClusterTemplate %s/%s: %w", kversion, t.GetNamespace(), t.GetName(), err)
 	}
 
 	t.Status.KubernetesVersion = kversion
 
 	return nil
+}
+
+// GetContracts returns .spec.capiContracts of the Template.
+func (t *ClusterTemplate) GetContracts() CompatibilityContracts {
+	return t.Spec.CAPIContracts
 }
 
 // GetSpecProviders returns .spec.providers of the Template.

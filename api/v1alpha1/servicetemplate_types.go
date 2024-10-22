@@ -16,7 +16,6 @@ package v1alpha1
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/Masterminds/semver/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -52,19 +51,7 @@ type ServiceTemplateStatus struct {
 // FillStatusWithProviders sets the status of the template with providers
 // either from the spec or from the given annotations.
 func (t *ServiceTemplate) FillStatusWithProviders(annotations map[string]string) error {
-	providers := annotations[ChartAnnotationProviderName]
-	if len(providers) == 0 {
-		t.Status.Providers = t.Spec.Providers
-	} else {
-		splitted := strings.Split(providers, multiProviderSeparator)
-		t.Status.Providers = make(Providers, 0, len(splitted))
-		t.Status.Providers = append(t.Status.Providers, t.Spec.Providers...)
-		for _, v := range splitted {
-			if c := strings.TrimSpace(v); c != "" {
-				t.Status.Providers = append(t.Status.Providers, NameContract{Name: c})
-			}
-		}
-	}
+	t.Status.Providers = getProvidersList(t, annotations)
 
 	kconstraint := annotations[ChartAnnotationKubernetesConstraint]
 	if t.Spec.KubernetesConstraint != "" {
@@ -75,12 +62,17 @@ func (t *ServiceTemplate) FillStatusWithProviders(annotations map[string]string)
 	}
 
 	if _, err := semver.NewConstraint(kconstraint); err != nil {
-		return fmt.Errorf("failed to parse kubernetes constraint %s: %w", kconstraint, err)
+		return fmt.Errorf("failed to parse kubernetes constraint %s for ServiceTemplate %s/%s: %w", kconstraint, t.GetNamespace(), t.GetName(), err)
 	}
 
 	t.Status.KubernetesConstraint = kconstraint
 
 	return nil
+}
+
+// GetSpecProviders returns .spec.providers of the Template.
+func (t *ServiceTemplate) GetSpecProviders() Providers {
+	return t.Spec.Providers
 }
 
 // GetHelmSpec returns .spec.helm of the Template.

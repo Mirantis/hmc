@@ -43,9 +43,9 @@ var (
 
 	mgmt = management.NewManagement(
 		management.WithAvailableProviders(v1alpha1.Providers{
-			{Name: "infrastructure-aws"},
-			{Name: "control-plane-k0s"},
-			{Name: "bootstrap-k0s"},
+			"infrastructure-aws",
+			"control-plane-k0smotron",
+			"bootstrap-k0smotron",
 		}),
 	)
 
@@ -128,9 +128,9 @@ func TestManagedClusterValidateCreate(t *testing.T) {
 				template.NewClusterTemplate(
 					template.WithName(testTemplateName),
 					template.WithProvidersStatus(v1alpha1.Providers{
-						{Name: "infrastructure-aws"},
-						{Name: "control-plane-k0s"},
-						{Name: "bootstrap-k0s"},
+						"infrastructure-aws",
+						"control-plane-k0smotron",
+						"bootstrap-k0smotron",
 					}),
 					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
 				),
@@ -145,9 +145,9 @@ func TestManagedClusterValidateCreate(t *testing.T) {
 			existingObjects: []runtime.Object{
 				cred,
 				management.NewManagement(management.WithAvailableProviders(v1alpha1.Providers{
-					{Name: "infrastructure-aws"},
-					{Name: "control-plane-k0s"},
-					{Name: "bootstrap-k0s"},
+					"infrastructure-aws",
+					"control-plane-k0smotron",
+					"bootstrap-k0smotron",
 				})),
 				template.NewClusterTemplate(
 					template.WithName(testTemplateName),
@@ -171,9 +171,9 @@ func TestManagedClusterValidateCreate(t *testing.T) {
 				template.NewClusterTemplate(
 					template.WithName(testTemplateName),
 					template.WithProvidersStatus(v1alpha1.Providers{
-						{Name: "infrastructure-aws"},
-						{Name: "control-plane-k0s"},
-						{Name: "bootstrap-k0s"},
+						"infrastructure-aws",
+						"control-plane-k0smotron",
+						"bootstrap-k0smotron",
 					}),
 					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
 				),
@@ -200,9 +200,9 @@ func TestManagedClusterValidateCreate(t *testing.T) {
 				template.NewClusterTemplate(
 					template.WithName(testTemplateName),
 					template.WithProvidersStatus(v1alpha1.Providers{
-						{Name: "infrastructure-aws"},
-						{Name: "control-plane-k0s"},
-						{Name: "bootstrap-k0s"},
+						"infrastructure-aws",
+						"control-plane-k0smotron",
+						"bootstrap-k0smotron",
 					}),
 					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
 				),
@@ -219,17 +219,17 @@ func TestManagedClusterValidateCreate(t *testing.T) {
 				cred,
 				management.NewManagement(
 					management.WithAvailableProviders(v1alpha1.Providers{
-						{Name: "infrastructure-azure"},
-						{Name: "control-plane-k0s"},
-						{Name: "bootstrap-k0s"},
+						"infrastructure-azure",
+						"control-plane-k0smotron",
+						"bootstrap-k0smotron",
 					}),
 				),
 				template.NewClusterTemplate(
 					template.WithName(testTemplateName),
 					template.WithProvidersStatus(v1alpha1.Providers{
-						{Name: "infrastructure-azure"},
-						{Name: "control-plane-k0s"},
-						{Name: "bootstrap-k0s"},
+						"infrastructure-azure",
+						"control-plane-k0smotron",
+						"bootstrap-k0smotron",
 					}),
 					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
 				),
@@ -311,9 +311,9 @@ func TestManagedClusterValidateUpdate(t *testing.T) {
 						ValidationError: "validation error example",
 					}),
 					template.WithProvidersStatus(v1alpha1.Providers{
-						{Name: "infrastructure-aws"},
-						{Name: "control-plane-k0s"},
-						{Name: "bootstrap-k0s"},
+						"infrastructure-aws",
+						"control-plane-k0smotron",
+						"bootstrap-k0smotron",
 					}),
 				),
 			},

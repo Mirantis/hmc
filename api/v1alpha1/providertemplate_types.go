@@ -15,23 +15,15 @@
 package v1alpha1
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
+	"fmt"
 
-const (
-	// ChartAnnotationCAPIContractVersion is an annotation containing the expected core CAPI contract version (e.g. v1beta1) associated with a ProviderTemplate.
-	ChartAnnotationCAPIContractVersion = "hmc.mirantis.com/capi-version"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // ProviderTemplateSpec defines the desired state of ProviderTemplate
 type ProviderTemplateSpec struct {
-	Helm HelmSpec `json:"helm,omitempty"`
-	// CAPI [contract version] indicating compatibility with the core CAPI.
-	// Currently supported versions: v1alpha3_v1alpha4_v1beta1.
-	// The field is not applicable for the cluster-api ProviderTemplate.
-	//
-	// [contract version]: https://cluster-api.sigs.k8s.io/developer/providers/contracts
-	CAPIContractVersion string `json:"capiContractVersion,omitempty"`
+	Helm          HelmSpec               `json:"helm,omitempty"`
+	CAPIContracts CompatibilityContracts `json:"capiContracts,omitempty"`
 	// Providers represent exposed CAPI providers with supported contract versions.
 	// Should be set if not present in the Helm chart metadata.
 	// Supported contract versions are optional to be defined.
@@ -40,11 +32,7 @@ type ProviderTemplateSpec struct {
 
 // ProviderTemplateStatus defines the observed state of ProviderTemplate
 type ProviderTemplateStatus struct {
-	// CAPI [contract version] indicating compatibility with the core CAPI.
-	// Currently supported versions: v1alpha3_v1alpha4_v1beta1.
-	//
-	// [contract version]: https://cluster-api.sigs.k8s.io/developer/providers/contracts
-	CAPIContractVersion string `json:"capiContractVersion,omitempty"`
+	CAPIContracts CompatibilityContracts `json:"capiContracts,omitempty"`
 	// Providers represent exposed CAPI providers with supported contract versions
 	// if the latter has been given.
 	Providers Providers `json:"providers,omitempty"`
@@ -55,20 +43,21 @@ type ProviderTemplateStatus struct {
 // FillStatusWithProviders sets the status of the template with providers
 // either from the spec or from the given annotations.
 func (t *ProviderTemplate) FillStatusWithProviders(annotations map[string]string) error {
-	t.Status.Providers = parseProviders(t, annotations)
+	t.Status.Providers = getProvidersList(t, annotations)
 
-	if t.Name == CoreCAPIName {
-		return nil
+	contractsStatus, err := getCAPIContracts(t, annotations)
+	if err != nil {
+		return fmt.Errorf("failed to get CAPI contract versions for ProviderTemplate %s: %v", t.GetName(), err)
 	}
 
-	requiredCAPIContract := annotations[ChartAnnotationCAPIContractVersion]
-	if t.Spec.CAPIContractVersion != "" {
-		requiredCAPIContract = t.Spec.CAPIContractVersion
-	}
-
-	t.Status.CAPIContractVersion = requiredCAPIContract
+	t.Status.CAPIContracts = contractsStatus
 
 	return nil
+}
+
+// GetContracts returns .spec.capiContracts of the Template.
+func (t *ProviderTemplate) GetContracts() CompatibilityContracts {
+	return t.Spec.CAPIContracts
 }
 
 // GetSpecProviders returns .spec.providers of the Template.

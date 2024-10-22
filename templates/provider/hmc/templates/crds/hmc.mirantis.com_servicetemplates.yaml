@@ -112,22 +112,7 @@ spec:
                   Providers represent requested CAPI providers.
                   Should be set if not present in the Helm chart metadata.
                 items:
-                  description: |-
-                    Represents name of the provider with its provider compatibility [contract versions].
-
-                    [contract versions]: https://cluster-api.sigs.k8s.io/developer/providers/contracts
-                  properties:
-                    contractVersion:
-                      description: |-
-                        Compatibility restriction in the [CAPI provider format]. The value is an underscore-delimited (_) list of versions.
-                        Optional to be defined.
-
-                        [CAPI provider format]: https://cluster-api.sigs.k8s.io/developer/providers/contracts#api-version-labels
-                      type: string
-                    name:
-                      description: Name of the provider.
-                      type: string
-                  type: object
+                  type: string
                 type: array
             required:
             - helm
@@ -187,22 +172,7 @@ spec:
               providers:
                 description: Providers represent requested CAPI providers.
                 items:
-                  description: |-
-                    Represents name of the provider with its provider compatibility [contract versions].
-
-                    [contract versions]: https://cluster-api.sigs.k8s.io/developer/providers/contracts
-                  properties:
-                    contractVersion:
-                      description: |-
-                        Compatibility restriction in the [CAPI provider format]. The value is an underscore-delimited (_) list of versions.
-                        Optional to be defined.
-
-                        [CAPI provider format]: https://cluster-api.sigs.k8s.io/developer/providers/contracts#api-version-labels
-                      type: string
-                    name:
-                      description: Name of the provider.
-                      type: string
-                  type: object
+                  type: string
                 type: array
               valid:
                 description: Valid indicates whether the template passed validation
