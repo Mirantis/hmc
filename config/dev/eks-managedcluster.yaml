@@ -4,8 +4,8 @@ metadata:
   name: eks-dev
   namespace: ${NAMESPACE}
 spec:
+  template: aws-eks-0-0-2
+  credential: "aws-cluster-identity-cred"
   config:
     region: us-east-2
     workersNumber: 1
-  template: aws-eks-0-0-2
-  credential: "aws-cluster-identity-cred"
