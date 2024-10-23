@@ -21,7 +21,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/Mirantis/hmc/test/utils"
+	"github.com/Mirantis/hmc/internal/utils/status"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
@@ -163,7 +163,7 @@ func (kc *KubeClient) CreateOrUpdateUnstructuredObject(gvr schema.GroupVersionRe
 
 	client := kc.GetDynamicClient(gvr, namespaced)
 
-	kind, name := utils.ObjKindName(obj)
+	kind, name := status.ObjKindName(obj)
 
 	resp, err := client.Get(context.Background(), name, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
