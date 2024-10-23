@@ -4,7 +4,7 @@
 
 Mirantis Hybrid Multi Cluster is part of Mirantis Project 0x2A which is focused
 on delivering a open source approach to providing an enterprise grade
-multi-cluster kubernetes managment solution based entirely on standard open
+multi-cluster kubernetes management solution based entirely on standard open
 source tooling that works across private or public clouds.
 
 We like to say that Project 0x2A (42) is the answer to life, the universe, and
@@ -78,17 +78,13 @@ kind: Management
 metadata:
   name: hmc
 spec:
-  core:
-    capi:
-      template: cluster-api
-    hmc:
-      template: hmc
   providers:
-  - template: k0smotron
-  - config:
-      configSecret:
-       name: aws-variables
-    template: cluster-api-provider-aws
+  - name: k0smotron
+  - name: cluster-api-provider-aws
+  - name: cluster-api-provider-azure
+  - name: cluster-api-provider-vsphere
+  - name: projectsveltos
+  release: hmc-0-0-3
 ```
 
 There are two options to override the default management configuration of HMC:
@@ -118,7 +114,12 @@ own `Management` configuration:
 
 To deploy a managed cluster:
 
-1. Select the `ClusterTemplate` you want to use for the deployment. To list all
+1. Create `Credential` object with all credentials required.
+
+   See [Credential system docs](https://mirantis.github.io/project-2a-docs/credential/main)
+   for more information regarding this object.
+
+2. Select the `ClusterTemplate` you want to use for the deployment. To list all
    available templates, run:
 
 ```bash
@@ -127,7 +128,7 @@ export KUBECONFIG=<path-to-management-kubeconfig>
 kubectl get clustertemplate -n hmc-system
 ```
 
-If you want to deploy hostded control plate template, make sure to check
+If you want to deploy hosted control plane template, make sure to check
 additional notes on Hosted control plane in 2A Docs, see
 [Documentation](#documentation).
 
@@ -146,6 +147,7 @@ metadata:
   namespace: <cluster-namespace>
 spec:
   template: <template-name>
+  credential: <credential-name>
   dryRun: <true/false>
   config:
     <cluster-configuration>
@@ -204,7 +206,6 @@ spec:
         cidrBlocks:
         - 10.96.0.0/12
     controlPlane:
-      amiID: ""
       iamInstanceProfile: control-plane.cluster-api-provider-aws.sigs.k8s.io
       instanceType: ""
     controlPlaneNumber: 3
@@ -214,11 +215,11 @@ spec:
     region: ""
     sshKeyName: ""
     worker:
-      amiID: ""
       iamInstanceProfile: nodes.cluster-api-provider-aws.sigs.k8s.io
       instanceType: ""
     workersNumber: 2
-  template: aws-standalone-cp
+  template: aws-standalone-cp-0-0-2
+  credential: aws-credential
   dryRun: true
 ```
 
@@ -233,19 +234,18 @@ apiVersion: hmc.mirantis.com/v1alpha1
 kind: ManagedCluster
 metadata:
   name: aws-standalone
-  namespace: aws
+  namespace: hmc-system
 spec:
-  template: aws-standalone-cp
+  template: aws-standalone-cp-0-0-2
+  credential: aws-credential
   config:
     region: us-east-2
     publicIP: true
     controlPlaneNumber: 1
     workersNumber: 1
     controlPlane:
-      amiID: ami-02f3416038bdb17fb
       instanceType: t3.small
     worker:
-      amiID: ami-02f3416038bdb17fb
       instanceType: t3.small
   status:
     conditions:
