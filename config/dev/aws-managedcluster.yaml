@@ -13,7 +13,7 @@ spec:
       instanceType: t3.small
     controlPlaneNumber: 1
     publicIP: true
-    region: us-west-2
+    region: ${AWS_REGION}
     worker:
       instanceType: t3.small
     workersNumber: 1
