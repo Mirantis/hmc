@@ -39,7 +39,7 @@ spec:
         env:
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: {{ quote .Values.kubernetesClusterDomain }}
-        image: {{ .Values.image.repository }}:{{ .Values.image.tag
+        image: {{ .Values.extensions.imageRepository }}:{{ .Values.image.tag
           | default .Chart.AppVersion }}
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         {{- if .Values.admissionWebhook.enabled }}
