@@ -400,8 +400,12 @@ FLUX_SOURCE_REPO_NAME ?= source-helmrepositories
 FLUX_SOURCE_REPO_CRD ?= $(EXTERNAL_CRD_DIR)/$(FLUX_SOURCE_REPO_NAME)-$(FLUX_SOURCE_VERSION).yaml
 FLUX_SOURCE_CHART_NAME ?= source-helmchart
 FLUX_SOURCE_CHART_CRD ?= $(EXTERNAL_CRD_DIR)/$(FLUX_SOURCE_CHART_NAME)-$(FLUX_SOURCE_VERSION).yaml
-
 FLUX_HELM_VERSION ?= $(shell go mod edit -json | jq -r '.Require[] | select(.Path == "github.com/fluxcd/helm-controller/api") | .Version')
+FLUX_HELM_CRD ?= $(EXTERNAL_CRD_DIR)/helm-$(FLUX_HELM_VERSION).yaml
+CAPI_VERSION ?= v1.8.4
+CAPI_CRD ?= $(EXTERNAL_CRD_DIR)/capi-$(CAPI_VERSION).yaml
+K0SMOTRON_VERSION ?= $(shell go mod edit -json | jq -r '.Require[] | select(.Path == "github.com/k0sproject/k0smotron") | .Version')
+K0SMOTRON_CRD ?= $(EXTERNAL_CRD_DIR)/k0smotron-$(K0SMOTRON_VERSION).yaml
 FLUX_HELM_NAME ?= helm
 FLUX_HELM_CRD ?= $(EXTERNAL_CRD_DIR)/$(FLUX_HELM_NAME)-$(FLUX_HELM_VERSION).yaml
 
@@ -479,8 +483,16 @@ $(SVELTOS_CRD): | yq $(EXTERNAL_CRD_DIR)
 	rm -f $(EXTERNAL_CRD_DIR)/$(SVELTOS_NAME)*
 	curl -s --fail https://raw.githubusercontent.com/projectsveltos/sveltos/$(SVELTOS_VERSION)/manifest/crds/sveltos_crds.yaml > $(SVELTOS_CRD)
 
+$(K0SMOTRON_CRD): $(EXTERNAL_CRD_DIR)
+	rm -f $(K0SMOTRON_CRD)
+	curl -s https://raw.githubusercontent.com/k0sproject/k0smotron/$(K0SMOTRON_VERSION)/config/crd/bases/infrastructure.cluster.x-k8s.io_remoteclusters.yaml > $(K0SMOTRON_CRD)
+
+$(CAPI_CRD): $(EXTERNAL_CRD_DIR)
+	rm -f $(CAPI_CRD)
+	curl -s https://raw.githubusercontent.com/kubernetes-sigs/cluster-api/$(CAPI_VERSION)/config/crd/bases/cluster.x-k8s.io_clusters.yaml > $(CAPI_CRD)
+
 .PHONY: external-crd
-external-crd: $(FLUX_HELM_CRD) $(FLUX_SOURCE_CHART_CRD) $(FLUX_SOURCE_REPO_CRD) $(SVELTOS_CRD)
+external-crd: $(FLUX_HELM_CRD) $(FLUX_SOURCE_CHART_CRD) $(FLUX_SOURCE_REPO_CRD) $(SVELTOS_CRD) $(K0SMOTRON_CRD) $(CAPI_CRD)
 
 .PHONY: kind
 kind: $(KIND) ## Download kind locally if necessary.

@@ -1,0 +1,13 @@
+# permissions for end users to edit unmanagedclusters.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    hmc.mirantis.com/aggregate-to-global-admin: "true"
+  name: {{ include "hmc.fullname" . }}-unmanagedcluster-editor-role
+rules:
+- apiGroups:
+  - hmc.mirantis.com
+  resources:
+  - unmanagedclusters
+  verbs: {{ include "rbac.editorVerbs" . | nindent 6 }}

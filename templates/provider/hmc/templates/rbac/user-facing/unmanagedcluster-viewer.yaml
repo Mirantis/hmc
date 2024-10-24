@@ -1,0 +1,13 @@
+# permissions for end users to view unmanagedclusters.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    hmc.mirantis.com/aggregate-to-global-admin: "true"
+  name: unmanagedcluster-viewer-role
+rules:
+- apiGroups:
+    - hmc.mirantis.com
+  resources:
+  - unmanagedclusters
+  verbs: {{ include "rbac.viewerVerbs" . | nindent 6 }}

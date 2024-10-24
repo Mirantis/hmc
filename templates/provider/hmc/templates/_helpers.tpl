@@ -96,6 +96,7 @@ hmc-webhook
 {{- define "rbac.editorVerbs" -}}
 - create
 - delete
+- deletecollection
 - get
 - list
 - patch
