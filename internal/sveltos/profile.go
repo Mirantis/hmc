@@ -16,6 +16,7 @@ package sveltos
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"unsafe"
@@ -23,6 +24,7 @@ import (
 	sveltosv1beta1 "github.com/projectsveltos/addon-controller/api/v1beta1"
 	libsveltosv1beta1 "github.com/projectsveltos/libsveltos/api/v1beta1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -224,4 +226,57 @@ func priorityToTier(priority int32) (int32, error) {
 	}
 
 	return 0, fmt.Errorf("invalid value %d, priority has to be between %d and %d", priority, mini, maxi)
+}
+
+// SetStatusConditions transforms status from Sveltos ClusterSummary
+// object and sets it into the provided list of conditions.
+func SetStatusConditions(summary *sveltosv1beta1.ClusterSummary, conditions *[]metav1.Condition) error {
+	if summary == nil {
+		return errors.New("nil summary provided")
+	}
+
+	for _, x := range summary.Status.FeatureSummaries {
+		msg := ""
+		status := metav1.ConditionTrue
+		if x.FailureMessage != nil && *x.FailureMessage != "" {
+			msg = *x.FailureMessage
+			status = metav1.ConditionFalse
+		}
+
+		apimeta.SetStatusCondition(conditions, metav1.Condition{
+			Message: msg,
+			Reason:  string(x.Status),
+			Status:  status,
+			Type:    string(x.FeatureID),
+		})
+	}
+
+	for _, x := range summary.Status.HelmReleaseSummaries {
+		msg := "Release " + x.ReleaseNamespace + "/" + x.ReleaseName
+		status := metav1.ConditionTrue
+		if x.ConflictMessage != "" {
+			msg += ": " + x.ConflictMessage
+			status = metav1.ConditionFalse
+		}
+
+		apimeta.SetStatusCondition(conditions, metav1.Condition{
+			Message: msg,
+			Reason:  string(x.Status),
+			Status:  status,
+			Type:    HelmReleaseReadyConditionType(x.ReleaseNamespace, x.ReleaseName),
+		})
+	}
+
+	return nil
+}
+
+// HelmReleaseReadyConditionType returns a SveltosHelmReleaseReady
+// type per service to be used in status conditions.
+func HelmReleaseReadyConditionType(releaseNamespace, releaseName string) string {
+	return fmt.Sprintf(
+		"%s.%s/%s",
+		releaseNamespace,
+		releaseName,
+		hmc.SveltosHelmReleaseReadyCondition,
+	)
 }

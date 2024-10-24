@@ -24,6 +24,18 @@ const (
 	MultiClusterServiceFinalizer = "hmc.mirantis.com/multicluster-service"
 	// MultiClusterServiceKind is the string representation of a MultiClusterServiceKind.
 	MultiClusterServiceKind = "MultiClusterService"
+
+	// SveltosProfileReadyCondition indicates if the Sveltos Profile is ready.
+	SveltosProfileReadyCondition = "SveltosProfileReady"
+	// SveltosClusterProfileReadyCondition indicates if the Sveltos ClusterProfile is ready.
+	SveltosClusterProfileReadyCondition = "SveltosClusterProfileReady"
+	// SveltosHelmReleaseReadyCondition indicates if the HelmRelease
+	// managed by a Sveltos Profile/ClusterProfile is ready.
+	SveltosHelmReleaseReadyCondition = "SveltosHelmReleaseReady"
+
+	// FetchServicesStatusSuccessCondition indicates if status
+	// for the deployed services have been fetched successfully.
+	FetchServicesStatusSuccessCondition = "FetchServicesStatusSuccess"
 )
 
 // ServiceSpec represents a Service to be managed
@@ -74,14 +86,24 @@ type MultiClusterServiceSpec struct {
 	StopOnConflict bool `json:"stopOnConflict,omitempty"`
 }
 
-// MultiClusterServiceStatus defines the observed state of MultiClusterService
-//
-// TODO(https://github.com/Mirantis/hmc/issues/460):
-// If this status ends up being common with ManagedClusterStatus,
-// then make a common status struct that can be shared by both.
+// ServiceStatus contains details for the state of services.
+type ServiceStatus struct {
+	// ClusterName is the name of the associated cluster.
+	ClusterName string `json:"clusterName"`
+	// ClusterNamespace is the namespace of the associated cluster.
+	ClusterNamespace string `json:"clusterNamespace,omitempty"`
+	// Conditions contains details for the current state of managed services.
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
+}
+
+// MultiClusterServiceStatus defines the observed state of MultiClusterService.
 type MultiClusterServiceStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// Services contains details for the state of services.
+	Services []ServiceStatus `json:"services,omitempty"`
+	// Conditions contains details for the current state of the ManagedCluster
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
+	// ObservedGeneration is the last observed generation.
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 }
 
 // +kubebuilder:object:root=true

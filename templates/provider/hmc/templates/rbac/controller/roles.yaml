@@ -184,6 +184,7 @@ rules:
   resources:
   - profiles
   - clusterprofiles
+  - clustersummaries
   verbs: {{ include "rbac.editorVerbs" . | nindent 4 }}
 - apiGroups:
   - hmc.mirantis.com
