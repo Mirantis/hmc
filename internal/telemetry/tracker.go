@@ -33,7 +33,7 @@ type Tracker struct {
 	SystemNamespace string
 }
 
-const interval = 10 * time.Minute
+const interval = 24 * time.Hour
 
 func (t *Tracker) Start(ctx context.Context) error {
 	timer := time.NewTimer(0)
