@@ -47,6 +47,8 @@ spec:
               order: 1
               namespace: kube-system
               values: |
+                image:
+                  repository: {{ .Values.extensions.imageRepository }}
                 config:
                   address: {{ .Values.controlPlaneEndpointIP }}
                 env:
@@ -74,6 +76,7 @@ spec:
                 config:
                   enabled: false
                 daemonset:
+                  image: {{ .Values.extensions.imageRepository }}/cloud-provider-vsphere
                   tolerations:
                     - effect: NoSchedule
                       key: node.cloudprovider.kubernetes.io/uninitialized
@@ -104,9 +107,23 @@ spec:
                   enabled: true
                 images:
                   driver:
+                    repo: {{ .Values.extensions.imageRepository }}/csi-vsphere/driver
                     tag: v3.1.2
                   syncer:
+                    repo: {{ .Values.extensions.imageRepository }}/csi-vsphere/syncer
                     tag: v3.1.2
+                  nodeDriverRegistrar:
+                    repo: {{ .Values.extensions.imageRepository }}/sig-storage/csi-node-driver-registrar
+                  csiAttacher:
+                    repo: {{ .Values.extensions.imageRepository }}/sig-storage/csi-attacher
+                  csiResizer:
+                    repo: {{ .Values.extensions.imageRepository }}/sig-storage/csi-resizer
+                  csiProvisioner:
+                    repo: {{ .Values.extensions.imageRepository }}/sig-storage/csi-provisioner
+                  csiSnapshotter:
+                    repo: {{ .Values.extensions.imageRepository }}/sig-storage/csi-snapshotter
+                  livenessProbe:
+                    repo: {{ .Values.extensions.imageRepository }}/csi-vsphere/livenessprobe
   machineTemplate:
     infrastructureRef:
       apiVersion: infrastructure.cluster.x-k8s.io/v1beta1

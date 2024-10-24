@@ -26,9 +26,17 @@ spec:
         helm:
           repositories:
           - name: vsphere-cpi
+            {{- if .Values.extensions.chartRepository }}
+            url: {{ .Values.extensions.chartRepository }}
+            {{- else }}
             url: https://kubernetes.github.io/cloud-provider-vsphere
+            {{- end }}
           - name: mirantis
+            {{- if .Values.extensions.chartRepository }}
+            url: {{ .Values.extensions.chartRepository }}
+            {{- else }}
             url: https://charts.mirantis.com
+            {{- end }}
           charts:
           - name: vsphere-cpi
             chartname: vsphere-cpi/vsphere-cpi
@@ -40,6 +48,7 @@ spec:
                 enabled: false
               daemonset:
                 affinity: null
+                image: {{ .Values.extensions.imageRepository }}/cloud-provider-vsphere
                 tolerations:
                   - effect: NoSchedule
                     key: node.cloudprovider.kubernetes.io/uninitialized
@@ -72,6 +81,20 @@ spec:
                 enabled: true
               images:
                 driver:
+                  repo: {{ .Values.extensions.imageRepository }}/csi-vsphere/driver
                   tag: v3.1.2
                 syncer:
+                  repo: {{ .Values.extensions.imageRepository }}/csi-vsphere/syncer
                   tag: v3.1.2
+                nodeDriverRegistrar:
+                  repo: {{ .Values.extensions.imageRepository }}/sig-storage/csi-node-driver-registrar
+                csiAttacher:
+                  repo: {{ .Values.extensions.imageRepository }}/sig-storage/csi-attacher
+                csiResizer:
+                  repo: {{ .Values.extensions.imageRepository }}/sig-storage/csi-resizer
+                csiProvisioner:
+                  repo: {{ .Values.extensions.imageRepository }}/sig-storage/csi-provisioner
+                csiSnapshotter:
+                  repo: {{ .Values.extensions.imageRepository }}/sig-storage/csi-snapshotter
+                livenessProbe:
+                  repo: {{ .Values.extensions.imageRepository }}/csi-vsphere/livenessprobe
