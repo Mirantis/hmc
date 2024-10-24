@@ -28,6 +28,8 @@ import (
 	fluxmeta "github.com/fluxcd/pkg/apis/meta"
 	fluxconditions "github.com/fluxcd/pkg/runtime/conditions"
 	sourcev1 "github.com/fluxcd/source-controller/api/v1"
+	sveltosv1beta1 "github.com/projectsveltos/addon-controller/api/v1beta1"
+
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
 	corev1 "k8s.io/api/core/v1"
@@ -366,8 +368,24 @@ func (r *ManagedClusterReconciler) Update(ctx context.Context, managedCluster *h
 }
 
 // updateServices reconciles services provided in ManagedCluster.Spec.Services.
-// TODO(https://github.com/Mirantis/hmc/issues/361): Set status to ManagedCluster object at appropriate places.
 func (r *ManagedClusterReconciler) updateServices(ctx context.Context, mc *hmc.ManagedCluster) (ctrl.Result, error) {
+	var err error
+	defer func() {
+		condition := metav1.Condition{
+			Reason: hmc.SucceededReason,
+			Status: metav1.ConditionTrue,
+			Type:   hmc.SveltosProfileCondition,
+		}
+
+		if err != nil {
+			condition.Message = err.Error()
+			condition.Reason = hmc.FailedReason
+			condition.Status = metav1.ConditionFalse
+		}
+
+		apimeta.SetStatusCondition(mc.GetConditions(), condition)
+	}()
+
 	opts, err := helmChartOpts(ctx, r.Client, mc.Namespace, mc.Spec.Services)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -394,12 +412,18 @@ func (r *ManagedClusterReconciler) updateServices(ctx context.Context, mc *hmc.M
 		return ctrl.Result{}, fmt.Errorf("failed to reconcile Profile: %w", err)
 	}
 
-	// We don't technically need to requeue here, but doing so because golint fails with:
-	// `(*ManagedClusterReconciler).updateServices` - result `res` is always `nil` (unparam)
-	//
-	// This will be automatically resolved once setting status is implemented (https://github.com/Mirantis/hmc/issues/361),
-	// as it is likely that some execution path in the function will have to return with a requeue to fetch latest status.
-	return ctrl.Result{RequeueAfter: DefaultRequeueInterval}, nil
+	profile := sveltosv1beta1.Profile{}
+	profileRef := client.ObjectKey{Name: mc.Name, Namespace: mc.Namespace}
+	if err := r.Get(ctx, profileRef, &profile); err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to get Profile %s to fetch status from its associated ClusterSummary: %w", profileRef.String(), err)
+	}
+
+	servicesStatus, e := updateServicesStatus(ctx, r.Client, profileRef, sveltosv1beta1.ProfileKind, profile.Status, mc.Status.Services)
+	if e != nil {
+		return ctrl.Result{}, e
+	}
+	mc.Status.Services = servicesStatus
+	return ctrl.Result{}, nil
 }
 
 func validateReleaseWithValues(ctx context.Context, actionConfig *action.Configuration, managedCluster *hmc.ManagedCluster, hcChart *chart.Chart) error {
@@ -1022,5 +1046,32 @@ func (r *ManagedClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				}
 			}),
 		).
+		Watches(&sveltosv1beta1.ClusterSummary{},
+			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, o client.Object) []ctrl.Request {
+				cs, ok := o.(*sveltosv1beta1.ClusterSummary)
+				if !ok {
+					return []ctrl.Request{}
+				}
+
+				ownerRef, err := sveltosv1beta1.GetProfileOwnerReference(cs)
+				if err != nil {
+					return []ctrl.Request{}
+				}
+
+				if ownerRef.Kind == sveltosv1beta1.ProfileKind {
+					return []ctrl.Request{
+						{
+							NamespacedName: client.ObjectKey{
+								Namespace: o.GetNamespace(),
+								// The ClusterProfile obj has the same name as
+								// its owner, the MultiClusterService obj.
+								Name: ownerRef.Name,
+							},
+						},
+					}
+				}
+
+				return []ctrl.Request{}
+			})).
 		Complete(r)
 }
