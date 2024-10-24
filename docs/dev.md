@@ -7,7 +7,7 @@ a managed cluster on AWS with k0s for testing. The kind cluster acts as manageme
 
 ### Clone HMC repository
 
-```
+```bash
 git clone https://github.com/Mirantis/hmc.git && cd hmc
 ```
 
@@ -15,7 +15,7 @@ git clone https://github.com/Mirantis/hmc.git && cd hmc
 
 Run:
 
-```
+```bash
 make cli-install
 ```
 
@@ -25,8 +25,13 @@ Follow the instruction to configure AWS Provider: [AWS Provider Setup](aws/main.
 
 The following env variables must be set in order to deploy dev cluster on AWS:
 
-- `AWS_ACCESS_KEY_ID`
-- `AWS_SECRET_ACCESS_KEY`
+- `AWS_ACCESS_KEY_ID`: The access key ID for authenticating with AWS.
+- `AWS_SECRET_ACCESS_KEY`: The secret access key for authenticating with AWS.
+
+The following environment variables are optional but can enhance functionality:
+
+- `AWS_SESSION_TOKEN`: Required only if using temporary AWS credentials.
+- `AWS_REGION`: Specifies the AWS region in which to deploy resources. If not provided, defaults to `us-east-2`.
 
 ### Azure Provider Setup
 
@@ -100,7 +105,7 @@ running make (e.g. `export DEV_PROVIDER=azure`).
 6. Wait for infrastructure to be provisioned and the cluster to be deployed. You
    may watch the process with the `./bin/clusterctl describe` command. Example:
 
-```
+```bash
 export KUBECONFIG=~/.kube/config
 
 ./bin/clusterctl describe cluster <managedcluster-name> -n hmc-system --show-conditions all
@@ -109,14 +114,14 @@ export KUBECONFIG=~/.kube/config
 > [!NOTE]
 > If you encounter any errors in the output of `clusterctl describe cluster` inspect the logs of the
 > `capa-controller-manager` with:
-> ```
+> ```bash
 > kubectl logs -n hmc-system deploy/capa-controller-manager
 > ```
 > This may help identify any potential issues with deployment of the AWS infrastructure.
 
 7. Retrieve the `kubeconfig` of your managed cluster:
 
-```
+```bash
 kubectl --kubeconfig ~/.kube/config get secret -n hmc-system <managedcluster-name>-kubeconfig -o=jsonpath={.data.value} | base64 -d > kubeconfig
 ```
 
@@ -154,13 +159,13 @@ Each specific provider test also has a label, for example, `provider:aws` can be
 used to run only AWS tests.  To utilize these filters with the `make test-e2e`
 target pass the `GINKGO_LABEL_FILTER` env var, for example:
 
-```
+```bash
 GINKGO_LABEL_FILTER="provider:cloud" make test-e2e
 ```
 
 would run all cloud provider tests.  To see a list of all available labels run:
 
-```
+```bash
 ginkgo labels ./test/e2e
 ```
 
@@ -168,7 +173,7 @@ ginkgo labels ./test/e2e
 In CI we run `make dev-aws-nuke` to cleanup test resources, you can do so
 manually with:
 
-```
+```bash
 CLUSTER_NAME=example-e2e-test make dev-aws-nuke
 ```
 

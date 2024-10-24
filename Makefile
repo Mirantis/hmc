@@ -3,7 +3,7 @@ VERSION ?= $(shell git describe --tags --always)
 VERSION := $(patsubst v%,%,$(VERSION))
 FQDN_VERSION = $(subst .,-,$(VERSION))
 # Image URL to use all building/pushing image targets
-IMG ?= hmc/controller:latest
+IMG ?= localhost/hmc/controller:latest
 IMG_REPO = $(shell echo $(IMG) | cut -d: -f1)
 IMG_TAG = $(shell echo $(IMG) | cut -d: -f2)
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
@@ -11,6 +11,9 @@ ENVTEST_K8S_VERSION = 1.29.0
 
 HOSTOS := $(shell go env GOHOSTOS)
 HOSTARCH := $(shell go env GOHOSTARCH)
+
+# aws default values
+AWS_REGION ?= us-east-2
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -292,9 +295,15 @@ helm-push: helm-package
 		fi; \
 	done
 
+# kind doesn't support load docker-image if the container tool is podman
+# https://github.com/kubernetes-sigs/kind/issues/2038
 .PHONY: dev-push
 dev-push: docker-build helm-push
-	$(KIND) load docker-image $(IMG) -n $(KIND_CLUSTER_NAME)
+	@if [ "$(CONTAINER_TOOL)" = "podman" ]; then \
+		$(KIND) load image-archive --name $(KIND_CLUSTER_NAME) <($(CONTAINER_TOOL) save $(IMG)); \
+	else \
+		$(KIND) load docker-image $(IMG) --name $(KIND_CLUSTER_NAME); \
+	fi; \
 
 .PHONY: dev-templates
 dev-templates: templates-generate
