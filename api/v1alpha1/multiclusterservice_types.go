@@ -80,8 +80,11 @@ type MultiClusterServiceSpec struct {
 // If this status ends up being common with ManagedClusterStatus,
 // then make a common status struct that can be shared by both.
 type MultiClusterServiceStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	Services []ServicesStatus `json:"services,omitempty"`
+	// Conditions contains details for the current state of the ManagedCluster
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
+	// ObservedGeneration is the last observed generation.
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -104,6 +107,10 @@ type MultiClusterServiceList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []MultiClusterService `json:"items"`
+}
+
+func (in *MultiClusterService) GetConditions() *[]metav1.Condition {
+	return &in.Status.Conditions
 }
 
 func init() {

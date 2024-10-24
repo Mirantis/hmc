@@ -50,6 +50,9 @@ const (
 	HelmReleaseReadyCondition = "HelmReleaseReady"
 	// ReadyCondition indicates the ManagedCluster is ready and fully reconciled.
 	ReadyCondition string = "Ready"
+
+	SveltosProfileCondition        = "SveltosProfileReady"
+	SveltosClusterProfileCondition = "SveltosClusterProfileReady"
 )
 
 // ManagedClusterSpec defines the desired state of ManagedCluster
@@ -92,6 +95,8 @@ type ManagedClusterSpec struct {
 
 // ManagedClusterStatus defines the observed state of ManagedCluster
 type ManagedClusterStatus struct {
+	Services []ServicesStatus `json:"services,omitempty"`
+	// Services []*apiextensionsv1.JSON `json:"services,omitempty"`
 	// Currently compatible exact Kubernetes version of the cluster. Being set only if
 	// provided by the corresponding ClusterTemplate.
 	KubernetesVersion string `json:"k8sVersion,omitempty"`
@@ -99,6 +104,12 @@ type ManagedClusterStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 	// ObservedGeneration is the last observed generation.
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+}
+
+type ServicesStatus struct {
+	ClusterName      string             `json:"clusterName"`
+	ClusterNamespace string             `json:"clusterNamespace,omitempty"`
+	Conditions       []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // +kubebuilder:object:root=true
