@@ -181,11 +181,12 @@ func (r *ManagedClusterReconciler) Update(ctx context.Context, managedCluster *h
 		managedCluster.InitConditions()
 	}
 
+	template := &hmc.ClusterTemplate{}
+
 	defer func() {
-		err = errors.Join(err, r.updateStatus(ctx, managedCluster))
+		err = errors.Join(err, r.updateStatus(ctx, managedCluster, template))
 	}()
 
-	template := &hmc.ClusterTemplate{}
 	templateRef := client.ObjectKey{Name: managedCluster.Spec.Template, Namespace: managedCluster.Namespace}
 	if err := r.Get(ctx, templateRef, template); err != nil {
 		l.Error(err, "Failed to get Template")
@@ -420,7 +421,7 @@ func validateReleaseWithValues(ctx context.Context, actionConfig *action.Configu
 	return nil
 }
 
-func (r *ManagedClusterReconciler) updateStatus(ctx context.Context, managedCluster *hmc.ManagedCluster) error {
+func (r *ManagedClusterReconciler) updateStatus(ctx context.Context, managedCluster *hmc.ManagedCluster, template *hmc.ClusterTemplate) error {
 	managedCluster.Status.ObservedGeneration = managedCluster.Generation
 	warnings := ""
 	errs := ""
@@ -452,6 +453,11 @@ func (r *ManagedClusterReconciler) updateStatus(ctx context.Context, managedClus
 		condition.Message = errs
 	}
 	apimeta.SetStatusCondition(managedCluster.GetConditions(), condition)
+
+	err := r.setAvailableUpgrades(ctx, managedCluster, template)
+	if err != nil {
+		return fmt.Errorf("failed to set available upgrades")
+	}
 	if err := r.Status().Update(ctx, managedCluster); err != nil {
 		return fmt.Errorf("failed to update status for managedCluster %s/%s: %w", managedCluster.Namespace, managedCluster.Name, err)
 	}
@@ -1000,6 +1006,38 @@ func setIdentityHelmValues(values *apiextensionsv1.JSON, idRef *corev1.ObjectRef
 	}, nil
 }
 
+func (r *ManagedClusterReconciler) setAvailableUpgrades(ctx context.Context, managedCluster *hmc.ManagedCluster, template *hmc.ClusterTemplate) error {
+	if template == nil {
+		return nil
+	}
+	chains := &hmc.ClusterTemplateChainList{}
+	err := r.List(ctx, chains,
+		client.InNamespace(template.Namespace),
+		client.MatchingFields{hmc.SupportedTemplateKey: template.GetName()},
+	)
+	if err != nil {
+		return err
+	}
+
+	availableUpgradesMap := make(map[string]hmc.AvailableUpgrade)
+	for _, chain := range chains.Items {
+		for _, supportedTemplate := range chain.Spec.SupportedTemplates {
+			if supportedTemplate.Name == template.Name {
+				for _, availableUpgrade := range supportedTemplate.AvailableUpgrades {
+					availableUpgradesMap[availableUpgrade.Name] = availableUpgrade
+				}
+			}
+		}
+	}
+	availableUpgrades := make([]hmc.AvailableUpgrade, 0, len(availableUpgradesMap))
+	for _, availableUpgrade := range availableUpgradesMap {
+		availableUpgrades = append(availableUpgrades, availableUpgrade)
+	}
+
+	managedCluster.Status.AvailableUpgrades = availableUpgrades
+	return nil
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *ManagedClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
@@ -1020,6 +1058,37 @@ func (r *ManagedClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 						NamespacedName: managedClusterRef,
 					},
 				}
+			}),
+		).
+		Watches(&hmc.ClusterTemplateChain{},
+			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, o client.Object) []ctrl.Request {
+				templates := &hmc.ClusterTemplateList{}
+				err := r.Client.List(ctx, templates,
+					client.InNamespace(o.GetNamespace()),
+					client.MatchingLabels{hmc.HMCManagedByChainLabelKey: o.GetName()})
+				if err != nil {
+					return []ctrl.Request{}
+				}
+
+				var req []ctrl.Request
+				for _, template := range templates.Items {
+					managedClusters := &hmc.ManagedClusterList{}
+					err = r.Client.List(ctx, managedClusters,
+						client.InNamespace(o.GetNamespace()),
+						client.MatchingFields{hmc.TemplateKey: template.Name})
+					if err != nil {
+						return []ctrl.Request{}
+					}
+					for _, cluster := range managedClusters.Items {
+						req = append(req, reconcile.Request{
+							NamespacedName: client.ObjectKey{
+								Namespace: cluster.Namespace,
+								Name:      cluster.Name,
+							},
+						})
+					}
+				}
+				return req
 			}),
 		).
 		Complete(r)

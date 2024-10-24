@@ -27,8 +27,6 @@ import (
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
 )
 
-const HMCManagedByChainLabelKey = "hmc.mirantis.com/managed-by-chain"
-
 // TemplateChainReconciler reconciles a TemplateChain object
 type TemplateChainReconciler struct {
 	client.Client
@@ -102,8 +100,8 @@ func (r *TemplateChainReconciler) ReconcileTemplateChain(ctx context.Context, te
 			Name:      supportedTemplate.Name,
 			Namespace: templateChain.GetNamespace(),
 			Labels: map[string]string{
-				hmc.HMCManagedLabelKey:    hmc.HMCManagedLabelValue,
-				HMCManagedByChainLabelKey: templateChain.GetName(),
+				hmc.HMCManagedLabelKey:        hmc.HMCManagedLabelValue,
+				hmc.HMCManagedByChainLabelKey: templateChain.GetName(),
 			},
 		}
 		keepTemplate[supportedTemplate.Name] = struct{}{}
@@ -203,7 +201,7 @@ func getCurrentTemplates(ctx context.Context, cl client.Client, templateKind, sy
 		labels := template.GetLabels()
 		if template.GetNamespace() == targetNamespace &&
 			labels[hmc.HMCManagedLabelKey] == hmc.HMCManagedLabelValue &&
-			labels[HMCManagedByChainLabelKey] == templateChainName {
+			labels[hmc.HMCManagedByChainLabelKey] == templateChainName {
 			managedTemplates = append(managedTemplates, template)
 		}
 	}

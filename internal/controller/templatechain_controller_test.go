@@ -76,7 +76,7 @@ var _ = Describe("Template Chain Controller", func() {
 				template.WithName("ct1"),
 				template.WithNamespace(namespace.Name),
 				template.WithHelmSpec(templateHelmSpec),
-				template.WithLabels(map[string]string{HMCManagedByChainLabelKey: ctChain1Name}),
+				template.WithLabels(map[string]string{hmcmirantiscomv1alpha1.HMCManagedByChainLabelKey: ctChain1Name}),
 				template.ManagedByHMC(),
 			),
 			// Should be unchanged (unmanaged)
@@ -104,7 +104,7 @@ var _ = Describe("Template Chain Controller", func() {
 				template.WithName("st1"),
 				template.WithNamespace(namespace.Name),
 				template.WithHelmSpec(templateHelmSpec),
-				template.WithLabels(map[string]string{HMCManagedByChainLabelKey: stChain1Name}),
+				template.WithLabels(map[string]string{hmcmirantiscomv1alpha1.HMCManagedByChainLabelKey: stChain1Name}),
 				template.ManagedByHMC(),
 			),
 			// Should be unchanged (unmanaged)
@@ -338,5 +338,5 @@ func checkHMCManagedLabelExistence(labels map[string]string) {
 }
 
 func checkHMCManagedByChainLabelExistence(labels map[string]string, chainName string) {
-	Expect(labels).To(HaveKeyWithValue(HMCManagedByChainLabelKey, chainName))
+	Expect(labels).To(HaveKeyWithValue(hmcmirantiscomv1alpha1.HMCManagedByChainLabelKey, chainName))
 }
