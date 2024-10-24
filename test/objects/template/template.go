@@ -140,18 +140,18 @@ func WithValidationStatus(validationStatus v1alpha1.TemplateValidationStatus) Op
 	}
 }
 
-func WithProvidersStatus[T v1alpha1.Providers | v1alpha1.ProvidersTupled](providers T) Opt {
+func WithProvidersStatus(providers v1alpha1.Providers) Opt {
 	return func(t Template) {
 		switch v := t.(type) {
 		case *v1alpha1.ClusterTemplate:
 			var ok bool
-			v.Status.Providers, ok = any(providers).(v1alpha1.ProvidersTupled)
+			v.Status.Providers, ok = any(providers).(v1alpha1.Providers)
 			if !ok {
 				panic(fmt.Sprintf("unexpected type %T", providers))
 			}
 		case *v1alpha1.ProviderTemplate:
 			var ok bool
-			v.Status.Providers, ok = any(providers).(v1alpha1.ProvidersTupled)
+			v.Status.Providers, ok = any(providers).(v1alpha1.Providers)
 			if !ok {
 				panic(fmt.Sprintf("unexpected type %T", providers))
 			}
@@ -174,23 +174,28 @@ func WithConfigStatus(config string) Opt {
 	}
 }
 
-func WithProviderStatusCAPIVersion(v string) Opt {
-	return func(template Template) {
-		pt, ok := template.(*v1alpha1.ProviderTemplate)
-		if !ok {
-			panic(fmt.Sprintf("unexpected type %T, expected ProviderTemplate", template))
-		}
-		pt.Status.CAPIVersion = v
+func WithProviderStatusCAPIContracts(coreAndProvidersContracts ...string) Opt {
+	if len(coreAndProvidersContracts)&1 != 0 {
+		panic("non even number of arguments")
 	}
-}
 
-func WithProviderStatusCAPIConstraint(v string) Opt {
 	return func(template Template) {
+		if len(coreAndProvidersContracts) == 0 {
+			return
+		}
+
 		pt, ok := template.(*v1alpha1.ProviderTemplate)
 		if !ok {
 			panic(fmt.Sprintf("unexpected type %T, expected ProviderTemplate", template))
 		}
-		pt.Status.CAPIVersionConstraint = v
+
+		if pt.Status.CAPIContracts == nil {
+			pt.Status.CAPIContracts = make(v1alpha1.CompatibilityContracts)
+		}
+
+		for i := 0; i < len(coreAndProvidersContracts)/2; i++ {
+			pt.Status.CAPIContracts[coreAndProvidersContracts[i*2]] = coreAndProvidersContracts[i*2+1]
+		}
 	}
 }
 

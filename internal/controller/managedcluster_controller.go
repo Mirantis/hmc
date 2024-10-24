@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	texttemplate "text/template"
 	"time"
 
@@ -68,26 +69,6 @@ type ManagedClusterReconciler struct {
 	DynamicClient   *dynamic.DynamicClient
 	SystemNamespace string
 }
-
-var (
-	gvkAWSCluster = schema.GroupVersionKind{
-		Group:   "infrastructure.cluster.x-k8s.io",
-		Version: "v1beta2",
-		Kind:    "awscluster",
-	}
-
-	gvkAzureCluster = schema.GroupVersionKind{
-		Group:   "infrastructure.cluster.x-k8s.io",
-		Version: "v1beta1",
-		Kind:    "azurecluster",
-	}
-
-	gvkMachine = schema.GroupVersionKind{
-		Group:   "cluster.x-k8s.io",
-		Version: "v1beta1",
-		Kind:    "machine",
-	}
-)
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -373,8 +354,8 @@ func (r *ManagedClusterReconciler) Update(ctx context.Context, managedCluster *h
 			return ctrl.Result{RequeueAfter: DefaultRequeueInterval}, nil
 		}
 
-		err = r.reconcileCredentialPropagation(ctx, managedCluster)
-		if err != nil {
+		if err := r.reconcileCredentialPropagation(ctx, managedCluster); err != nil {
+			l.Error(err, "failed to reconcile credentials propagation")
 			return ctrl.Result{}, err
 		}
 
@@ -537,17 +518,30 @@ func (r *ManagedClusterReconciler) Delete(ctx context.Context, managedCluster *h
 }
 
 func (r *ManagedClusterReconciler) releaseCluster(ctx context.Context, namespace, name, templateName string) error {
-	providers, err := r.getProviders(ctx, namespace, templateName)
+	providers, err := r.getInfraProvidersNames(ctx, namespace, templateName)
 	if err != nil {
 		return err
 	}
 
-	for _, provider := range providers.BootstrapProviders {
-		if provider.Name == "eks" {
-			// no need to do anything for EKS clusters
-			return nil
+	var (
+		gvkAWSCluster = schema.GroupVersionKind{
+			Group:   "infrastructure.cluster.x-k8s.io",
+			Version: "v1beta2",
+			Kind:    "AWSCluster",
 		}
-	}
+
+		gvkAzureCluster = schema.GroupVersionKind{
+			Group:   "infrastructure.cluster.x-k8s.io",
+			Version: "v1beta1",
+			Kind:    "AzureCluster",
+		}
+
+		gvkMachine = schema.GroupVersionKind{
+			Group:   "cluster.x-k8s.io",
+			Version: "v1beta1",
+			Kind:    "Machine",
+		}
+	)
 
 	providerGVKs := map[string]schema.GroupVersionKind{
 		"aws":   gvkAWSCluster,
@@ -555,14 +549,18 @@ func (r *ManagedClusterReconciler) releaseCluster(ctx context.Context, namespace
 	}
 
 	// Associate the provider with it's GVK
-	for _, provider := range providers.InfrastructureProviders {
-		gvk, ok := providerGVKs[provider.Name]
+	for _, provider := range providers {
+		gvk, ok := providerGVKs[provider]
 		if !ok {
 			continue
 		}
 
 		cluster, err := r.getCluster(ctx, namespace, name, gvk)
 		if err != nil {
+			if provider == "aws" && apierrors.IsNotFound(err) {
+				return nil
+			}
+
 			return err
 		}
 
@@ -579,15 +577,26 @@ func (r *ManagedClusterReconciler) releaseCluster(ctx context.Context, namespace
 	return nil
 }
 
-func (r *ManagedClusterReconciler) getProviders(ctx context.Context, templateNamespace, templateName string) (hmc.ProvidersTupled, error) {
+func (r *ManagedClusterReconciler) getInfraProvidersNames(ctx context.Context, templateNamespace, templateName string) ([]string, error) {
 	template := &hmc.ClusterTemplate{}
 	templateRef := client.ObjectKey{Name: templateName, Namespace: templateNamespace}
 	if err := r.Get(ctx, templateRef, template); err != nil {
 		ctrl.LoggerFrom(ctx).Error(err, "Failed to get ClusterTemplate", "template namespace", templateNamespace, "template name", templateName)
-		return hmc.ProvidersTupled{}, err
+		return nil, err
 	}
 
-	return template.Status.Providers, nil
+	const infraPrefix = "infrastructure-"
+	var (
+		ips     = make([]string, 0, len(template.Status.Providers))
+		lprefix = len(infraPrefix)
+	)
+	for _, v := range template.Status.Providers {
+		if idx := strings.Index(v, infraPrefix); idx > -1 {
+			ips = append(ips, v[idx+lprefix:])
+		}
+	}
+
+	return ips[:len(ips):len(ips)], nil
 }
 
 func (r *ManagedClusterReconciler) getCluster(ctx context.Context, namespace, name string, gvk schema.GroupVersionKind) (*metav1.PartialObjectMetadata, error) {
@@ -638,7 +647,7 @@ func (r *ManagedClusterReconciler) reconcileCredentialPropagation(ctx context.Co
 	l := ctrl.LoggerFrom(ctx)
 	l.Info("Reconciling CCM credentials propagation")
 
-	providers, err := r.getProviders(ctx, managedCluster.Namespace, managedCluster.Spec.Template)
+	providers, err := r.getInfraProvidersNames(ctx, managedCluster.Namespace, managedCluster.Spec.Template)
 	if err != nil {
 		return fmt.Errorf("failed to get cluster providers for cluster %s/%s: %s", managedCluster.Namespace, managedCluster.Name, err)
 	}
@@ -651,15 +660,13 @@ func (r *ManagedClusterReconciler) reconcileCredentialPropagation(ctx context.Co
 		return fmt.Errorf("failed to get kubeconfig secret for cluster %s/%s: %s", managedCluster.Namespace, managedCluster.Name, err)
 	}
 
-	for _, provider := range providers.InfrastructureProviders {
-		switch provider.Name {
+	for _, provider := range providers {
+		switch provider {
 		case "aws":
 			l.Info("Skipping creds propagation for AWS")
-			continue
 		case "azure":
 			l.Info("Azure creds propagation start")
-			err := r.propagateAzureSecrets(ctx, managedCluster, kubeconfSecret)
-			if err != nil {
+			if err := r.propagateAzureSecrets(ctx, managedCluster, kubeconfSecret); err != nil {
 				errMsg := fmt.Sprintf("failed to create Azure CCM credentials: %s", err)
 				apimeta.SetStatusCondition(managedCluster.GetConditions(), metav1.Condition{
 					Type:    hmc.CredentialsPropagatedCondition,
@@ -667,19 +674,19 @@ func (r *ManagedClusterReconciler) reconcileCredentialPropagation(ctx context.Co
 					Reason:  hmc.FailedReason,
 					Message: errMsg,
 				})
+
 				return errors.New(errMsg)
 			}
+
 			apimeta.SetStatusCondition(managedCluster.GetConditions(), metav1.Condition{
 				Type:    hmc.CredentialsPropagatedCondition,
 				Status:  metav1.ConditionTrue,
 				Reason:  hmc.SucceededReason,
 				Message: "Azure CCM credentials created",
 			})
-			continue
 		case "vsphere":
 			l.Info("vSphere creds propagation start")
-			err := r.propagateVSphereSecrets(ctx, managedCluster, kubeconfSecret)
-			if err != nil {
+			if err := r.propagateVSphereSecrets(ctx, managedCluster, kubeconfSecret); err != nil {
 				errMsg := fmt.Sprintf("failed to create vSphere CCM credentials: %s", err)
 				apimeta.SetStatusCondition(managedCluster.GetConditions(), metav1.Condition{
 					Type:    hmc.CredentialsPropagatedCondition,
@@ -689,25 +696,25 @@ func (r *ManagedClusterReconciler) reconcileCredentialPropagation(ctx context.Co
 				})
 				return errors.New(errMsg)
 			}
+
 			apimeta.SetStatusCondition(managedCluster.GetConditions(), metav1.Condition{
 				Type:    hmc.CredentialsPropagatedCondition,
 				Status:  metav1.ConditionTrue,
 				Reason:  hmc.SucceededReason,
 				Message: "vSphere CCM credentials created",
 			})
-			continue
 		default:
-			errMsg := fmt.Sprintf("unsupported infrastructure provider %s", provider)
 			apimeta.SetStatusCondition(managedCluster.GetConditions(), metav1.Condition{
 				Type:    hmc.CredentialsPropagatedCondition,
 				Status:  metav1.ConditionFalse,
 				Reason:  hmc.FailedReason,
-				Message: errMsg,
+				Message: fmt.Sprintf("unsupported infrastructure provider %s", provider),
 			})
-			continue
 		}
 	}
+
 	l.Info("CCM credentials reconcile finished")
+
 	return nil
 }
 

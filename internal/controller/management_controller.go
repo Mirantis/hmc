@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 
 	fluxv2 "github.com/fluxcd/helm-controller/api/v2"
 	"github.com/fluxcd/pkg/apis/meta"
@@ -104,9 +105,13 @@ func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Manag
 		return ctrl.Result{}, err
 	}
 
-	var errs error
-	detectedProviders := hmc.ProvidersTupled{}
-	detectedComponents := make(map[string]hmc.ComponentStatus)
+	var (
+		errs error
+
+		detectedProviders  = hmc.Providers{}
+		detectedComponents = make(map[string]hmc.ComponentStatus)
+		detectedContracts  = make(map[string]hmc.CompatibilityContracts)
+	)
 
 	err := r.enableAdditionalComponents(ctx, management)
 	if err != nil {
@@ -126,13 +131,13 @@ func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Manag
 		}, template)
 		if err != nil {
 			errMsg := fmt.Sprintf("Failed to get ProviderTemplate %s: %s", component.Template, err)
-			updateComponentsStatus(detectedComponents, &detectedProviders, component.helmReleaseName, component.Template, template.Status.Providers, errMsg)
+			updateComponentsStatus(detectedComponents, &detectedProviders, detectedContracts, component.helmReleaseName, component.Template, template.Status.Providers, template.Status.CAPIContracts, errMsg)
 			errs = errors.Join(errs, errors.New(errMsg))
 			continue
 		}
 		if !template.Status.Valid {
 			errMsg := fmt.Sprintf("Template %s is not marked as valid", component.Template)
-			updateComponentsStatus(detectedComponents, &detectedProviders, component.helmReleaseName, component.Template, template.Status.Providers, errMsg)
+			updateComponentsStatus(detectedComponents, &detectedProviders, detectedContracts, component.helmReleaseName, component.Template, template.Status.Providers, template.Status.CAPIContracts, errMsg)
 			errs = errors.Join(errs, errors.New(errMsg))
 			continue
 		}
@@ -146,15 +151,16 @@ func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Manag
 		})
 		if err != nil {
 			errMsg := fmt.Sprintf("error reconciling HelmRelease %s/%s: %s", r.SystemNamespace, component.Template, err)
-			updateComponentsStatus(detectedComponents, &detectedProviders, component.helmReleaseName, component.Template, template.Status.Providers, errMsg)
+			updateComponentsStatus(detectedComponents, &detectedProviders, detectedContracts, component.helmReleaseName, component.Template, template.Status.Providers, template.Status.CAPIContracts, errMsg)
 			errs = errors.Join(errs, errors.New(errMsg))
 			continue
 		}
-		updateComponentsStatus(detectedComponents, &detectedProviders, component.helmReleaseName, component.Template, template.Status.Providers, "")
+		updateComponentsStatus(detectedComponents, &detectedProviders, detectedContracts, component.helmReleaseName, component.Template, template.Status.Providers, template.Status.CAPIContracts, "")
 	}
 
 	management.Status.ObservedGeneration = management.Generation
 	management.Status.AvailableProviders = detectedProviders
+	management.Status.CAPIContracts = detectedContracts
 	management.Status.Components = detectedComponents
 	management.Status.Release = management.Spec.Release
 	if err := r.Status().Update(ctx, management); err != nil {
@@ -412,10 +418,12 @@ func (r *ManagementReconciler) enableAdditionalComponents(ctx context.Context, m
 
 func updateComponentsStatus(
 	components map[string]hmc.ComponentStatus,
-	providers *hmc.ProvidersTupled,
+	providers *hmc.Providers,
+	capiContracts map[string]hmc.CompatibilityContracts,
 	componentName string,
 	templateName string,
-	templateProviders hmc.ProvidersTupled,
+	templateProviders hmc.Providers,
+	templateContracts hmc.CompatibilityContracts,
 	err string,
 ) {
 	components[componentName] = hmc.ComponentStatus{
@@ -425,9 +433,13 @@ func updateComponentsStatus(
 	}
 
 	if err == "" {
-		providers.InfrastructureProviders = append(providers.InfrastructureProviders, templateProviders.InfrastructureProviders...)
-		providers.BootstrapProviders = append(providers.BootstrapProviders, templateProviders.BootstrapProviders...)
-		providers.ControlPlaneProviders = append(providers.ControlPlaneProviders, templateProviders.ControlPlaneProviders...)
+		*providers = append(*providers, templateProviders...)
+		slices.Sort(*providers)
+		*providers = slices.Compact(*providers)
+
+		for _, v := range templateProviders {
+			capiContracts[v] = templateContracts // TODO (zerospiel): not sure whether it's okay to overwrite if the same provider
+		}
 	}
 }
 

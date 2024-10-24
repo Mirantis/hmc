@@ -36,39 +36,16 @@ const (
 )
 
 type (
-	// Providers hold different types of CAPI providers.
-	Providers struct {
-		// InfrastructureProviders is the list of CAPI infrastructure providers
-		InfrastructureProviders []string `json:"infrastructure,omitempty"`
-		// BootstrapProviders is the list of CAPI bootstrap providers
-		BootstrapProviders []string `json:"bootstrap,omitempty"`
-		// ControlPlaneProviders is the list of CAPI control plane providers
-		ControlPlaneProviders []string `json:"controlPlane,omitempty"`
-	}
+	// Holds different types of CAPI providers.
+	Providers []string
 
-	// Holds different types of CAPI providers with either
-	// an exact or constrained version in the SemVer format. The requirement
-	// is determined by a consumer of this type.
-	ProvidersTupled struct {
-		// List of CAPI infrastructure providers with either an exact or constrained version in the SemVer format.
-		// Compatibility attributes are optional to be defined.
-		InfrastructureProviders []ProviderTuple `json:"infrastructure,omitempty"`
-		// List of CAPI bootstrap providers with either an exact or constrained version in the SemVer format.
-		// Compatibility attributes are optional to be defined.
-		BootstrapProviders []ProviderTuple `json:"bootstrap,omitempty"`
-		// List of CAPI control plane providers with either an exact or constrained version in the SemVer format.
-		// Compatibility attributes are optional to be defined.
-		ControlPlaneProviders []ProviderTuple `json:"controlPlane,omitempty"`
-	}
-
-	// Represents name of the provider with either an exact or constrained version in the SemVer format.
-	ProviderTuple struct {
-		// Name of the provider.
-		Name string `json:"name,omitempty"`
-		// Compatibility restriction in the SemVer format (exact or constrained version).
-		// Optional to be defined.
-		VersionOrConstraint string `json:"versionOrConstraint,omitempty"`
-	}
+	// Holds key-value pairs with compatibility [contract versions],
+	// where the key is the core CAPI contract version,
+	// and the value is an underscore-delimited (_) list of provider contract versions
+	// supported by the core CAPI.
+	//
+	// [contract versions]: https://cluster-api.sigs.k8s.io/developer/providers/contracts
+	CompatibilityContracts map[string]string
 )
 
 const (
@@ -143,37 +120,4 @@ func ExtractServiceTemplateName(rawObj client.Object) []string {
 	}
 
 	return templates
-}
-
-func (c ProvidersTupled) BootstrapProvidersNames() []string {
-	return c.names(bootstrapProvidersType)
-}
-
-func (c ProvidersTupled) ControlPlaneProvidersNames() []string {
-	return c.names(controlPlaneProvidersType)
-}
-
-func (c ProvidersTupled) InfrastructureProvidersNames() []string {
-	return c.names(infrastructureProvidersType)
-}
-
-func (c ProvidersTupled) names(typ providersType) []string {
-	f := func(nn []ProviderTuple) []string {
-		res := make([]string, len(nn))
-		for i, v := range nn {
-			res[i] = v.Name
-		}
-		return res
-	}
-
-	switch typ {
-	case bootstrapProvidersType:
-		return f(c.BootstrapProviders)
-	case controlPlaneProvidersType:
-		return f(c.ControlPlaneProviders)
-	case infrastructureProvidersType:
-		return f(c.InfrastructureProviders)
-	default:
-		return []string{}
-	}
 }

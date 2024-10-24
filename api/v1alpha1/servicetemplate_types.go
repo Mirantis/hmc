@@ -16,7 +16,6 @@ package v1alpha1
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/Masterminds/semver/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -52,40 +51,7 @@ type ServiceTemplateStatus struct {
 // FillStatusWithProviders sets the status of the template with providers
 // either from the spec or from the given annotations.
 func (t *ServiceTemplate) FillStatusWithProviders(annotations map[string]string) error {
-	parseProviders := func(typ providersType) []string {
-		var (
-			pspec []string
-			anno  string
-		)
-		switch typ {
-		case bootstrapProvidersType:
-			pspec, anno = t.Spec.Providers.BootstrapProviders, ChartAnnotationBootstrapProviders
-		case controlPlaneProvidersType:
-			pspec, anno = t.Spec.Providers.ControlPlaneProviders, ChartAnnotationControlPlaneProviders
-		case infrastructureProvidersType:
-			pspec, anno = t.Spec.Providers.InfrastructureProviders, ChartAnnotationInfraProviders
-		}
-
-		providers := annotations[anno]
-		if len(providers) == 0 {
-			return pspec
-		}
-
-		splitted := strings.Split(providers, multiProviderSeparator)
-		result := make([]string, 0, len(splitted))
-		result = append(result, pspec...)
-		for _, v := range splitted {
-			if c := strings.TrimSpace(v); c != "" {
-				result = append(result, c)
-			}
-		}
-
-		return result
-	}
-
-	t.Status.Providers.BootstrapProviders = parseProviders(bootstrapProvidersType)
-	t.Status.Providers.ControlPlaneProviders = parseProviders(controlPlaneProvidersType)
-	t.Status.Providers.InfrastructureProviders = parseProviders(infrastructureProvidersType)
+	t.Status.Providers = getProvidersList(t, annotations)
 
 	kconstraint := annotations[ChartAnnotationKubernetesConstraint]
 	if t.Spec.KubernetesConstraint != "" {
@@ -96,12 +62,17 @@ func (t *ServiceTemplate) FillStatusWithProviders(annotations map[string]string)
 	}
 
 	if _, err := semver.NewConstraint(kconstraint); err != nil {
-		return fmt.Errorf("failed to parse kubernetes constraint %s: %w", kconstraint, err)
+		return fmt.Errorf("failed to parse kubernetes constraint %s for ServiceTemplate %s/%s: %w", kconstraint, t.GetNamespace(), t.GetName(), err)
 	}
 
 	t.Status.KubernetesConstraint = kconstraint
 
 	return nil
+}
+
+// GetSpecProviders returns .spec.providers of the Template.
+func (t *ServiceTemplate) GetSpecProviders() Providers {
+	return t.Spec.Providers
 }
 
 // GetHelmSpec returns .spec.helm of the Template.

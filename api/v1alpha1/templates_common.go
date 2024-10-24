@@ -17,6 +17,7 @@ package v1alpha1
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	helmcontrollerv2 "github.com/fluxcd/helm-controller/api/v2"
@@ -24,12 +25,11 @@ import (
 )
 
 const (
-	// ChartAnnotationInfraProviders is an annotation containing the CAPI infrastructure providers associated with Template.
-	ChartAnnotationInfraProviders = "hmc.mirantis.com/infrastructure-providers"
-	// ChartAnnotationBootstrapProviders is an annotation containing the CAPI bootstrap providers associated with Template.
-	ChartAnnotationBootstrapProviders = "hmc.mirantis.com/bootstrap-providers"
-	// ChartAnnotationControlPlaneProviders is an annotation containing the CAPI control plane providers associated with Template.
-	ChartAnnotationControlPlaneProviders = "hmc.mirantis.com/control-plane-providers"
+	// ChartAnnotationProviderName is the annotation set on components in a Template.
+	// This annotations allows to identify all the components belonging to a provider.
+	ChartAnnotationProviderName = "cluster.x-k8s.io/provider"
+
+	chartAnnoCAPIPrefix = "cluster.x-k8s.io/"
 )
 
 // +kubebuilder:validation:XValidation:rule="(has(self.chartName) && !has(self.chartRef)) || (!has(self.chartName) && has(self.chartRef))", message="either chartName or chartRef must be set"
@@ -77,66 +77,77 @@ type TemplateValidationStatus struct {
 	Valid bool `json:"valid"`
 }
 
-type providersType int
+func getProvidersList(providersGetter interface{ GetSpecProviders() Providers }, annotations map[string]string) Providers {
+	const multiProviderSeparator = ","
 
-const (
-	bootstrapProvidersType providersType = iota
-	controlPlaneProvidersType
-	infrastructureProvidersType
-)
+	if spec := providersGetter.GetSpecProviders(); len(spec) > 0 {
+		slices.Sort(spec)
+		return slices.Compact(spec)
+	}
 
-const multiProviderSeparator = ";"
-
-func parseProviders[T any](providersGetter interface{ GetSpecProviders() ProvidersTupled }, typ providersType, annotations map[string]string, validationFn func(string) (T, error)) ([]ProviderTuple, error) {
-	pspec, anno := getProvidersSpecAnno(providersGetter, typ)
-
-	providers := annotations[anno]
+	providers := annotations[ChartAnnotationProviderName]
 	if len(providers) == 0 {
-		return pspec, nil
+		return Providers{}
 	}
 
 	var (
 		splitted = strings.Split(providers, multiProviderSeparator)
-		pstatus  = make([]ProviderTuple, 0, len(splitted)+len(pspec))
-		merr     error
+		pstatus  = make([]string, 0, len(splitted))
 	)
-	pstatus = append(pstatus, pspec...)
-
 	for _, v := range splitted {
-		v = strings.TrimSpace(v)
-		nVerOrC := strings.SplitN(v, " ", 2)
-		if len(nVerOrC) == 0 { // BCE (bound check elimination)
-			continue
+		if c := strings.TrimSpace(v); c != "" {
+			pstatus = append(pstatus, c)
 		}
-
-		n := ProviderTuple{Name: nVerOrC[0]}
-		if len(nVerOrC) < 2 {
-			pstatus = append(pstatus, n)
-			continue
-		}
-
-		ver := strings.TrimSpace(nVerOrC[1])
-		if _, err := validationFn(ver); err != nil { // validation
-			merr = errors.Join(merr, fmt.Errorf("failed to parse %s in the %s: %v", ver, v, err))
-			continue
-		}
-
-		n.VersionOrConstraint = ver
-		pstatus = append(pstatus, n)
 	}
 
-	return pstatus, merr
+	slices.Sort(pstatus)
+	return slices.Compact(pstatus)
 }
 
-func getProvidersSpecAnno(providersGetter interface{ GetSpecProviders() ProvidersTupled }, typ providersType) (spec []ProviderTuple, annotation string) {
-	switch typ {
-	case bootstrapProvidersType:
-		return providersGetter.GetSpecProviders().BootstrapProviders, ChartAnnotationBootstrapProviders
-	case controlPlaneProvidersType:
-		return providersGetter.GetSpecProviders().ControlPlaneProviders, ChartAnnotationControlPlaneProviders
-	case infrastructureProvidersType:
-		return providersGetter.GetSpecProviders().InfrastructureProviders, ChartAnnotationInfraProviders
-	default:
-		return []ProviderTuple{}, ""
+func getCAPIContracts(contractsGetter interface{ GetContracts() CompatibilityContracts }, annotations map[string]string) (_ CompatibilityContracts, merr error) {
+	contractsStatus := make(map[string]string)
+
+	// spec preceding the annos
+	if contracts := contractsGetter.GetContracts(); len(contracts) > 0 {
+		for capiContract, providerContract := range contracts {
+			if !isCAPIContractSingleVersion(capiContract) {
+				merr = errors.Join(merr, fmt.Errorf("incorrect CAPI contract version %s in the spec", capiContract))
+				continue
+			}
+
+			if providerContract != "" && !isCAPIContractVersion(providerContract) { // special case for either CAPI or deliberately set empty
+				merr = errors.Join(merr, fmt.Errorf("incorrect provider contract version %s in the spec for the %s CAPI contract version", providerContract, capiContract))
+				continue
+			}
+
+			contractsStatus[capiContract] = providerContract
+		}
+
+		return contractsStatus, merr
 	}
+
+	for k, providerContract := range annotations {
+		idx := strings.Index(k, chartAnnoCAPIPrefix)
+		if idx < 0 {
+			continue
+		}
+
+		capiContract := k[idx+len(chartAnnoCAPIPrefix):]
+		if isCAPIContractSingleVersion(capiContract) {
+			if providerContract == "" { // special case for either CAPI or deliberately set empty
+				contractsStatus[capiContract] = ""
+				continue
+			}
+
+			if isCAPIContractVersion(providerContract) {
+				contractsStatus[capiContract] = providerContract
+			} else {
+				// since we parsed capi contract version,
+				// then treat the provider's invalid version as an error
+				merr = errors.Join(merr, fmt.Errorf("incorrect provider contract version %s given for the %s CAPI contract version annotation", providerContract, k))
+			}
+		}
+	}
+
+	return contractsStatus, merr
 }

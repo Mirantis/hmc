@@ -26,7 +26,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	"github.com/Masterminds/semver/v3"
 	hmcv1alpha1 "github.com/Mirantis/hmc/api/v1alpha1"
 )
 
@@ -83,13 +82,12 @@ func (v *ManagementValidator) ValidateUpdate(ctx context.Context, _, newObj runt
 		return nil, fmt.Errorf("failed to get ProviderTemplate %s: %w", capiTplName, err)
 	}
 
-	if capiTpl.Status.CAPIVersion == "" {
+	if len(capiTpl.Status.CAPIContracts) == 0 {
 		return nil, nil // nothing to validate against
 	}
 
-	capiRequiredVersion, err := semver.NewVersion(capiTpl.Status.CAPIVersion)
-	if err != nil { // should never happen
-		return nil, fmt.Errorf("%s: invalid CAPI version %s in the ProviderTemplate %s to be validated against: %v", invalidMgmtMsg, capiTpl.Status.CAPIVersion, capiTpl.Name, err)
+	if !capiTpl.Status.Valid {
+		return nil, fmt.Errorf("%s: not valid ProviderTemplate %s", invalidMgmtMsg, capiTpl.Name)
 	}
 
 	var wrongVersions error
@@ -108,22 +106,23 @@ func (v *ManagementValidator) ValidateUpdate(ctx context.Context, _, newObj runt
 			return nil, fmt.Errorf("failed to get ProviderTemplate %s: %w", tplName, err)
 		}
 
-		if pTpl.Status.CAPIVersionConstraint == "" {
+		if len(pTpl.Status.CAPIContracts) == 0 {
 			continue
 		}
 
-		constraint, err := semver.NewConstraint(pTpl.Status.CAPIVersionConstraint)
-		if err != nil { // should never happen
-			return nil, fmt.Errorf("%s: invalid CAPI version constraint %s in the ProviderTemplate %s: %v", invalidMgmtMsg, pTpl.Status.CAPIVersionConstraint, pTpl.Name, err)
+		if !pTpl.Status.Valid {
+			return nil, fmt.Errorf("%s: not valid ProviderTemplate %s", invalidMgmtMsg, tplName)
 		}
 
-		if !constraint.Check(capiRequiredVersion) {
-			wrongVersions = errors.Join(wrongVersions, fmt.Errorf("core CAPI version %s does not satisfy ProviderTemplate %s constraint %s", capiRequiredVersion, pTpl.Name, constraint))
+		for capi := range capiTpl.Status.CAPIContracts {
+			if _, ok := pTpl.Status.CAPIContracts[capi]; !ok {
+				wrongVersions = errors.Join(wrongVersions, fmt.Errorf("core CAPI contract version %s does not support ProviderTemplate %s", capi, pTpl.Name))
+			}
 		}
 	}
 
 	if wrongVersions != nil {
-		return admission.Warnings{"The Management object has incompatible CAPI versions ProviderTemplates"}, fmt.Errorf("%s: %s", invalidMgmtMsg, wrongVersions)
+		return admission.Warnings{"The Management object has incompatible CAPI contract versions in ProviderTemplates"}, fmt.Errorf("%s: %s", invalidMgmtMsg, wrongVersions)
 	}
 
 	return nil, nil

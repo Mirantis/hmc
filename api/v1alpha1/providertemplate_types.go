@@ -17,44 +17,25 @@ package v1alpha1
 import (
 	"fmt"
 
-	"github.com/Masterminds/semver/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const (
-	// ChartAnnotationCAPIVersion is an annotation containing the CAPI exact version in the SemVer format associated with a ProviderTemplate.
-	ChartAnnotationCAPIVersion = "hmc.mirantis.com/capi-version"
-	// ChartAnnotationCAPIVersionConstraint is an annotation containing the CAPI version constraint in the SemVer format associated with a ProviderTemplate.
-	ChartAnnotationCAPIVersionConstraint = "hmc.mirantis.com/capi-version-constraint"
-)
-
-// +kubebuilder:validation:XValidation:rule="!(has(self.capiVersion) && has(self.capiVersionConstraint))", message="Either capiVersion or capiVersionConstraint may be set, but not both"
-
 // ProviderTemplateSpec defines the desired state of ProviderTemplate
 type ProviderTemplateSpec struct {
-	Helm HelmSpec `json:"helm,omitempty"`
-	// CAPI exact version in the SemVer format.
-	// Applicable only for the cluster-api ProviderTemplate itself.
-	CAPIVersion string `json:"capiVersion,omitempty"`
-	// CAPI version constraint in the SemVer format indicating compatibility with the core CAPI.
-	// Not applicable for the cluster-api ProviderTemplate.
-	CAPIVersionConstraint string `json:"capiVersionConstraint,omitempty"`
-	// Providers represent exposed CAPI providers with exact compatibility versions set.
+	Helm          HelmSpec               `json:"helm,omitempty"`
+	CAPIContracts CompatibilityContracts `json:"capiContracts,omitempty"`
+	// Providers represent exposed CAPI providers with supported contract versions.
 	// Should be set if not present in the Helm chart metadata.
-	// Compatibility attributes are optional to be defined.
-	Providers ProvidersTupled `json:"providers,omitempty"`
+	// Supported contract versions are optional to be defined.
+	Providers Providers `json:"providers,omitempty"`
 }
 
 // ProviderTemplateStatus defines the observed state of ProviderTemplate
 type ProviderTemplateStatus struct {
-	// CAPI exact version in the SemVer format.
-	// Applicable only for the capi Template itself.
-	CAPIVersion string `json:"capiVersion,omitempty"`
-	// CAPI version constraint in the SemVer format indicating compatibility with the core CAPI.
-	CAPIVersionConstraint string `json:"capiVersionConstraint,omitempty"`
-	// Providers represent exposed CAPI providers with exact compatibility versions set
+	CAPIContracts CompatibilityContracts `json:"capiContracts,omitempty"`
+	// Providers represent exposed CAPI providers with supported contract versions
 	// if the latter has been given.
-	Providers ProvidersTupled `json:"providers,omitempty"`
+	Providers Providers `json:"providers,omitempty"`
 
 	TemplateStatusCommon `json:",inline"`
 }
@@ -62,57 +43,25 @@ type ProviderTemplateStatus struct {
 // FillStatusWithProviders sets the status of the template with providers
 // either from the spec or from the given annotations.
 func (t *ProviderTemplate) FillStatusWithProviders(annotations map[string]string) error {
-	var err error
-	t.Status.Providers.BootstrapProviders, err = parseProviders(t, bootstrapProvidersType, annotations, semver.NewVersion)
+	t.Status.Providers = getProvidersList(t, annotations)
+
+	contractsStatus, err := getCAPIContracts(t, annotations)
 	if err != nil {
-		return fmt.Errorf("failed to parse ProviderTemplate bootstrap providers: %v", err)
+		return fmt.Errorf("failed to get CAPI contract versions for ProviderTemplate %s: %v", t.GetName(), err)
 	}
 
-	t.Status.Providers.ControlPlaneProviders, err = parseProviders(t, controlPlaneProvidersType, annotations, semver.NewVersion)
-	if err != nil {
-		return fmt.Errorf("failed to parse ProviderTemplate controlPlane providers: %v", err)
-	}
-
-	t.Status.Providers.InfrastructureProviders, err = parseProviders(t, infrastructureProvidersType, annotations, semver.NewVersion)
-	if err != nil {
-		return fmt.Errorf("failed to parse ProviderTemplate infrastructure providers: %v", err)
-	}
-
-	if t.Name == CoreCAPIName {
-		capiVersion := annotations[ChartAnnotationCAPIVersion]
-		if t.Spec.CAPIVersion != "" {
-			capiVersion = t.Spec.CAPIVersion
-		}
-		if capiVersion == "" {
-			return nil
-		}
-
-		if _, err := semver.NewVersion(capiVersion); err != nil {
-			return fmt.Errorf("failed to parse CAPI version %s: %w", capiVersion, err)
-		}
-
-		t.Status.CAPIVersion = capiVersion
-	} else {
-		capiConstraint := annotations[ChartAnnotationCAPIVersionConstraint]
-		if t.Spec.CAPIVersionConstraint != "" {
-			capiConstraint = t.Spec.CAPIVersionConstraint
-		}
-		if capiConstraint == "" {
-			return nil
-		}
-
-		if _, err := semver.NewConstraint(capiConstraint); err != nil {
-			return fmt.Errorf("failed to parse CAPI version constraint %s: %w", capiConstraint, err)
-		}
-
-		t.Status.CAPIVersionConstraint = capiConstraint
-	}
+	t.Status.CAPIContracts = contractsStatus
 
 	return nil
 }
 
+// GetContracts returns .spec.capiContracts of the Template.
+func (t *ProviderTemplate) GetContracts() CompatibilityContracts {
+	return t.Spec.CAPIContracts
+}
+
 // GetSpecProviders returns .spec.providers of the Template.
-func (t *ProviderTemplate) GetSpecProviders() ProvidersTupled {
+func (t *ProviderTemplate) GetSpecProviders() Providers {
 	return t.Spec.Providers
 }
 

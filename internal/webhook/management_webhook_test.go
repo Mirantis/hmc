@@ -39,14 +39,15 @@ func TestManagementValidateUpdate(t *testing.T) {
 	ctx := admission.NewContextWithRequest(context.Background(), admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{Operation: admissionv1.Update}})
 
 	const (
-		versionOne                         = "1.0.0"
-		constraintVerOne, constraintVerTwo = "^1.0.0", "~2.0.0"
-		invalidVersion                     = "invalid-ver"
-		invalidConstraint                  = "invalid-constraint"
+		someContractVersion = "v1alpha4_v1beta1"
+		capiVersion         = "v1beta1"
+		capiVersionOther    = "v1alpha3"
 	)
 
+	validStatus := v1alpha1.TemplateValidationStatus{Valid: true}
+
 	providerAwsDefaultTpl := v1alpha1.Provider{
-		Name: "aws",
+		Name: "infrastructure-aws",
 		Component: v1alpha1.Component{
 			Template: template.DefaultName,
 		},
@@ -78,19 +79,19 @@ func TestManagementValidateUpdate(t *testing.T) {
 			},
 		},
 		{
-			name:       "capi providertemplate with wrong capi semver set, should fail",
+			name:       "capi providertemplate is not valid, should fail",
 			management: management.NewManagement(management.WithRelease(release.DefaultName)),
 			existingObjects: []runtime.Object{
 				release.New(),
 				template.NewProviderTemplate(
 					template.WithName(release.DefaultCAPITemplateName),
-					template.WithProviderStatusCAPIVersion(invalidVersion),
+					template.WithProviderStatusCAPIContracts(capiVersion, ""),
 				),
 			},
-			err: fmt.Sprintf("the Management is invalid: invalid CAPI version %s in the ProviderTemplate %s to be validated against: Invalid Semantic Version", invalidVersion, release.DefaultCAPITemplateName),
+			err: fmt.Sprintf("the Management is invalid: not valid ProviderTemplate %s", release.DefaultCAPITemplateName),
 		},
 		{
-			name: "providertemplates without specified capi constraints, should succeed",
+			name: "no providertemplates that declared in mgmt spec.providers, should fail",
 			management: management.NewManagement(
 				management.WithRelease(release.DefaultName),
 				management.WithProviders([]v1alpha1.Provider{providerAwsDefaultTpl}),
@@ -99,13 +100,30 @@ func TestManagementValidateUpdate(t *testing.T) {
 				release.New(),
 				template.NewProviderTemplate(
 					template.WithName(release.DefaultCAPITemplateName),
-					template.WithProviderStatusCAPIVersion(versionOne),
+					template.WithProviderStatusCAPIContracts(capiVersion, ""),
+					template.WithValidationStatus(validStatus),
+				),
+			},
+			err: fmt.Sprintf(`failed to get ProviderTemplate %s: providertemplates.hmc.mirantis.com "%s" not found`, template.DefaultName, template.DefaultName),
+		},
+		{
+			name: "providertemplates without specified capi contracts, should succeed",
+			management: management.NewManagement(
+				management.WithRelease(release.DefaultName),
+				management.WithProviders([]v1alpha1.Provider{providerAwsDefaultTpl}),
+			),
+			existingObjects: []runtime.Object{
+				release.New(),
+				template.NewProviderTemplate(
+					template.WithName(release.DefaultCAPITemplateName),
+					template.WithProviderStatusCAPIContracts(capiVersion, ""),
+					template.WithValidationStatus(validStatus),
 				),
 				template.NewProviderTemplate(),
 			},
 		},
 		{
-			name: "providertemplates with invalid specified capi semver, should fail",
+			name: "providertemplates is not ready, should succeed",
 			management: management.NewManagement(
 				management.WithRelease(release.DefaultName),
 				management.WithProviders([]v1alpha1.Provider{providerAwsDefaultTpl}),
@@ -114,16 +132,17 @@ func TestManagementValidateUpdate(t *testing.T) {
 				release.New(),
 				template.NewProviderTemplate(
 					template.WithName(release.DefaultCAPITemplateName),
-					template.WithProviderStatusCAPIVersion(versionOne),
+					template.WithProviderStatusCAPIContracts(capiVersion, ""),
+					template.WithValidationStatus(validStatus),
 				),
 				template.NewProviderTemplate(
-					template.WithProviderStatusCAPIConstraint(invalidConstraint),
+					template.WithProviderStatusCAPIContracts(capiVersionOther, someContractVersion),
 				),
 			},
-			err: fmt.Sprintf("the Management is invalid: invalid CAPI version constraint %s in the ProviderTemplate %s: improper constraint: %s", invalidConstraint, template.DefaultName, invalidConstraint),
+			err: fmt.Sprintf("the Management is invalid: not valid ProviderTemplate %s", template.DefaultName),
 		},
 		{
-			name: "providertemplates do not match capi version, should fail",
+			name: "providertemplates do not match capi contracts, should fail",
 			management: management.NewManagement(
 				management.WithRelease(release.DefaultName),
 				management.WithProviders([]v1alpha1.Provider{providerAwsDefaultTpl}),
@@ -132,17 +151,19 @@ func TestManagementValidateUpdate(t *testing.T) {
 				release.New(),
 				template.NewProviderTemplate(
 					template.WithName(release.DefaultCAPITemplateName),
-					template.WithProviderStatusCAPIVersion(versionOne),
+					template.WithProviderStatusCAPIContracts(capiVersion, ""),
+					template.WithValidationStatus(validStatus),
 				),
 				template.NewProviderTemplate(
-					template.WithProviderStatusCAPIConstraint(constraintVerTwo),
+					template.WithProviderStatusCAPIContracts(capiVersionOther, someContractVersion),
+					template.WithValidationStatus(validStatus),
 				),
 			},
-			warnings: admission.Warnings{"The Management object has incompatible CAPI versions ProviderTemplates"},
-			err:      fmt.Sprintf("the Management is invalid: core CAPI version %s does not satisfy ProviderTemplate %s constraint %s", versionOne, template.DefaultName, constraintVerTwo),
+			warnings: admission.Warnings{"The Management object has incompatible CAPI contract versions in ProviderTemplates"},
+			err:      fmt.Sprintf("the Management is invalid: core CAPI contract version %s does not support ProviderTemplate %s", capiVersion, template.DefaultName),
 		},
 		{
-			name: "providertemplates match capi version, should succeed",
+			name: "providertemplates match capi contracts, should succeed",
 			management: management.NewManagement(
 				management.WithRelease(release.DefaultName),
 				management.WithProviders([]v1alpha1.Provider{providerAwsDefaultTpl}),
@@ -151,10 +172,12 @@ func TestManagementValidateUpdate(t *testing.T) {
 				release.New(),
 				template.NewProviderTemplate(
 					template.WithName(release.DefaultCAPITemplateName),
-					template.WithProviderStatusCAPIVersion(versionOne),
+					template.WithProviderStatusCAPIContracts(capiVersion, ""),
+					template.WithValidationStatus(validStatus),
 				),
 				template.NewProviderTemplate(
-					template.WithProviderStatusCAPIConstraint(constraintVerOne),
+					template.WithProviderStatusCAPIContracts(capiVersion, someContractVersion),
+					template.WithValidationStatus(validStatus),
 				),
 			},
 		},
