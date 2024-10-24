@@ -53,7 +53,7 @@ func validateCluster(ctx context.Context, kc *kubeclient.KubeClient, clusterName
 		Fail(err.Error())
 	}
 
-	return utils.ValidateConditionsTrue(cluster)
+	return utils.ValidateConditionsTrue(cluster, []string{})
 }
 
 func validateMachines(ctx context.Context, kc *kubeclient.KubeClient, clusterName string) error {
@@ -77,7 +77,7 @@ func validateMachines(ctx context.Context, kc *kubeclient.KubeClient, clusterNam
 				Fail(err.Error())
 			}
 
-			if err := utils.ValidateConditionsTrue(&md); err != nil {
+			if err := utils.ValidateConditionsTrue(&md, []string{}); err != nil {
 				return err
 			}
 		}
@@ -88,7 +88,7 @@ func validateMachines(ctx context.Context, kc *kubeclient.KubeClient, clusterNam
 			Fail(err.Error())
 		}
 
-		if err := utils.ValidateConditionsTrue(&machine); err != nil {
+		if err := utils.ValidateConditionsTrue(&machine, []string{}); err != nil {
 			return err
 		}
 	}
@@ -132,6 +132,30 @@ func validateK0sControlPlanes(ctx context.Context, kc *kubeclient.KubeClient, cl
 		if v, ok := st["ready"].(bool); !ok || !v {
 			return fmt.Errorf("%s %s is not ready, status: %+v", objKind, objName, st)
 		}
+	}
+
+	return nil
+}
+
+func validateAWSManagedControlPlanes(ctx context.Context, kc *kubeclient.KubeClient, clusterName string) error {
+	controlPlanes, err := kc.ListAWSManagedControlPlanes(ctx, clusterName)
+	if err != nil {
+		return err
+	}
+
+	for _, controlPlane := range controlPlanes {
+		if err := utils.ValidateObjectNamePrefix(&controlPlane, clusterName); err != nil {
+			Fail(err.Error())
+		}
+
+		// EKSControlPlaneCreating condition very often has READY=False, SEVERITY=Info and REASON=created (this is fine).
+		if err := utils.ValidateConditionsTrue(&controlPlane, []string{"EKSControlPlaneCreating"}); err != nil {
+			return err
+		}
+	}
+
+	if err != nil {
+		return err
 	}
 
 	return nil
