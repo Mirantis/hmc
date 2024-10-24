@@ -38,7 +38,7 @@ spec:
               url: https://kube-vip.github.io/helm-charts
             - name: vsphere-cpi
               url: https://kubernetes.github.io/cloud-provider-vsphere
-            - name: mirantis
+            - name: vsphere-csi-driver
               url: https://charts.mirantis.com
             charts:
             - name: kube-vip
@@ -90,7 +90,7 @@ spec:
                     - key: CriticalAddonsOnly
                       effect: NoExecute
                       operator: Exists
-            - name: vsphere-csi
+            - name: vsphere-csi-driver
               chartname: mirantis/vsphere-csi-driver
               version: 0.0.2
               order: 3
