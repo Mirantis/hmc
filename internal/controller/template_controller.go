@@ -341,8 +341,9 @@ func (r *ClusterTemplateReconciler) validateCompatibilityAttrs(ctx context.Conte
 
 	exposedProviders, requiredProviders := management.Status.AvailableProviders, template.Status.Providers
 
-	ctrl.LoggerFrom(ctx).V(1).Info("providers to check", "exposed", exposedProviders, "required", requiredProviders,
-		"exposed_capi_contract_versions", management.Status.CAPIContracts, "required_capi_contract_versions", template.Status.CAPIContracts)
+	l := ctrl.LoggerFrom(ctx)
+	l.V(1).Info("providers to check", "exposed", exposedProviders, "required", requiredProviders,
+		"exposed_capi_contract_versions", management.Status.CAPIContracts, "required_provider_contract_versions", template.Status.ProviderContracts)
 
 	var (
 		merr          error
@@ -354,26 +355,25 @@ func (r *ClusterTemplateReconciler) validateCompatibilityAttrs(ctx context.Conte
 			missing = append(missing, v)
 			continue
 		}
+	}
 
-		providerCAPIContracts, ok := management.Status.CAPIContracts[v]
+	// already validated contract versions format
+	for providerName, requiredContract := range template.Status.ProviderContracts {
+		l.V(1).Info("validating contracts", "exposed_provider_capi_contracts", management.Status.CAPIContracts, "required_provider_name", providerName)
+
+		providerCAPIContracts, ok := management.Status.CAPIContracts[providerName] // capi_version: provider_version(s)
 		if !ok {
 			continue // both the provider and cluster templates contract versions must be set for the validation
 		}
 
-		// already validated contract versions format
-		for capi, providerReq := range template.Status.CAPIContracts {
-			providerSupported, ok := providerCAPIContracts[capi]
-			if !ok {
-				// TODO (zerospiel): should we also consider it as a missing error? capi req from cluster missing in provider tpl
-				continue
-			}
+		var exposedProviderContracts []string
+		for _, supportedVersions := range providerCAPIContracts {
+			exposedProviderContracts = append(exposedProviderContracts, strings.Split(supportedVersions, "_")...)
+		}
 
-			providerSupportedContracts := strings.Split(providerSupported, "_")
-			for _, v := range strings.Split(providerReq, "_") {
-				if !slices.Contains(providerSupportedContracts, v) {
-					nonSatisfying = append(nonSatisfying, v)
-				}
-			}
+		l.V(1).Info("checking if contract is supported", "exposed_provider_contracts_final_list", exposedProviderContracts, "required_contract", requiredContract)
+		if !slices.Contains(exposedProviderContracts, requiredContract) {
+			nonSatisfying = append(nonSatisfying, "provider "+providerName+" does not support "+requiredContract)
 		}
 	}
 

@@ -51,7 +51,7 @@ type ServiceTemplateStatus struct {
 // FillStatusWithProviders sets the status of the template with providers
 // either from the spec or from the given annotations.
 func (t *ServiceTemplate) FillStatusWithProviders(annotations map[string]string) error {
-	t.Status.Providers = getProvidersList(t, annotations)
+	t.Status.Providers = getProvidersList(t.Spec.Providers, annotations)
 
 	kconstraint := annotations[ChartAnnotationKubernetesConstraint]
 	if t.Spec.KubernetesConstraint != "" {
