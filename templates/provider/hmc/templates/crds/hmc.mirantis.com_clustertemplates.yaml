@@ -56,17 +56,6 @@ spec:
           spec:
             description: ClusterTemplateSpec defines the desired state of ClusterTemplate
             properties:
-              capiContracts:
-                additionalProperties:
-                  type: string
-                description: |-
-                  Holds key-value pairs with compatibility [contract versions],
-                  where the key is the core CAPI contract version,
-                  and the value is an underscore-delimited (_) list of provider contract versions
-                  supported by the core CAPI.
-
-                  [contract versions]: https://cluster-api.sigs.k8s.io/developer/providers/contracts
-                type: object
               helm:
                 description: HelmSpec references a Helm chart representing the HMC
                   template
@@ -118,6 +107,17 @@ spec:
                 description: Kubernetes exact version in the SemVer format provided
                   by this ClusterTemplate.
                 type: string
+              providerContracts:
+                additionalProperties:
+                  type: string
+                description: |-
+                  Holds key-value pairs with compatibility [contract versions],
+                  where the key is the name of the provider,
+                  and the value is the provider contract version
+                  required to be supported by the provider.
+
+                  [contract versions]: https://cluster-api.sigs.k8s.io/developer/providers/contracts
+                type: object
               providers:
                 description: |-
                   Providers represent required CAPI providers with supported contract versions.
@@ -135,17 +135,6 @@ spec:
           status:
             description: ClusterTemplateStatus defines the observed state of ClusterTemplate
             properties:
-              capiContracts:
-                additionalProperties:
-                  type: string
-                description: |-
-                  Holds key-value pairs with compatibility [contract versions],
-                  where the key is the core CAPI contract version,
-                  and the value is an underscore-delimited (_) list of provider contract versions
-                  supported by the core CAPI.
-
-                  [contract versions]: https://cluster-api.sigs.k8s.io/developer/providers/contracts
-                type: object
               chartRef:
                 description: |-
                   ChartRef is a reference to a source controller resource containing the
@@ -192,6 +181,17 @@ spec:
                 description: ObservedGeneration is the last observed generation.
                 format: int64
                 type: integer
+              providerContracts:
+                additionalProperties:
+                  type: string
+                description: |-
+                  Holds key-value pairs with compatibility [contract versions],
+                  where the key is the name of the provider,
+                  and the value is the provider contract version
+                  required to be supported by the provider.
+
+                  [contract versions]: https://cluster-api.sigs.k8s.io/developer/providers/contracts
+                type: object
               providers:
                 description: |-
                   Providers represent required CAPI providers with supported contract versions

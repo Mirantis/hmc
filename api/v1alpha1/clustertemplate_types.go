@@ -30,8 +30,14 @@ const (
 
 // ClusterTemplateSpec defines the desired state of ClusterTemplate
 type ClusterTemplateSpec struct {
-	Helm          HelmSpec               `json:"helm"`
-	CAPIContracts CompatibilityContracts `json:"capiContracts,omitempty"`
+	Helm HelmSpec `json:"helm"`
+	// Holds key-value pairs with compatibility [contract versions],
+	// where the key is the name of the provider,
+	// and the value is the provider contract version
+	// required to be supported by the provider.
+	//
+	// [contract versions]: https://cluster-api.sigs.k8s.io/developer/providers/contracts
+	ProviderContracts CompatibilityContracts `json:"providerContracts,omitempty"`
 	// Kubernetes exact version in the SemVer format provided by this ClusterTemplate.
 	KubernetesVersion string `json:"k8sVersion,omitempty"`
 	// Providers represent required CAPI providers with supported contract versions.
@@ -42,7 +48,13 @@ type ClusterTemplateSpec struct {
 
 // ClusterTemplateStatus defines the observed state of ClusterTemplate
 type ClusterTemplateStatus struct {
-	CAPIContracts CompatibilityContracts `json:"capiContracts,omitempty"`
+	// Holds key-value pairs with compatibility [contract versions],
+	// where the key is the name of the provider,
+	// and the value is the provider contract version
+	// required to be supported by the provider.
+	//
+	// [contract versions]: https://cluster-api.sigs.k8s.io/developer/providers/contracts
+	ProviderContracts CompatibilityContracts `json:"providerContracts,omitempty"`
 	// Kubernetes exact version in the SemVer format provided by this ClusterTemplate.
 	KubernetesVersion string `json:"k8sVersion,omitempty"`
 	// Providers represent required CAPI providers with supported contract versions
@@ -55,14 +67,14 @@ type ClusterTemplateStatus struct {
 // FillStatusWithProviders sets the status of the template with providers
 // either from the spec or from the given annotations.
 func (t *ClusterTemplate) FillStatusWithProviders(annotations map[string]string) error {
-	t.Status.Providers = getProvidersList(t, annotations)
+	t.Status.Providers = getProvidersList(t.Spec.Providers, annotations)
 
-	contractsStatus, err := getCAPIContracts(t, annotations)
+	contractsStatus, err := getCAPIContracts(t.Kind, t.Spec.ProviderContracts, annotations)
 	if err != nil {
 		return fmt.Errorf("failed to get CAPI contract versions for ClusterTemplate %s/%s: %v", t.GetNamespace(), t.GetName(), err)
 	}
 
-	t.Status.CAPIContracts = contractsStatus
+	t.Status.ProviderContracts = contractsStatus
 
 	kversion := annotations[ChartAnnotationKubernetesVersion]
 	if t.Spec.KubernetesVersion != "" {
@@ -79,11 +91,6 @@ func (t *ClusterTemplate) FillStatusWithProviders(annotations map[string]string)
 	t.Status.KubernetesVersion = kversion
 
 	return nil
-}
-
-// GetContracts returns .spec.capiContracts of the Template.
-func (t *ClusterTemplate) GetContracts() CompatibilityContracts {
-	return t.Spec.CAPIContracts
 }
 
 // GetSpecProviders returns .spec.providers of the Template.

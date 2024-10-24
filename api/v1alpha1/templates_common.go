@@ -77,21 +77,22 @@ type TemplateValidationStatus struct {
 	Valid bool `json:"valid"`
 }
 
-func getProvidersList(providersGetter interface{ GetSpecProviders() Providers }, annotations map[string]string) Providers {
+func getProvidersList(providers Providers, annotations map[string]string) Providers {
 	const multiProviderSeparator = ","
 
-	if spec := providersGetter.GetSpecProviders(); len(spec) > 0 {
-		slices.Sort(spec)
-		return slices.Compact(spec)
+	if len(providers) > 0 {
+		res := slices.Clone(providers)
+		slices.Sort(res)
+		return slices.Compact(res)
 	}
 
-	providers := annotations[ChartAnnotationProviderName]
-	if len(providers) == 0 {
+	providersFromAnno := annotations[ChartAnnotationProviderName]
+	if len(providersFromAnno) == 0 {
 		return Providers{}
 	}
 
 	var (
-		splitted = strings.Split(providers, multiProviderSeparator)
+		splitted = strings.Split(providersFromAnno, multiProviderSeparator)
 		pstatus  = make([]string, 0, len(splitted))
 	)
 	for _, v := range splitted {
@@ -104,23 +105,30 @@ func getProvidersList(providersGetter interface{ GetSpecProviders() Providers },
 	return slices.Compact(pstatus)
 }
 
-func getCAPIContracts(contractsGetter interface{ GetContracts() CompatibilityContracts }, annotations map[string]string) (_ CompatibilityContracts, merr error) {
+func getCAPIContracts(kind string, contracts CompatibilityContracts, annotations map[string]string) (_ CompatibilityContracts, merr error) {
 	contractsStatus := make(map[string]string)
 
 	// spec preceding the annos
-	if contracts := contractsGetter.GetContracts(); len(contracts) > 0 {
-		for capiContract, providerContract := range contracts {
-			if !isCAPIContractSingleVersion(capiContract) {
-				merr = errors.Join(merr, fmt.Errorf("incorrect CAPI contract version %s in the spec", capiContract))
+	if len(contracts) > 0 {
+		for key, providerContract := range contracts { // key is either CAPI contract version or the name of a provider
+			// for provider templates the key must be contract version
+			// for cluster template the key must be the name of a provider
+			if kind == ProviderTemplateKind && !isCAPIContractSingleVersion(key) {
+				merr = errors.Join(merr, fmt.Errorf("incorrect CAPI contract version %s in the spec", key))
 				continue
 			}
 
-			if providerContract != "" && !isCAPIContractVersion(providerContract) { // special case for either CAPI or deliberately set empty
-				merr = errors.Join(merr, fmt.Errorf("incorrect provider contract version %s in the spec for the %s CAPI contract version", providerContract, capiContract))
+			// for provider templates it is allowed to have a list of contract versions, or be empty for the core CAPI case
+			// for cluster templates the contract versions should be single
+			if kind == ProviderTemplateKind && providerContract != "" && !isCAPIContractVersion(providerContract) {
+				merr = errors.Join(merr, fmt.Errorf("incorrect provider contract version %s in the spec for the %s CAPI contract version", providerContract, key))
+				continue
+			} else if kind == ClusterTemplateKind && !isCAPIContractSingleVersion(providerContract) {
+				merr = errors.Join(merr, fmt.Errorf("incorrect provider contract version %s in the spec for the %s provider name", providerContract, key))
 				continue
 			}
 
-			contractsStatus[capiContract] = providerContract
+			contractsStatus[key] = providerContract
 		}
 
 		return contractsStatus, merr
@@ -132,19 +140,23 @@ func getCAPIContracts(contractsGetter interface{ GetContracts() CompatibilityCon
 			continue
 		}
 
-		capiContract := k[idx+len(chartAnnoCAPIPrefix):]
-		if isCAPIContractSingleVersion(capiContract) {
-			if providerContract == "" { // special case for either CAPI or deliberately set empty
-				contractsStatus[capiContract] = ""
+		capiContractOrProviderName := k[idx+len(chartAnnoCAPIPrefix):]
+		if (kind == ProviderTemplateKind && isCAPIContractSingleVersion(capiContractOrProviderName)) ||
+			(kind == ClusterTemplateKind && (strings.HasPrefix(capiContractOrProviderName, "bootstrap-") ||
+				strings.HasPrefix(capiContractOrProviderName, "control-plane-") ||
+				strings.HasPrefix(capiContractOrProviderName, "infrastructure-"))) {
+			if kind == ProviderTemplateKind && providerContract == "" { // special case for the core CAPI
+				contractsStatus[capiContractOrProviderName] = ""
 				continue
 			}
 
-			if isCAPIContractVersion(providerContract) {
-				contractsStatus[capiContract] = providerContract
+			if (kind == ProviderTemplateKind && isCAPIContractVersion(providerContract)) ||
+				(kind == ClusterTemplateKind && isCAPIContractSingleVersion(providerContract)) {
+				contractsStatus[capiContractOrProviderName] = providerContract
 			} else {
 				// since we parsed capi contract version,
 				// then treat the provider's invalid version as an error
-				merr = errors.Join(merr, fmt.Errorf("incorrect provider contract version %s given for the %s CAPI contract version annotation", providerContract, k))
+				merr = errors.Join(merr, fmt.Errorf("incorrect provider contract version %s given for the %s annotation", providerContract, k))
 			}
 		}
 	}

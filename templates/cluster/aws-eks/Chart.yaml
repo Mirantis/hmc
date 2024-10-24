@@ -9,3 +9,4 @@ type: application
 version: 0.0.2
 annotations:
   cluster.x-k8s.io/provider: infrastructure-aws
+  cluster.x-k8s.io/infrastructure-aws: v1beta2

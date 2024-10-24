@@ -21,3 +21,6 @@ version: 0.0.2
 appVersion: "1.0.4"
 annotations:
   cluster.x-k8s.io/provider: infrastructure-k0smotron, bootstrap-k0smotron, control-plane-k0smotron
+  cluster.x-k8s.io/bootstrap-k0smotron: v1beta1
+  cluster.x-k8s.io/control-plane-k0smotron: v1beta1
+  cluster.x-k8s.io/infrastructure-k0smotron: v1beta1

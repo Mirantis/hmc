@@ -438,7 +438,7 @@ func updateComponentsStatus(
 		*providers = slices.Compact(*providers)
 
 		for _, v := range templateProviders {
-			capiContracts[v] = templateContracts // TODO (zerospiel): not sure whether it's okay to overwrite if the same provider
+			capiContracts[v] = templateContracts
 		}
 	}
 }

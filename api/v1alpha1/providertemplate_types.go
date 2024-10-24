@@ -20,6 +20,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// ProviderTemplateKind denotes the providertemplate resource Kind.
+const ProviderTemplateKind = "ProviderTemplate"
+
 // ProviderTemplateSpec defines the desired state of ProviderTemplate
 type ProviderTemplateSpec struct {
 	Helm          HelmSpec               `json:"helm,omitempty"`
@@ -43,9 +46,9 @@ type ProviderTemplateStatus struct {
 // FillStatusWithProviders sets the status of the template with providers
 // either from the spec or from the given annotations.
 func (t *ProviderTemplate) FillStatusWithProviders(annotations map[string]string) error {
-	t.Status.Providers = getProvidersList(t, annotations)
+	t.Status.Providers = getProvidersList(t.Spec.Providers, annotations)
 
-	contractsStatus, err := getCAPIContracts(t, annotations)
+	contractsStatus, err := getCAPIContracts(t.Kind, t.Spec.CAPIContracts, annotations)
 	if err != nil {
 		return fmt.Errorf("failed to get CAPI contract versions for ProviderTemplate %s: %v", t.GetName(), err)
 	}
@@ -53,16 +56,6 @@ func (t *ProviderTemplate) FillStatusWithProviders(annotations map[string]string
 	t.Status.CAPIContracts = contractsStatus
 
 	return nil
-}
-
-// GetContracts returns .spec.capiContracts of the Template.
-func (t *ProviderTemplate) GetContracts() CompatibilityContracts {
-	return t.Spec.CAPIContracts
-}
-
-// GetSpecProviders returns .spec.providers of the Template.
-func (t *ProviderTemplate) GetSpecProviders() Providers {
-	return t.Spec.Providers
 }
 
 // GetHelmSpec returns .spec.helm of the Template.
