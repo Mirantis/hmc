@@ -107,36 +107,30 @@ func (r *ManagedClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	return r.Update(ctx, managedCluster)
 }
 
-func (r *ManagedClusterReconciler) setStatusFromClusterStatus(ctx context.Context, managedCluster *hmc.ManagedCluster) (requeue bool, _ error) {
+func (r *ManagedClusterReconciler) setStatusFromChildObjects(ctx context.Context, managedCluster *hmc.ManagedCluster, resourceID schema.GroupVersionResource) (requeue bool, _ error) {
 	l := ctrl.LoggerFrom(ctx)
-
-	resourceID := schema.GroupVersionResource{
-		Group:    "cluster.x-k8s.io",
-		Version:  "v1beta1",
-		Resource: "clusters",
-	}
 
 	list, err := r.DynamicClient.Resource(resourceID).Namespace(managedCluster.Namespace).List(ctx, metav1.ListOptions{
 		LabelSelector: labels.SelectorFromSet(map[string]string{hmc.FluxHelmChartNameKey: managedCluster.Name}).String(),
 	})
 
 	if apierrors.IsNotFound(err) || len(list.Items) == 0 {
-		l.Info("Clusters not found, ignoring since object must be deleted or not yet created")
+		l.Info(fmt.Sprintf("%s not found, ignoring since object must be deleted or not yet created", resourceID.Resource))
 		return true, nil
 	}
 
 	if err != nil {
-		return true, fmt.Errorf("failed to get cluster information for managedCluster %s in namespace: %s: %w",
-			managedCluster.Namespace, managedCluster.Name, err)
+		return true, fmt.Errorf("failed to get %s information for managedCluster %s in namespace: %s: %w",
+			resourceID.Resource, managedCluster.Namespace, managedCluster.Name, err)
 	}
 	conditions, found, err := unstructured.NestedSlice(list.Items[0].Object, "status", "conditions")
 	if err != nil {
-		return true, fmt.Errorf("failed to get cluster information for managedCluster %s in namespace: %s: %w",
-			managedCluster.Namespace, managedCluster.Name, err)
+		return true, fmt.Errorf("failed to get %s information for managedCluster %s in namespace: %s: %w",
+			resourceID.Resource, managedCluster.Namespace, managedCluster.Name, err)
 	}
 	if !found {
-		return true, fmt.Errorf("failed to get cluster information for managedCluster %s in namespace: %s: status.conditions not found",
-			managedCluster.Namespace, managedCluster.Name)
+		return true, fmt.Errorf("failed to get %s information for managedCluster %s in namespace: %s: status.conditions not found",
+			resourceID.Resource, managedCluster.Namespace, managedCluster.Name)
 	}
 
 	allConditionsComplete := true
@@ -337,17 +331,32 @@ func (r *ManagedClusterReconciler) Update(ctx context.Context, managedCluster *h
 			})
 		}
 
-		requeue, err := r.setStatusFromClusterStatus(ctx, managedCluster)
-		if err != nil {
-			if requeue {
-				return ctrl.Result{RequeueAfter: DefaultRequeueInterval}, err
-			}
-
-			return ctrl.Result{}, err
+		childObjects := []schema.GroupVersionResource{
+			{
+				Group:    "cluster.x-k8s.io",
+				Version:  "v1beta1",
+				Resource: "clusters",
+			},
+			{
+				Group:    "cluster.x-k8s.io",
+				Version:  "v1beta1",
+				Resource: "machinedeployments",
+			},
 		}
 
-		if requeue {
-			return ctrl.Result{RequeueAfter: DefaultRequeueInterval}, nil
+		for _, gvr := range childObjects {
+			requeue, err := r.setStatusFromChildObjects(ctx, managedCluster, gvr)
+			if err != nil {
+				if requeue {
+					return ctrl.Result{RequeueAfter: DefaultRequeueInterval}, err
+				}
+
+				return ctrl.Result{}, err
+			}
+
+			if requeue {
+				return ctrl.Result{RequeueAfter: DefaultRequeueInterval}, nil
+			}
 		}
 
 		if !fluxconditions.IsReady(hr) {
