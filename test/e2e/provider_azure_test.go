@@ -21,14 +21,15 @@ import (
 	"os/exec"
 	"time"
 
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+
 	internalutils "github.com/Mirantis/hmc/internal/utils"
 	"github.com/Mirantis/hmc/test/e2e/kubeclient"
 	"github.com/Mirantis/hmc/test/e2e/managedcluster"
 	"github.com/Mirantis/hmc/test/e2e/managedcluster/azure"
 	"github.com/Mirantis/hmc/test/e2e/managedcluster/clusteridentity"
 	"github.com/Mirantis/hmc/test/utils"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 )
 
 var _ = Context("Azure Templates", Label("provider:cloud", "provider:azure"), Ordered, func() {

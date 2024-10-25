@@ -157,7 +157,7 @@ func (r *TemplateReconciler) ReconcileTemplate(ctx context.Context, template tem
 		}
 	} else {
 		if helmSpec.ChartName == "" {
-			err := fmt.Errorf("neither chartName nor chartRef is set")
+			err := errors.New("neither chartName nor chartRef is set")
 			l.Error(err, "invalid helm chart reference")
 			return ctrl.Result{}, err
 		}
@@ -180,7 +180,7 @@ func (r *TemplateReconciler) ReconcileTemplate(ctx context.Context, template tem
 		}
 	}
 	if hcChart == nil {
-		err := fmt.Errorf("HelmChart is nil")
+		err := errors.New("HelmChart is nil")
 		l.Error(err, "could not get the helm chart")
 		return ctrl.Result{}, err
 	}
@@ -249,7 +249,7 @@ func templateManagedByHMC(template templateCommon) bool {
 
 func fillStatusWithProviders(template templateCommon, helmChart *chart.Chart) error {
 	if helmChart.Metadata == nil {
-		return fmt.Errorf("chart metadata is empty")
+		return errors.New("chart metadata is empty")
 	}
 
 	return template.FillStatusWithProviders(helmChart.Metadata.Annotations)

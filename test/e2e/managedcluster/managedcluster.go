@@ -20,13 +20,14 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Mirantis/hmc/test/utils"
 	"github.com/a8m/envsubst"
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/Mirantis/hmc/test/utils"
 )
 
 type ProviderType string

@@ -26,15 +26,16 @@ import (
 	"testing"
 	"time"
 
-	internalutils "github.com/Mirantis/hmc/internal/utils"
-	"github.com/Mirantis/hmc/test/e2e/kubeclient"
-	"github.com/Mirantis/hmc/test/e2e/managedcluster"
-	"github.com/Mirantis/hmc/test/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
+
+	internalutils "github.com/Mirantis/hmc/internal/utils"
+	"github.com/Mirantis/hmc/test/e2e/kubeclient"
+	"github.com/Mirantis/hmc/test/e2e/managedcluster"
+	"github.com/Mirantis/hmc/test/utils"
 )
 
 // Run e2e tests using the Ginkgo runner.
@@ -104,7 +105,7 @@ func verifyControllersUp(kc *kubeclient.KubeClient) error {
 	return nil
 }
 
-func validateController(kc *kubeclient.KubeClient, labelSelector string, name string) error {
+func validateController(kc *kubeclient.KubeClient, labelSelector, name string) error {
 	controllerItems := 1
 	if strings.Contains(labelSelector, managedcluster.GetProviderLabel(managedcluster.ProviderAzure)) {
 		// Azure provider has two controllers.

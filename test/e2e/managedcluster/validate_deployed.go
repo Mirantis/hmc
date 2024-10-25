@@ -19,8 +19,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Mirantis/hmc/test/e2e/kubeclient"
-	"github.com/Mirantis/hmc/test/utils"
 	. "github.com/onsi/ginkgo/v2"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -28,6 +26,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/intstr"
+
+	"github.com/Mirantis/hmc/test/e2e/kubeclient"
+	"github.com/Mirantis/hmc/test/utils"
 )
 
 // resourceValidationFunc is intended to validate a specific kubernetes

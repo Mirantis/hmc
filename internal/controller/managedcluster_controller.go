@@ -169,8 +169,7 @@ func (r *ManagedClusterReconciler) setStatusFromClusterStatus(ctx context.Contex
 func (r *ManagedClusterReconciler) Update(ctx context.Context, managedCluster *hmc.ManagedCluster) (result ctrl.Result, err error) {
 	l := ctrl.LoggerFrom(ctx)
 
-	finalizersUpdated := controllerutil.AddFinalizer(managedCluster, hmc.ManagedClusterFinalizer)
-	if finalizersUpdated {
+	if controllerutil.AddFinalizer(managedCluster, hmc.ManagedClusterFinalizer) {
 		if err := r.Client.Update(ctx, managedCluster); err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to update managedCluster %s/%s: %w", managedCluster.Namespace, managedCluster.Name, err)
 		}
@@ -460,7 +459,7 @@ func (r *ManagedClusterReconciler) updateStatus(ctx context.Context, managedClus
 
 func (r *ManagedClusterReconciler) getSource(ctx context.Context, ref *hcv2.CrossNamespaceSourceReference) (sourcev1.Source, error) {
 	if ref == nil {
-		return nil, fmt.Errorf("helm chart source is not provided")
+		return nil, errors.New("helm chart source is not provided")
 	}
 	chartRef := client.ObjectKey{Namespace: ref.Namespace, Name: ref.Name}
 	hc := sourcev1.HelmChart{}
@@ -481,8 +480,7 @@ func (r *ManagedClusterReconciler) Delete(ctx context.Context, managedCluster *h
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			l.Info("Removing Finalizer", "finalizer", hmc.ManagedClusterFinalizer)
-			finalizersUpdated := controllerutil.RemoveFinalizer(managedCluster, hmc.ManagedClusterFinalizer)
-			if finalizersUpdated {
+			if controllerutil.RemoveFinalizer(managedCluster, hmc.ManagedClusterFinalizer) {
 				if err := r.Client.Update(ctx, managedCluster); err != nil {
 					return ctrl.Result{}, fmt.Errorf("failed to update managedCluster %s/%s: %w", managedCluster.Namespace, managedCluster.Name, err)
 				}
@@ -618,8 +616,7 @@ func (r *ManagedClusterReconciler) getCluster(ctx context.Context, namespace, na
 
 func (r *ManagedClusterReconciler) removeClusterFinalizer(ctx context.Context, cluster *metav1.PartialObjectMetadata) error {
 	originalCluster := *cluster
-	finalizersUpdated := controllerutil.RemoveFinalizer(cluster, hmc.BlockingFinalizer)
-	if finalizersUpdated {
+	if controllerutil.RemoveFinalizer(cluster, hmc.BlockingFinalizer) {
 		ctrl.LoggerFrom(ctx).Info("Allow to stop cluster", "finalizer", hmc.BlockingFinalizer)
 		if err := r.Client.Patch(ctx, cluster, client.MergeFrom(&originalCluster)); err != nil {
 			return fmt.Errorf("failed to patch cluster %s/%s: %w", cluster.Namespace, cluster.Name, err)
@@ -654,7 +651,7 @@ func (r *ManagedClusterReconciler) reconcileCredentialPropagation(ctx context.Co
 
 	kubeconfSecret := &corev1.Secret{}
 	if err := r.Client.Get(ctx, client.ObjectKey{
-		Name:      fmt.Sprintf("%s-kubeconfig", managedCluster.Name),
+		Name:      managedCluster.Name + "-kubeconfig",
 		Namespace: managedCluster.Namespace,
 	}, kubeconfSecret); err != nil {
 		return fmt.Errorf("failed to get kubeconfig secret for cluster %s/%s: %s", managedCluster.Namespace, managedCluster.Name, err)
@@ -708,7 +705,7 @@ func (r *ManagedClusterReconciler) reconcileCredentialPropagation(ctx context.Co
 				Type:    hmc.CredentialsPropagatedCondition,
 				Status:  metav1.ConditionFalse,
 				Reason:  hmc.FailedReason,
-				Message: fmt.Sprintf("unsupported infrastructure provider %s", provider),
+				Message: "unsupported infrastructure provider " + provider,
 			})
 		}
 	}
@@ -845,8 +842,8 @@ func (r *ManagedClusterReconciler) propagateVSphereSecrets(ctx context.Context, 
 func generateVSphereCCMConfigs(vCl *capv.VSphereCluster, vScrt *corev1.Secret, vMa *capv.VSphereMachine) (*corev1.Secret, *corev1.ConfigMap, error) {
 	secretName := "vsphere-cloud-secret"
 	secretData := map[string][]byte{
-		fmt.Sprintf("%s.username", vCl.Spec.Server): vScrt.Data["username"],
-		fmt.Sprintf("%s.password", vCl.Spec.Server): vScrt.Data["password"],
+		vCl.Spec.Server + ".username": vScrt.Data["username"],
+		vCl.Spec.Server + ".password": vScrt.Data["password"],
 	}
 	ccmCfg := map[string]any{
 		"global": map[string]any{

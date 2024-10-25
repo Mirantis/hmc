@@ -18,8 +18,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Mirantis/hmc/test/e2e/kubeclient"
 	. "github.com/onsi/ginkgo/v2"
+
+	"github.com/Mirantis/hmc/test/e2e/kubeclient"
 )
 
 // ProviderValidator is a struct that contains the necessary information to

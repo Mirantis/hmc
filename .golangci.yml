@@ -18,21 +18,37 @@ issues:
     - text: "Unhandled error in call to function fmt.Print*"
       linters:
         - revive
+    - path: cmd/main.go
+      linters:
+        - maintidx
+    - path: test/
+      linters:
+        - perfsprint
 linters:
   disable-all: true
   enable:
     - asciicheck
     - bodyclose
+    - canonicalheader
     - containedctx
     - contextcheck
     - copyloopvar
     - decorder
     - dogsled
     - dupl
+    - dupword
     - durationcheck
     - errcheck
+    - errchkjson
+    - errname
+    - forbidigo
     - forcetypeassert
+    - gci
+    - ginkgolinter
+    - gocheckcompilerdirectives
+    - gochecksumtype
     - goconst
+    - gocritic
     - gocyclo
     - gofmt
     - gofumpt
@@ -41,11 +57,20 @@ linters:
     - gosimple
     - govet
     - ineffassign
+    - interfacebloat
+    - intrange
+    - loggercheck
+    - maintidx
     - misspell
+    - musttag
     - nakedret
+    - nilerr
+    - nilnil
     - noctx
     - nolintlint
     - nosprintfhostport
+    - paralleltest
+    - perfsprint
     - prealloc
     - predeclared
     - promlinter
@@ -53,8 +78,9 @@ linters:
     - staticcheck
     - stylecheck
     - tenv
+    - testifylint
     - thelper
-    - typecheck
+    - tparallel
     - unconvert
     - unparam
     - unused
@@ -67,6 +93,12 @@ linters-settings:
     # Tokens count to trigger issue.
     # Default: 150
     threshold: 200
+  gci:
+    sections:
+      - standard # Standard section: captures all standard packages.
+      - default # Default section: contains all imports that could not be matched to another section type.
+      - prefix(github.com/Mirantis/hmc) # Custom section: groups all imports with the specified Prefix.
+    skip-generated: false
   gofmt:
     # Apply the rewrite rules to the source before reformatting.
     # https://pkg.go.dev/cmd/gofmt
@@ -74,8 +106,20 @@ linters-settings:
     rewrite-rules:
       - pattern: "interface{}"
         replacement: "any"
-  stylecheck:
-    checks: ["all", "-ST1000", "-ST1001", "-ST1021"]
+  gofumpt:
+    extra-rules: true
+  govet:
+    enable-all: true
+    disable:
+      - fieldalignment
+      - shadow
+  loggercheck:
+    kitlog: false
+    klog: false
+    require-string-key: true
+    no-printf-like: true
+  paralleltest:
+    ignore-missing: true
   revive:
     enable-all-rules: true
     rules:
@@ -97,3 +141,5 @@ linters-settings:
         disabled: true
       - name: package-comments
         disabled: true
+  stylecheck:
+    checks: ["all", "-ST1000", "-ST1001", "-ST1021"]

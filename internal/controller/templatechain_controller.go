@@ -137,7 +137,7 @@ func (r *TemplateChainReconciler) ReconcileTemplateChain(ctx context.Context, te
 		}
 
 		if err := r.Create(ctx, target); err == nil {
-			l.Info(fmt.Sprintf("%s was successfully created", templateChain.TemplateKind()), "template namespace", templateChain.GetNamespace(), "template name", supportedTemplate.Name)
+			l.Info(templateChain.TemplateKind()+" was successfully created", "template namespace", templateChain.GetNamespace(), "template name", supportedTemplate.Name)
 			continue
 		}
 

@@ -108,8 +108,7 @@ func (r *TemplateManagementReconciler) Reconcile(ctx context.Context, req ctrl.R
 		}
 	}
 
-	managedChains := append(managedCtChains, managedStChains...)
-	for _, managedChain := range managedChains {
+	for _, managedChain := range append(managedCtChains, managedStChains...) {
 		keep := false
 		templateNamespacedName := getNamespacedName(managedChain.GetNamespace(), managedChain.GetName())
 		switch managedChain.Kind() {
@@ -248,7 +247,7 @@ func (r *TemplateManagementReconciler) createTemplateChain(ctx context.Context, 
 		}
 		return err
 	}
-	l.Info(fmt.Sprintf("%s was successfully created", source.Kind()), "target namespace", targetNamespace, "source name", source.GetName())
+	l.Info(source.Kind()+" was successfully created", "target namespace", targetNamespace, "source name", source.GetName())
 	return nil
 }
 
@@ -262,7 +261,7 @@ func (r *TemplateManagementReconciler) deleteTemplateChain(ctx context.Context, 
 		}
 		return err
 	}
-	l.Info(fmt.Sprintf("%s was successfully deleted", chain.Kind()), "chain namespace", chain.GetNamespace(), "chain name", chain.GetName())
+	l.Info(chain.Kind()+"%s was successfully deleted", "chain namespace", chain.GetNamespace(), "chain name", chain.GetName())
 	return nil
 }
 
