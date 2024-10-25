@@ -19,13 +19,14 @@ import (
 	"os"
 	"time"
 
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+
 	internalutils "github.com/Mirantis/hmc/internal/utils"
 	"github.com/Mirantis/hmc/test/e2e/kubeclient"
 	"github.com/Mirantis/hmc/test/e2e/managedcluster"
 	"github.com/Mirantis/hmc/test/e2e/managedcluster/clusteridentity"
 	"github.com/Mirantis/hmc/test/e2e/managedcluster/vsphere"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 )
 
 var _ = Context("vSphere Templates", Label("provider:onprem", "provider:vsphere"), Ordered, func() {

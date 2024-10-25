@@ -20,8 +20,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/Mirantis/hmc/test/e2e/kubeclient"
-	"github.com/Mirantis/hmc/test/e2e/managedcluster"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -29,6 +27,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	"github.com/Mirantis/hmc/test/e2e/kubeclient"
+	"github.com/Mirantis/hmc/test/e2e/managedcluster"
 )
 
 type ClusterIdentity struct {

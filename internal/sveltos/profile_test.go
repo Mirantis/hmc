@@ -19,29 +19,28 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestPriorityToTier(t *testing.T) {
+func Test_priorityToTier(t *testing.T) {
 	for _, tc := range []struct {
 		err      error
 		priority int32
 		tier     int32
 	}{
-		{priority: 1, tier: 2147483646, err: nil},
-		{priority: 2147483646, tier: 1, err: nil},
-		{priority: 0, err: errors.New("priority cannot be < 1")},
-		{priority: 2147483647, err: errors.New("priority cannot be > 2147483646")},
+		{priority: 1, tier: 2147483646},
+		{priority: 2147483646, tier: 1},
+		{priority: 0, err: errors.New("priority has to be between 1 and 2147483646")},
+		{priority: 2147483647, err: errors.New("priority has to be between 1 and 2147483646")},
 	} {
 		t.Run(fmt.Sprintf("priority=%d", tc.priority), func(t *testing.T) {
-			tier, err := PriorityToTier(tc.priority)
+			tier, err := priorityToTier(tc.priority)
 			if tc.err != nil {
-				assert.NotNil(t, err)
-				assert.Zero(t, tc.tier)
+				require.ErrorContains(t, err, tc.err.Error())
 			} else {
-				assert.Nil(t, err)
-				assert.Equal(t, tc.tier, tier)
+				require.NoError(t, err)
 			}
+			require.Equal(t, tc.tier, tier)
 		})
 	}
 }

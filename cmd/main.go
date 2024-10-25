@@ -19,11 +19,9 @@ import (
 	"flag"
 	"os"
 
-	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
-	// to ensure that exec-entrypoint and run can make use of them.
-
 	hcv2 "github.com/fluxcd/helm-controller/api/v2"
 	sourcev1 "github.com/fluxcd/source-controller/api/v1"
+	sveltosv1beta1 "github.com/projectsveltos/addon-controller/api/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/dynamic"
@@ -37,15 +35,12 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	sveltosv1beta1 "github.com/projectsveltos/addon-controller/api/v1beta1"
-
 	hmcmirantiscomv1alpha1 "github.com/Mirantis/hmc/api/v1alpha1"
 	"github.com/Mirantis/hmc/internal/controller"
 	"github.com/Mirantis/hmc/internal/helm"
 	"github.com/Mirantis/hmc/internal/telemetry"
 	"github.com/Mirantis/hmc/internal/utils"
 	hmcwebhook "github.com/Mirantis/hmc/internal/webhook"
-	// +kubebuilder:scaffold:imports
 )
 
 var (

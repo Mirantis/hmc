@@ -15,6 +15,7 @@
 package helm
 
 import (
+	"errors"
 	"fmt"
 
 	sourcev1 "github.com/fluxcd/source-controller/api/v1"
@@ -25,7 +26,7 @@ func ArtifactReady(chart *sourcev1.HelmChart) (reportStatus bool, _ error) {
 	for _, c := range chart.Status.Conditions {
 		if c.Type == "Ready" {
 			if chart.Generation != c.ObservedGeneration {
-				return false, fmt.Errorf("HelmChart was not reconciled yet, retrying")
+				return false, errors.New("HelmChart was not reconciled yet, retrying")
 			}
 			if c.Status != metav1.ConditionTrue {
 				return true, fmt.Errorf("failed to download helm chart artifact: %s", c.Message)
@@ -34,7 +35,7 @@ func ArtifactReady(chart *sourcev1.HelmChart) (reportStatus bool, _ error) {
 	}
 
 	if chart.Status.Artifact == nil || chart.Status.URL == "" {
-		return false, fmt.Errorf("helm chart artifact is not ready yet")
+		return false, errors.New("helm chart artifact is not ready yet")
 	}
 
 	return false, nil

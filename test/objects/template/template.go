@@ -193,7 +193,7 @@ func WithProviderStatusCAPIContracts(coreAndProvidersContracts ...string) Opt {
 			pt.Status.CAPIContracts = make(v1alpha1.CompatibilityContracts)
 		}
 
-		for i := 0; i < len(coreAndProvidersContracts)/2; i++ {
+		for i := range len(coreAndProvidersContracts) / 2 {
 			pt.Status.CAPIContracts[coreAndProvidersContracts[i*2]] = coreAndProvidersContracts[i*2+1]
 		}
 	}

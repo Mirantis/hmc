@@ -21,7 +21,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/Mirantis/hmc/test/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
@@ -33,6 +32,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+
+	"github.com/Mirantis/hmc/test/utils"
 )
 
 type KubeClient struct {
@@ -143,9 +144,7 @@ func newKubeClient(configBytes []byte, namespace string) *KubeClient {
 }
 
 // GetDynamicClient returns a dynamic client for the given GroupVersionResource.
-//
-//nolint:revive
-func (kc *KubeClient) GetDynamicClient(gvr schema.GroupVersionResource, namespaced bool) dynamic.ResourceInterface {
+func (kc *KubeClient) GetDynamicClient(gvr schema.GroupVersionResource, namespaced bool) dynamic.ResourceInterface { //nolint:revive
 	GinkgoHelper()
 
 	client, err := dynamic.NewForConfig(kc.Config)

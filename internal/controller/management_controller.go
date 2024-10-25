@@ -85,8 +85,7 @@ func (r *ManagementReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Management) (ctrl.Result, error) {
 	l := ctrl.LoggerFrom(ctx)
 
-	finalizersUpdated := controllerutil.AddFinalizer(management, hmc.ManagementFinalizer)
-	if finalizersUpdated {
+	if controllerutil.AddFinalizer(management, hmc.ManagementFinalizer) {
 		if err := r.Client.Update(ctx, management); err != nil {
 			l.Error(err, "Failed to update Management finalizers")
 			return ctrl.Result{}, err

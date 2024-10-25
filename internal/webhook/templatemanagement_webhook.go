@@ -59,13 +59,13 @@ func (v *TemplateManagementValidator) ValidateCreate(ctx context.Context, _ runt
 		return nil, err
 	}
 	if len(itemsList.Items) > 0 {
-		return nil, fmt.Errorf("TemplateManagement object already exists")
+		return nil, errors.New("TemplateManagement object already exists")
 	}
 	return nil, nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type.
-func (*TemplateManagementValidator) ValidateUpdate(_ context.Context, _ runtime.Object, _ runtime.Object) (admission.Warnings, error) {
+func (*TemplateManagementValidator) ValidateUpdate(_ context.Context, _, _ runtime.Object) (admission.Warnings, error) {
 	return nil, nil
 }
 

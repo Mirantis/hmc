@@ -64,7 +64,7 @@ func (*ClusterTemplateChainValidator) ValidateCreate(_ context.Context, obj runt
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type.
-func (*ClusterTemplateChainValidator) ValidateUpdate(_ context.Context, _ runtime.Object, _ runtime.Object) (admission.Warnings, error) {
+func (*ClusterTemplateChainValidator) ValidateUpdate(_ context.Context, _, _ runtime.Object) (admission.Warnings, error) {
 	return nil, nil
 }
 
@@ -110,7 +110,7 @@ func (*ServiceTemplateChainValidator) ValidateCreate(_ context.Context, obj runt
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type.
-func (*ServiceTemplateChainValidator) ValidateUpdate(_ context.Context, _ runtime.Object, _ runtime.Object) (admission.Warnings, error) {
+func (*ServiceTemplateChainValidator) ValidateUpdate(_ context.Context, _, _ runtime.Object) (admission.Warnings, error) {
 	return nil, nil
 }
 

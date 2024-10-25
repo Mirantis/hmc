@@ -26,27 +26,25 @@ import (
 	"testing"
 	"time"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-	admissionv1 "k8s.io/api/admissionregistration/v1"
-	utilyaml "sigs.k8s.io/cluster-api/util/yaml"
-	ctrl "sigs.k8s.io/controller-runtime"
-	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
-
 	helmcontrollerv2 "github.com/fluxcd/helm-controller/api/v2"
 	sourcev1 "github.com/fluxcd/source-controller/api/v1"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	sveltosv1beta1 "github.com/projectsveltos/addon-controller/api/v1beta1"
+	admissionv1 "k8s.io/api/admissionregistration/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+	utilyaml "sigs.k8s.io/cluster-api/util/yaml"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	hmcmirantiscomv1alpha1 "github.com/Mirantis/hmc/api/v1alpha1"
 	hmcwebhook "github.com/Mirantis/hmc/internal/webhook"
-	sveltosv1beta1 "github.com/projectsveltos/addon-controller/api/v1beta1"
-	// +kubebuilder:scaffold:imports
 )
 
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to

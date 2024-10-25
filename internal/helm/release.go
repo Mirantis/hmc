@@ -89,7 +89,7 @@ func ReconcileHelmRelease(ctx context.Context,
 	return hr, operation, nil
 }
 
-func DeleteHelmRelease(ctx context.Context, cl client.Client, name string, namespace string) error {
+func DeleteHelmRelease(ctx context.Context, cl client.Client, name, namespace string) error {
 	err := cl.Delete(ctx, &hcv2.HelmRelease{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,

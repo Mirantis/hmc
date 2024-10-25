@@ -22,17 +22,16 @@ import (
 	sourcev1 "github.com/fluxcd/source-controller/api/v1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	sveltosv1beta1 "github.com/projectsveltos/addon-controller/api/v1beta1"
 	"helm.sh/helm/v3/pkg/chart"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
 	"github.com/Mirantis/hmc/internal/utils"
-	sveltosv1beta1 "github.com/projectsveltos/addon-controller/api/v1beta1"
 )
 
 var _ = Describe("MultiClusterService Controller", func() {
@@ -187,7 +186,7 @@ var _ = Describe("MultiClusterService Controller", func() {
 			// Running reconcile to remove the finalizer and delete the MultiClusterService
 			_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: multiClusterServiceRef})
 			Expect(err).NotTo(HaveOccurred())
-			Eventually(k8sClient.Get(ctx, multiClusterServiceRef, multiClusterService), 1*time.Minute, 5*time.Second).Should(HaveOccurred())
+			Eventually(k8sClient.Get, 1*time.Minute, 5*time.Second).WithArguments(ctx, multiClusterServiceRef, multiClusterService).Should(HaveOccurred())
 
 			Expect(k8sClient.Get(ctx, clusterProfileRef, &sveltosv1beta1.ClusterProfile{})).To(HaveOccurred())
 
@@ -220,7 +219,7 @@ var _ = Describe("MultiClusterService Controller", func() {
 			_, err = multiClusterServiceReconciler.Reconcile(ctx, reconcile.Request{NamespacedName: multiClusterServiceRef})
 			Expect(err).NotTo(HaveOccurred())
 
-			Eventually(k8sClient.Get(ctx, clusterProfileRef, clusterProfile), 1*time.Minute, 5*time.Second).ShouldNot(HaveOccurred())
+			Eventually(k8sClient.Get, 1*time.Minute, 5*time.Second).WithArguments(ctx, clusterProfileRef, clusterProfile).ShouldNot(HaveOccurred())
 		})
 	})
 })

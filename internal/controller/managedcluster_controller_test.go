@@ -166,7 +166,7 @@ var _ = Describe("ManagedCluster Controller", func() {
 			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{NamespacedName: typeNamespacedName})
 			Expect(err).NotTo(HaveOccurred())
 
-			Eventually(k8sClient.Get(ctx, typeNamespacedName, managedCluster), 1*time.Minute, 5*time.Second).Should(HaveOccurred())
+			Eventually(k8sClient.Get, 1*time.Minute, 5*time.Second).WithArguments(ctx, typeNamespacedName, managedCluster).Should(HaveOccurred())
 
 			Expect(k8sClient.Delete(ctx, template)).To(Succeed())
 			Expect(k8sClient.Delete(ctx, management)).To(Succeed())

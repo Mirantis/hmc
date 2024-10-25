@@ -88,7 +88,7 @@ func TestManagementValidateUpdate(t *testing.T) {
 					template.WithProviderStatusCAPIContracts(capiVersion, ""),
 				),
 			},
-			err: fmt.Sprintf("the Management is invalid: not valid ProviderTemplate %s", release.DefaultCAPITemplateName),
+			err: "the Management is invalid: not valid ProviderTemplate " + release.DefaultCAPITemplateName,
 		},
 		{
 			name: "no providertemplates that declared in mgmt spec.providers, should fail",
@@ -139,7 +139,7 @@ func TestManagementValidateUpdate(t *testing.T) {
 					template.WithProviderStatusCAPIContracts(capiVersionOther, someContractVersion),
 				),
 			},
-			err: fmt.Sprintf("the Management is invalid: not valid ProviderTemplate %s", template.DefaultName),
+			err: "the Management is invalid: not valid ProviderTemplate " + template.DefaultName,
 		},
 		{
 			name: "providertemplates do not match capi contracts, should fail",

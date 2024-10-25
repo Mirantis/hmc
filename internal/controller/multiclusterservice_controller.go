@@ -18,9 +18,9 @@ import (
 	"context"
 	"fmt"
 
+	sourcev1 "github.com/fluxcd/source-controller/api/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -28,7 +28,6 @@ import (
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
 	"github.com/Mirantis/hmc/internal/sveltos"
 	"github.com/Mirantis/hmc/internal/utils"
-	sourcev1 "github.com/fluxcd/source-controller/api/v1"
 )
 
 // MultiClusterServiceReconciler reconciles a MultiClusterService object
@@ -111,7 +110,7 @@ func helmChartOpts(ctx context.Context, c client.Client, namespace string, servi
 		// because if the services slice is part of:
 		// 1. ManagedCluster: Then the referred template must be in its own namespace.
 		// 2. MultiClusterService: Then the referred template must be in hmc-system namespace.
-		tmplRef := types.NamespacedName{Name: svc.Template, Namespace: namespace}
+		tmplRef := client.ObjectKey{Name: svc.Template, Namespace: namespace}
 		if err := c.Get(ctx, tmplRef, tmpl); err != nil {
 			return nil, fmt.Errorf("failed to get ServiceTemplate %s: %w", tmplRef.String(), err)
 		}
@@ -121,7 +120,7 @@ func helmChartOpts(ctx context.Context, c client.Client, namespace string, servi
 		}
 
 		chart := &sourcev1.HelmChart{}
-		chartRef := types.NamespacedName{
+		chartRef := client.ObjectKey{
 			Namespace: tmpl.GetCommonStatus().ChartRef.Namespace,
 			Name:      tmpl.GetCommonStatus().ChartRef.Name,
 		}
@@ -130,7 +129,7 @@ func helmChartOpts(ctx context.Context, c client.Client, namespace string, servi
 		}
 
 		repo := &sourcev1.HelmRepository{}
-		repoRef := types.NamespacedName{
+		repoRef := client.ObjectKey{
 			// Using chart's namespace because it's source
 			// should be within the same namespace.
 			Namespace: chart.Namespace,

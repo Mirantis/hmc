@@ -16,6 +16,7 @@ package webhook
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -79,7 +80,7 @@ func (v *ManagedClusterValidator) ValidateCreate(ctx context.Context, obj runtim
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type.
-func (v *ManagedClusterValidator) ValidateUpdate(ctx context.Context, oldObj runtime.Object, newObj runtime.Object) (admission.Warnings, error) {
+func (v *ManagedClusterValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
 	oldManagedCluster, ok := oldObj.(*hmcv1alpha1.ManagedCluster)
 	if !ok {
 		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected ManagedCluster but got a %T", oldObj))
@@ -235,7 +236,7 @@ func (v *ManagedClusterValidator) validateCredential(ctx context.Context, manage
 	}
 
 	if cred.Status.State != hmcv1alpha1.CredentialReady {
-		return fmt.Errorf("credential is not Ready")
+		return errors.New("credential is not Ready")
 	}
 
 	return isCredMatchTemplate(cred, template)

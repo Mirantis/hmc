@@ -19,10 +19,11 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/Mirantis/hmc/test/e2e/kubeclient"
-	"github.com/Mirantis/hmc/test/utils"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/Mirantis/hmc/test/e2e/kubeclient"
+	"github.com/Mirantis/hmc/test/utils"
 )
 
 // validateClusterDeleted validates that the Cluster resource has been deleted.

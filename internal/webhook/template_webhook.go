@@ -55,7 +55,7 @@ func (*ClusterTemplateValidator) ValidateCreate(_ context.Context, _ runtime.Obj
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type.
-func (*ClusterTemplateValidator) ValidateUpdate(_ context.Context, _ runtime.Object, _ runtime.Object) (admission.Warnings, error) {
+func (*ClusterTemplateValidator) ValidateUpdate(_ context.Context, _, _ runtime.Object) (admission.Warnings, error) {
 	return nil, nil
 }
 
@@ -110,7 +110,7 @@ func (*ServiceTemplateValidator) ValidateCreate(_ context.Context, _ runtime.Obj
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type.
-func (*ServiceTemplateValidator) ValidateUpdate(_ context.Context, _ runtime.Object, _ runtime.Object) (admission.Warnings, error) {
+func (*ServiceTemplateValidator) ValidateUpdate(_ context.Context, _, _ runtime.Object) (admission.Warnings, error) {
 	return nil, nil
 }
 
@@ -165,7 +165,7 @@ func (*ProviderTemplateValidator) ValidateCreate(_ context.Context, _ runtime.Ob
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type.
-func (*ProviderTemplateValidator) ValidateUpdate(_ context.Context, _ runtime.Object, _ runtime.Object) (admission.Warnings, error) {
+func (*ProviderTemplateValidator) ValidateUpdate(_ context.Context, _, _ runtime.Object) (admission.Warnings, error) {
 	return nil, nil
 }
 

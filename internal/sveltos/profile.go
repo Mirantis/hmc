@@ -20,7 +20,6 @@ import (
 	"math"
 	"unsafe"
 
-	hmc "github.com/Mirantis/hmc/api/v1alpha1"
 	sveltosv1beta1 "github.com/projectsveltos/addon-controller/api/v1beta1"
 	libsveltosv1beta1 "github.com/projectsveltos/libsveltos/api/v1beta1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -29,6 +28,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/yaml"
+
+	hmc "github.com/Mirantis/hmc/api/v1alpha1"
 )
 
 type ReconcileProfileOpts struct {
@@ -126,7 +127,7 @@ func ReconcileProfile(
 // Spec returns a spec object to be used with
 // a Sveltos Profile or ClusterProfile object.
 func Spec(opts *ReconcileProfileOpts) (*sveltosv1beta1.Spec, error) {
-	tier, err := PriorityToTier(opts.Priority)
+	tier, err := priorityToTier(opts.Priority)
 	if err != nil {
 		return nil, err
 	}
@@ -190,7 +191,7 @@ func objectMeta(owner *metav1.OwnerReference) metav1.ObjectMeta {
 }
 
 // DeleteProfile deletes a Sveltos Profile object.
-func DeleteProfile(ctx context.Context, cl client.Client, namespace string, name string) error {
+func DeleteProfile(ctx context.Context, cl client.Client, namespace, name string) error {
 	err := cl.Delete(ctx, &sveltosv1beta1.Profile{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
@@ -212,8 +213,8 @@ func DeleteClusterProfile(ctx context.Context, cl client.Client, name string) er
 	return client.IgnoreNotFound(err)
 }
 
-// PriorityToTier converts priority value to Sveltos tier value.
-func PriorityToTier(priority int32) (int32, error) {
+// priorityToTier converts priority value to Sveltos tier value.
+func priorityToTier(priority int32) (int32, error) {
 	var mini int32 = 1
 	maxi := math.MaxInt32 - mini
 

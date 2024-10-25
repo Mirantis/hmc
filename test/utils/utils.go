@@ -106,7 +106,7 @@ func GetProjectDir() (string, error) {
 	if err != nil {
 		return wd, err
 	}
-	wd = strings.Replace(wd, "/test/e2e", "", -1)
+	wd = strings.ReplaceAll(wd, "/test/e2e", "")
 	return wd, nil
 }
 
@@ -190,7 +190,7 @@ func ValidateObjectNamePrefix(unstrObj *unstructured.Unstructured, clusterName s
 	return nil
 }
 
-func ObjKindName(unstrObj *unstructured.Unstructured) (kind string, name string) {
+func ObjKindName(unstrObj *unstructured.Unstructured) (kind, name string) {
 	return unstrObj.GetKind(), unstrObj.GetName()
 }
 

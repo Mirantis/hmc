@@ -20,12 +20,13 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Mirantis/hmc/test/e2e/kubeclient"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+
+	"github.com/Mirantis/hmc/test/e2e/kubeclient"
 )
 
 // PatchHostedClusterReady patches a hosted clusters' infrastructure resource
