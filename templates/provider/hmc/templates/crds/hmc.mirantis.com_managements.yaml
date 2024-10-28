@@ -112,9 +112,7 @@ spec:
             description: ManagementStatus defines the observed state of Management
             properties:
               availableProviders:
-                description: |-
-                  AvailableProviders holds all CAPI providers available along with
-                  their supported contract versions, if specified in ProviderTemplates, on the Management cluster.
+                description: AvailableProviders holds all available CAPI providers.
                 items:
                   type: string
                 type: array

@@ -29,7 +29,6 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -151,7 +150,7 @@ func (r *ProviderTemplateReconciler) Reconcile(ctx context.Context, req ctrl.Req
 func (r *ProviderTemplateReconciler) setReleaseOwnership(ctx context.Context, providerTemplate *hmc.ProviderTemplate) (changed bool, err error) {
 	releases := &hmc.ReleaseList{}
 	err = r.Client.List(ctx, releases,
-		client.MatchingFields{hmc.ReleaseTemplatesKey: providerTemplate.Name},
+		client.MatchingFields{hmc.ReleaseTemplatesIndexKey: providerTemplate.Name},
 	)
 	if err != nil {
 		return changed, fmt.Errorf("failed to get associated releases: %w", err)
@@ -371,8 +370,7 @@ func (r *ClusterTemplateReconciler) validateCompatibilityAttrs(ctx context.Conte
 	exposedProviders, requiredProviders := management.Status.AvailableProviders, template.Status.Providers
 
 	l := ctrl.LoggerFrom(ctx)
-	l.V(1).Info("providers to check", "exposed", exposedProviders, "required", requiredProviders,
-		"exposed_capi_contract_versions", management.Status.CAPIContracts, "required_provider_contract_versions", template.Status.ProviderContracts)
+	l.V(1).Info("providers to check", "exposed", exposedProviders, "required", requiredProviders)
 
 	var (
 		merr          error
@@ -448,13 +446,15 @@ func (r *ProviderTemplateReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				if !ok {
 					return nil
 				}
+
 				templates := release.Templates()
 				requests := make([]ctrl.Request, 0, len(templates))
 				for _, template := range templates {
 					requests = append(requests, ctrl.Request{
-						NamespacedName: types.NamespacedName{Name: template},
+						NamespacedName: client.ObjectKey{Name: template},
 					})
 				}
+
 				return requests
 			}),
 			builder.WithPredicates(predicate.Funcs{

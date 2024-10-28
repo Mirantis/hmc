@@ -69,7 +69,7 @@ func (v *ClusterTemplateValidator) ValidateDelete(ctx context.Context, obj runti
 	managedClusters := &v1alpha1.ManagedClusterList{}
 	if err := v.Client.List(ctx, managedClusters,
 		client.InNamespace(template.Namespace),
-		client.MatchingFields{v1alpha1.TemplateKey: template.Name},
+		client.MatchingFields{v1alpha1.ManagedClusterTemplateIndexKey: template.Name},
 		client.Limit(1)); err != nil {
 		return nil, err
 	}
@@ -125,7 +125,7 @@ func (v *ServiceTemplateValidator) ValidateDelete(ctx context.Context, obj runti
 	managedClusters := &v1alpha1.ManagedClusterList{}
 	if err := v.Client.List(ctx, managedClusters,
 		client.InNamespace(tmpl.Namespace),
-		client.MatchingFields{v1alpha1.ServicesTemplateKey: tmpl.Name},
+		client.MatchingFields{v1alpha1.ManagedClusterServiceTemplatesIndexKey: tmpl.Name},
 		client.Limit(1)); err != nil {
 		return nil, err
 	}
@@ -138,7 +138,7 @@ func (v *ServiceTemplateValidator) ValidateDelete(ctx context.Context, obj runti
 	if tmpl.Namespace == v.SystemNamespace {
 		multiSvcClusters := &v1alpha1.MultiClusterServiceList{}
 		if err := v.Client.List(ctx, multiSvcClusters,
-			client.MatchingFields{v1alpha1.ServicesTemplateKey: tmpl.Name},
+			client.MatchingFields{v1alpha1.MultiClusterServiceTemplatesIndexKey: tmpl.Name},
 			client.Limit(1)); err != nil {
 			return nil, err
 		}

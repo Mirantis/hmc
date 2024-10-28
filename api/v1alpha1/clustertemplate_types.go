@@ -40,9 +40,8 @@ type ClusterTemplateSpec struct {
 	ProviderContracts CompatibilityContracts `json:"providerContracts,omitempty"`
 	// Kubernetes exact version in the SemVer format provided by this ClusterTemplate.
 	KubernetesVersion string `json:"k8sVersion,omitempty"`
-	// Providers represent required CAPI providers with supported contract versions.
+	// Providers represent required CAPI providers.
 	// Should be set if not present in the Helm chart metadata.
-	// Compatibility attributes are optional to be defined.
 	Providers Providers `json:"providers,omitempty"`
 }
 
@@ -57,8 +56,7 @@ type ClusterTemplateStatus struct {
 	ProviderContracts CompatibilityContracts `json:"providerContracts,omitempty"`
 	// Kubernetes exact version in the SemVer format provided by this ClusterTemplate.
 	KubernetesVersion string `json:"k8sVersion,omitempty"`
-	// Providers represent required CAPI providers with supported contract versions
-	// if the latter has been given.
+	// Providers represent required CAPI providers.
 	Providers Providers `json:"providers,omitempty"`
 
 	TemplateStatusCommon `json:",inline"`

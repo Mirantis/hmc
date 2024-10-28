@@ -116,9 +116,8 @@ spec:
                     && has(self.chartRef))
               providers:
                 description: |-
-                  Providers represent exposed CAPI providers with supported contract versions.
+                  Providers represent exposed CAPI providers.
                   Should be set if not present in the Helm chart metadata.
-                  Supported contract versions are optional to be defined.
                 items:
                   type: string
                 type: array
@@ -183,9 +182,7 @@ spec:
                 format: int64
                 type: integer
               providers:
-                description: |-
-                  Providers represent exposed CAPI providers with supported contract versions
-                  if the latter has been given.
+                description: Providers represent exposed CAPI providers.
                 items:
                   type: string
                 type: array

@@ -26,7 +26,7 @@ import (
 
 const (
 	DefaultName      = "template"
-	DefaultNamespace = "default"
+	DefaultNamespace = metav1.NamespaceDefault
 )
 
 type (
@@ -140,27 +140,15 @@ func WithValidationStatus(validationStatus v1alpha1.TemplateValidationStatus) Op
 	}
 }
 
-func WithProvidersStatus(providers v1alpha1.Providers) Opt {
+func WithProvidersStatus(providers ...string) Opt {
 	return func(t Template) {
 		switch v := t.(type) {
 		case *v1alpha1.ClusterTemplate:
-			var ok bool
-			v.Status.Providers, ok = any(providers).(v1alpha1.Providers)
-			if !ok {
-				panic(fmt.Sprintf("unexpected type %T", providers))
-			}
+			v.Status.Providers = providers
 		case *v1alpha1.ProviderTemplate:
-			var ok bool
-			v.Status.Providers, ok = any(providers).(v1alpha1.Providers)
-			if !ok {
-				panic(fmt.Sprintf("unexpected type %T", providers))
-			}
+			v.Status.Providers = providers
 		case *v1alpha1.ServiceTemplate:
-			var ok bool
-			v.Status.Providers, ok = any(providers).(v1alpha1.Providers)
-			if !ok {
-				panic(fmt.Sprintf("unexpected type %T", providers))
-			}
+			v.Status.Providers = providers
 		}
 	}
 }

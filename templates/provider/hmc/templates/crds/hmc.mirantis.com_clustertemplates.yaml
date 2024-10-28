@@ -120,9 +120,8 @@ spec:
                 type: object
               providers:
                 description: |-
-                  Providers represent required CAPI providers with supported contract versions.
+                  Providers represent required CAPI providers.
                   Should be set if not present in the Helm chart metadata.
-                  Compatibility attributes are optional to be defined.
                 items:
                   type: string
                 type: array
@@ -193,9 +192,7 @@ spec:
                   [contract versions]: https://cluster-api.sigs.k8s.io/developer/providers/contracts
                 type: object
               providers:
-                description: |-
-                  Providers represent required CAPI providers with supported contract versions
-                  if the latter has been given.
+                description: Providers represent required CAPI providers.
                 items:
                   type: string
                 type: array

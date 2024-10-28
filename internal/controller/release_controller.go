@@ -284,7 +284,7 @@ func (r *ReleaseReconciler) reconcileHMCTemplates(ctx context.Context, releaseNa
 func (r *ReleaseReconciler) getCurrentReleaseName(ctx context.Context) (string, error) {
 	releases := &hmc.ReleaseList{}
 	listOptions := client.ListOptions{
-		FieldSelector: fields.SelectorFromSet(fields.Set{hmc.ReleaseVersionKey: build.Version}),
+		FieldSelector: fields.SelectorFromSet(fields.Set{hmc.ReleaseVersionIndexKey: build.Version}),
 	}
 	if err := r.Client.List(ctx, releases, &listOptions); err != nil {
 		return "", err

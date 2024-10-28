@@ -95,8 +95,7 @@ func (r *ManagedClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			l.Error(err, "Failed to get Management object")
 			return ctrl.Result{}, err
 		}
-		if err := telemetry.TrackManagedClusterCreate(
-			string(mgmt.UID), string(managedCluster.UID), managedCluster.Spec.Template, managedCluster.Spec.DryRun); err != nil {
+		if err := telemetry.TrackManagedClusterCreate(string(mgmt.UID), string(managedCluster.UID), managedCluster.Spec.Template, managedCluster.Spec.DryRun); err != nil {
 			l.Error(err, "Failed to track ManagedCluster creation")
 		}
 	}
@@ -104,9 +103,7 @@ func (r *ManagedClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	return r.Update(ctx, managedCluster)
 }
 
-func (r *ManagedClusterReconciler) setStatusFromClusterStatus(
-	ctx context.Context, managedCluster *hmc.ManagedCluster,
-) (bool, error) {
+func (r *ManagedClusterReconciler) setStatusFromClusterStatus(ctx context.Context, managedCluster *hmc.ManagedCluster) (requeue bool, _ error) {
 	l := ctrl.LoggerFrom(ctx)
 
 	resourceConditions, err := status.GetResourceConditions(ctx, managedCluster.Namespace, r.DynamicClient, schema.GroupVersionResource{
@@ -115,8 +112,7 @@ func (r *ManagedClusterReconciler) setStatusFromClusterStatus(
 		Resource: "clusters",
 	}, labels.SelectorFromSet(map[string]string{hmc.FluxHelmChartNameKey: managedCluster.Name}).String())
 	if err != nil {
-		notFoundErr := status.ResourceNotFoundError{}
-		if errors.As(err, &notFoundErr) {
+		if errors.As(err, &status.ResourceNotFoundError{}) {
 			l.Info(err.Error())
 			return true, nil
 		}
@@ -130,7 +126,7 @@ func (r *ManagedClusterReconciler) setStatusFromClusterStatus(
 		}
 
 		if metaCondition.Reason == "" && metaCondition.Status == "True" {
-			metaCondition.Reason = "Succeeded"
+			metaCondition.Reason = hmc.SucceededReason
 		}
 		apimeta.SetStatusCondition(managedCluster.GetConditions(), metaCondition)
 	}
@@ -411,7 +407,7 @@ func (r *ManagedClusterReconciler) updateServices(ctx context.Context, mc *hmc.M
 	}
 
 	var servicesStatus []hmc.ServiceStatus
-	servicesStatus, servicesErr = updateServicesStatus(ctx, r.Client, profileRef, sveltosv1beta1.ProfileKind, profile.Status, mc.Status.Services)
+	servicesStatus, servicesErr = updateServicesStatus(ctx, r.Client, profileRef, profile.Status.MatchingClusterRefs, mc.Status.Services)
 	if servicesErr != nil {
 		return ctrl.Result{}, nil
 	}
@@ -737,7 +733,7 @@ func (r *ManagedClusterReconciler) setAvailableUpgrades(ctx context.Context, man
 	chains := &hmc.ClusterTemplateChainList{}
 	err := r.List(ctx, chains,
 		client.InNamespace(template.Namespace),
-		client.MatchingFields{hmc.SupportedTemplateKey: template.GetName()},
+		client.MatchingFields{hmc.TemplateChainSupportedTemplatesIndexKey: template.GetName()},
 	)
 	if err != nil {
 		return err
@@ -768,13 +764,8 @@ func (r *ManagedClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&hmc.ManagedCluster{}).
 		Watches(&hcv2.HelmRelease{},
 			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, o client.Object) []ctrl.Request {
-				managedCluster := hmc.ManagedCluster{}
-				managedClusterRef := client.ObjectKey{
-					Namespace: o.GetNamespace(),
-					Name:      o.GetName(),
-				}
-				err := r.Client.Get(ctx, managedClusterRef, &managedCluster)
-				if err != nil {
+				managedClusterRef := client.ObjectKeyFromObject(o)
+				if err := r.Client.Get(ctx, managedClusterRef, &hmc.ManagedCluster{}); err != nil {
 					return []ctrl.Request{}
 				}
 
@@ -793,7 +784,7 @@ func (r *ManagedClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 					managedClusters := &hmc.ManagedClusterList{}
 					err := r.Client.List(ctx, managedClusters,
 						client.InNamespace(chain.Namespace),
-						client.MatchingFields{hmc.TemplateKey: template})
+						client.MatchingFields{hmc.ManagedClusterTemplateIndexKey: template})
 					if err != nil {
 						return []ctrl.Request{}
 					}

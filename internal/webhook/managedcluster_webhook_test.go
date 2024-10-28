@@ -109,11 +109,11 @@ func TestManagedClusterValidateCreate(t *testing.T) {
 				cred,
 				template.NewClusterTemplate(
 					template.WithName(testTemplateName),
-					template.WithProvidersStatus(v1alpha1.Providers{
+					template.WithProvidersStatus(
 						"infrastructure-aws",
 						"control-plane-k0smotron",
 						"bootstrap-k0smotron",
-					}),
+					),
 					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
 				),
 				template.NewServiceTemplate(
@@ -154,11 +154,11 @@ func TestManagedClusterValidateCreate(t *testing.T) {
 				cred,
 				template.NewClusterTemplate(
 					template.WithName(testTemplateName),
-					template.WithProvidersStatus(v1alpha1.Providers{
+					template.WithProvidersStatus(
 						"infrastructure-aws",
 						"control-plane-k0smotron",
 						"bootstrap-k0smotron",
-					}),
+					),
 					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
 				),
 				template.NewServiceTemplate(
@@ -183,11 +183,11 @@ func TestManagedClusterValidateCreate(t *testing.T) {
 				cred,
 				template.NewClusterTemplate(
 					template.WithName(testTemplateName),
-					template.WithProvidersStatus(v1alpha1.Providers{
+					template.WithProvidersStatus(
 						"infrastructure-aws",
 						"control-plane-k0smotron",
 						"bootstrap-k0smotron",
-					}),
+					),
 					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
 				),
 				template.NewServiceTemplate(
@@ -230,11 +230,11 @@ func TestManagedClusterValidateCreate(t *testing.T) {
 				mgmt,
 				template.NewClusterTemplate(
 					template.WithName(testTemplateName),
-					template.WithProvidersStatus(v1alpha1.Providers{
+					template.WithProvidersStatus(
 						"infrastructure-aws",
 						"control-plane-k0smotron",
 						"bootstrap-k0smotron",
-					}),
+					),
 					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
 				),
 			},
@@ -259,11 +259,11 @@ func TestManagedClusterValidateCreate(t *testing.T) {
 				),
 				template.NewClusterTemplate(
 					template.WithName(testTemplateName),
-					template.WithProvidersStatus(v1alpha1.Providers{
+					template.WithProvidersStatus(
 						"infrastructure-aws",
 						"control-plane-k0smotron",
 						"bootstrap-k0smotron",
-					}),
+					),
 					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
 				),
 			},
@@ -286,11 +286,11 @@ func TestManagedClusterValidateCreate(t *testing.T) {
 				),
 				template.NewClusterTemplate(
 					template.WithName(testTemplateName),
-					template.WithProvidersStatus(v1alpha1.Providers{
+					template.WithProvidersStatus(
 						"infrastructure-azure",
 						"control-plane-k0smotron",
 						"bootstrap-k0smotron",
-					}),
+					),
 					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
 				),
 			},
@@ -373,20 +373,20 @@ func TestManagedClusterValidateUpdate(t *testing.T) {
 				template.NewClusterTemplate(
 					template.WithName(testTemplateName),
 					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
-					template.WithProvidersStatus(v1alpha1.Providers{
+					template.WithProvidersStatus(
 						"infrastructure-aws",
 						"control-plane-k0smotron",
 						"bootstrap-k0smotron",
-					}),
+					),
 				),
 				template.NewClusterTemplate(
 					template.WithName(upgradeTargetTemplateName),
 					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
-					template.WithProvidersStatus(v1alpha1.Providers{
+					template.WithProvidersStatus(
 						"infrastructure-aws",
 						"control-plane-k0smotron",
 						"bootstrap-k0smotron",
-					}),
+					),
 				),
 			},
 			warnings: admission.Warnings{fmt.Sprintf("Cluster can't be upgraded from %s to %s. This upgrade sequence is not allowed", testTemplateName, upgradeTargetTemplateName)},
@@ -408,20 +408,20 @@ func TestManagedClusterValidateUpdate(t *testing.T) {
 				template.NewClusterTemplate(
 					template.WithName(testTemplateName),
 					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
-					template.WithProvidersStatus(v1alpha1.Providers{
+					template.WithProvidersStatus(
 						"infrastructure-aws",
 						"control-plane-k0smotron",
 						"bootstrap-k0smotron",
-					}),
+					),
 				),
 				template.NewClusterTemplate(
 					template.WithName(newTemplateName),
 					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
-					template.WithProvidersStatus(v1alpha1.Providers{
+					template.WithProvidersStatus(
 						"infrastructure-aws",
 						"control-plane-k0smotron",
 						"bootstrap-k0smotron",
-					}),
+					),
 				),
 			},
 		},
@@ -446,11 +446,11 @@ func TestManagedClusterValidateUpdate(t *testing.T) {
 						Valid:           false,
 						ValidationError: "validation error example",
 					}),
-					template.WithProvidersStatus(v1alpha1.Providers{
+					template.WithProvidersStatus(
 						"infrastructure-aws",
 						"control-plane-k0smotron",
 						"bootstrap-k0smotron",
-					}),
+					),
 				),
 			},
 		},
@@ -476,11 +476,11 @@ func TestManagedClusterValidateUpdate(t *testing.T) {
 						Valid:           false,
 						ValidationError: "validation error example",
 					}),
-					template.WithProvidersStatus(v1alpha1.Providers{
+					template.WithProvidersStatus(
 						"infrastructure-aws",
 						"control-plane-k0smotron",
 						"bootstrap-k0smotron",
-					}),
+					),
 				),
 				template.NewServiceTemplate(
 					template.WithName(testSvcTemplate1Name),
@@ -510,11 +510,11 @@ func TestManagedClusterValidateUpdate(t *testing.T) {
 						Valid:           false,
 						ValidationError: "validation error example",
 					}),
-					template.WithProvidersStatus(v1alpha1.Providers{
+					template.WithProvidersStatus(
 						"infrastructure-aws",
 						"control-plane-k0smotron",
 						"bootstrap-k0smotron",
-					}),
+					),
 				),
 				template.NewServiceTemplate(
 					template.WithName(testSvcTemplate1Name),
@@ -544,11 +544,11 @@ func TestManagedClusterValidateUpdate(t *testing.T) {
 						Valid:           false,
 						ValidationError: "validation error example",
 					}),
-					template.WithProvidersStatus(v1alpha1.Providers{
+					template.WithProvidersStatus(
 						"infrastructure-aws",
 						"control-plane-k0smotron",
 						"bootstrap-k0smotron",
-					}),
+					),
 				),
 				template.NewServiceTemplate(
 					template.WithName(testSvcTemplate1Name),
@@ -580,11 +580,11 @@ func TestManagedClusterValidateUpdate(t *testing.T) {
 						Valid:           false,
 						ValidationError: "validation error example",
 					}),
-					template.WithProvidersStatus(v1alpha1.Providers{
+					template.WithProvidersStatus(
 						"infrastructure-aws",
 						"control-plane-k0smotron",
 						"bootstrap-k0smotron",
-					}),
+					),
 				),
 				template.NewServiceTemplate(
 					template.WithName(testSvcTemplate1Name),

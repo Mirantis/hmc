@@ -60,7 +60,7 @@ func TestTemplateManagementValidateCreate(t *testing.T) {
 			c := fake.NewClientBuilder().
 				WithScheme(scheme.Scheme).
 				WithRuntimeObjects(tt.existingObjects...).
-				WithIndex(&v1alpha1.ManagedCluster{}, v1alpha1.TemplateKey, v1alpha1.ExtractTemplateName).
+				WithIndex(&v1alpha1.ManagedCluster{}, v1alpha1.ManagedClusterTemplateIndexKey, v1alpha1.ExtractTemplateNameFromManagedCluster).
 				Build()
 			validator := &TemplateManagementValidator{Client: c, SystemNamespace: utils.DefaultSystemNamespace}
 			warn, err := validator.ValidateCreate(ctx, tt.tm)
@@ -117,7 +117,7 @@ func TestTemplateManagementValidateDelete(t *testing.T) {
 			c := fake.NewClientBuilder().
 				WithScheme(scheme.Scheme).
 				WithRuntimeObjects(tt.existingObjects...).
-				WithIndex(&v1alpha1.ManagedCluster{}, v1alpha1.TemplateKey, v1alpha1.ExtractTemplateName).
+				WithIndex(&v1alpha1.ManagedCluster{}, v1alpha1.ManagedClusterTemplateIndexKey, v1alpha1.ExtractTemplateNameFromManagedCluster).
 				Build()
 			validator := &TemplateManagementValidator{Client: c, SystemNamespace: utils.DefaultSystemNamespace}
 			warn, err := validator.ValidateDelete(ctx, tt.tm)
