@@ -540,7 +540,7 @@ func (in *ManagedClusterStatus) DeepCopyInto(out *ManagedClusterStatus) {
 	}
 	if in.AvailableUpgrades != nil {
 		in, out := &in.AvailableUpgrades, &out.AvailableUpgrades
-		*out = make([]AvailableUpgrade, len(*in))
+		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
 }

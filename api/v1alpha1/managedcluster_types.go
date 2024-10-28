@@ -101,7 +101,7 @@ type ManagedClusterStatus struct {
 	// AvailableUpgrades is the list of ClusterTemplate names to which
 	// this cluster can be upgraded. It can be an empty array, which means no upgrades are
 	// available.
-	AvailableUpgrades []AvailableUpgrade `json:"availableUpgrades,omitempty"`
+	AvailableUpgrades []string `json:"availableUpgrades,omitempty"`
 	// ObservedGeneration is the last observed generation.
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 }

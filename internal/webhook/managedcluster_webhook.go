@@ -101,8 +101,7 @@ func (v *ManagedClusterValidator) ValidateUpdate(ctx context.Context, oldObj, ne
 	}
 
 	if oldTemplate != newTemplate {
-		isUpgradeAvailable := validateAvailableUpgrade(oldManagedCluster, newTemplate)
-		if !isUpgradeAvailable {
+		if !slices.Contains(oldManagedCluster.Status.AvailableUpgrades, newTemplate) {
 			msg := fmt.Sprintf("Cluster can't be upgraded from %s to %s. This upgrade sequence is not allowed", oldTemplate, newTemplate)
 			return admission.Warnings{msg}, errClusterUpgradeForbidden
 		}
@@ -121,12 +120,6 @@ func (v *ManagedClusterValidator) ValidateUpdate(ctx context.Context, oldObj, ne
 	}
 
 	return nil, nil
-}
-
-func validateAvailableUpgrade(oldManagedCluster *hmcv1alpha1.ManagedCluster, newTemplate string) bool {
-	return slices.ContainsFunc(oldManagedCluster.Status.AvailableUpgrades, func(au hmcv1alpha1.AvailableUpgrade) bool {
-		return newTemplate == au.Name
-	})
 }
 
 func validateK8sCompatibility(ctx context.Context, cl client.Client, template *hmcv1alpha1.ClusterTemplate, mc *hmcv1alpha1.ManagedCluster) error {

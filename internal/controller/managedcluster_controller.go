@@ -39,7 +39,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -47,9 +46,12 @@ import (
 	capz "sigs.k8s.io/cluster-api-provider-azure/api/v1beta1"
 	capv "sigs.k8s.io/cluster-api-provider-vsphere/apis/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/yaml"
 
@@ -1027,9 +1029,9 @@ func (r *ManagedClusterReconciler) setAvailableUpgrades(ctx context.Context, man
 			}
 		}
 	}
-	availableUpgrades := make([]hmc.AvailableUpgrade, 0, len(availableUpgradesMap))
+	availableUpgrades := make([]string, 0, len(availableUpgradesMap))
 	for _, availableUpgrade := range availableUpgradesMap {
-		availableUpgrades = append(availableUpgrades, availableUpgrade)
+		availableUpgrades = append(availableUpgrades, availableUpgrade.Name)
 	}
 
 	managedCluster.Status.AvailableUpgrades = availableUpgrades
@@ -1060,23 +1062,22 @@ func (r *ManagedClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		).
 		Watches(&hmc.ClusterTemplateChain{},
 			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, o client.Object) []ctrl.Request {
-				chain := &hmc.ClusterTemplateChain{}
-				err := r.Client.Get(ctx, types.NamespacedName{Namespace: o.GetNamespace(), Name: o.GetName()}, chain)
-				if err != nil {
-					return []ctrl.Request{}
+				chain, ok := o.(*hmc.ClusterTemplateChain)
+				if !ok {
+					return nil
 				}
 
 				var req []ctrl.Request
 				for _, template := range getTemplateNamesManagedByChain(chain) {
 					managedClusters := &hmc.ManagedClusterList{}
-					err = r.Client.List(ctx, managedClusters,
-						client.InNamespace(o.GetNamespace()),
+					err := r.Client.List(ctx, managedClusters,
+						client.InNamespace(chain.Namespace),
 						client.MatchingFields{hmc.TemplateKey: template})
 					if err != nil {
 						return []ctrl.Request{}
 					}
 					for _, cluster := range managedClusters.Items {
-						req = append(req, reconcile.Request{
+						req = append(req, ctrl.Request{
 							NamespacedName: client.ObjectKey{
 								Namespace: cluster.Namespace,
 								Name:      cluster.Name,
@@ -1085,6 +1086,10 @@ func (r *ManagedClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 					}
 				}
 				return req
+			}),
+			builder.WithPredicates(predicate.Funcs{
+				UpdateFunc:  func(event.UpdateEvent) bool { return false },
+				GenericFunc: func(event.GenericEvent) bool { return false },
 			}),
 		).
 		Complete(r)

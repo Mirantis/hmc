@@ -282,7 +282,7 @@ func TestManagedClusterValidateUpdate(t *testing.T) {
 			name: "update spec.template: should fail if the new cluster template was found but is invalid (some validation error)",
 			oldManagedCluster: managedcluster.NewManagedCluster(
 				managedcluster.WithClusterTemplate(testTemplateName),
-				managedcluster.WithAvailableUpgrades([]v1alpha1.AvailableUpgrade{{Name: newTemplateName}}),
+				managedcluster.WithAvailableUpgrades([]string{newTemplateName}),
 			),
 			newManagedCluster: managedcluster.NewManagedCluster(managedcluster.WithClusterTemplate(newTemplateName)),
 			existingObjects: []runtime.Object{
@@ -302,7 +302,7 @@ func TestManagedClusterValidateUpdate(t *testing.T) {
 			oldManagedCluster: managedcluster.NewManagedCluster(
 				managedcluster.WithClusterTemplate(testTemplateName),
 				managedcluster.WithCredential(testCredentialName),
-				managedcluster.WithAvailableUpgrades([]v1alpha1.AvailableUpgrade{}),
+				managedcluster.WithAvailableUpgrades([]string{}),
 			),
 			newManagedCluster: managedcluster.NewManagedCluster(
 				managedcluster.WithClusterTemplate(upgradeTargetTemplateName),
@@ -337,7 +337,7 @@ func TestManagedClusterValidateUpdate(t *testing.T) {
 			oldManagedCluster: managedcluster.NewManagedCluster(
 				managedcluster.WithClusterTemplate(testTemplateName),
 				managedcluster.WithCredential(testCredentialName),
-				managedcluster.WithAvailableUpgrades([]v1alpha1.AvailableUpgrade{{Name: newTemplateName}}),
+				managedcluster.WithAvailableUpgrades([]string{newTemplateName}),
 			),
 			newManagedCluster: managedcluster.NewManagedCluster(
 				managedcluster.WithClusterTemplate(newTemplateName),

@@ -138,16 +138,7 @@ spec:
                   this cluster can be upgraded. It can be an empty array, which means no upgrades are
                   available.
                 items:
-                  description: AvailableUpgrade is the definition of the available
-                    upgrade for the Template
-                  properties:
-                    name:
-                      description: Name is the name of the Template to which the upgrade
-                        is available.
-                      type: string
-                  required:
-                  - name
-                  type: object
+                  type: string
                 type: array
               conditions:
                 description: Conditions contains details for the current state of

@@ -88,7 +88,7 @@ func WithCredential(credName string) Opt {
 	}
 }
 
-func WithAvailableUpgrades(availableUpgrades []v1alpha1.AvailableUpgrade) Opt {
+func WithAvailableUpgrades(availableUpgrades []string) Opt {
 	return func(p *v1alpha1.ManagedCluster) {
 		p.Status.AvailableUpgrades = availableUpgrades
 	}
