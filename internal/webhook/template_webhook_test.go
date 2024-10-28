@@ -80,7 +80,7 @@ func TestClusterTemplateValidateDelete(t *testing.T) {
 			c := fake.NewClientBuilder().
 				WithScheme(scheme.Scheme).
 				WithRuntimeObjects(tt.existingObjects...).
-				WithIndex(tt.existingObjects[0], v1alpha1.TemplateKey, v1alpha1.ExtractTemplateName).
+				WithIndex(&v1alpha1.ManagedCluster{}, v1alpha1.ManagedClusterTemplateIndexKey, v1alpha1.ExtractTemplateNameFromManagedCluster).
 				Build()
 			validator := &ClusterTemplateValidator{Client: c}
 			warn, err := validator.ValidateDelete(ctx, tt.template)
@@ -159,8 +159,8 @@ func TestServiceTemplateValidateDelete(t *testing.T) {
 				NewClientBuilder().
 				WithScheme(scheme.Scheme).
 				WithRuntimeObjects(tt.existingObjects...).
-				WithIndex(&v1alpha1.ManagedCluster{}, v1alpha1.ServicesTemplateKey, v1alpha1.ExtractServiceTemplateFromManagedCluster).
-				WithIndex(&v1alpha1.MultiClusterService{}, v1alpha1.ServicesTemplateKey, v1alpha1.ExtractServiceTemplateFromMultiClusterService).
+				WithIndex(&v1alpha1.ManagedCluster{}, v1alpha1.ManagedClusterServiceTemplatesIndexKey, v1alpha1.ExtractServiceTemplateNamesFromManagedCluster).
+				WithIndex(&v1alpha1.MultiClusterService{}, v1alpha1.MultiClusterServiceTemplatesIndexKey, v1alpha1.ExtractServiceTemplateNamesFromMultiClusterService).
 				Build()
 			validator := &ServiceTemplateValidator{Client: c, SystemNamespace: testSystemNamespace}
 			warn, err := validator.ValidateDelete(ctx, tt.template)

@@ -23,7 +23,7 @@ import (
 
 const (
 	DefaultName      = "managedcluster"
-	DefaultNamespace = "default"
+	DefaultNamespace = metav1.NamespaceDefault
 )
 
 type Opt func(managedCluster *v1alpha1.ManagedCluster)

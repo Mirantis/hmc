@@ -28,6 +28,10 @@ type Opt func(management *v1alpha1.Management)
 
 func NewManagement(opts ...Opt) *v1alpha1.Management {
 	p := &v1alpha1.Management{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Management",
+			APIVersion: v1alpha1.GroupVersion.Version,
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:       DefaultName,
 			Finalizers: []string{v1alpha1.ManagementFinalizer},
@@ -58,7 +62,7 @@ func WithCoreComponents(core *v1alpha1.Core) Opt {
 	}
 }
 
-func WithProviders(providers []v1alpha1.Provider) Opt {
+func WithProviders(providers ...v1alpha1.Provider) Opt {
 	return func(p *v1alpha1.Management) {
 		p.Spec.Providers = providers
 	}

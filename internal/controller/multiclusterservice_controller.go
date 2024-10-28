@@ -24,10 +24,10 @@ import (
 	sveltosv1beta1 "github.com/projectsveltos/addon-controller/api/v1beta1"
 	sveltoscontrollers "github.com/projectsveltos/addon-controller/controllers"
 	libsveltosv1beta1 "github.com/projectsveltos/libsveltos/api/v1beta1"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -151,7 +151,7 @@ func (r *MultiClusterServiceReconciler) reconcileUpdate(ctx context.Context, mcs
 	}
 
 	var servicesStatus []hmc.ServiceStatus
-	servicesStatus, servicesErr = updateServicesStatus(ctx, r.Client, profileRef, sveltosv1beta1.ClusterProfileKind, profile.Status, mcs.Status.Services)
+	servicesStatus, servicesErr = updateServicesStatus(ctx, r.Client, profileRef, profile.Status.MatchingClusterRefs, mcs.Status.Services)
 	if servicesErr != nil {
 		return ctrl.Result{}, nil
 	}
@@ -301,8 +301,13 @@ func updateStatusConditions(conditions []metav1.Condition, readyMsg string) []me
 }
 
 // updateServicesStatus updates the services deployment status.
-func updateServicesStatus(ctx context.Context, c client.Client, profileRef types.NamespacedName, profileKind string, profileStatus sveltosv1beta1.Status, servicesStatus []hmc.ServiceStatus) ([]hmc.ServiceStatus, error) {
-	for _, obj := range profileStatus.MatchingClusterRefs {
+func updateServicesStatus(ctx context.Context, c client.Client, profileRef client.ObjectKey, profileStatusMatchingClusterRefs []corev1.ObjectReference, servicesStatus []hmc.ServiceStatus) ([]hmc.ServiceStatus, error) {
+	profileKind := sveltosv1beta1.ProfileKind
+	if profileRef.Namespace == "" {
+		profileKind = sveltosv1beta1.ClusterProfileKind
+	}
+
+	for _, obj := range profileStatusMatchingClusterRefs {
 		isSveltosCluster := obj.APIVersion == libsveltosv1beta1.GroupVersion.String()
 		summaryName := sveltoscontrollers.GetClusterSummaryName(profileKind, profileRef.Name, obj.Name, isSveltosCluster)
 

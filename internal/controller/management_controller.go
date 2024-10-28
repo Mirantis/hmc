@@ -275,8 +275,7 @@ func (r *ManagementReconciler) checkProviderStatus(ctx context.Context, provider
 			labels.SelectorFromSet(map[string]string{hmc.FluxHelmChartNameKey: providerTemplateName}).String(),
 		)
 		if err != nil {
-			notFoundErr := status.ResourceNotFoundError{}
-			if errors.As(err, &notFoundErr) {
+			if errors.As(err, &status.ResourceNotFoundError{}) {
 				// Check the next resource type.
 				continue
 			}
@@ -292,16 +291,12 @@ func (r *ManagementReconciler) checkProviderStatus(ctx context.Context, provider
 		}
 
 		if len(falseConditionTypes) > 0 {
-			errs = errors.Join(fmt.Errorf("%s: %s is not yet ready, has false conditions: %s",
+			errs = errors.Join(errs, fmt.Errorf("%s: %s is not yet ready, has false conditions: %s",
 				resourceConditions.Name, resourceConditions.Kind, strings.Join(falseConditionTypes, ", ")))
 		}
 	}
 
-	if errs != nil {
-		return errs
-	}
-
-	return nil
+	return errs
 }
 
 func (r *ManagementReconciler) Delete(ctx context.Context, management *hmc.Management) (ctrl.Result, error) {
@@ -439,6 +434,8 @@ func getWrappedComponents(ctx context.Context, cl client.Client, mgmt *hmc.Manag
 	}
 	components = append(components, capiComp)
 
+	const sveltosTargetNamespace = "projectsveltos"
+
 	for _, p := range mgmt.Spec.Providers {
 		c := component{
 			Component: p.Component, helmReleaseName: p.Name,
@@ -450,8 +447,8 @@ func getWrappedComponents(ctx context.Context, cl client.Client, mgmt *hmc.Manag
 		}
 
 		if p.Name == hmc.ProviderSveltosName {
-			c.targetNamespace = hmc.ProviderSveltosTargetNamespace
-			c.createNamespace = hmc.ProviderSveltosCreateNamespace
+			c.targetNamespace = sveltosTargetNamespace
+			c.createNamespace = true
 		}
 
 		components = append(components, c)
