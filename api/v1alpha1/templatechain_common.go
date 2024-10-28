@@ -14,6 +14,8 @@
 
 package v1alpha1
 
+const TemplateChainFinalizer = "hmc.mirantis.com/template-chain"
+
 // TemplateChainSpec defines the observed state of TemplateChain
 type TemplateChainSpec struct {
 	// SupportedTemplates is the list of supported Templates definitions and all available upgrade sequences for it.
