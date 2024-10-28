@@ -18,16 +18,23 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
 )
-
-const HMCManagedByChainLabelKey = "hmc.mirantis.com/managed-by-chain"
 
 // TemplateChainReconciler reconciles a TemplateChain object
 type TemplateChainReconciler struct {
@@ -65,7 +72,12 @@ func (r *ClusterTemplateChainReconciler) Reconcile(ctx context.Context, req ctrl
 		l.Error(err, "Failed to get ClusterTemplateChain")
 		return ctrl.Result{}, err
 	}
-	return r.ReconcileTemplateChain(ctx, clusterTemplateChain)
+
+	if !clusterTemplateChain.DeletionTimestamp.IsZero() {
+		l.Info("Deleting ClusterTemplateChain")
+		return r.Delete(ctx, clusterTemplateChain)
+	}
+	return r.Update(ctx, clusterTemplateChain)
 }
 
 func (r *ServiceTemplateChainReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -82,15 +94,28 @@ func (r *ServiceTemplateChainReconciler) Reconcile(ctx context.Context, req ctrl
 		l.Error(err, "Failed to get ServiceTemplateChain")
 		return ctrl.Result{}, err
 	}
-	return r.ReconcileTemplateChain(ctx, serviceTemplateChain)
+
+	if !serviceTemplateChain.DeletionTimestamp.IsZero() {
+		l.Info("Deleting ServiceTemplateChain")
+		return r.Delete(ctx, serviceTemplateChain)
+	}
+	return r.Update(ctx, serviceTemplateChain)
 }
 
-func (r *TemplateChainReconciler) ReconcileTemplateChain(ctx context.Context, templateChain templateChain) (ctrl.Result, error) {
+func (r *TemplateChainReconciler) Update(ctx context.Context, templateChain templateChain) (ctrl.Result, error) {
 	l := ctrl.LoggerFrom(ctx)
 
-	systemTemplates, managedTemplates, err := getCurrentTemplates(ctx, r.Client, templateChain.TemplateKind(), r.SystemNamespace, templateChain.GetNamespace(), templateChain.GetName())
+	if controllerutil.AddFinalizer(templateChain, hmc.TemplateChainFinalizer) {
+		if err := r.Client.Update(ctx, templateChain); err != nil {
+			l.Error(err, "Failed to update TemplateChain finalizers")
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{}, nil
+	}
+
+	systemTemplates, err := r.getSystemTemplates(ctx, templateChain)
 	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to get current templates: %w", err)
+		return ctrl.Result{}, fmt.Errorf("failed to get system templates: %w", err)
 	}
 
 	var (
@@ -102,8 +127,7 @@ func (r *TemplateChainReconciler) ReconcileTemplateChain(ctx context.Context, te
 			Name:      supportedTemplate.Name,
 			Namespace: templateChain.GetNamespace(),
 			Labels: map[string]string{
-				hmc.HMCManagedLabelKey:    hmc.HMCManagedLabelValue,
-				HMCManagedByChainLabelKey: templateChain.GetName(),
+				hmc.HMCManagedLabelKey: hmc.HMCManagedLabelValue,
 			},
 		}
 		keepTemplate[supportedTemplate.Name] = struct{}{}
@@ -145,70 +169,144 @@ func (r *TemplateChainReconciler) ReconcileTemplateChain(ctx context.Context, te
 			errs = errors.Join(errs, err)
 		}
 	}
-
-	for _, template := range managedTemplates {
-		templateName := template.GetName()
-		if _, keep := keepTemplate[templateName]; keep {
-			continue
-		}
-
-		ll := l.WithValues("template kind", templateChain.TemplateKind(), "template namespace", templateChain.GetNamespace(), "template name", templateName)
-		ll.Info("Deleting Template")
-
-		if err := r.Delete(ctx, template); client.IgnoreNotFound(err) != nil {
-			errs = errors.Join(errs, err)
-			continue
-		}
-
-		ll.Info("Template has been deleted")
+	if errs != nil {
+		return ctrl.Result{}, errs
 	}
 
-	return ctrl.Result{}, errs
+	err = r.removeOrphanedTemplates(ctx, templateChain)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	return ctrl.Result{}, nil
 }
 
-func getCurrentTemplates(ctx context.Context, cl client.Client, templateKind, systemNamespace, targetNamespace, templateChainName string) (systemTemplates map[string]templateCommon, managedTemplates []templateCommon, _ error) {
+func (r *TemplateChainReconciler) Delete(ctx context.Context, chain templateChain) (ctrl.Result, error) {
+	l := log.FromContext(ctx)
+
+	err := r.removeOrphanedTemplates(ctx, chain)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// Removing finalizer in the end of cleanup
+	l.Info("Removing TemplateChain finalizer")
+	if controllerutil.RemoveFinalizer(chain, hmc.TemplateChainFinalizer) {
+		return ctrl.Result{}, r.Client.Update(ctx, chain)
+	}
+	return ctrl.Result{}, nil
+}
+
+func (r TemplateChainReconciler) getSystemTemplates(ctx context.Context, chain templateChain) (systemTemplates map[string]templateCommon, _ error) {
+	templates, err := r.getTemplates(ctx, chain.TemplateKind(), &client.ListOptions{Namespace: r.SystemNamespace})
+	if err != nil {
+		return nil, err
+	}
+
+	systemTemplates = make(map[string]templateCommon, len(templates))
+	for _, template := range templates {
+		systemTemplates[template.GetName()] = template
+	}
+	return systemTemplates, nil
+}
+
+func (r TemplateChainReconciler) getTemplates(ctx context.Context, templateKind string, opts *client.ListOptions) ([]templateCommon, error) {
 	var templates []templateCommon
 
 	switch templateKind {
 	case hmc.ClusterTemplateKind:
 		ctList := &hmc.ClusterTemplateList{}
-		err := cl.List(ctx, ctList)
+		err := r.Client.List(ctx, ctList, opts)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		for _, template := range ctList.Items {
 			templates = append(templates, &template)
 		}
 	case hmc.ServiceTemplateKind:
 		stList := &hmc.ServiceTemplateList{}
-		err := cl.List(ctx, stList)
+		err := r.Client.List(ctx, stList, opts)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		for _, template := range stList.Items {
 			templates = append(templates, &template)
 		}
 	default:
-		return nil, nil, fmt.Errorf("invalid Template kind. Supported kinds are %s and %s", hmc.ClusterTemplateKind, hmc.ServiceTemplateKind)
+		return nil, fmt.Errorf("invalid Template kind. Supported kinds are %s and %s", hmc.ClusterTemplateKind, hmc.ServiceTemplateKind)
+	}
+	return templates, nil
+}
+
+func (r TemplateChainReconciler) removeOrphanedTemplates(ctx context.Context, chain templateChain) error {
+	l := log.FromContext(ctx)
+
+	managedTemplates, err := r.getTemplates(ctx, chain.TemplateKind(), &client.ListOptions{
+		Namespace:     chain.GetNamespace(),
+		LabelSelector: labels.SelectorFromSet(map[string]string{hmc.HMCManagedLabelKey: hmc.HMCManagedLabelValue}),
+	})
+	if err != nil {
+		return err
 	}
 
-	systemTemplates = make(map[string]templateCommon, len(templates))
-	managedTemplates = make([]templateCommon, 0, len(templates))
-	for _, template := range templates {
-		if template.GetNamespace() == systemNamespace {
-			systemTemplates[template.GetName()] = template
+	// Removing templates not managed by any chain
+	var errs error
+	for _, template := range managedTemplates {
+		isOrphaned, err := isTemplateOrphaned(ctx, r.Client, chain.TemplateKind(), template.GetNamespace(), template.GetName())
+		if err != nil {
+			errs = errors.Join(errs, err)
 			continue
 		}
+		if isOrphaned {
+			ll := l.WithValues("template kind", chain.TemplateKind(), "template namespace", template.GetNamespace(), "template name", template.GetName())
+			ll.Info("Deleting Template")
 
-		labels := template.GetLabels()
-		if template.GetNamespace() == targetNamespace &&
-			labels[hmc.HMCManagedLabelKey] == hmc.HMCManagedLabelValue &&
-			labels[HMCManagedByChainLabelKey] == templateChainName {
-			managedTemplates = append(managedTemplates, template)
+			if err := r.Client.Delete(ctx, template); client.IgnoreNotFound(err) != nil {
+				errs = errors.Join(errs, err)
+				continue
+			}
+			ll.Info("Template has been deleted")
 		}
 	}
+	if errs != nil {
+		return errs
+	}
+	return nil
+}
 
-	return systemTemplates, managedTemplates, nil
+func isTemplateOrphaned(ctx context.Context, cl client.Client, templateKind, namespace, templateName string) (bool, error) {
+	opts := &client.ListOptions{
+		Namespace:     namespace,
+		FieldSelector: fields.SelectorFromSet(fields.Set{hmc.SupportedTemplateKey: templateName}),
+	}
+
+	switch templateKind {
+	case hmc.ClusterTemplateKind:
+		list := &hmc.ClusterTemplateChainList{}
+		err := cl.List(ctx, list, opts)
+		if err != nil {
+			return false, err
+		}
+		for _, chain := range list.Items {
+			if chain.DeletionTimestamp == nil {
+				return false, nil
+			}
+		}
+		return true, nil
+	case hmc.ServiceTemplateKind:
+		list := &hmc.ServiceTemplateChainList{}
+		err := cl.List(ctx, list, opts)
+		if err != nil {
+			return false, err
+		}
+		for _, chain := range list.Items {
+			if chain.DeletionTimestamp == nil {
+				return false, nil
+			}
+		}
+		return true, nil
+	default:
+		return false, fmt.Errorf("invalid Template kind. Supported kinds are %s and %s", hmc.ClusterTemplateKind, hmc.ServiceTemplateKind)
+	}
 }
 
 func getTemplateNamesManagedByChain(chain templateChain) []string {
@@ -219,10 +317,33 @@ func getTemplateNamesManagedByChain(chain templateChain) []string {
 	return result
 }
 
+var tmEvents = predicate.Funcs{
+	UpdateFunc: func(e event.UpdateEvent) bool {
+		// Only trigger if access rules were changed
+		oldObject, ok := e.ObjectOld.(*hmc.TemplateManagement)
+		if !ok {
+			return false
+		}
+		newObject, ok := e.ObjectNew.(*hmc.TemplateManagement)
+		if !ok {
+			return false
+		}
+		return !reflect.DeepEqual(oldObject.Spec.AccessRules, newObject.Spec.AccessRules)
+	},
+	DeleteFunc:  func(event.DeleteEvent) bool { return false },
+	GenericFunc: func(event.GenericEvent) bool { return false },
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *ClusterTemplateChainReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&hmc.ClusterTemplateChain{}).
+		Watches(&hmc.TemplateManagement{},
+			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, _ client.Object) []ctrl.Request {
+				return getTemplateChainRequests(ctx, r.Client, r.SystemNamespace, &hmc.ClusterTemplateChainList{})
+			}),
+			builder.WithPredicates(tmEvents),
+		).
 		Complete(r)
 }
 
@@ -230,5 +351,41 @@ func (r *ClusterTemplateChainReconciler) SetupWithManager(mgr ctrl.Manager) erro
 func (r *ServiceTemplateChainReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&hmc.ServiceTemplateChain{}).
+		Watches(&hmc.TemplateManagement{},
+			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, _ client.Object) []ctrl.Request {
+				return getTemplateChainRequests(ctx, r.Client, r.SystemNamespace, &hmc.ServiceTemplateChainList{})
+			}),
+			builder.WithPredicates(tmEvents),
+		).
 		Complete(r)
+}
+
+func getTemplateChainRequests(ctx context.Context, cl client.Client, systemNamespace string, list client.ObjectList) []ctrl.Request {
+	err := cl.List(ctx, list, client.InNamespace(systemNamespace))
+	if err != nil {
+		return nil
+	}
+
+	var req []ctrl.Request
+	switch chainList := list.(type) {
+	case *hmc.ClusterTemplateChainList:
+		for _, chain := range chainList.Items {
+			req = append(req, ctrl.Request{
+				NamespacedName: client.ObjectKey{
+					Namespace: chain.Namespace,
+					Name:      chain.Name,
+				},
+			})
+		}
+	case *hmc.ServiceTemplateChainList:
+		for _, chain := range chainList.Items {
+			req = append(req, ctrl.Request{
+				NamespacedName: client.ObjectKey{
+					Namespace: chain.Namespace,
+					Name:      chain.Name,
+				},
+			})
+		}
+	}
+	return req
 }

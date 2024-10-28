@@ -17,6 +17,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"time"
 
 	helmcontrollerv2 "github.com/fluxcd/helm-controller/api/v2"
 	. "github.com/onsi/ginkgo/v2"
@@ -76,7 +77,6 @@ var _ = Describe("Template Chain Controller", func() {
 				template.WithName("ct1"),
 				template.WithNamespace(namespace.Name),
 				template.WithHelmSpec(templateHelmSpec),
-				template.WithLabels(map[string]string{HMCManagedByChainLabelKey: ctChain1Name}),
 				template.ManagedByHMC(),
 			),
 			// Should be unchanged (unmanaged)
@@ -104,7 +104,6 @@ var _ = Describe("Template Chain Controller", func() {
 				template.WithName("st1"),
 				template.WithNamespace(namespace.Name),
 				template.WithHelmSpec(templateHelmSpec),
-				template.WithLabels(map[string]string{HMCManagedByChainLabelKey: stChain1Name}),
 				template.ManagedByHMC(),
 			),
 			// Should be unchanged (unmanaged)
@@ -210,25 +209,42 @@ var _ = Describe("Template Chain Controller", func() {
 		})
 
 		AfterEach(func() {
-			for _, template := range []*hmcmirantiscomv1alpha1.ClusterTemplate{
-				ctTemplates["test"], ctTemplates["ct0"], ctTemplates["ct1"], ctTemplates["ct2"],
-			} {
-				err := k8sClient.Delete(ctx, template)
-				Expect(crclient.IgnoreNotFound(err)).To(Succeed())
-			}
-			for _, template := range []*hmcmirantiscomv1alpha1.ServiceTemplate{
-				stTemplates["test"], stTemplates["st0"], stTemplates["st1"], stTemplates["st2"],
-			} {
-				err := k8sClient.Delete(ctx, template)
-				Expect(crclient.IgnoreNotFound(err)).To(Succeed())
+			templateChainReconciler := TemplateChainReconciler{
+				Client:          mgrClient,
+				SystemNamespace: utils.DefaultSystemNamespace,
 			}
 
 			for _, chain := range ctChainNames {
 				clusterTemplateChainResource := &hmcmirantiscomv1alpha1.ClusterTemplateChain{}
 				err := k8sClient.Get(ctx, chain, clusterTemplateChainResource)
 				Expect(err).NotTo(HaveOccurred())
+
 				By("Cleanup the specific resource instance ClusterTemplateChain")
-				Expect(k8sClient.Delete(ctx, clusterTemplateChainResource)).To(Succeed())
+				Expect(mgrClient.Delete(ctx, clusterTemplateChainResource)).To(Succeed())
+
+				// Wait until the cached client reflects the deletion by checking the deletion timestamp
+				Eventually(func() bool {
+					err := mgrClient.Get(ctx, chain, clusterTemplateChainResource)
+					if err != nil {
+						return errors.IsNotFound(err)
+					}
+					return !clusterTemplateChainResource.DeletionTimestamp.IsZero()
+				}, 1*time.Minute, 5*time.Second).Should(BeTrue(), "ClusterTemplateChain should have a deletion timestamp")
+
+				// Running reconcile to remove the finalizer and delete the ClusterTemplateChain
+				clusterTemplateChainReconciler := &ClusterTemplateChainReconciler{TemplateChainReconciler: templateChainReconciler}
+				_, err = clusterTemplateChainReconciler.Reconcile(ctx, reconcile.Request{NamespacedName: chain})
+				Expect(err).NotTo(HaveOccurred())
+
+				Eventually(k8sClient.Get, 1*time.Minute, 5*time.Second).WithArguments(ctx, chain, clusterTemplateChainResource).Should(HaveOccurred())
+			}
+			// These ClusterTemplates should be deleted once the ClusterTemplateChain is deleted
+			for _, template := range []*hmcmirantiscomv1alpha1.ClusterTemplate{ctTemplates["test"], ctTemplates["ct0"]} {
+				verifyObjectDeleted(ctx, template.Namespace, template)
+			}
+			for _, template := range []*hmcmirantiscomv1alpha1.ClusterTemplate{ctTemplates["ct1"], ctTemplates["ct2"]} {
+				err := k8sClient.Delete(ctx, template)
+				Expect(crclient.IgnoreNotFound(err)).To(Succeed())
 			}
 
 			for _, chain := range stChainNames {
@@ -238,6 +254,30 @@ var _ = Describe("Template Chain Controller", func() {
 
 				By("Cleanup the specific resource instance ServiceTemplateChain")
 				Expect(k8sClient.Delete(ctx, serviceTemplateChainResource)).To(Succeed())
+
+				// Wait until the cached client reflects the deletion by checking the deletion timestamp
+				Eventually(func() bool {
+					err := mgrClient.Get(ctx, chain, serviceTemplateChainResource)
+					if err != nil {
+						return errors.IsNotFound(err)
+					}
+					return !serviceTemplateChainResource.DeletionTimestamp.IsZero()
+				}, 1*time.Minute, 5*time.Second).Should(BeTrue(), "ServiceTemplateChain should have a deletion timestamp")
+
+				// Running reconcile to remove the finalizer and delete the ServiceTemplateChain
+				serviceTemplateChainReconciler := &ServiceTemplateChainReconciler{TemplateChainReconciler: templateChainReconciler}
+				_, err = serviceTemplateChainReconciler.Reconcile(ctx, reconcile.Request{NamespacedName: chain})
+				Expect(err).NotTo(HaveOccurred())
+
+				Eventually(mgrClient.Get, 1*time.Minute, 5*time.Second).WithArguments(ctx, chain, serviceTemplateChainResource).Should(HaveOccurred())
+			}
+			// These ServiceTemplates should be deleted once the ServiceTemplateChain is deleted
+			for _, template := range []*hmcmirantiscomv1alpha1.ServiceTemplate{stTemplates["test"], stTemplates["st0"]} {
+				verifyObjectDeleted(ctx, template.Namespace, template)
+			}
+			for _, template := range []*hmcmirantiscomv1alpha1.ServiceTemplate{stTemplates["st1"], stTemplates["st2"]} {
+				err := k8sClient.Delete(ctx, template)
+				Expect(crclient.IgnoreNotFound(err)).To(Succeed())
 			}
 
 			By("Cleanup the namespace")
@@ -255,19 +295,37 @@ var _ = Describe("Template Chain Controller", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			templateChainReconciler := TemplateChainReconciler{
-				Client:          k8sClient,
+				Client:          mgrClient,
 				SystemNamespace: utils.DefaultSystemNamespace,
 			}
 			By("Reconciling the ClusterTemplateChain resources")
 			for _, chain := range ctChainNames {
+				// First Reconcile should only add finalizer
 				clusterTemplateChainReconciler := &ClusterTemplateChainReconciler{TemplateChainReconciler: templateChainReconciler}
+				_, err = clusterTemplateChainReconciler.Reconcile(ctx, reconcile.Request{NamespacedName: chain})
+				Expect(err).NotTo(HaveOccurred())
+
+				ctChain := &hmcmirantiscomv1alpha1.ClusterTemplateChain{}
+				Expect(k8sClient.Get(ctx, types.NamespacedName{Namespace: chain.Namespace, Name: chain.Name}, ctChain)).NotTo(HaveOccurred())
+				Expect(ctChain.Finalizers).Should(ContainElement(hmcmirantiscomv1alpha1.TemplateChainFinalizer))
+
+				// Second Reconcile should reconcile the TemplateChain
 				_, err = clusterTemplateChainReconciler.Reconcile(ctx, reconcile.Request{NamespacedName: chain})
 				Expect(err).NotTo(HaveOccurred())
 			}
 
 			By("Reconciling the ServiceTemplateChain resources")
 			for _, chain := range stChainNames {
+				// First Reconcile should only add finalizer
 				serviceTemplateChainReconciler := &ServiceTemplateChainReconciler{TemplateChainReconciler: templateChainReconciler}
+				_, err = serviceTemplateChainReconciler.Reconcile(ctx, reconcile.Request{NamespacedName: chain})
+				Expect(err).NotTo(HaveOccurred())
+
+				stChain := &hmcmirantiscomv1alpha1.ServiceTemplateChain{}
+				Expect(k8sClient.Get(ctx, types.NamespacedName{Namespace: chain.Namespace, Name: chain.Name}, stChain)).NotTo(HaveOccurred())
+				Expect(stChain.Finalizers).Should(ContainElement(hmcmirantiscomv1alpha1.TemplateChainFinalizer))
+
+				// Second Reconcile should reconcile the TemplateChain
 				_, err = serviceTemplateChainReconciler.Reconcile(ctx, reconcile.Request{NamespacedName: chain})
 				Expect(err).NotTo(HaveOccurred())
 			}
@@ -286,16 +344,12 @@ var _ = Describe("Template Chain Controller", func() {
 			*/
 
 			verifyObjectCreated(ctx, namespace.Name, ctTemplates["test"])
-			checkHMCManagedByChainLabelExistence(ctTemplates["test"].GetLabels(), ctChain1Name)
 			verifyObjectCreated(ctx, namespace.Name, ctTemplates["ct0"])
-			checkHMCManagedByChainLabelExistence(ctTemplates["test"].GetLabels(), ctChain1Name)
 			verifyObjectDeleted(ctx, namespace.Name, ctTemplates["ct1"])
 			verifyObjectUnchanged(ctx, namespace.Name, ctUnmanagedBefore, ctTemplates["ct2"])
 
 			verifyObjectCreated(ctx, namespace.Name, stTemplates["test"])
-			checkHMCManagedByChainLabelExistence(stTemplates["test"].GetLabels(), stChain1Name)
 			verifyObjectCreated(ctx, namespace.Name, stTemplates["st0"])
-			checkHMCManagedByChainLabelExistence(stTemplates["st0"].GetLabels(), stChain1Name)
 			verifyObjectDeleted(ctx, namespace.Name, stTemplates["st1"])
 			verifyObjectUnchanged(ctx, namespace.Name, stUnmanagedBefore, stTemplates["st2"])
 		})
@@ -332,8 +386,4 @@ func verifyObjectUnchanged(ctx context.Context, namespace string, oldObj, newObj
 
 func checkHMCManagedLabelExistence(labels map[string]string) {
 	Expect(labels).To(HaveKeyWithValue(hmcmirantiscomv1alpha1.HMCManagedLabelKey, hmcmirantiscomv1alpha1.HMCManagedLabelValue))
-}
-
-func checkHMCManagedByChainLabelExistence(labels map[string]string, chainName string) {
-	Expect(labels).To(HaveKeyWithValue(HMCManagedByChainLabelKey, chainName))
 }

@@ -144,6 +144,7 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 	mgrClient = mgr.GetClient()
+	Expect(mgr).NotTo(BeNil())
 
 	err = hmcmirantiscomv1alpha1.SetupIndexers(ctx, mgr)
 	Expect(err).NotTo(HaveOccurred())
