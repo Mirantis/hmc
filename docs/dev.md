@@ -171,3 +171,55 @@ manually with:
 ```
 CLUSTER_NAME=example-e2e-test make dev-aws-nuke
 ```
+
+## Credential propagation
+
+The following is the notes on provider specific CCM credentials delivery process
+
+### Azure
+
+Azure CCM/CSI controllers expect well-known `azure.json` to be provided though
+Secret or by placing it on host file system.
+
+The 2A controller will create Secret named `azure-cloud-provider` in the
+`kube-system` namespace (where all controllers reside). The name is passed to
+controllers via helm values.
+
+The `azure.json` parameters are documented in detail in the
+[official docs](https://cloud-provider-azure.sigs.k8s.io/install/configs)
+
+Most parameters are obtained from CAPZ objects. Rest parameters are either
+omitted or set to sane defaults.
+
+### vSphere
+
+#### CCM
+
+cloud-provider-vsphere expects configuration to be passed in ConfigMap. The
+credentials are located in the secret which is referenced in the configuration.
+
+The config itself is a yaml file and it's not very well documented (the
+[spec docs](https://github.com/kubernetes/cloud-provider-vsphere/blob/master/docs/book/cloud_config.md)
+haven't been updated for years).
+
+Most options however has similar names and could be inferred.
+
+All optional parameters are omitted in the configuration created by 2A
+controller.
+
+Some options are hardcoded (since values are hard/impossible to get from CAPV
+objects). For example:
+
+- `insecureFlag` is set to `true` to omit certificate management parameters. This
+  is also a default in the official charts since most vcenters are using
+  self-signed or signed by internal authority certificates.
+- `port` is set to `443` (HTTPS)
+- [Multi-vcenter](https://cloud-provider-vsphere.sigs.k8s.io/tutorials/deploying_cpi_with_multi_dc_vc_aka_zones.html)
+  labels are set to default values of region and zone (`k8s-region` and
+  `k8s-zone`)
+
+#### CSI
+
+CSI expects single Secret with configuration in `ini` format
+([documented here](https://docs.vmware.com/en/VMware-vSphere-Container-Storage-Plug-in/2.0/vmware-vsphere-csp-getting-started/GUID-BFF39F1D-F70A-4360-ABC9-85BDAFBE8864.html)).
+Options are similar to CCM and same defaults/considerations are applicable.
