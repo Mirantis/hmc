@@ -15,6 +15,7 @@
 package credspropagation
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
@@ -24,9 +25,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func PropagateAzureSecrets(cfg PropagationCfg) error {
+func PropagateAzureSecrets(ctx context.Context, cfg *PropagationCfg) error {
 	azureCluster := &capz.AzureCluster{}
-	if err := cfg.Client.Get(cfg.Ctx, client.ObjectKey{
+	if err := cfg.Client.Get(ctx, client.ObjectKey{
 		Name:      cfg.ManagedCluster.Name,
 		Namespace: cfg.ManagedCluster.Namespace,
 	}, azureCluster); err != nil {
@@ -34,7 +35,7 @@ func PropagateAzureSecrets(cfg PropagationCfg) error {
 	}
 
 	azureClIdty := &capz.AzureClusterIdentity{}
-	if err := cfg.Client.Get(cfg.Ctx, client.ObjectKey{
+	if err := cfg.Client.Get(ctx, client.ObjectKey{
 		Name:      azureCluster.Spec.IdentityRef.Name,
 		Namespace: azureCluster.Spec.IdentityRef.Namespace,
 	}, azureClIdty); err != nil {
@@ -42,7 +43,7 @@ func PropagateAzureSecrets(cfg PropagationCfg) error {
 	}
 
 	azureSecret := &corev1.Secret{}
-	if err := cfg.Client.Get(cfg.Ctx, client.ObjectKey{
+	if err := cfg.Client.Get(ctx, client.ObjectKey{
 		Name:      azureClIdty.Spec.ClientSecret.Name,
 		Namespace: azureClIdty.Spec.ClientSecret.Namespace,
 	}, azureSecret); err != nil {
@@ -54,7 +55,7 @@ func PropagateAzureSecrets(cfg PropagationCfg) error {
 		return fmt.Errorf("failed to generate Azure CCM secret: %s", err)
 	}
 
-	if err := applyCCMConfigs(cfg.Ctx, cfg.KubeconfSecret, ccmSecret); err != nil {
+	if err := applyCCMConfigs(ctx, cfg.KubeconfSecret, ccmSecret); err != nil {
 		return fmt.Errorf("failed to apply Azure CCM secret: %s", err)
 	}
 

@@ -16,6 +16,7 @@ package credspropagation
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	texttemplate "text/template"
 
@@ -29,9 +30,9 @@ import (
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
 )
 
-func PropagateVSphereSecrets(cfg PropagationCfg) error {
+func PropagateVSphereSecrets(ctx context.Context, cfg *PropagationCfg) error {
 	vsphereCluster := &capv.VSphereCluster{}
-	if err := cfg.Client.Get(cfg.Ctx, client.ObjectKey{
+	if err := cfg.Client.Get(ctx, client.ObjectKey{
 		Name:      cfg.ManagedCluster.Name,
 		Namespace: cfg.ManagedCluster.Namespace,
 	}, vsphereCluster); err != nil {
@@ -39,14 +40,14 @@ func PropagateVSphereSecrets(cfg PropagationCfg) error {
 	}
 
 	vsphereClIdty := &capv.VSphereClusterIdentity{}
-	if err := cfg.Client.Get(cfg.Ctx, client.ObjectKey{
+	if err := cfg.Client.Get(ctx, client.ObjectKey{
 		Name: vsphereCluster.Spec.IdentityRef.Name,
 	}, vsphereClIdty); err != nil {
 		return fmt.Errorf("failed to get VSphereClusterIdentity %s: %w", vsphereCluster.Spec.IdentityRef.Name, err)
 	}
 
 	vsphereSecret := &corev1.Secret{}
-	if err := cfg.Client.Get(cfg.Ctx, client.ObjectKey{
+	if err := cfg.Client.Get(ctx, client.ObjectKey{
 		Name:      vsphereClIdty.Spec.SecretName,
 		Namespace: cfg.SystemNamespace,
 	}, vsphereSecret); err != nil {
@@ -55,7 +56,7 @@ func PropagateVSphereSecrets(cfg PropagationCfg) error {
 
 	vsphereMachines := &capv.VSphereMachineList{}
 	if err := cfg.Client.List(
-		cfg.Ctx,
+		ctx,
 		vsphereMachines,
 		&client.ListOptions{
 			Namespace: cfg.ManagedCluster.Namespace,
@@ -76,7 +77,7 @@ func PropagateVSphereSecrets(cfg PropagationCfg) error {
 		return fmt.Errorf("failed to generate VSphere CSI secret: %s", err)
 	}
 
-	if err := applyCCMConfigs(cfg.Ctx, cfg.KubeconfSecret, ccmSecret, ccmConfig, csiSecret); err != nil {
+	if err := applyCCMConfigs(ctx, cfg.KubeconfSecret, ccmSecret, ccmConfig, csiSecret); err != nil {
 		return fmt.Errorf("failed to apply VSphere CCM/CSI secrets: %s", err)
 	}
 

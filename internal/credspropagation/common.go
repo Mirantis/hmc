@@ -29,7 +29,6 @@ import (
 )
 
 type PropagationCfg struct {
-	Ctx             context.Context
 	Client          client.Client
 	ManagedCluster  *hmc.ManagedCluster
 	KubeconfSecret  *corev1.Secret

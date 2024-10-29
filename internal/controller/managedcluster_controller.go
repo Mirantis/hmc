@@ -651,19 +651,20 @@ func (r *ManagedClusterReconciler) reconcileCredentialPropagation(ctx context.Co
 		return fmt.Errorf("failed to get kubeconfig secret for cluster %s/%s: %w", managedCluster.Namespace, managedCluster.Name, err)
 	}
 
+	propnCfg := &credspropagation.PropagationCfg{
+		Client:          r.Client,
+		ManagedCluster:  managedCluster,
+		KubeconfSecret:  kubeconfSecret,
+		SystemNamespace: r.SystemNamespace,
+	}
+
 	for _, provider := range providers {
 		switch provider {
 		case "aws":
 			l.Info("Skipping creds propagation for AWS")
 		case "azure":
 			l.Info("Azure creds propagation start")
-			if err := credspropagation.PropagateAzureSecrets(credspropagation.PropagationCfg{
-				Ctx:             ctx,
-				Client:          r.Client,
-				ManagedCluster:  managedCluster,
-				KubeconfSecret:  kubeconfSecret,
-				SystemNamespace: r.SystemNamespace,
-			}); err != nil {
+			if err := credspropagation.PropagateAzureSecrets(ctx, propnCfg); err != nil {
 				errMsg := fmt.Sprintf("failed to create Azure CCM credentials: %s", err)
 				apimeta.SetStatusCondition(managedCluster.GetConditions(), metav1.Condition{
 					Type:    hmc.CredentialsPropagatedCondition,
@@ -683,13 +684,7 @@ func (r *ManagedClusterReconciler) reconcileCredentialPropagation(ctx context.Co
 			})
 		case "vsphere":
 			l.Info("vSphere creds propagation start")
-			if err := credspropagation.PropagateVSphereSecrets(credspropagation.PropagationCfg{
-				Ctx:             ctx,
-				Client:          r.Client,
-				ManagedCluster:  managedCluster,
-				KubeconfSecret:  kubeconfSecret,
-				SystemNamespace: r.SystemNamespace,
-			}); err != nil {
+			if err := credspropagation.PropagateVSphereSecrets(ctx, propnCfg); err != nil {
 				errMsg := fmt.Sprintf("failed to create vSphere CCM credentials: %s", err)
 				apimeta.SetStatusCondition(managedCluster.GetConditions(), metav1.Condition{
 					Type:    hmc.CredentialsPropagatedCondition,
