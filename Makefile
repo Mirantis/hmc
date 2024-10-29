@@ -371,12 +371,18 @@ $(EXTERNAL_CRD_DIR): $(LOCALBIN)
 	mkdir -p $(EXTERNAL_CRD_DIR)
 
 FLUX_SOURCE_VERSION ?= $(shell go mod edit -json | jq -r '.Require[] | select(.Path == "github.com/fluxcd/source-controller/api") | .Version')
-FLUX_SOURCE_REPO_CRD ?= $(EXTERNAL_CRD_DIR)/source-helmrepositories-$(FLUX_SOURCE_VERSION).yaml
-FLUX_SOURCE_CHART_CRD ?= $(EXTERNAL_CRD_DIR)/source-helmchart-$(FLUX_SOURCE_VERSION).yaml
+FLUX_SOURCE_REPO_NAME ?= source-helmrepositories
+FLUX_SOURCE_REPO_CRD ?= $(EXTERNAL_CRD_DIR)/$(FLUX_SOURCE_REPO_NAME)-$(FLUX_SOURCE_VERSION).yaml
+FLUX_SOURCE_CHART_NAME ?= source-helmchart
+FLUX_SOURCE_CHART_CRD ?= $(EXTERNAL_CRD_DIR)/$(FLUX_SOURCE_CHART_NAME)-$(FLUX_SOURCE_VERSION).yaml
+
 FLUX_HELM_VERSION ?= $(shell go mod edit -json | jq -r '.Require[] | select(.Path == "github.com/fluxcd/helm-controller/api") | .Version')
-FLUX_HELM_CRD ?= $(EXTERNAL_CRD_DIR)/helm-$(FLUX_HELM_VERSION).yaml
-SVELTOS_VERSION ?= $(shell go mod edit -json | jq -r '.Require[] | select(.Path == "github.com/projectsveltos/libsveltos") | .Version')
-SVELTOS_CRD ?= $(EXTERNAL_CRD_DIR)/sveltos-$(SVELTOS_VERSION).yaml
+FLUX_HELM_NAME ?= helm
+FLUX_HELM_CRD ?= $(EXTERNAL_CRD_DIR)/$(FLUX_HELM_NAME)-$(FLUX_HELM_VERSION).yaml
+
+SVELTOS_VERSION ?= v$(shell $(YQ) -r '.appVersion' $(PROVIDER_TEMPLATES_DIR)/projectsveltos/Chart.yaml)
+SVELTOS_NAME ?= sveltos
+SVELTOS_CRD ?= $(EXTERNAL_CRD_DIR)/$(SVELTOS_NAME)-$(SVELTOS_VERSION).yaml
 
 ## Tool Binaries
 KUBECTL ?= kubectl
@@ -431,20 +437,20 @@ $(HELM): | $(LOCALBIN)
 	rm -f $(LOCALBIN)/helm-*
 	curl -s --fail $(HELM_INSTALL_SCRIPT) | USE_SUDO=false HELM_INSTALL_DIR=$(LOCALBIN) DESIRED_VERSION=$(HELM_VERSION) BINARY_NAME=helm-$(HELM_VERSION) PATH="$(LOCALBIN):$(PATH)" bash
 
-$(FLUX_HELM_CRD): $(EXTERNAL_CRD_DIR)
-	rm -f $(FLUX_HELM_CRD)
+$(FLUX_HELM_CRD): | $(EXTERNAL_CRD_DIR)
+	rm -f $(EXTERNAL_CRD_DIR)/$(FLUX_HELM_NAME)*
 	curl -s --fail https://raw.githubusercontent.com/fluxcd/helm-controller/$(FLUX_HELM_VERSION)/config/crd/bases/helm.toolkit.fluxcd.io_helmreleases.yaml > $(FLUX_HELM_CRD)
 
-$(FLUX_SOURCE_CHART_CRD): $(EXTERNAL_CRD_DIR)
-	rm -f $(FLUX_SOURCE_CHART_CRD)
+$(FLUX_SOURCE_CHART_CRD): | $(EXTERNAL_CRD_DIR)
+	rm -f $(EXTERNAL_CRD_DIR)/$(FLUX_SOURCE_CHART_NAME)*
 	curl -s --fail https://raw.githubusercontent.com/fluxcd/source-controller/$(FLUX_SOURCE_VERSION)/config/crd/bases/source.toolkit.fluxcd.io_helmcharts.yaml > $(FLUX_SOURCE_CHART_CRD)
 
-$(FLUX_SOURCE_REPO_CRD): $(EXTERNAL_CRD_DIR)
-	rm -f $(FLUX_SOURCE_REPO_CRD)
+$(FLUX_SOURCE_REPO_CRD): | $(EXTERNAL_CRD_DIR)
+	rm -f $(EXTERNAL_CRD_DIR)/$(FLUX_SOURCE_REPO_NAME)*
 	curl -s --fail https://raw.githubusercontent.com/fluxcd/source-controller/$(FLUX_SOURCE_VERSION)/config/crd/bases/source.toolkit.fluxcd.io_helmrepositories.yaml > $(FLUX_SOURCE_REPO_CRD)
 
-$(SVELTOS_CRD): $(EXTERNAL_CRD_DIR)
-	rm -f $(SVELTOS_CRD)
+$(SVELTOS_CRD): | yq $(EXTERNAL_CRD_DIR)
+	rm -f $(EXTERNAL_CRD_DIR)/$(SVELTOS_NAME)*
 	curl -s --fail https://raw.githubusercontent.com/projectsveltos/sveltos/$(SVELTOS_VERSION)/manifest/crds/sveltos_crds.yaml > $(SVELTOS_CRD)
 
 .PHONY: external-crd
