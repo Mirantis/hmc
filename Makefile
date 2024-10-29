@@ -449,7 +449,7 @@ $(FLUX_SOURCE_REPO_CRD): | $(EXTERNAL_CRD_DIR)
 	rm -f $(EXTERNAL_CRD_DIR)/$(FLUX_SOURCE_REPO_NAME)*
 	curl -s --fail https://raw.githubusercontent.com/fluxcd/source-controller/$(FLUX_SOURCE_VERSION)/config/crd/bases/source.toolkit.fluxcd.io_helmrepositories.yaml > $(FLUX_SOURCE_REPO_CRD)
 
-$(SVELTOS_CRD): | $(EXTERNAL_CRD_DIR)
+$(SVELTOS_CRD): | yq $(EXTERNAL_CRD_DIR)
 	rm -f $(EXTERNAL_CRD_DIR)/$(SVELTOS_NAME)*
 	curl -s --fail https://raw.githubusercontent.com/projectsveltos/sveltos/$(SVELTOS_VERSION)/manifest/crds/sveltos_crds.yaml > $(SVELTOS_CRD)
 
