@@ -87,3 +87,9 @@ func WithCredential(credName string) Opt {
 		p.Spec.Credential = credName
 	}
 }
+
+func WithAvailableUpgrades(availableUpgrades []string) Opt {
+	return func(p *v1alpha1.ManagedCluster) {
+		p.Status.AvailableUpgrades = availableUpgrades
+	}
+}

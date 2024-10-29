@@ -257,6 +257,11 @@ func TestManagedClusterValidateCreate(t *testing.T) {
 }
 
 func TestManagedClusterValidateUpdate(t *testing.T) {
+	const (
+		upgradeTargetTemplateName  = "upgrade-target-template"
+		unmanagedByHMCTemplateName = "unmanaged-template"
+	)
+
 	g := NewWithT(t)
 
 	ctx := admission.NewContextWithRequest(context.Background(), admission.Request{
@@ -274,8 +279,11 @@ func TestManagedClusterValidateUpdate(t *testing.T) {
 		warnings          admission.Warnings
 	}{
 		{
-			name:              "should fail if the new cluster template was found but is invalid (some validation error)",
-			oldManagedCluster: managedcluster.NewManagedCluster(managedcluster.WithClusterTemplate(testTemplateName)),
+			name: "update spec.template: should fail if the new cluster template was found but is invalid (some validation error)",
+			oldManagedCluster: managedcluster.NewManagedCluster(
+				managedcluster.WithClusterTemplate(testTemplateName),
+				managedcluster.WithAvailableUpgrades([]string{newTemplateName}),
+			),
 			newManagedCluster: managedcluster.NewManagedCluster(managedcluster.WithClusterTemplate(newTemplateName)),
 			existingObjects: []runtime.Object{
 				mgmt,
@@ -290,7 +298,75 @@ func TestManagedClusterValidateUpdate(t *testing.T) {
 			err: "the ManagedCluster is invalid: the template is not valid: validation error example",
 		},
 		{
-			name: "should succeed if template is not changed",
+			name: "update spec.template: should fail if the template is not in the list of available",
+			oldManagedCluster: managedcluster.NewManagedCluster(
+				managedcluster.WithClusterTemplate(testTemplateName),
+				managedcluster.WithCredential(testCredentialName),
+				managedcluster.WithAvailableUpgrades([]string{}),
+			),
+			newManagedCluster: managedcluster.NewManagedCluster(
+				managedcluster.WithClusterTemplate(upgradeTargetTemplateName),
+				managedcluster.WithCredential(testCredentialName),
+			),
+			existingObjects: []runtime.Object{
+				mgmt, cred,
+				template.NewClusterTemplate(
+					template.WithName(testTemplateName),
+					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
+					template.WithProvidersStatus(v1alpha1.Providers{
+						"infrastructure-aws",
+						"control-plane-k0smotron",
+						"bootstrap-k0smotron",
+					}),
+				),
+				template.NewClusterTemplate(
+					template.WithName(upgradeTargetTemplateName),
+					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
+					template.WithProvidersStatus(v1alpha1.Providers{
+						"infrastructure-aws",
+						"control-plane-k0smotron",
+						"bootstrap-k0smotron",
+					}),
+				),
+			},
+			warnings: admission.Warnings{fmt.Sprintf("Cluster can't be upgraded from %s to %s. This upgrade sequence is not allowed", testTemplateName, upgradeTargetTemplateName)},
+			err:      "cluster upgrade is forbidden",
+		},
+		{
+			name: "update spec.template: should succeed if the template is in the list of available",
+			oldManagedCluster: managedcluster.NewManagedCluster(
+				managedcluster.WithClusterTemplate(testTemplateName),
+				managedcluster.WithCredential(testCredentialName),
+				managedcluster.WithAvailableUpgrades([]string{newTemplateName}),
+			),
+			newManagedCluster: managedcluster.NewManagedCluster(
+				managedcluster.WithClusterTemplate(newTemplateName),
+				managedcluster.WithCredential(testCredentialName),
+			),
+			existingObjects: []runtime.Object{
+				mgmt, cred,
+				template.NewClusterTemplate(
+					template.WithName(testTemplateName),
+					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
+					template.WithProvidersStatus(v1alpha1.Providers{
+						"infrastructure-aws",
+						"control-plane-k0smotron",
+						"bootstrap-k0smotron",
+					}),
+				),
+				template.NewClusterTemplate(
+					template.WithName(newTemplateName),
+					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
+					template.WithProvidersStatus(v1alpha1.Providers{
+						"infrastructure-aws",
+						"control-plane-k0smotron",
+						"bootstrap-k0smotron",
+					}),
+				),
+			},
+		},
+		{
+			name: "should succeed if spec.template is not changed",
 			oldManagedCluster: managedcluster.NewManagedCluster(
 				managedcluster.WithClusterTemplate(testTemplateName),
 				managedcluster.WithConfig(`{"foo":"bar"}`),

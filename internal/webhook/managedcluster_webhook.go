@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
@@ -37,6 +38,8 @@ type ManagedClusterValidator struct {
 }
 
 const invalidManagedClusterMsg = "the ManagedCluster is invalid"
+
+var errClusterUpgradeForbidden = errors.New("cluster upgrade is forbidden")
 
 func (v *ManagedClusterValidator) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	v.Client = mgr.GetClient()
@@ -89,12 +92,20 @@ func (v *ManagedClusterValidator) ValidateUpdate(ctx context.Context, oldObj, ne
 	if !ok {
 		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected ManagedCluster but got a %T", newObj))
 	}
-	template, err := v.getManagedClusterTemplate(ctx, newManagedCluster.Namespace, newManagedCluster.Spec.Template)
+	oldTemplate := oldManagedCluster.Spec.Template
+	newTemplate := newManagedCluster.Spec.Template
+
+	template, err := v.getManagedClusterTemplate(ctx, newManagedCluster.Namespace, newTemplate)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %v", invalidManagedClusterMsg, err)
 	}
 
-	if oldManagedCluster.Spec.Template != newManagedCluster.Spec.Template {
+	if oldTemplate != newTemplate {
+		if !slices.Contains(oldManagedCluster.Status.AvailableUpgrades, newTemplate) {
+			msg := fmt.Sprintf("Cluster can't be upgraded from %s to %s. This upgrade sequence is not allowed", oldTemplate, newTemplate)
+			return admission.Warnings{msg}, errClusterUpgradeForbidden
+		}
+
 		if err := isTemplateValid(template); err != nil {
 			return nil, fmt.Errorf("%s: %v", invalidManagedClusterMsg, err)
 		}
