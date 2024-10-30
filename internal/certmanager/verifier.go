@@ -22,7 +22,8 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-func VerifyAPI(ctx context.Context, restcfg *rest.Config, scheme *runtime.Scheme, namespace string) error {
+func VerifyAPI(ctx context.Context, restcfg *rest.Config, namespace string) error {
+	scheme := runtime.NewScheme()
 	checker, err := cmapichecker.New(restcfg, scheme, namespace)
 	if err != nil {
 		return err

@@ -384,7 +384,7 @@ func (r *ManagementReconciler) enableAdditionalComponents(ctx context.Context, m
 		capiOperatorValues = v
 	}
 
-	err := certmanager.VerifyAPI(ctx, r.Config, r.Scheme, r.SystemNamespace)
+	err := certmanager.VerifyAPI(ctx, r.Config, r.SystemNamespace)
 	if err != nil {
 		return fmt.Errorf("failed to check in the cert-manager API is installed: %v", err)
 	}
