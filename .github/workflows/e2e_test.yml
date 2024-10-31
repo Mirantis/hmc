@@ -27,6 +27,7 @@ jobs:
       cancel-in-progress: true
     name: Push Images and Charts to GHCR
     runs-on: ubuntu-latest
+    if: ${{ contains( github.event.pull_request.labels.*.name, 'test e2e') }}
     outputs:
       version: ${{ steps.vars.outputs.version }}
       clustername: ${{ steps.vars.outputs.clustername }}
