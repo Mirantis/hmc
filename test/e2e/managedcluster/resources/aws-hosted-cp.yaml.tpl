@@ -6,9 +6,6 @@ spec:
   template: aws-hosted-cp-0-0-2
   credential: ${AWS_CLUSTER_IDENTITY}-cred
   config:
-    clusterIdentity:
-      name: ${AWS_CLUSTER_IDENTITY}
-      namespace: ${NAMESPACE}
     vpcID: ${AWS_VPC_ID}
     region: ${AWS_REGION}
     subnets:

@@ -4,15 +4,12 @@ metadata:
   name: ${MANAGED_CLUSTER_NAME}
   namespace: ${NAMESPACE}
 spec:
-  template: azure-hosted-cp-0-0-2
+  template: azure-hosted-cp-0-0-3
   credential: ${AZURE_CLUSTER_IDENTITY}-cred
   config:
     location: "${AZURE_REGION}"
     subscriptionID: "${AZURE_SUBSCRIPTION_ID}"
     vmSize: Standard_A4_v2
-    clusterIdentity:
-      name: ${AZURE_CLUSTER_IDENTITY}
-      namespace: hmc-system
     resourceGroup: "${AZURE_RESOURCE_GROUP}"
     network:
       vnetName: "${AZURE_VM_NET_NAME}"

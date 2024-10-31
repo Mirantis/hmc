@@ -8,8 +8,6 @@ spec:
   config:
     controlPlaneNumber: ${CONTROL_PLANE_NUMBER:=1}
     workersNumber: ${WORKERS_NUMBER:=1}
-    clusterIdentity:
-      name: "${VSPHERE_CLUSTER_IDENTITY}"
     vsphere:
       server: "${VSPHERE_SERVER}"
       thumbprint: "${VSPHERE_THUMBPRINT} "
@@ -20,7 +18,6 @@ spec:
       username: "${VSPHERE_USER}"
       password: "${VSPHERE_PASSWORD}"
     controlPlaneEndpointIP: "${VSPHERE_CONTROL_PLANE_ENDPOINT}"
-
     controlPlane:
       ssh:
         user: ubuntu
@@ -30,7 +27,6 @@ spec:
       memory: 4096
       vmTemplate: "${VSPHERE_VM_TEMPLATE}"
       network: "${VSPHERE_NETWORK}"
-
     worker:
       ssh:
         user: ubuntu
