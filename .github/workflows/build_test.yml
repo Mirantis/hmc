@@ -1,4 +1,4 @@
-name: E2E Tests
+name: CI
 on:
   pull_request:
     types:
@@ -21,12 +21,42 @@ env:
   REGISTRY_REPO: 'oci://ghcr.io/mirantis/hmc/charts-ci'
 
 jobs:
+  build:
+    concurrency:
+      group: ${{ github.head_ref || github.run_id }}
+      cancel-in-progress: true
+    name: Build and Unit Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: false
+      - name: Lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          args: --timeout 10m0s
+      - name: Verify all generated pieces are up-to-date
+        run: make generate-all && git add -N . && git diff --exit-code
+      - name: Unit tests
+        run: |
+          make test
+      - name: Build HMC controller image
+        run: |
+          make docker-build
+
   push:
     concurrency:
       group: push-${{ github.head_ref || github.run_id }}
       cancel-in-progress: true
-    name: Push Images and Charts to GHCR
+    name: E2E Push Images and Charts to GHCR
     runs-on: ubuntu-latest
+    needs: build
     if: ${{ contains( github.event.pull_request.labels.*.name, 'test e2e') }}
     outputs:
       version: ${{ steps.vars.outputs.version }}
@@ -74,7 +104,7 @@ jobs:
           make helm-push
 
   controller-e2etest:
-    name: Controller
+    name: E2E Controller
     runs-on: ubuntu-latest
     if: ${{ contains( github.event.pull_request.labels.*.name, 'test e2e') }}
     needs: push
@@ -108,7 +138,7 @@ jobs:
             test/e2e/*.log
 
   provider-cloud-e2etest:
-    name: Cloud Providers
+    name: E2E Cloud Providers
     runs-on: ubuntu-latest
     if: ${{ contains( github.event.pull_request.labels.*.name, 'test e2e') }}
     needs: push
@@ -156,7 +186,7 @@ jobs:
             test/e2e/*.log
 
   provider-onprem-e2etest:
-    name: On-Prem Providers
+    name: E2E On-Prem Providers
     runs-on: self-hosted
     if: ${{ contains( github.event.pull_request.labels.*.name, 'test e2e') }}
     needs: push
@@ -207,7 +237,7 @@ jobs:
             test/e2e/*.log
 
   cleanup:
-    name: Cleanup
+    name: E2E Cleanup
     needs:
       - push
       - provider-cloud-e2etest
