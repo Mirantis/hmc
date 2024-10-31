@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"os"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -39,7 +38,7 @@ func EnsureDeleteAllOf(ctx context.Context, cl client.Client, gvk schema.GroupVe
 	var errs error
 	for _, item := range itemsList.Items {
 		if item.DeletionTimestamp.IsZero() {
-			if err := cl.Delete(ctx, &item); err != nil && !apierrors.IsNotFound(err) {
+			if err := cl.Delete(ctx, &item); client.IgnoreNotFound(err) != nil {
 				errs = errors.Join(errs, err)
 				continue
 			}
