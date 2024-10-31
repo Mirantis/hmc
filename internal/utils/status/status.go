@@ -121,8 +121,6 @@ func GetResourceConditions(
 	}, nil
 }
 
-func ObjKindName(unstrObj *unstructured.Unstructured) (name string, kind string) {
-	kind = unstrObj.GetKind()
-	name = unstrObj.GetName()
-	return kind, name
+func ObjKindName(unstrObj *unstructured.Unstructured) (name, kind string) {
+	return unstrObj.GetKind(), unstrObj.GetName()
 }
