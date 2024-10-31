@@ -33,7 +33,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
-	"github.com/Mirantis/hmc/test/utils"
+	"github.com/Mirantis/hmc/internal/utils/status"
 )
 
 type KubeClient struct {
@@ -162,7 +162,7 @@ func (kc *KubeClient) CreateOrUpdateUnstructuredObject(gvr schema.GroupVersionRe
 
 	client := kc.GetDynamicClient(gvr, namespaced)
 
-	kind, name := utils.ObjKindName(obj)
+	kind, name := status.ObjKindName(obj)
 
 	resp, err := client.Get(context.Background(), name, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {

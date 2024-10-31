@@ -6,6 +6,16 @@ metadata:
   {{- include "hmc.labels" . | nindent 4 }}
 rules:
 - apiGroups:
+  - operator.cluster.x-k8s.io
+  resources:
+  - coreproviders
+  - infrastructureproviders
+  - bootstrapproviders
+  - controlplaneproviders
+  verbs:
+  - get
+  - list
+- apiGroups:
   - cluster.x-k8s.io
   resources:
   - clusters
