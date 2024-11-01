@@ -60,3 +60,26 @@ func CurrentNamespace() string {
 	}
 	return DefaultSystemNamespace
 }
+
+func AddOwnerReference(dependent, owner client.Object) (changed bool) {
+	ownerRefs := dependent.GetOwnerReferences()
+	if ownerRefs == nil {
+		ownerRefs = []metav1.OwnerReference{}
+	}
+	for _, ref := range ownerRefs {
+		if ref.UID == owner.GetUID() {
+			return false
+		}
+	}
+	apiVersion, kind := owner.GetObjectKind().GroupVersionKind().ToAPIVersionAndKind()
+	ownerRefs = append(ownerRefs,
+		metav1.OwnerReference{
+			APIVersion: apiVersion,
+			Kind:       kind,
+			Name:       owner.GetName(),
+			UID:        owner.GetUID(),
+		},
+	)
+	dependent.SetOwnerReferences(ownerRefs)
+	return true
+}

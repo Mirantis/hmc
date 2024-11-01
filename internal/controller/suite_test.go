@@ -58,6 +58,7 @@ const (
 var (
 	cfg       *rest.Config
 	k8sClient client.Client
+	mgrClient client.Client
 	testEnv   *envtest.Environment
 	ctx       context.Context
 	cancel    context.CancelFunc
@@ -135,6 +136,7 @@ var _ = BeforeSuite(func() {
 		Metrics:        metricsserver.Options{BindAddress: "0"},
 	})
 	Expect(err).NotTo(HaveOccurred())
+	mgrClient = mgr.GetClient()
 
 	err = hmcmirantiscomv1alpha1.SetupIndexers(ctx, mgr)
 	Expect(err).NotTo(HaveOccurred())
