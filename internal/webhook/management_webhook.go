@@ -114,9 +114,9 @@ func (v *ManagementValidator) ValidateUpdate(ctx context.Context, _, newObj runt
 			return nil, fmt.Errorf("%s: not valid ProviderTemplate %s", invalidMgmtMsg, tplName)
 		}
 
-		for capi := range capiTpl.Status.CAPIContracts {
-			if _, ok := pTpl.Status.CAPIContracts[capi]; !ok {
-				wrongVersions = errors.Join(wrongVersions, fmt.Errorf("core CAPI contract version %s does not support ProviderTemplate %s", capi, pTpl.Name))
+		for capiVersion := range pTpl.Status.CAPIContracts {
+			if _, ok := capiTpl.Status.CAPIContracts[capiVersion]; !ok {
+				wrongVersions = errors.Join(wrongVersions, fmt.Errorf("core CAPI contract versions does not support %s version in the ProviderTemplate %s", capiVersion, pTpl.Name))
 			}
 		}
 	}
