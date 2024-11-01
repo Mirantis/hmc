@@ -55,7 +55,7 @@ func validateCluster(ctx context.Context, kc *kubeclient.KubeClient, clusterName
 		Fail(err.Error())
 	}
 
-	return utils.ValidateConditionsTrue(cluster, []string{})
+	return utils.NewConditionsValidator().IfTrue(cluster)
 }
 
 func validateMachines(ctx context.Context, kc *kubeclient.KubeClient, clusterName string) error {
@@ -79,7 +79,7 @@ func validateMachines(ctx context.Context, kc *kubeclient.KubeClient, clusterNam
 				Fail(err.Error())
 			}
 
-			if err := utils.ValidateConditionsTrue(&md, []string{}); err != nil {
+			if err := utils.NewConditionsValidator().IfTrue(&md); err != nil {
 				return err
 			}
 		}
@@ -90,7 +90,7 @@ func validateMachines(ctx context.Context, kc *kubeclient.KubeClient, clusterNam
 			Fail(err.Error())
 		}
 
-		if err := utils.ValidateConditionsTrue(&machine, []string{}); err != nil {
+		if err := utils.NewConditionsValidator().IfTrue(&machine); err != nil {
 			return err
 		}
 	}
@@ -113,7 +113,7 @@ func validateK0sControlPlanes(ctx context.Context, kc *kubeclient.KubeClient, cl
 
 		// k0s does not use the metav1.Condition type for status.conditions,
 		// instead it uses a custom type so we can't use
-		// ValidateConditionsTrue here, instead we'll check for "ready: true".
+		// ordinary conditions validation here, instead we'll check for "ready: true".
 		objStatus, found, err := unstructured.NestedFieldCopy(controlPlane.Object, "status")
 		if !found {
 			return fmt.Errorf("no status found for %s: %s", objKind, objName)
@@ -151,7 +151,7 @@ func validateAWSManagedControlPlanes(ctx context.Context, kc *kubeclient.KubeCli
 		}
 
 		// EKSControlPlaneCreating condition very often has READY=False, SEVERITY=Info and REASON=created (this is fine).
-		if err := utils.ValidateConditionsTrue(&controlPlane, []string{"EKSControlPlaneCreating"}); err != nil {
+		if err := utils.NewConditionsValidator(utils.WithExcluded([]string{"EKSControlPlaneCreating"})).IfTrue(&controlPlane); err != nil {
 			return err
 		}
 	}
