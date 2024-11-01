@@ -67,7 +67,11 @@ func SetupIndexers(ctx context.Context, mgr ctrl.Manager) error {
 		return err
 	}
 
-	if err := SetupReleaseIndexer(ctx, mgr); err != nil {
+	if err := SetupReleaseVersionIndexer(ctx, mgr); err != nil {
+		return err
+	}
+
+	if err := SetupReleaseTemplatesIndexer(ctx, mgr); err != nil {
 		return err
 	}
 
@@ -96,10 +100,10 @@ func ExtractTemplateName(rawObj client.Object) []string {
 	return []string{cluster.Spec.Template}
 }
 
-const VersionKey = ".spec.version"
+const ReleaseVersionKey = ".spec.version"
 
-func SetupReleaseIndexer(ctx context.Context, mgr ctrl.Manager) error {
-	return mgr.GetFieldIndexer().IndexField(ctx, &Release{}, VersionKey, ExtractReleaseVersion)
+func SetupReleaseVersionIndexer(ctx context.Context, mgr ctrl.Manager) error {
+	return mgr.GetFieldIndexer().IndexField(ctx, &Release{}, ReleaseVersionKey, ExtractReleaseVersion)
 }
 
 func ExtractReleaseVersion(rawObj client.Object) []string {
@@ -108,6 +112,20 @@ func ExtractReleaseVersion(rawObj client.Object) []string {
 		return nil
 	}
 	return []string{release.Spec.Version}
+}
+
+const ReleaseTemplatesKey = "releaseTemplates"
+
+func SetupReleaseTemplatesIndexer(ctx context.Context, mgr ctrl.Manager) error {
+	return mgr.GetFieldIndexer().IndexField(ctx, &Release{}, ReleaseTemplatesKey, ExtractReleaseTemplates)
+}
+
+func ExtractReleaseTemplates(rawObj client.Object) []string {
+	release, ok := rawObj.(*Release)
+	if !ok {
+		return nil
+	}
+	return release.Templates()
 }
 
 const ServicesTemplateKey = ".spec.services[].Template"

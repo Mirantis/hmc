@@ -177,7 +177,7 @@ var _ = Describe("Template Controller", func() {
 
 		It("should successfully reconcile the resource", func() {
 			templateReconciler := TemplateReconciler{
-				Client:                k8sClient,
+				Client:                mgrClient,
 				downloadHelmChartFunc: fakeDownloadHelmChartFunc,
 			}
 			By("Reconciling the ClusterTemplate resource")

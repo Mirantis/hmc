@@ -57,6 +57,15 @@ func (in *Release) ProviderTemplate(name string) string {
 	return ""
 }
 
+func (in *Release) Templates() []string {
+	templates := make([]string, 0, len(in.Spec.Providers)+2)
+	templates = append(templates, in.Spec.HMC.Template, in.Spec.CAPI.Template)
+	for _, p := range in.Spec.Providers {
+		templates = append(templates, p.Template)
+	}
+	return templates
+}
+
 // ReleaseStatus defines the observed state of Release
 type ReleaseStatus struct {
 	// Conditions contains details for the current state of the Release
