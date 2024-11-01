@@ -21,11 +21,11 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/Mirantis/hmc/internal/utils/status"
 	. "github.com/onsi/ginkgo/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	"github.com/Mirantis/hmc/internal/utils/status"
+	"k8s.io/utils/strings/slices"
 )
 
 const (
@@ -114,7 +114,7 @@ func GetProjectDir() (string, error) {
 // ValidateConditionsTrue iterates over the conditions of the given
 // unstructured object and returns an error if any of the conditions are not
 // true.  Conditions are expected to be of type metav1.Condition.
-func ValidateConditionsTrue(unstrObj *unstructured.Unstructured) error {
+func ValidateConditionsTrue(unstrObj *unstructured.Unstructured, excludedConditions []string) error {
 	objKind, objName := status.ObjKindName(unstrObj)
 
 	conditions, err := status.ConditionsFromUnstructured(unstrObj)
@@ -126,6 +126,10 @@ func ValidateConditionsTrue(unstrObj *unstructured.Unstructured) error {
 
 	for _, c := range conditions {
 		if c.Status == metav1.ConditionTrue {
+			continue
+		}
+
+		if slices.Contains(excludedConditions, c.Type) {
 			continue
 		}
 
