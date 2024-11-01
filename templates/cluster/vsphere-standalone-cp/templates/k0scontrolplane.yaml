@@ -48,7 +48,7 @@ spec:
               namespace: kube-system
               values: |
                 image:
-                  repository: {{ .Values.extensions.imageRepository }}
+                  repository: {{ .Values.extensions.imageRepository }}/kube-vip
                 config:
                   address: {{ .Values.controlPlaneEndpointIP }}
                 env:
