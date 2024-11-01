@@ -160,7 +160,7 @@ func TestManagementValidateUpdate(t *testing.T) {
 				),
 			},
 			warnings: admission.Warnings{"The Management object has incompatible CAPI contract versions in ProviderTemplates"},
-			err:      fmt.Sprintf("the Management is invalid: core CAPI contract version %s does not support ProviderTemplate %s", capiVersion, template.DefaultName),
+			err:      fmt.Sprintf("the Management is invalid: core CAPI contract versions does not support %s version in the ProviderTemplate %s", capiVersionOther, template.DefaultName),
 		},
 		{
 			name: "providertemplates match capi contracts, should succeed",
