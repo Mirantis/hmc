@@ -29,13 +29,17 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
 	"github.com/Mirantis/hmc/internal/helm"
+	"github.com/Mirantis/hmc/internal/utils"
 )
 
 const (
@@ -131,8 +135,33 @@ func (r *ProviderTemplateReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		l.Error(err, "Failed to get ProviderTemplate")
 		return ctrl.Result{}, err
 	}
+	changed, err := r.setReleaseOwnership(ctx, providerTemplate)
+	if err != nil {
+		l.Error(err, "Failed to set OwnerReferences")
+		return ctrl.Result{}, err
+	}
+	if changed {
+		l.Info("Updating OwnerReferences with associated Releases")
+		return ctrl.Result{}, r.Update(ctx, providerTemplate)
+	}
 
 	return r.ReconcileTemplate(ctx, providerTemplate)
+}
+
+func (r *ProviderTemplateReconciler) setReleaseOwnership(ctx context.Context, providerTemplate *hmc.ProviderTemplate) (changed bool, err error) {
+	releases := &hmc.ReleaseList{}
+	err = r.Client.List(ctx, releases,
+		client.MatchingFields{hmc.ReleaseTemplatesKey: providerTemplate.Name},
+	)
+	if err != nil {
+		return changed, fmt.Errorf("failed to get associated releases: %w", err)
+	}
+	for _, release := range releases.Items {
+		if utils.AddOwnerReference(providerTemplate, &release) {
+			changed = true
+		}
+	}
+	return changed, nil
 }
 
 type templateCommon interface {
@@ -413,5 +442,26 @@ func (r *ServiceTemplateReconciler) SetupWithManager(mgr ctrl.Manager) error {
 func (r *ProviderTemplateReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&hmc.ProviderTemplate{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
+		Watches(&hmc.Release{},
+			handler.EnqueueRequestsFromMapFunc(func(_ context.Context, o client.Object) []ctrl.Request {
+				release, ok := o.(*hmc.Release)
+				if !ok {
+					return nil
+				}
+				templates := release.Templates()
+				requests := make([]ctrl.Request, 0, len(templates))
+				for _, template := range templates {
+					requests = append(requests, ctrl.Request{
+						NamespacedName: types.NamespacedName{Name: template},
+					})
+				}
+				return requests
+			}),
+			builder.WithPredicates(predicate.Funcs{
+				UpdateFunc:  func(event.UpdateEvent) bool { return false },
+				GenericFunc: func(event.GenericEvent) bool { return false },
+				DeleteFunc:  func(event.DeleteEvent) bool { return false },
+			}),
+		).
 		Complete(r)
 }

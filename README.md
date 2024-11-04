@@ -35,8 +35,7 @@ create a managed cluster.
 > [!NOTE]
 > The HMC installation using Kubernetes manifests does not allow
 > customization of the deployment. To apply a custom HMC configuration, install
-> HMC using the Helm chart.  deployment. If the custom HMC configuration should
-> be applied, install HMC using the Helm chart.
+> HMC using the Helm chart.
 
 ### Development guide
 
@@ -128,7 +127,7 @@ export KUBECONFIG=<path-to-management-kubeconfig>
 kubectl get clustertemplate -n hmc-system
 ```
 
-If you want to deploy hosted control plane template, make sure to check
+If you want to deploy hosted control plate template, make sure to check
 additional notes on Hosted control plane in 2A Docs, see
 [Documentation](#documentation).
 
