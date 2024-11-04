@@ -32,9 +32,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
+	hmc "github.com/Mirantis/hmc/api/v1alpha1"
 	internalutils "github.com/Mirantis/hmc/internal/utils"
 	"github.com/Mirantis/hmc/test/e2e/kubeclient"
 	"github.com/Mirantis/hmc/test/e2e/managedcluster"
+	"github.com/Mirantis/hmc/test/e2e/templates"
 	"github.com/Mirantis/hmc/test/utils"
 )
 
@@ -45,8 +47,12 @@ func TestE2E(t *testing.T) {
 	RunSpecs(t, "e2e suite")
 }
 
+var clusterTemplates map[string][]hmc.AvailableUpgrade
+
 var _ = BeforeSuite(func() {
 	GinkgoT().Setenv(managedcluster.EnvVarNamespace, internalutils.DefaultSystemNamespace)
+
+	ctx := context.Background()
 
 	By("building and deploying the controller-manager")
 	cmd := exec.Command("make", "kind-deploy")
@@ -66,6 +72,9 @@ var _ = BeforeSuite(func() {
 		}
 		return nil
 	}).WithTimeout(15 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
+
+	By(fmt.Sprintf("applying access rules for ClusterTemplates in %s namespace", managedcluster.Namespace))
+	clusterTemplates = templates.ApplyClusterTemplateAccessRules(ctx, kc.CrClient)
 })
 
 var _ = AfterSuite(func() {

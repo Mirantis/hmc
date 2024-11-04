@@ -29,10 +29,13 @@ import (
 	"github.com/Mirantis/hmc/test/e2e/managedcluster"
 	"github.com/Mirantis/hmc/test/e2e/managedcluster/aws"
 	"github.com/Mirantis/hmc/test/e2e/managedcluster/clusteridentity"
+	"github.com/Mirantis/hmc/test/e2e/templates"
 	"github.com/Mirantis/hmc/test/utils"
 )
 
 var _ = Describe("AWS Templates", Label("provider:cloud", "provider:aws"), Ordered, func() {
+	ctx := context.Background()
+
 	var (
 		kc                   *kubeclient.KubeClient
 		standaloneClient     *kubeclient.KubeClient
@@ -123,6 +126,9 @@ var _ = Describe("AWS Templates", Label("provider:cloud", "provider:aws"), Order
 			}
 			return nil
 		}).WithTimeout(15 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
+
+		By(fmt.Sprintf("applying access rules for ClusterTemplates in %s namespace", managedcluster.Namespace))
+		templates.ApplyClusterTemplateAccessRules(ctx, standaloneClient.CrClient)
 
 		// Ensure AWS credentials are set in the standalone cluster.
 		clusteridentity.New(standaloneClient, managedcluster.ProviderAWS)

@@ -39,6 +39,8 @@ const (
 	ProviderVSphere ProviderType = "infrastructure-vsphere"
 
 	providerLabel = "cluster.x-k8s.io/provider"
+
+	Namespace = "default"
 )
 
 type Template string
