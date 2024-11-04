@@ -27,17 +27,23 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 
+	hmcmirantiscomv1alpha1 "github.com/Mirantis/hmc/api/v1alpha1"
 	"github.com/Mirantis/hmc/internal/utils/status"
 )
 
+var scheme = runtime.NewScheme()
+
 type KubeClient struct {
 	Client         kubernetes.Interface
+	CrClient       crclient.Client
 	ExtendedClient apiextensionsclientset.Interface
 	Config         *rest.Config
 
@@ -132,12 +138,19 @@ func newKubeClient(configBytes []byte, namespace string) *KubeClient {
 	clientSet, err := kubernetes.NewForConfig(config)
 	Expect(err).NotTo(HaveOccurred(), "failed to initialize kubernetes client")
 
+	err = hmcmirantiscomv1alpha1.AddToScheme(scheme)
+	Expect(err).NotTo(HaveOccurred(), "failed to add HMC API to scheme")
+
+	crClient, err := crclient.New(config, crclient.Options{Scheme: scheme})
+	Expect(err).NotTo(HaveOccurred(), "failed to create controller runtime client")
+
 	extendedClientSet, err := apiextensionsclientset.NewForConfig(config)
 	Expect(err).NotTo(HaveOccurred(), "failed to initialize apiextensions clientset")
 
 	return &KubeClient{
 		Namespace:      namespace,
 		Client:         clientSet,
+		CrClient:       crClient,
 		ExtendedClient: extendedClientSet,
 		Config:         config,
 	}

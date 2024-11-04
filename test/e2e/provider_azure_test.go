@@ -29,10 +29,13 @@ import (
 	"github.com/Mirantis/hmc/test/e2e/managedcluster"
 	"github.com/Mirantis/hmc/test/e2e/managedcluster/azure"
 	"github.com/Mirantis/hmc/test/e2e/managedcluster/clusteridentity"
+	"github.com/Mirantis/hmc/test/e2e/templates"
 	"github.com/Mirantis/hmc/test/utils"
 )
 
 var _ = Context("Azure Templates", Label("provider:cloud", "provider:azure"), Ordered, func() {
+	ctx := context.Background()
+
 	var (
 		kc                      *kubeclient.KubeClient
 		standaloneClient        *kubeclient.KubeClient
@@ -122,6 +125,9 @@ var _ = Context("Azure Templates", Label("provider:cloud", "provider:azure"), Or
 			}
 			return nil
 		}).WithTimeout(15 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
+
+		By(fmt.Sprintf("applying access rules for ClusterTemplates in %s namespace", managedcluster.Namespace))
+		templates.ApplyClusterTemplateAccessRules(ctx, standaloneClient.CrClient)
 
 		By("Create azure credential secret")
 		clusteridentity.New(standaloneClient, managedcluster.ProviderAzure)
