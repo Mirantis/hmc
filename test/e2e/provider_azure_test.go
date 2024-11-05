@@ -49,7 +49,7 @@ var _ = Context("Azure Templates", Label("provider:cloud", "provider:azure"), Or
 	BeforeAll(func() {
 		By("ensuring Azure credentials are set")
 		kc = kubeclient.NewFromLocal(internalutils.DefaultSystemNamespace)
-		ci := clusteridentity.New(kc, managedcluster.ProviderAzure)
+		ci := clusteridentity.New(kc, managedcluster.ProviderAzure, managedcluster.Namespace)
 		Expect(os.Setenv(managedcluster.EnvVarAzureClusterIdentity, ci.IdentityName)).Should(Succeed())
 	})
 
@@ -85,11 +85,12 @@ var _ = Context("Azure Templates", Label("provider:cloud", "provider:azure"), Or
 		sd := managedcluster.GetUnstructured(managedcluster.TemplateAzureStandaloneCP)
 		sdName = sd.GetName()
 
-		standaloneDeleteFunc := kc.CreateManagedCluster(context.Background(), sd)
+		standaloneDeleteFunc := kc.CreateManagedCluster(context.Background(), sd, managedcluster.Namespace)
 
 		// verify the standalone cluster is deployed correctly
 		deploymentValidator := managedcluster.NewProviderValidator(
 			managedcluster.TemplateAzureStandaloneCP,
+			managedcluster.Namespace,
 			sdName,
 			managedcluster.ValidationActionDeploy,
 		)
@@ -106,7 +107,7 @@ var _ = Context("Azure Templates", Label("provider:cloud", "provider:azure"), Or
 		hdName := hd.GetName()
 
 		var kubeCfgPath string
-		kubeCfgPath, kubecfgDeleteFunc = kc.WriteKubeconfig(context.Background(), sdName)
+		kubeCfgPath, kubecfgDeleteFunc = kc.WriteKubeconfig(context.Background(), managedcluster.Namespace, sdName)
 
 		By("Deploy onto standalone cluster")
 		GinkgoT().Setenv("KUBECONFIG", kubeCfgPath)
@@ -115,7 +116,7 @@ var _ = Context("Azure Templates", Label("provider:cloud", "provider:azure"), Or
 		Expect(err).NotTo(HaveOccurred())
 		Expect(os.Unsetenv("KUBECONFIG")).To(Succeed())
 
-		standaloneClient = kc.NewFromCluster(context.Background(), internalutils.DefaultSystemNamespace, sdName)
+		standaloneClient = kc.NewFromCluster(context.Background(), managedcluster.Namespace, sdName)
 		// verify the cluster is ready prior to creating credentials
 		Eventually(func() error {
 			err := verifyControllersUp(standaloneClient)
@@ -130,20 +131,21 @@ var _ = Context("Azure Templates", Label("provider:cloud", "provider:azure"), Or
 		templates.ApplyClusterTemplateAccessRules(ctx, standaloneClient.CrClient)
 
 		By("Create azure credential secret")
-		clusteridentity.New(standaloneClient, managedcluster.ProviderAzure)
+		clusteridentity.New(standaloneClient, managedcluster.ProviderAzure, managedcluster.Namespace)
 
 		By("Create default storage class for azure-disk CSI driver")
 		azure.CreateDefaultStorageClass(standaloneClient)
 
 		templateBy(managedcluster.TemplateAzureHostedCP, "creating a ManagedCluster")
-		hostedDeleteFunc = standaloneClient.CreateManagedCluster(context.Background(), hd)
+		hostedDeleteFunc = standaloneClient.CreateManagedCluster(context.Background(), hd, managedcluster.Namespace)
 
 		templateBy(managedcluster.TemplateAzureHostedCP, "Patching AzureCluster to ready")
-		managedcluster.PatchHostedClusterReady(standaloneClient, managedcluster.ProviderAzure, hdName)
+		managedcluster.PatchHostedClusterReady(standaloneClient, managedcluster.ProviderAzure, managedcluster.Namespace, hdName)
 
 		templateBy(managedcluster.TemplateAzureHostedCP, "waiting for infrastructure to deploy successfully")
 		deploymentValidator = managedcluster.NewProviderValidator(
 			managedcluster.TemplateAzureHostedCP,
+			managedcluster.Namespace,
 			hdName,
 			managedcluster.ValidationActionDeploy,
 		)
@@ -161,6 +163,7 @@ var _ = Context("Azure Templates", Label("provider:cloud", "provider:azure"), Or
 
 		deploymentValidator = managedcluster.NewProviderValidator(
 			managedcluster.TemplateAzureHostedCP,
+			managedcluster.Namespace,
 			hdName,
 			managedcluster.ValidationActionDelete,
 		)
@@ -171,6 +174,7 @@ var _ = Context("Azure Templates", Label("provider:cloud", "provider:azure"), Or
 
 		deploymentValidator = managedcluster.NewProviderValidator(
 			managedcluster.TemplateAzureStandaloneCP,
+			managedcluster.Namespace,
 			hdName,
 			managedcluster.ValidationActionDelete,
 		)

@@ -43,7 +43,7 @@ var _ = Context("vSphere Templates", Label("provider:onprem", "provider:vsphere"
 		By("creating kube client")
 		kc = kubeclient.NewFromLocal(internalutils.DefaultSystemNamespace)
 		By("providing cluster identity")
-		ci := clusteridentity.New(kc, managedcluster.ProviderVSphere)
+		ci := clusteridentity.New(kc, managedcluster.ProviderVSphere, managedcluster.Namespace)
 		By("setting VSPHERE_CLUSTER_IDENTITY env variable")
 		Expect(os.Setenv(managedcluster.EnvVarVSphereClusterIdentity, ci.IdentityName)).Should(Succeed())
 	})
@@ -66,6 +66,7 @@ var _ = Context("vSphere Templates", Label("provider:onprem", "provider:vsphere"
 		if deleteFunc != nil && !noCleanup() {
 			deletionValidator := managedcluster.NewProviderValidator(
 				managedcluster.TemplateVSphereStandaloneCP,
+				managedcluster.Namespace,
 				clusterName,
 				managedcluster.ValidationActionDelete,
 			)
@@ -83,11 +84,12 @@ var _ = Context("vSphere Templates", Label("provider:onprem", "provider:vsphere"
 		d := managedcluster.GetUnstructured(managedcluster.TemplateVSphereStandaloneCP)
 		clusterName = d.GetName()
 
-		deleteFunc = kc.CreateManagedCluster(context.Background(), d)
+		deleteFunc = kc.CreateManagedCluster(context.Background(), d, managedcluster.Namespace)
 
 		By("waiting for infrastructure providers to deploy successfully")
 		deploymentValidator := managedcluster.NewProviderValidator(
 			managedcluster.TemplateVSphereStandaloneCP,
+			managedcluster.Namespace,
 			clusterName,
 			managedcluster.ValidationActionDeploy,
 		)

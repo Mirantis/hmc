@@ -39,7 +39,7 @@ func PopulateHostedTemplateVars(ctx context.Context, kc *kubeclient.KubeClient, 
 		Group:    "infrastructure.cluster.x-k8s.io",
 		Version:  "v1beta2",
 		Resource: "awsclusters",
-	}, true)
+	}, managedcluster.Namespace)
 
 	awsCluster, err := c.Get(ctx, clusterName, metav1.GetOptions{})
 	Expect(err).NotTo(HaveOccurred(), "failed to get AWS cluster")
