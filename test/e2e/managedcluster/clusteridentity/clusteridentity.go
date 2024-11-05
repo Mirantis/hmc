@@ -73,7 +73,7 @@ func New(kc *kubeclient.KubeClient, provider managedcluster.ProviderType) *Clust
 			"secretRef": secretName,
 			"allowedNamespaces": map[string]any{
 				"selector": map[string]any{
-					"matchLabels": map[string]any{},
+					"matchLabels": make(map[string]any),
 				},
 			},
 		}
@@ -85,7 +85,7 @@ func New(kc *kubeclient.KubeClient, provider managedcluster.ProviderType) *Clust
 			"clientSecret": os.Getenv(managedcluster.EnvVarAzureClientSecret),
 		}
 		spec = map[string]any{
-			"allowedNamespaces": map[string]any{},
+			"allowedNamespaces": make(map[string]any),
 			"clientID":          os.Getenv(managedcluster.EnvVarAzureClientID),
 			"clientSecret": map[string]any{
 				"name":      secretName,
@@ -107,7 +107,7 @@ func New(kc *kubeclient.KubeClient, provider managedcluster.ProviderType) *Clust
 			"secretName": secretName,
 			"allowedNamespaces": map[string]any{
 				"selector": map[string]any{
-					"matchLabels": map[string]any{},
+					"matchLabels": make(map[string]any),
 				},
 			},
 		}

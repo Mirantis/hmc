@@ -150,15 +150,12 @@ var _ = Describe("Template Chain Controller", func() {
 		BeforeEach(func() {
 			By("creating the system and test namespaces")
 			for _, ns := range []string{namespace.Name, utils.DefaultSystemNamespace} {
-				namespace := &corev1.Namespace{}
-				err := k8sClient.Get(ctx, types.NamespacedName{Name: ns}, namespace)
-				if err != nil && errors.IsNotFound(err) {
-					namespace := &corev1.Namespace{
+				if err := k8sClient.Get(ctx, types.NamespacedName{Name: ns}, &corev1.Namespace{}); errors.IsNotFound(err) {
+					Expect(k8sClient.Create(ctx, &corev1.Namespace{
 						ObjectMeta: metav1.ObjectMeta{
 							Name: ns,
 						},
-					}
-					Expect(k8sClient.Create(ctx, namespace)).To(Succeed())
+					})).To(Succeed())
 				}
 			}
 

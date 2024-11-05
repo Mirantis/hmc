@@ -64,19 +64,19 @@ func (v *ManagedClusterValidator) ValidateCreate(ctx context.Context, obj runtim
 
 	template, err := v.getManagedClusterTemplate(ctx, managedCluster.Namespace, managedCluster.Spec.Template)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %v", invalidManagedClusterMsg, err)
+		return nil, fmt.Errorf("%s: %w", invalidManagedClusterMsg, err)
 	}
 
 	if err := isTemplateValid(template); err != nil {
-		return nil, fmt.Errorf("%s: %v", invalidManagedClusterMsg, err)
+		return nil, fmt.Errorf("%s: %w", invalidManagedClusterMsg, err)
 	}
 
 	if err := validateK8sCompatibility(ctx, v.Client, template, managedCluster); err != nil {
-		return admission.Warnings{"Failed to validate k8s version compatibility with ServiceTemplates"}, fmt.Errorf("failed to validate k8s compatibility: %v", err)
+		return admission.Warnings{"Failed to validate k8s version compatibility with ServiceTemplates"}, fmt.Errorf("failed to validate k8s compatibility: %w", err)
 	}
 
 	if err := v.validateCredential(ctx, managedCluster, template); err != nil {
-		return nil, fmt.Errorf("%s: %v", invalidManagedClusterMsg, err)
+		return nil, fmt.Errorf("%s: %w", invalidManagedClusterMsg, err)
 	}
 
 	return nil, nil
@@ -97,7 +97,7 @@ func (v *ManagedClusterValidator) ValidateUpdate(ctx context.Context, oldObj, ne
 
 	template, err := v.getManagedClusterTemplate(ctx, newManagedCluster.Namespace, newTemplate)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %v", invalidManagedClusterMsg, err)
+		return nil, fmt.Errorf("%s: %w", invalidManagedClusterMsg, err)
 	}
 
 	if oldTemplate != newTemplate {
@@ -107,16 +107,16 @@ func (v *ManagedClusterValidator) ValidateUpdate(ctx context.Context, oldObj, ne
 		}
 
 		if err := isTemplateValid(template); err != nil {
-			return nil, fmt.Errorf("%s: %v", invalidManagedClusterMsg, err)
+			return nil, fmt.Errorf("%s: %w", invalidManagedClusterMsg, err)
 		}
 
 		if err := validateK8sCompatibility(ctx, v.Client, template, newManagedCluster); err != nil {
-			return admission.Warnings{"Failed to validate k8s version compatibility with ServiceTemplates"}, fmt.Errorf("failed to validate k8s compatibility: %v", err)
+			return admission.Warnings{"Failed to validate k8s version compatibility with ServiceTemplates"}, fmt.Errorf("failed to validate k8s compatibility: %w", err)
 		}
 	}
 
 	if err := v.validateCredential(ctx, newManagedCluster, template); err != nil {
-		return nil, fmt.Errorf("%s: %v", invalidManagedClusterMsg, err)
+		return nil, fmt.Errorf("%s: %w", invalidManagedClusterMsg, err)
 	}
 
 	return nil, nil
@@ -182,11 +182,11 @@ func (v *ManagedClusterValidator) Default(ctx context.Context, obj runtime.Objec
 
 	template, err := v.getManagedClusterTemplate(ctx, managedCluster.Namespace, managedCluster.Spec.Template)
 	if err != nil {
-		return fmt.Errorf("could not get template for the managedcluster: %v", err)
+		return fmt.Errorf("could not get template for the managedcluster: %w", err)
 	}
 
 	if err := isTemplateValid(template); err != nil {
-		return fmt.Errorf("template is invalid: %v", err)
+		return fmt.Errorf("template is invalid: %w", err)
 	}
 
 	if template.Status.Config == nil {

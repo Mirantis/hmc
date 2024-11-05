@@ -70,15 +70,15 @@ func PropagateVSphereSecrets(ctx context.Context, cfg *PropagationCfg) error {
 	}
 	ccmSecret, ccmConfig, err := generateVSphereCCMConfigs(vsphereCluster, vsphereSecret, &vsphereMachines.Items[0])
 	if err != nil {
-		return fmt.Errorf("failed to generate VSphere CCM config: %s", err)
+		return fmt.Errorf("failed to generate VSphere CCM config: %w", err)
 	}
 	csiSecret, err := generateVSphereCSISecret(vsphereCluster, vsphereSecret, &vsphereMachines.Items[0])
 	if err != nil {
-		return fmt.Errorf("failed to generate VSphere CSI secret: %s", err)
+		return fmt.Errorf("failed to generate VSphere CSI secret: %w", err)
 	}
 
 	if err := applyCCMConfigs(ctx, cfg.KubeconfSecret, ccmSecret, ccmConfig, csiSecret); err != nil {
-		return fmt.Errorf("failed to apply VSphere CCM/CSI secrets: %s", err)
+		return fmt.Errorf("failed to apply VSphere CCM/CSI secrets: %w", err)
 	}
 
 	return nil
@@ -113,7 +113,7 @@ func generateVSphereCCMConfigs(vCl *capv.VSphereCluster, vScrt *corev1.Secret, v
 
 	ccmCfgYaml, err := yaml.Marshal(ccmCfg)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to marshal CCM config: %s", err)
+		return nil, nil, fmt.Errorf("failed to marshal CCM config: %w", err)
 	}
 
 	cmData := map[string]string{
@@ -150,11 +150,11 @@ datacenters = "{{ .Datacenter }}"
 
 	tmpl, err := texttemplate.New("csiCfg").Parse(csiCfg)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate CSI secret (tmpl parse): %s", err)
+		return nil, fmt.Errorf("failed to generate CSI secret (tmpl parse): %w", err)
 	}
 	var buf bytes.Buffer
 	if err := tmpl.Execute(&buf, fields); err != nil {
-		return nil, fmt.Errorf("failed to generate CSI secret (tmpl execute): %s", err)
+		return nil, fmt.Errorf("failed to generate CSI secret (tmpl execute): %w", err)
 	}
 
 	secretData := map[string][]byte{

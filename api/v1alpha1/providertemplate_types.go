@@ -50,7 +50,7 @@ func (t *ProviderTemplate) FillStatusWithProviders(annotations map[string]string
 
 	contractsStatus, err := getCAPIContracts(t.Kind, t.Spec.CAPIContracts, annotations)
 	if err != nil {
-		return fmt.Errorf("failed to get CAPI contract versions for ProviderTemplate %s: %v", t.GetName(), err)
+		return fmt.Errorf("failed to get CAPI contract versions for ProviderTemplate %s: %w", t.GetName(), err)
 	}
 
 	t.Status.CAPIContracts = contractsStatus

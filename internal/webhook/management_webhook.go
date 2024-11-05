@@ -122,7 +122,7 @@ func (v *ManagementValidator) ValidateUpdate(ctx context.Context, _, newObj runt
 	}
 
 	if wrongVersions != nil {
-		return admission.Warnings{"The Management object has incompatible CAPI contract versions in ProviderTemplates"}, fmt.Errorf("%s: %s", invalidMgmtMsg, wrongVersions)
+		return admission.Warnings{"The Management object has incompatible CAPI contract versions in ProviderTemplates"}, fmt.Errorf("%s: %s", invalidMgmtMsg, wrongVersions.Error())
 	}
 
 	return nil, nil

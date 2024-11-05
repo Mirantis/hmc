@@ -52,11 +52,11 @@ func PropagateAzureSecrets(ctx context.Context, cfg *PropagationCfg) error {
 
 	ccmSecret, err := generateAzureCCMSecret(azureCluster, azureClIdty, azureSecret)
 	if err != nil {
-		return fmt.Errorf("failed to generate Azure CCM secret: %s", err)
+		return fmt.Errorf("failed to generate Azure CCM secret: %w", err)
 	}
 
 	if err := applyCCMConfigs(ctx, cfg.KubeconfSecret, ccmSecret); err != nil {
-		return fmt.Errorf("failed to apply Azure CCM secret: %s", err)
+		return fmt.Errorf("failed to apply Azure CCM secret: %w", err)
 	}
 
 	return nil
@@ -85,7 +85,7 @@ func generateAzureCCMSecret(azureCluster *capz.AzureCluster, azureClIdty *capz.A
 	}
 	azureJSON, err := json.Marshal(azureJSONMap)
 	if err != nil {
-		return nil, fmt.Errorf("error marshalling azure.json: %s", err)
+		return nil, fmt.Errorf("error marshalling azure.json: %w", err)
 	}
 
 	secretData := map[string][]byte{

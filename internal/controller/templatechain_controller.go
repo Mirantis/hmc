@@ -90,7 +90,7 @@ func (r *TemplateChainReconciler) ReconcileTemplateChain(ctx context.Context, te
 
 	systemTemplates, managedTemplates, err := getCurrentTemplates(ctx, r.Client, templateChain.TemplateKind(), r.SystemNamespace, templateChain.GetNamespace(), templateChain.GetName())
 	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to get current templates: %v", err)
+		return ctrl.Result{}, fmt.Errorf("failed to get current templates: %w", err)
 	}
 
 	var (

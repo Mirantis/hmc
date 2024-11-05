@@ -71,7 +71,7 @@ func (t *ClusterTemplate) FillStatusWithProviders(annotations map[string]string)
 
 	contractsStatus, err := getCAPIContracts(t.Kind, t.Spec.ProviderContracts, annotations)
 	if err != nil {
-		return fmt.Errorf("failed to get CAPI contract versions for ClusterTemplate %s/%s: %v", t.GetNamespace(), t.GetName(), err)
+		return fmt.Errorf("failed to get CAPI contract versions for ClusterTemplate %s/%s: %w", t.GetNamespace(), t.GetName(), err)
 	}
 
 	t.Status.ProviderContracts = contractsStatus
