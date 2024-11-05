@@ -62,16 +62,16 @@ func NewFromLocal(namespace string) *KubeClient {
 // the kubeconfig from secret it needs an existing kubeclient.
 func (kc *KubeClient) NewFromCluster(ctx context.Context, namespace, clusterName string) *KubeClient {
 	GinkgoHelper()
-	return newKubeClient(kc.getKubeconfigSecretData(ctx, clusterName), namespace)
+	return newKubeClient(kc.getKubeconfigSecretData(ctx, namespace, clusterName), namespace)
 }
 
 // WriteKubeconfig writes the kubeconfig for the given clusterName to the
 // test/e2e directory returning the path to the file and a function to delete
 // it later.
-func (kc *KubeClient) WriteKubeconfig(ctx context.Context, clusterName string) (string, func() error) {
+func (kc *KubeClient) WriteKubeconfig(ctx context.Context, namespace, clusterName string) (string, func() error) {
 	GinkgoHelper()
 
-	secretData := kc.getKubeconfigSecretData(ctx, clusterName)
+	secretData := kc.getKubeconfigSecretData(ctx, namespace, clusterName)
 
 	dir, err := os.Getwd()
 	Expect(err).NotTo(HaveOccurred())
@@ -95,11 +95,11 @@ func (kc *KubeClient) WriteKubeconfig(ctx context.Context, clusterName string) (
 	return path, deleteFunc
 }
 
-func (kc *KubeClient) getKubeconfigSecretData(ctx context.Context, clusterName string) []byte {
+func (kc *KubeClient) getKubeconfigSecretData(ctx context.Context, namespace, clusterName string) []byte {
 	GinkgoHelper()
 
-	secret, err := kc.Client.CoreV1().Secrets(kc.Namespace).Get(ctx, clusterName+"-kubeconfig", metav1.GetOptions{})
-	Expect(err).NotTo(HaveOccurred(), "failed to get cluster: %q kubeconfig secret", clusterName)
+	secret, err := kc.Client.CoreV1().Secrets(namespace).Get(ctx, clusterName+"-kubeconfig", metav1.GetOptions{})
+	Expect(err).NotTo(HaveOccurred(), "failed to get cluster: %q kubeconfig secret in %s namespace", clusterName, namespace)
 
 	secretData, ok := secret.Data["value"]
 	Expect(ok).To(BeTrue(), "kubeconfig secret %q has no 'value' key", clusterName)
@@ -157,23 +157,23 @@ func newKubeClient(configBytes []byte, namespace string) *KubeClient {
 }
 
 // GetDynamicClient returns a dynamic client for the given GroupVersionResource.
-func (kc *KubeClient) GetDynamicClient(gvr schema.GroupVersionResource, namespaced bool) dynamic.ResourceInterface { //nolint:revive
+func (kc *KubeClient) GetDynamicClient(gvr schema.GroupVersionResource, namespace string) dynamic.ResourceInterface {
 	GinkgoHelper()
 
 	client, err := dynamic.NewForConfig(kc.Config)
 	Expect(err).NotTo(HaveOccurred(), "failed to create dynamic client for resource: %s", gvr.String())
 
-	if !namespaced {
+	if namespace == "" {
 		return client.Resource(gvr)
 	}
 
-	return client.Resource(gvr).Namespace(kc.Namespace)
+	return client.Resource(gvr).Namespace(namespace)
 }
 
-func (kc *KubeClient) CreateOrUpdateUnstructuredObject(gvr schema.GroupVersionResource, obj *unstructured.Unstructured, namespaced bool) {
+func (kc *KubeClient) CreateOrUpdateUnstructuredObject(gvr schema.GroupVersionResource, obj *unstructured.Unstructured, namespace string) {
 	GinkgoHelper()
 
-	client := kc.GetDynamicClient(gvr, namespaced)
+	client := kc.GetDynamicClient(gvr, namespace)
 
 	kind, name := status.ObjKindName(obj)
 
@@ -194,18 +194,22 @@ func (kc *KubeClient) CreateOrUpdateUnstructuredObject(gvr schema.GroupVersionRe
 // namespace and returns a DeleteFunc to clean up the deployment.
 // The DeleteFunc is a no-op if the deployment has already been deleted.
 func (kc *KubeClient) CreateManagedCluster(
-	ctx context.Context, managedcluster *unstructured.Unstructured,
+	ctx context.Context, managedcluster *unstructured.Unstructured, namespace string,
 ) func() error {
 	GinkgoHelper()
 
 	kind := managedcluster.GetKind()
 	Expect(kind).To(Equal("ManagedCluster"))
 
+	if namespace != "" {
+		managedcluster.SetNamespace(namespace)
+	}
+
 	client := kc.GetDynamicClient(schema.GroupVersionResource{
 		Group:    "hmc.mirantis.com",
 		Version:  "v1alpha1",
 		Resource: "managedclusters",
-	}, true)
+	}, namespace)
 
 	_, err := client.Create(ctx, managedcluster, metav1.CreateOptions{})
 	if !apierrors.IsAlreadyExists(err) {
@@ -222,14 +226,14 @@ func (kc *KubeClient) CreateManagedCluster(
 }
 
 // GetCluster returns a Cluster resource by name.
-func (kc *KubeClient) GetCluster(ctx context.Context, clusterName string) (*unstructured.Unstructured, error) {
+func (kc *KubeClient) GetCluster(ctx context.Context, namespace, clusterName string) (*unstructured.Unstructured, error) {
 	gvr := schema.GroupVersionResource{
 		Group:    "cluster.x-k8s.io",
 		Version:  "v1beta1",
 		Resource: "clusters",
 	}
 
-	client := kc.GetDynamicClient(gvr, true)
+	client := kc.GetDynamicClient(gvr, namespace)
 
 	cluster, err := client.Get(ctx, clusterName, metav1.GetOptions{})
 	if err != nil {
@@ -242,9 +246,9 @@ func (kc *KubeClient) GetCluster(ctx context.Context, clusterName string) (*unst
 // listResource returns a list of resources for the given GroupVersionResource
 // affiliated with the given clusterName.
 func (kc *KubeClient) listResource(
-	ctx context.Context, gvr schema.GroupVersionResource, clusterName string,
+	ctx context.Context, gvr schema.GroupVersionResource, namespace, clusterName string,
 ) ([]unstructured.Unstructured, error) {
-	client := kc.GetDynamicClient(gvr, true)
+	client := kc.GetDynamicClient(gvr, namespace)
 
 	resources, err := client.List(ctx, metav1.ListOptions{
 		LabelSelector: "cluster.x-k8s.io/cluster-name=" + clusterName,
@@ -257,20 +261,20 @@ func (kc *KubeClient) listResource(
 }
 
 // ListMachines returns a list of Machine resources for the given cluster.
-func (kc *KubeClient) ListMachines(ctx context.Context, clusterName string) ([]unstructured.Unstructured, error) {
+func (kc *KubeClient) ListMachines(ctx context.Context, namespace, clusterName string) ([]unstructured.Unstructured, error) {
 	GinkgoHelper()
 
 	return kc.listResource(ctx, schema.GroupVersionResource{
 		Group:    "cluster.x-k8s.io",
 		Version:  "v1beta1",
 		Resource: "machines",
-	}, clusterName)
+	}, namespace, clusterName)
 }
 
 // ListMachineDeployments returns a list of MachineDeployment resources for the
 // given cluster.
 func (kc *KubeClient) ListMachineDeployments(
-	ctx context.Context, clusterName string,
+	ctx context.Context, namespace, clusterName string,
 ) ([]unstructured.Unstructured, error) {
 	GinkgoHelper()
 
@@ -278,11 +282,11 @@ func (kc *KubeClient) ListMachineDeployments(
 		Group:    "cluster.x-k8s.io",
 		Version:  "v1beta1",
 		Resource: "machinedeployments",
-	}, clusterName)
+	}, namespace, clusterName)
 }
 
 func (kc *KubeClient) ListK0sControlPlanes(
-	ctx context.Context, clusterName string,
+	ctx context.Context, namespace, clusterName string,
 ) ([]unstructured.Unstructured, error) {
 	GinkgoHelper()
 
@@ -290,5 +294,5 @@ func (kc *KubeClient) ListK0sControlPlanes(
 		Group:    "controlplane.cluster.x-k8s.io",
 		Version:  "v1beta1",
 		Resource: "k0scontrolplanes",
-	}, clusterName)
+	}, namespace, clusterName)
 }

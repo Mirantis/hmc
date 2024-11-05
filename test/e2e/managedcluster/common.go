@@ -34,7 +34,7 @@ import (
 // See: https://docs.k0smotron.io/stable/capi-aws/#prepare-the-aws-infra-provider
 // Use Eventually as the resource might not be available immediately following
 // a ManagedCluster creation.
-func PatchHostedClusterReady(kc *kubeclient.KubeClient, provider ProviderType, clusterName string) {
+func PatchHostedClusterReady(kc *kubeclient.KubeClient, provider ProviderType, namespace, clusterName string) {
 	GinkgoHelper()
 
 	ctx := context.Background()
@@ -61,7 +61,7 @@ func PatchHostedClusterReady(kc *kubeclient.KubeClient, provider ProviderType, c
 		Group:    "infrastructure.cluster.x-k8s.io",
 		Version:  version,
 		Resource: resource,
-	}, true)
+	}, namespace)
 
 	trueStatus := map[string]any{
 		"status": map[string]any{

@@ -31,6 +31,7 @@ import (
 
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
 	"github.com/Mirantis/hmc/test/e2e/kubeclient"
+	"github.com/Mirantis/hmc/test/e2e/managedcluster"
 )
 
 func getAzureInfo(ctx context.Context, name string, kc *kubeclient.KubeClient) map[string]any {
@@ -41,7 +42,7 @@ func getAzureInfo(ctx context.Context, name string, kc *kubeclient.KubeClient) m
 		Resource: "azureclusters",
 	}
 
-	dc := kc.GetDynamicClient(resourceID, true)
+	dc := kc.GetDynamicClient(resourceID, managedcluster.Namespace)
 	list, err := dc.List(ctx, metav1.ListOptions{
 		LabelSelector: labels.SelectorFromSet(map[string]string{hmc.FluxHelmChartNameKey: name}).String(),
 	})
