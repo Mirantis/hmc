@@ -150,6 +150,19 @@ var _ = Describe("MultiClusterService Controller", func() {
 			}
 			Expect(k8sClient.Create(ctx, serviceTemplate)).To(Succeed())
 
+			By("reconciling ServiceTemplate used by MultiClusterService")
+			templateReconciler := TemplateReconciler{
+				Client:                k8sClient,
+				downloadHelmChartFunc: fakeDownloadHelmChartFunc,
+			}
+			serviceTemplateReconciler := &ServiceTemplateReconciler{TemplateReconciler: templateReconciler}
+			_, err = serviceTemplateReconciler.Reconcile(ctx, reconcile.Request{NamespacedName: serviceTemplateRef})
+			Expect(err).NotTo(HaveOccurred())
+
+			By("having the valid service template status")
+			Expect(k8sClient.Get(ctx, serviceTemplateRef, serviceTemplate)).To(Succeed())
+			Expect(serviceTemplate.Status.Valid && serviceTemplate.Status.ValidationError == "").To(BeTrue())
+
 			By("creating MultiClusterService")
 			err = k8sClient.Get(ctx, multiClusterServiceRef, multiClusterService)
 			if err != nil && apierrors.IsNotFound(err) {
@@ -204,19 +217,10 @@ var _ = Describe("MultiClusterService Controller", func() {
 		})
 
 		It("should successfully reconcile the resource", func() {
-			By("reconciling ServiceTemplate used by MultiClusterService")
-			templateReconciler := TemplateReconciler{
-				Client:                k8sClient,
-				downloadHelmChartFunc: fakeDownloadHelmChartFunc,
-			}
-			serviceTemplateReconciler := &ServiceTemplateReconciler{TemplateReconciler: templateReconciler}
-			_, err := serviceTemplateReconciler.Reconcile(ctx, reconcile.Request{NamespacedName: serviceTemplateRef})
-			Expect(err).NotTo(HaveOccurred())
-
 			By("reconciling MultiClusterService")
 			multiClusterServiceReconciler := &MultiClusterServiceReconciler{Client: k8sClient}
 
-			_, err = multiClusterServiceReconciler.Reconcile(ctx, reconcile.Request{NamespacedName: multiClusterServiceRef})
+			_, err := multiClusterServiceReconciler.Reconcile(ctx, reconcile.Request{NamespacedName: multiClusterServiceRef})
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(k8sClient.Get, 1*time.Minute, 5*time.Second).WithArguments(ctx, clusterProfileRef, clusterProfile).ShouldNot(HaveOccurred())

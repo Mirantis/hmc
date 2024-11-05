@@ -27,6 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
@@ -38,8 +39,9 @@ var _ = Describe("ManagedCluster Controller", func() {
 			managedClusterName      = "test-managed-cluster"
 			managedClusterNamespace = "test"
 
-			templateName   = "test-template"
-			credentialName = "test-credential"
+			templateName    = "test-template"
+			svcTemplateName = "test-svc-template"
+			credentialName  = "test-credential"
 		)
 
 		ctx := context.Background()
@@ -50,6 +52,7 @@ var _ = Describe("ManagedCluster Controller", func() {
 		}
 		managedCluster := &hmc.ManagedCluster{}
 		template := &hmc.ClusterTemplate{}
+		svcTemplate := &hmc.ServiceTemplate{}
 		management := &hmc.Management{}
 		credential := &hmc.Credential{}
 		namespace := &corev1.Namespace{}
@@ -66,7 +69,7 @@ var _ = Describe("ManagedCluster Controller", func() {
 				Expect(k8sClient.Create(ctx, namespace)).To(Succeed())
 			}
 
-			By("creating the custom resource for the Kind Template")
+			By("creating the custom resource for the Kind ClusterTemplate")
 			err = k8sClient.Get(ctx, typeNamespacedName, template)
 			if err != nil && errors.IsNotFound(err) {
 				template = &hmc.ClusterTemplate{
@@ -97,6 +100,35 @@ var _ = Describe("ManagedCluster Controller", func() {
 					Providers: hmc.Providers{"infrastructure-aws"},
 				}
 				Expect(k8sClient.Status().Update(ctx, template)).To(Succeed())
+			}
+
+			By("creating the custom resource for the Kind ServiceTemplate")
+			err = k8sClient.Get(ctx, client.ObjectKey{Namespace: managedClusterNamespace, Name: svcTemplateName}, svcTemplate)
+			if err != nil && errors.IsNotFound(err) {
+				svcTemplate = &hmc.ServiceTemplate{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      svcTemplateName,
+						Namespace: managedClusterNamespace,
+					},
+					Spec: hmc.ServiceTemplateSpec{
+						Helm: hmc.HelmSpec{
+							ChartRef: &hcv2.CrossNamespaceSourceReference{
+								Kind:      "HelmChart",
+								Name:      "ref-test",
+								Namespace: "default",
+							},
+						},
+					},
+				}
+				Expect(k8sClient.Create(ctx, svcTemplate)).To(Succeed())
+				svcTemplate.Status = hmc.ServiceTemplateStatus{
+					TemplateStatusCommon: hmc.TemplateStatusCommon{
+						TemplateValidationStatus: hmc.TemplateValidationStatus{
+							Valid: true,
+						},
+					},
+				}
+				Expect(k8sClient.Status().Update(ctx, svcTemplate)).To(Succeed())
 			}
 
 			By("creating the custom resource for the Kind Management")
@@ -148,6 +180,12 @@ var _ = Describe("ManagedCluster Controller", func() {
 					Spec: hmc.ManagedClusterSpec{
 						Template:   templateName,
 						Credential: credentialName,
+						Services: []hmc.ServiceSpec{
+							{
+								Template: svcTemplateName,
+								Name:     "test-svc-name",
+							},
+						},
 					},
 				}
 				Expect(k8sClient.Create(ctx, managedCluster)).To(Succeed())

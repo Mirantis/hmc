@@ -79,6 +79,10 @@ func SetupIndexers(ctx context.Context, mgr ctrl.Manager) error {
 		return err
 	}
 
+	if err := SetupMultiClusterServiceServicesIndexer(ctx, mgr); err != nil {
+		return err
+	}
+
 	if err := SetupClusterTemplateChainIndexer(ctx, mgr); err != nil {
 		return err
 	}
@@ -131,11 +135,29 @@ func ExtractReleaseTemplates(rawObj client.Object) []string {
 const ServicesTemplateKey = ".spec.services[].Template"
 
 func SetupManagedClusterServicesIndexer(ctx context.Context, mgr ctrl.Manager) error {
-	return mgr.GetFieldIndexer().IndexField(ctx, &ManagedCluster{}, ServicesTemplateKey, ExtractServiceTemplateName)
+	return mgr.GetFieldIndexer().IndexField(ctx, &ManagedCluster{}, ServicesTemplateKey, ExtractServiceTemplateFromManagedCluster)
 }
 
-func ExtractServiceTemplateName(rawObj client.Object) []string {
+func ExtractServiceTemplateFromManagedCluster(rawObj client.Object) []string {
 	cluster, ok := rawObj.(*ManagedCluster)
+	if !ok {
+		return nil
+	}
+
+	templates := []string{}
+	for _, s := range cluster.Spec.Services {
+		templates = append(templates, s.Template)
+	}
+
+	return templates
+}
+
+func SetupMultiClusterServiceServicesIndexer(ctx context.Context, mgr ctrl.Manager) error {
+	return mgr.GetFieldIndexer().IndexField(ctx, &MultiClusterService{}, ServicesTemplateKey, ExtractServiceTemplateFromMultiClusterService)
+}
+
+func ExtractServiceTemplateFromMultiClusterService(rawObj client.Object) []string {
+	cluster, ok := rawObj.(*MultiClusterService)
 	if !ok {
 		return nil
 	}

@@ -150,6 +150,9 @@ var _ = BeforeSuite(func() {
 	err = (&hmcwebhook.ManagedClusterValidator{}).SetupWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
+	err = (&hmcwebhook.MultiClusterServiceValidator{}).SetupWebhookWithManager(mgr)
+	Expect(err).NotTo(HaveOccurred())
+
 	err = (&hmcwebhook.ManagementValidator{}).SetupWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 

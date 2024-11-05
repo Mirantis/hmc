@@ -331,6 +331,10 @@ func setupWebhooks(mgr ctrl.Manager, currentNamespace string) error {
 		setupLog.Error(err, "unable to create webhook", "webhook", "ManagedCluster")
 		return err
 	}
+	if err := (&hmcwebhook.MultiClusterServiceValidator{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "MultiClusterService")
+		return err
+	}
 	if err := (&hmcwebhook.ManagementValidator{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "Management")
 		return err
