@@ -232,6 +232,7 @@ var _ = Describe("Template Chain Controller", func() {
 				}, 1*time.Minute, 5*time.Second).Should(BeTrue(), "ClusterTemplateChain should have a deletion timestamp")
 
 				// Running reconcile to remove the finalizer and delete the ClusterTemplateChain
+				templateChainReconciler.templateKind = hmcmirantiscomv1alpha1.ClusterTemplateKind
 				clusterTemplateChainReconciler := &ClusterTemplateChainReconciler{TemplateChainReconciler: templateChainReconciler}
 				_, err = clusterTemplateChainReconciler.Reconcile(ctx, reconcile.Request{NamespacedName: chain})
 				Expect(err).NotTo(HaveOccurred())
@@ -265,6 +266,7 @@ var _ = Describe("Template Chain Controller", func() {
 				}, 1*time.Minute, 5*time.Second).Should(BeTrue(), "ServiceTemplateChain should have a deletion timestamp")
 
 				// Running reconcile to remove the finalizer and delete the ServiceTemplateChain
+				templateChainReconciler.templateKind = hmcmirantiscomv1alpha1.ServiceTemplateKind
 				serviceTemplateChainReconciler := &ServiceTemplateChainReconciler{TemplateChainReconciler: templateChainReconciler}
 				_, err = serviceTemplateChainReconciler.Reconcile(ctx, reconcile.Request{NamespacedName: chain})
 				Expect(err).NotTo(HaveOccurred())
@@ -301,6 +303,7 @@ var _ = Describe("Template Chain Controller", func() {
 			By("Reconciling the ClusterTemplateChain resources")
 			for _, chain := range ctChainNames {
 				// First Reconcile should only add finalizer
+				templateChainReconciler.templateKind = hmcmirantiscomv1alpha1.ClusterTemplateKind
 				clusterTemplateChainReconciler := &ClusterTemplateChainReconciler{TemplateChainReconciler: templateChainReconciler}
 				_, err = clusterTemplateChainReconciler.Reconcile(ctx, reconcile.Request{NamespacedName: chain})
 				Expect(err).NotTo(HaveOccurred())
@@ -317,6 +320,7 @@ var _ = Describe("Template Chain Controller", func() {
 			By("Reconciling the ServiceTemplateChain resources")
 			for _, chain := range stChainNames {
 				// First Reconcile should only add finalizer
+				templateChainReconciler.templateKind = hmcmirantiscomv1alpha1.ServiceTemplateKind
 				serviceTemplateChainReconciler := &ServiceTemplateChainReconciler{TemplateChainReconciler: templateChainReconciler}
 				_, err = serviceTemplateChainReconciler.Reconcile(ctx, reconcile.Request{NamespacedName: chain})
 				Expect(err).NotTo(HaveOccurred())

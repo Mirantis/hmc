@@ -15,9 +15,11 @@
 package v1alpha1
 
 import (
+	"context"
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // ProviderTemplateKind denotes the providertemplate resource Kind.
@@ -64,6 +66,11 @@ func (t *ProviderTemplate) GetHelmSpec() *HelmSpec {
 // GetCommonStatus returns common status of the Template.
 func (t *ProviderTemplate) GetCommonStatus() *TemplateStatusCommon {
 	return &t.Status.TemplateStatusCommon
+}
+
+// IsOrphaned checks whether the Template is orphaned or not.
+func (*ProviderTemplate) IsOrphaned(_ context.Context, _ client.Client) (bool, error) {
+	return false, nil
 }
 
 // +kubebuilder:object:root=true

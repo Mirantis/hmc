@@ -111,7 +111,7 @@ func (r *TemplateManagementReconciler) Reconcile(ctx context.Context, req ctrl.R
 	for _, managedChain := range append(managedCtChains, managedStChains...) {
 		keep := false
 		templateNamespacedName := getNamespacedName(managedChain.GetNamespace(), managedChain.GetName())
-		switch managedChain.Kind() {
+		switch managedChain.GetObjectKind().GroupVersionKind().Kind {
 		case hmc.ClusterTemplateChainKind:
 			keep = keepCtChains[templateNamespacedName]
 		case hmc.ServiceTemplateChainKind:
@@ -236,7 +236,8 @@ func (r *TemplateManagementReconciler) createTemplateChain(ctx context.Context, 
 		},
 	}
 	var target templateChain
-	switch source.Kind() {
+	kind := source.GetObjectKind().GroupVersionKind().Kind
+	switch kind {
 	case hmc.ClusterTemplateChainKind:
 		target = &hmc.ClusterTemplateChain{ObjectMeta: meta, Spec: *source.GetSpec()}
 	case hmc.ServiceTemplateChainKind:
@@ -250,7 +251,7 @@ func (r *TemplateManagementReconciler) createTemplateChain(ctx context.Context, 
 		}
 		return err
 	}
-	l.Info(source.Kind()+" was successfully created", "target namespace", targetNamespace, "source name", source.GetName())
+	l.Info(kind+" was successfully created", "target namespace", targetNamespace, "source name", source.GetName())
 	return nil
 }
 
@@ -264,7 +265,7 @@ func (r *TemplateManagementReconciler) deleteTemplateChain(ctx context.Context, 
 		}
 		return err
 	}
-	l.Info(chain.Kind()+"%s was successfully deleted", "chain namespace", chain.GetNamespace(), "chain name", chain.GetName())
+	l.Info(chain.GetObjectKind().GroupVersionKind().Kind+" was successfully deleted", "chain namespace", chain.GetNamespace(), "chain name", chain.GetName())
 	return nil
 }
 

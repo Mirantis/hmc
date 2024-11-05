@@ -15,10 +15,12 @@
 package v1alpha1
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/Masterminds/semver/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -104,6 +106,20 @@ func (t *ClusterTemplate) GetHelmSpec() *HelmSpec {
 // GetCommonStatus returns common status of the Template.
 func (t *ClusterTemplate) GetCommonStatus() *TemplateStatusCommon {
 	return &t.Status.TemplateStatusCommon
+}
+
+// IsOrphaned checks whether the Template is orphaned or not.
+func (t *ClusterTemplate) IsOrphaned(ctx context.Context, cl client.Client) (bool, error) {
+	list := new(ClusterTemplateChainList)
+	if err := cl.List(ctx, list, client.InNamespace(t.Namespace), client.MatchingFields{SupportedTemplateKey: t.Name}); err != nil {
+		return false, fmt.Errorf("failed to list %s: %w", list.GroupVersionKind(), err)
+	}
+	for _, chain := range list.Items {
+		if chain.DeletionTimestamp == nil {
+			return false, nil
+		}
+	}
+	return true, nil
 }
 
 // +kubebuilder:object:root=true
