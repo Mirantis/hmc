@@ -237,7 +237,7 @@ func (r *TemplateReconciler) ReconcileTemplate(ctx context.Context, template tem
 	helmChart, err := r.downloadHelmChartFunc(ctx, artifact)
 	if err != nil {
 		l.Error(err, "Failed to download Helm chart")
-		err = fmt.Errorf("failed to download chart: %s", err)
+		err = fmt.Errorf("failed to download chart: %w", err)
 		_ = r.updateStatus(ctx, template, err.Error())
 		return ctrl.Result{}, err
 	}
@@ -261,7 +261,7 @@ func (r *TemplateReconciler) ReconcileTemplate(ctx context.Context, template tem
 	rawValues, err := json.Marshal(helmChart.Values)
 	if err != nil {
 		l.Error(err, "Failed to parse Helm chart values")
-		err = fmt.Errorf("failed to parse Helm chart values: %s", err)
+		err = fmt.Errorf("failed to parse Helm chart values: %w", err)
 		_ = r.updateStatus(ctx, template, err.Error())
 		return ctrl.Result{}, err
 	}
@@ -363,7 +363,7 @@ func (r *ClusterTemplateReconciler) validateCompatibilityAttrs(ctx context.Conte
 			return err
 		}
 
-		err = fmt.Errorf("failed to get Management: %v", err)
+		err = fmt.Errorf("failed to get Management: %w", err)
 		_ = r.updateStatus(ctx, template, err.Error())
 		return err
 	}

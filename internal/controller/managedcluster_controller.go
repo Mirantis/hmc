@@ -44,7 +44,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
 	"github.com/Mirantis/hmc/internal/credspropagation"
@@ -276,9 +275,9 @@ func (r *ManagedClusterReconciler) Update(ctx context.Context, managedCluster *h
 	if !managedCluster.Spec.DryRun {
 		helmValues, err := setIdentityHelmValues(managedCluster.Spec.Config, cred.Spec.IdentityRef)
 		if err != nil {
-			return ctrl.Result{},
-				fmt.Errorf("error setting identity values: %s", err)
+			return ctrl.Result{}, fmt.Errorf("error setting identity values: %w", err)
 		}
+
 		hr, _, err := helm.ReconcileHelmRelease(ctx, r.Client, managedCluster.Name, managedCluster.Namespace, helm.ReconcileHelmReleaseOpts{
 			Values: helmValues,
 			OwnerReference: &metav1.OwnerReference{
@@ -451,26 +450,23 @@ func (r *ManagedClusterReconciler) Delete(ctx context.Context, managedCluster *h
 	l := ctrl.LoggerFrom(ctx)
 
 	hr := &hcv2.HelmRelease{}
-	err := r.Get(ctx, client.ObjectKey{
-		Name:      managedCluster.Name,
-		Namespace: managedCluster.Namespace,
-	}, hr)
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			l.Info("Removing Finalizer", "finalizer", hmc.ManagedClusterFinalizer)
-			if controllerutil.RemoveFinalizer(managedCluster, hmc.ManagedClusterFinalizer) {
-				if err := r.Client.Update(ctx, managedCluster); err != nil {
-					return ctrl.Result{}, fmt.Errorf("failed to update managedCluster %s/%s: %w", managedCluster.Namespace, managedCluster.Name, err)
-				}
-			}
-			l.Info("ManagedCluster deleted")
-			return ctrl.Result{}, nil
+
+	if err := r.Get(ctx, client.ObjectKeyFromObject(managedCluster), hr); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return ctrl.Result{}, err
 		}
-		return ctrl.Result{}, err
+
+		l.Info("Removing Finalizer", "finalizer", hmc.ManagedClusterFinalizer)
+		if controllerutil.RemoveFinalizer(managedCluster, hmc.ManagedClusterFinalizer) {
+			if err := r.Client.Update(ctx, managedCluster); err != nil {
+				return ctrl.Result{}, fmt.Errorf("failed to update managedCluster %s/%s: %w", managedCluster.Namespace, managedCluster.Name, err)
+			}
+		}
+		l.Info("ManagedCluster deleted")
+		return ctrl.Result{}, nil
 	}
 
-	err = helm.DeleteHelmRelease(ctx, r.Client, managedCluster.Name, managedCluster.Namespace)
-	if err != nil {
+	if err := helm.DeleteHelmRelease(ctx, r.Client, managedCluster.Name, managedCluster.Namespace); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -479,13 +475,11 @@ func (r *ManagedClusterReconciler) Delete(ctx context.Context, managedCluster *h
 	// It is detailed in https://github.com/projectsveltos/addon-controller/issues/732.
 	// We may try to remove the explicit call to Delete once a fix for it has been merged.
 	// TODO(https://github.com/Mirantis/hmc/issues/526).
-	err = sveltos.DeleteProfile(ctx, r.Client, managedCluster.Namespace, managedCluster.Name)
-	if err != nil {
+	if err := sveltos.DeleteProfile(ctx, r.Client, managedCluster.Namespace, managedCluster.Name); err != nil {
 		return ctrl.Result{}, err
 	}
 
-	err = r.releaseCluster(ctx, managedCluster.Namespace, managedCluster.Name, managedCluster.Spec.Template)
-	if err != nil {
+	if err := r.releaseCluster(ctx, managedCluster.Namespace, managedCluster.Name, managedCluster.Spec.Template); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -704,18 +698,16 @@ func setIdentityHelmValues(values *apiextensionsv1.JSON, idRef *corev1.ObjectRef
 	var valuesJSON map[string]any
 	err := json.Unmarshal(values.Raw, &valuesJSON)
 	if err != nil {
-		return nil, fmt.Errorf("error unmarshalling values: %s", err)
+		return nil, fmt.Errorf("error unmarshalling values: %w", err)
 	}
 
 	valuesJSON["clusterIdentity"] = idRef
 	valuesRaw, err := json.Marshal(valuesJSON)
 	if err != nil {
-		return nil, fmt.Errorf("error marshalling values: %s", err)
+		return nil, fmt.Errorf("error marshalling values: %w", err)
 	}
 
-	return &apiextensionsv1.JSON{
-		Raw: valuesRaw,
-	}, nil
+	return &apiextensionsv1.JSON{Raw: valuesRaw}, nil
 }
 
 func (r *ManagedClusterReconciler) setAvailableUpgrades(ctx context.Context, managedCluster *hmc.ManagedCluster, template *hmc.ClusterTemplate) error {
@@ -765,11 +757,8 @@ func (r *ManagedClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				if err != nil {
 					return []ctrl.Request{}
 				}
-				return []reconcile.Request{
-					{
-						NamespacedName: managedClusterRef,
-					},
-				}
+
+				return []ctrl.Request{{NamespacedName: managedClusterRef}}
 			}),
 		).
 		Watches(&hmc.ClusterTemplateChain{},

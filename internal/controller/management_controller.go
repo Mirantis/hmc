@@ -59,8 +59,8 @@ type ManagementReconciler struct {
 	client.Client
 	Scheme                   *runtime.Scheme
 	Config                   *rest.Config
-	SystemNamespace          string
 	DynamicClient            *dynamic.DynamicClient
+	SystemNamespace          string
 	CreateTemplateManagement bool
 }
 
@@ -426,7 +426,7 @@ func (r *ManagementReconciler) enableAdditionalComponents(ctx context.Context, m
 	if hmcComponent.Config != nil {
 		err := json.Unmarshal(hmcComponent.Config.Raw, &config)
 		if err != nil {
-			return fmt.Errorf("failed to unmarshal HMC config into map[string]any: %v", err)
+			return fmt.Errorf("failed to unmarshal HMC config into map[string]any: %w", err)
 		}
 	}
 
@@ -452,7 +452,7 @@ func (r *ManagementReconciler) enableAdditionalComponents(ctx context.Context, m
 
 	err := certmanager.VerifyAPI(ctx, r.Config, r.SystemNamespace)
 	if err != nil {
-		return fmt.Errorf("failed to check in the cert-manager API is installed: %v", err)
+		return fmt.Errorf("failed to check in the cert-manager API is installed: %w", err)
 	}
 	l.Info("Cert manager is installed, enabling the HMC admission webhook")
 
@@ -473,7 +473,7 @@ func (r *ManagementReconciler) enableAdditionalComponents(ctx context.Context, m
 
 	updatedConfig, err := json.Marshal(config)
 	if err != nil {
-		return fmt.Errorf("failed to marshal HMC config: %v", err)
+		return fmt.Errorf("failed to marshal HMC config: %w", err)
 	}
 	hmcComponent.Config = &apiextensionsv1.JSON{
 		Raw: updatedConfig,

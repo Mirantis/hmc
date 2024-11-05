@@ -53,14 +53,16 @@ var (
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type.
 func (v *TemplateManagementValidator) ValidateCreate(ctx context.Context, _ runtime.Object) (admission.Warnings, error) {
 	itemsList := &metav1.PartialObjectMetadataList{}
-	gvk := v1alpha1.GroupVersion.WithKind(v1alpha1.TemplateManagementKind)
-	itemsList.SetGroupVersionKind(gvk)
-	if err := v.List(ctx, itemsList); err != nil {
+	itemsList.SetGroupVersionKind(v1alpha1.GroupVersion.WithKind(v1alpha1.TemplateManagementKind))
+
+	if err := v.List(ctx, itemsList, client.Limit(1)); err != nil {
 		return nil, err
 	}
+
 	if len(itemsList.Items) > 0 {
 		return nil, errors.New("TemplateManagement object already exists")
 	}
+
 	return nil, nil
 }
 
@@ -72,18 +74,19 @@ func (*TemplateManagementValidator) ValidateUpdate(_ context.Context, _, _ runti
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
 func (v *TemplateManagementValidator) ValidateDelete(ctx context.Context, _ runtime.Object) (admission.Warnings, error) {
 	partialList := &metav1.PartialObjectMetadataList{}
-	gvk := v1alpha1.GroupVersion.WithKind(v1alpha1.ManagementKind)
-	partialList.SetGroupVersionKind(gvk)
-	err := v.List(ctx, partialList)
-	if err != nil {
-		return nil, fmt.Errorf("failed to list Management objects: %v", err)
+	partialList.SetGroupVersionKind(v1alpha1.GroupVersion.WithKind(v1alpha1.ManagementKind))
+
+	if err := v.List(ctx, partialList, client.Limit(1)); err != nil {
+		return nil, fmt.Errorf("failed to list Management objects: %w", err)
 	}
+
 	if len(partialList.Items) > 0 {
 		mgmt := partialList.Items[0]
 		if mgmt.DeletionTimestamp == nil {
 			return nil, errTemplateManagementDeletionForbidden
 		}
 	}
+
 	return nil, nil
 }
 
