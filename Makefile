@@ -71,6 +71,7 @@ set-hmc-version: yq
 	$(YQ) eval '.spec.version = "$(VERSION)"' -i $(PROVIDER_TEMPLATES_DIR)/hmc-templates/files/release.yaml
 	$(YQ) eval '.metadata.name = "hmc-$(FQDN_VERSION)"' -i $(PROVIDER_TEMPLATES_DIR)/hmc-templates/files/release.yaml
 	$(YQ) eval '.spec.hmc.template = "hmc-$(FQDN_VERSION)"' -i $(PROVIDER_TEMPLATES_DIR)/hmc-templates/files/release.yaml
+	$(YQ) eval '.metadata.name = "hmc-$(FQDN_VERSION)"' -i $(PROVIDER_TEMPLATES_DIR)/hmc-templates/templates/clustertemplatechain.yaml
 
 .PHONY: hmc-chart-release
 hmc-chart-release: set-hmc-version templates-generate ## Generate hmc helm chart
@@ -329,6 +330,7 @@ dev-push: docker-build helm-push
 .PHONY: dev-templates
 dev-templates: templates-generate
 	$(KUBECTL) -n $(NAMESPACE) apply --force -f $(PROVIDER_TEMPLATES_DIR)/hmc-templates/files/templates
+	$(KUBECTL) -n $(NAMESPACE) apply --force -f $(PROVIDER_TEMPLATES_DIR)/hmc-templates/templates/clustertemplatechain.yaml
 
 .PHONY: dev-release
 dev-release:
