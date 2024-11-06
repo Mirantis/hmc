@@ -161,7 +161,8 @@ var _ = Describe("MultiClusterService Controller", func() {
 
 			By("having the valid service template status")
 			Expect(k8sClient.Get(ctx, serviceTemplateRef, serviceTemplate)).To(Succeed())
-			Expect(serviceTemplate.Status.Valid && serviceTemplate.Status.ValidationError == "").To(BeTrue())
+			Expect(serviceTemplate.Status.Valid).To(BeTrue())
+			Expect(serviceTemplate.Status.ValidationError).To(BeEmpty())
 
 			By("creating MultiClusterService")
 			err = k8sClient.Get(ctx, multiClusterServiceRef, multiClusterService)
