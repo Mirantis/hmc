@@ -9,7 +9,7 @@ spec:
   hmc:
     template: hmc-0-0-3
   capi:
-    template: cluster-api-0-0-2
+    template: cluster-api-0-0-3
   providers:
     - name: k0smotron
       template: k0smotron-0-0-2
