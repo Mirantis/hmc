@@ -58,3 +58,17 @@ jobs:
             dist/install.yaml
             templates/provider/hmc-templates/files/release.yaml
           draft: true
+
+      - name: Build airgap bundle
+        env:
+          IMG: 'ghcr.io/mirantis/hmc:${{ env.VERSION }}'
+        run: |
+          make airgap-package
+
+      - name: Upload airgap bundle
+        env:
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID }}
+        run: |
+          make awscli
+          ./bin/aws s3 cp bin/hmc-airgap-${{ env.VERSION }}.tgz s3://binary2a-mirantis-com.s3.amazonaws.com/hmc-airgap-${{ env.VERSION }}.tgz
