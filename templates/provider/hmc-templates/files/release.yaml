@@ -12,7 +12,7 @@ spec:
     template: cluster-api-0-0-3
   providers:
     - name: k0smotron
-      template: k0smotron-0-0-2
+      template: k0smotron-0-0-3
     - name: cluster-api-provider-azure
       template: cluster-api-provider-azure-0-0-2
     - name: cluster-api-provider-vsphere
