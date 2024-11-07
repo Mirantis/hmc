@@ -231,9 +231,6 @@ func (r *TemplateManagementReconciler) createTemplateChain(ctx context.Context, 
 		Labels: map[string]string{
 			hmc.HMCManagedLabelKey: hmc.HMCManagedLabelValue,
 		},
-		Finalizers: []string{
-			hmc.TemplateChainFinalizer,
-		},
 	}
 	var target templateChain
 	kind := source.GetObjectKind().GroupVersionKind().Kind

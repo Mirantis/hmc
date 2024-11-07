@@ -168,7 +168,6 @@ type templateCommon interface {
 	GetHelmSpec() *hmc.HelmSpec
 	GetCommonStatus() *hmc.TemplateStatusCommon
 	FillStatusWithProviders(map[string]string) error
-	IsOrphaned(context.Context, client.Client) (bool, error)
 }
 
 func (r *TemplateReconciler) ReconcileTemplate(ctx context.Context, template templateCommon) (ctrl.Result, error) {
