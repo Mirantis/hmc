@@ -31,3 +31,6 @@ vendor
 
 # mkdocs folder
 mkdocs
+
+# airgap-push script directories
+hmc-airgap
