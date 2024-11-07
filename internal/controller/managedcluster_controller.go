@@ -26,6 +26,7 @@ import (
 	fluxmeta "github.com/fluxcd/pkg/apis/meta"
 	fluxconditions "github.com/fluxcd/pkg/runtime/conditions"
 	sourcev1 "github.com/fluxcd/source-controller/api/v1"
+	sveltosv1beta1 "github.com/projectsveltos/addon-controller/api/v1beta1"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
 	corev1 "k8s.io/api/core/v1"
@@ -337,14 +338,46 @@ func (r *ManagedClusterReconciler) Update(ctx context.Context, managedCluster *h
 }
 
 // updateServices reconciles services provided in ManagedCluster.Spec.Services.
-// TODO(https://github.com/Mirantis/hmc/issues/361): Set status to ManagedCluster object at appropriate places.
-func (r *ManagedClusterReconciler) updateServices(ctx context.Context, mc *hmc.ManagedCluster) (ctrl.Result, error) {
+func (r *ManagedClusterReconciler) updateServices(ctx context.Context, mc *hmc.ManagedCluster) (_ ctrl.Result, err error) {
+	// servicesErr is handled separately from err because we do not want
+	// to set the condition of SveltosProfileReady type to "False"
+	// if there is an error while retrieving status for the services.
+	var servicesErr error
+
+	defer func() {
+		condition := metav1.Condition{
+			Reason: hmc.SucceededReason,
+			Status: metav1.ConditionTrue,
+			Type:   hmc.SveltosProfileReadyCondition,
+		}
+		if err != nil {
+			condition.Message = err.Error()
+			condition.Reason = hmc.FailedReason
+			condition.Status = metav1.ConditionFalse
+		}
+		apimeta.SetStatusCondition(&mc.Status.Conditions, condition)
+
+		servicesCondition := metav1.Condition{
+			Reason: hmc.SucceededReason,
+			Status: metav1.ConditionTrue,
+			Type:   hmc.FetchServicesStatusSuccessCondition,
+		}
+		if servicesErr != nil {
+			servicesCondition.Message = servicesErr.Error()
+			servicesCondition.Reason = hmc.FailedReason
+			servicesCondition.Status = metav1.ConditionFalse
+		}
+		apimeta.SetStatusCondition(&mc.Status.Conditions, servicesCondition)
+
+		err = errors.Join(err, servicesErr)
+	}()
+
 	opts, err := helmChartOpts(ctx, r.Client, mc.Namespace, mc.Spec.Services)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	if _, err := sveltos.ReconcileProfile(ctx, r.Client, mc.Namespace, mc.Name,
+	if _, err = sveltos.ReconcileProfile(ctx, r.Client, mc.Namespace, mc.Name,
 		sveltos.ReconcileProfileOpts{
 			OwnerReference: &metav1.OwnerReference{
 				APIVersion: hmc.GroupVersion.String(),
@@ -365,12 +398,26 @@ func (r *ManagedClusterReconciler) updateServices(ctx context.Context, mc *hmc.M
 		return ctrl.Result{}, fmt.Errorf("failed to reconcile Profile: %w", err)
 	}
 
-	// We don't technically need to requeue here, but doing so because golint fails with:
-	// `(*ManagedClusterReconciler).updateServices` - result `res` is always `nil` (unparam)
-	//
-	// This will be automatically resolved once setting status is implemented (https://github.com/Mirantis/hmc/issues/361),
-	// as it is likely that some execution path in the function will have to return with a requeue to fetch latest status.
-	return ctrl.Result{RequeueAfter: DefaultRequeueInterval}, nil
+	// NOTE:
+	// We are returning nil in the return statements whenever servicesErr != nil
+	// because we don't want the error content in servicesErr to be assigned to err.
+	// The servicesErr var is joined with err in the defer func() so this function
+	// will ultimately return the error in servicesErr instead of nil.
+	profile := sveltosv1beta1.Profile{}
+	profileRef := client.ObjectKey{Name: mc.Name, Namespace: mc.Namespace}
+	if servicesErr = r.Get(ctx, profileRef, &profile); servicesErr != nil {
+		servicesErr = fmt.Errorf("failed to get Profile %s to fetch status from its associated ClusterSummary: %w", profileRef.String(), servicesErr)
+		return ctrl.Result{}, nil
+	}
+
+	var servicesStatus []hmc.ServiceStatus
+	servicesStatus, servicesErr = updateServicesStatus(ctx, r.Client, profileRef, sveltosv1beta1.ProfileKind, profile.Status, mc.Status.Services)
+	if servicesErr != nil {
+		return ctrl.Result{}, nil
+	}
+	mc.Status.Services = servicesStatus
+
+	return ctrl.Result{}, nil
 }
 
 func validateReleaseWithValues(ctx context.Context, actionConfig *action.Configuration, managedCluster *hmc.ManagedCluster, hcChart *chart.Chart) error {
@@ -391,46 +438,19 @@ func validateReleaseWithValues(ctx context.Context, actionConfig *action.Configu
 	return nil
 }
 
+// updateStatus updates the status for the ManagedCluster object.
 func (r *ManagedClusterReconciler) updateStatus(ctx context.Context, managedCluster *hmc.ManagedCluster, template *hmc.ClusterTemplate) error {
 	managedCluster.Status.ObservedGeneration = managedCluster.Generation
-	warnings := ""
-	errs := ""
-	for _, condition := range managedCluster.Status.Conditions {
-		if condition.Type == hmc.ReadyCondition {
-			continue
-		}
-		if condition.Status == metav1.ConditionUnknown {
-			warnings += condition.Message + ". "
-		}
-		if condition.Status == metav1.ConditionFalse {
-			errs += condition.Message + ". "
-		}
-	}
-	condition := metav1.Condition{
-		Type:    hmc.ReadyCondition,
-		Status:  metav1.ConditionTrue,
-		Reason:  hmc.SucceededReason,
-		Message: "ManagedCluster is ready",
-	}
-	if warnings != "" {
-		condition.Status = metav1.ConditionUnknown
-		condition.Reason = hmc.ProgressingReason
-		condition.Message = warnings
-	}
-	if errs != "" {
-		condition.Status = metav1.ConditionFalse
-		condition.Reason = hmc.FailedReason
-		condition.Message = errs
-	}
-	apimeta.SetStatusCondition(managedCluster.GetConditions(), condition)
+	managedCluster.Status.Conditions = updateStatusConditions(managedCluster.Status.Conditions, "ManagedCluster is ready")
 
-	err := r.setAvailableUpgrades(ctx, managedCluster, template)
-	if err != nil {
+	if err := r.setAvailableUpgrades(ctx, managedCluster, template); err != nil {
 		return errors.New("failed to set available upgrades")
 	}
+
 	if err := r.Status().Update(ctx, managedCluster); err != nil {
 		return fmt.Errorf("failed to update status for managedCluster %s/%s: %w", managedCluster.Namespace, managedCluster.Name, err)
 	}
+
 	return nil
 }
 
@@ -790,6 +810,13 @@ func (r *ManagedClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			}),
 			builder.WithPredicates(predicate.Funcs{
 				UpdateFunc:  func(event.UpdateEvent) bool { return false },
+				GenericFunc: func(event.GenericEvent) bool { return false },
+			}),
+		).
+		Watches(&sveltosv1beta1.ClusterSummary{},
+			handler.EnqueueRequestsFromMapFunc(requeueSveltosProfileForClusterSummary),
+			builder.WithPredicates(predicate.Funcs{
+				DeleteFunc:  func(event.DeleteEvent) bool { return false },
 				GenericFunc: func(event.GenericEvent) bool { return false },
 			}),
 		).

@@ -92,6 +92,8 @@ type ManagedClusterSpec struct {
 
 // ManagedClusterStatus defines the observed state of ManagedCluster
 type ManagedClusterStatus struct {
+	// Services contains details for the state of services.
+	Services []ServiceStatus `json:"services,omitempty"`
 	// Currently compatible exact Kubernetes version of the cluster. Being set only if
 	// provided by the corresponding ClusterTemplate.
 	KubernetesVersion string `json:"k8sVersion,omitempty"`
