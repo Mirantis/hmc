@@ -45,7 +45,9 @@ spec:
             version: "0.0.8"
             values: |
               image:
+                {{- if .Values.extensions.imageRepository }}
                 repository: {{ .Values.extensions.imageRepository }}
+                {{- end }}
                 tag: v1.30.3
               args:
                 - --v=2
@@ -62,6 +64,7 @@ spec:
             chartname: aws-ebs-csi-driver/aws-ebs-csi-driver
             version: 2.33.0
             values: |
+              {{- if .Values.extensions.imageRepository }}
               image:
                 repository: {{ .Values.extensions.imageRepository }}
               sidecars:
@@ -86,7 +89,7 @@ spec:
                 volumemodifier:
                   image:
                     repository: {{ .Values.extensions.imageRepository }}
-                # TODO
+              {{- end }}
               defaultStorageClass:
                 enabled: true
               node:

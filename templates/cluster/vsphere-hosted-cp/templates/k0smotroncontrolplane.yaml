@@ -48,7 +48,9 @@ spec:
                 enabled: false
               daemonset:
                 affinity: null
+                {{- if .Values.extensions.imageRepository }}
                 image: {{ .Values.extensions.imageRepository }}/cloud-provider-vsphere
+                {{- end }}
                 tolerations:
                   - effect: NoSchedule
                     key: node.cloudprovider.kubernetes.io/uninitialized
@@ -81,11 +83,16 @@ spec:
                 enabled: true
               images:
                 driver:
+                  {{- if .Values.extensions.imageRepository }}
                   repo: {{ .Values.extensions.imageRepository }}/csi-vsphere/driver
+                  {{- end }}
                   tag: v3.1.2
                 syncer:
+                  {{- if .Values.extensions.imageRepository }}
                   repo: {{ .Values.extensions.imageRepository }}/csi-vsphere/syncer
+                  {{- end }}
                   tag: v3.1.2
+                {{- if .Values.extensions.imageRepository }}
                 nodeDriverRegistrar:
                   repo: {{ .Values.extensions.imageRepository }}/sig-storage/csi-node-driver-registrar
                 csiAttacher:
@@ -98,3 +105,4 @@ spec:
                   repo: {{ .Values.extensions.imageRepository }}/sig-storage/csi-snapshotter
                 livenessProbe:
                   repo: {{ .Values.extensions.imageRepository }}/csi-vsphere/livenessprobe
+                {{- end }}

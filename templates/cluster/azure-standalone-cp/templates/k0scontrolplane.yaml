@@ -50,17 +50,23 @@ spec:
                     cloudConfigSecretName: azure-cloud-provider
                     nodeSelector:
                       node-role.kubernetes.io/control-plane: "true"
+                    {{- if .Values.extensions.imageRepository }}
                     imageRepository: {{ .Values.extensions.imageRepository }}
+                    {{- end }}
+                  {{- if .Values.extensions.imageRepository }}
                   cloudNodeManager:
                     imageRepository: {{ .Values.extensions.imageRepository }}
+                  {{- end }}
               - name: azuredisk-csi-driver
                 namespace: kube-system
                 chartname: azuredisk-csi-driver/azuredisk-csi-driver
                 version: 1.30.3
                 order: 2
                 values: |
+                  {{- if .Values.extensions.imageRepository }}
                   image:
                     baseRepo: {{ .Values.extensions.imageRepository }}
+                  {{- end }}
                   controller:
                     cloudConfigSecretName: azure-cloud-provider
                   node:
