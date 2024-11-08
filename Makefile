@@ -152,10 +152,10 @@ helm-package: $(CHARTS_PACKAGE_DIR) $(EXTENSION_CHARTS_PACKAGE_DIR) helm
 	@make $(patsubst %,package-%-tmpl,$(TEMPLATE_FOLDERS))
 
 bundle-images: dev-apply $(IMAGES_PACKAGE_DIR) ## Create a tarball with all images used by HMC.
-	@BUNDLE_TARBALL=$(IMAGES_PACKAGE_DIR)/hmc-images-$(VERSION).tgz EXTENSIONS_BUNDLE_TARBALL=$(IMAGES_PACKAGE_DIR)/hmc-extension-images-$(VERSION).tgz IMG=$(IMG) KUBECTL=$(KUBECTL) YQ=$(YQ) HELM=$(HELM) NAMESPACE=$(NAMESPACE) TEMPLATES_DIR=$(TEMPLATES_DIR) KIND_CLUSTER_NAME=$(KIND_CLUSTER_NAME) $(SHELL) "scripts/bundle-images.sh"
+	@BUNDLE_TARBALL=$(IMAGES_PACKAGE_DIR)/hmc-images-$(VERSION).tgz EXTENSIONS_BUNDLE_TARBALL=$(IMAGES_PACKAGE_DIR)/hmc-extension-images-$(VERSION).tgz IMG=$(IMG) KUBECTL=$(KUBECTL) YQ=$(YQ) HELM=$(HELM) NAMESPACE=$(NAMESPACE) TEMPLATES_DIR=$(TEMPLATES_DIR) KIND_CLUSTER_NAME=$(KIND_CLUSTER_NAME) $(SHELL) $(CURDIR)/scripts/bundle-images.sh
 
 airgap-package: bundle-images ## Create a tarball with all images and Helm charts used by HMC, useful for deploying in air-gapped environments.
-	@TEMPLATES_DIR=$(TEMPLATES_DIR) EXTENSION_CHARTS_PACKAGE_DIR=$(EXTENSION_CHARTS_PACKAGE_DIR) HELM=$(HELM) YQ=$(YQ) $(SHELL) "scripts/package-k0s-extensions-helm.sh"
+	@TEMPLATES_DIR=$(TEMPLATES_DIR) EXTENSION_CHARTS_PACKAGE_DIR=$(EXTENSION_CHARTS_PACKAGE_DIR) HELM=$(HELM) YQ=$(YQ) $(SHELL) $(CURDIR)/scripts/package-k0s-extensions-helm.sh
 	cd $(LOCALBIN) && mkdir -p scripts && cp ../scripts/airgap-push.sh scripts/airgap-push.sh && tar -czf hmc-airgap-$(VERSION).tgz scripts/airgap-push.sh $(shell basename $(CHARTS_PACKAGE_DIR)) $(shell basename $(IMAGES_PACKAGE_DIR))
 
 package-%-tmpl:
@@ -365,11 +365,11 @@ dev-creds-apply: dev-$(DEV_PROVIDER)-creds
 
 .PHONY: dev-aws-nuke
 dev-aws-nuke: envsubst awscli yq cloud-nuke ## Warning: Destructive! Nuke all AWS resources deployed by 'DEV_PROVIDER=aws dev-mcluster-apply'
-	@CLUSTER_NAME=$(CLUSTER_NAME) YQ=$(YQ) AWSCLI=$(AWSCLI) $(SHELL) "./scripts/aws-nuke-ccm.sh elb"
+	@CLUSTER_NAME=$(CLUSTER_NAME) YQ=$(YQ) AWSCLI=$(AWSCLI) $(SHELL) $(CURDIR)/scripts/aws-nuke-ccm.sh elb
 	@CLUSTER_NAME=$(CLUSTER_NAME) $(ENVSUBST) < config/dev/aws-cloud-nuke.yaml.tpl > config/dev/aws-cloud-nuke.yaml
 	DISABLE_TELEMETRY=true $(CLOUDNUKE) aws --region $$AWS_REGION --force --config config/dev/aws-cloud-nuke.yaml --resource-type vpc,eip,nat-gateway,ec2,ec2-subnet,elb,elbv2,ebs,internet-gateway,network-interface,security-group
 	@rm config/dev/aws-cloud-nuke.yaml
-	@CLUSTER_NAME=$(CLUSTER_NAME) YQ=$(YQ) AWSCLI=$(AWSCLI) $(SHELL) "./scripts/aws-nuke-ccm.sh ebs"
+	@CLUSTER_NAME=$(CLUSTER_NAME) YQ=$(YQ) AWSCLI=$(AWSCLI) $(SHELL) $(CURDIR)/scripts/aws-nuke-ccm.sh ebs
 
 .PHONY: dev-azure-nuke
 dev-azure-nuke: envsubst azure-nuke ## Warning: Destructive! Nuke all Azure resources deployed by 'DEV_PROVIDER=azure dev-mcluster-apply'
