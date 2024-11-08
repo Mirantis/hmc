@@ -24,7 +24,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/Mirantis/hmc/api/v1alpha1"
-	"github.com/Mirantis/hmc/internal/utils"
 	"github.com/Mirantis/hmc/test/objects/managedcluster"
 	"github.com/Mirantis/hmc/test/objects/multiclusterservice"
 	"github.com/Mirantis/hmc/test/objects/template"
@@ -139,8 +138,8 @@ func TestServiceTemplateValidateDelete(t *testing.T) {
 			existingObjects: []runtime.Object{managedcluster.NewManagedCluster()},
 		},
 		{
-			title:    "should fail if a MultiClusterService is referencing serviceTemplate in hmc-system namespace",
-			template: template.NewServiceTemplate(template.WithNamespace(utils.DefaultSystemNamespace), template.WithName(tmpl.Name)),
+			title:    "should fail if a MultiClusterService is referencing serviceTemplate in system namespace",
+			template: template.NewServiceTemplate(template.WithNamespace(testSystemNamespace), template.WithName(tmpl.Name)),
 			existingObjects: []runtime.Object{
 				multiclusterservice.NewMultiClusterService(
 					multiclusterservice.WithName("mymulticlusterservice"),
@@ -163,7 +162,7 @@ func TestServiceTemplateValidateDelete(t *testing.T) {
 				WithIndex(&v1alpha1.ManagedCluster{}, v1alpha1.ServicesTemplateKey, v1alpha1.ExtractServiceTemplateFromManagedCluster).
 				WithIndex(&v1alpha1.MultiClusterService{}, v1alpha1.ServicesTemplateKey, v1alpha1.ExtractServiceTemplateFromMultiClusterService).
 				Build()
-			validator := &ServiceTemplateValidator{Client: c}
+			validator := &ServiceTemplateValidator{Client: c, SystemNamespace: testSystemNamespace}
 			warn, err := validator.ValidateDelete(ctx, tt.template)
 			if tt.err != "" {
 				g.Expect(err).To(MatchError(tt.err))

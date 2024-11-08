@@ -115,8 +115,8 @@ func (r *MultiClusterServiceReconciler) reconcileUpdate(ctx context.Context, mcs
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	// By using DefaultSystemNamespace we are enforcing that MultiClusterService
-	// may only use ServiceTemplates that are present in the system namespace.
+	// We are enforcing that MultiClusterService may only use
+	// ServiceTemplates that are present in the system namespace.
 	opts, err := helmChartOpts(ctx, r.Client, r.SystemNamespace, mcs.Spec.Services)
 	if err != nil {
 		return ctrl.Result{}, err

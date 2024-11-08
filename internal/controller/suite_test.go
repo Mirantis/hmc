@@ -169,7 +169,7 @@ var _ = BeforeSuite(func() {
 	err = (&hmcwebhook.ClusterTemplateValidator{}).SetupWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
-	err = (&hmcwebhook.ServiceTemplateValidator{}).SetupWebhookWithManager(mgr)
+	err = (&hmcwebhook.ServiceTemplateValidator{SystemNamespace: testSystemNamespace}).SetupWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
 	err = (&hmcwebhook.ProviderTemplateValidator{}).SetupWebhookWithManager(mgr)

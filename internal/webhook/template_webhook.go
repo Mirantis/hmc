@@ -27,7 +27,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/Mirantis/hmc/api/v1alpha1"
-	"github.com/Mirantis/hmc/internal/utils"
 )
 
 type ClusterTemplateValidator struct {
@@ -89,6 +88,7 @@ func (*ClusterTemplateValidator) Default(context.Context, runtime.Object) error 
 
 type ServiceTemplateValidator struct {
 	client.Client
+	SystemNamespace string
 }
 
 func (v *ServiceTemplateValidator) SetupWebhookWithManager(mgr ctrl.Manager) error {
@@ -134,8 +134,8 @@ func (v *ServiceTemplateValidator) ValidateDelete(ctx context.Context, obj runti
 		return admission.Warnings{"The ServiceTemplate object can't be removed if ManagedCluster objects referencing it still exist"}, errTemplateDeletionForbidden
 	}
 
-	// MultiClusterServices can only refer to serviceTemplates in hmc-system namespace.
-	if tmpl.Namespace == utils.DefaultSystemNamespace {
+	// MultiClusterServices can only refer to serviceTemplates in system namespace.
+	if tmpl.Namespace == v.SystemNamespace {
 		multiSvcClusters := &v1alpha1.MultiClusterServiceList{}
 		if err := v.Client.List(ctx, multiSvcClusters,
 			client.MatchingFields{v1alpha1.ServicesTemplateKey: tmpl.Name},

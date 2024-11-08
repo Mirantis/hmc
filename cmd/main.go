@@ -356,7 +356,7 @@ func setupWebhooks(mgr ctrl.Manager, currentNamespace string) error {
 		setupLog.Error(err, "unable to create webhook", "webhook", "ClusterTemplate")
 		return err
 	}
-	if err := (&hmcwebhook.ServiceTemplateValidator{}).SetupWebhookWithManager(mgr); err != nil {
+	if err := (&hmcwebhook.ServiceTemplateValidator{SystemNamespace: currentNamespace}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "ServiceTemplate")
 		return err
 	}
