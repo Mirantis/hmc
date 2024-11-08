@@ -22,6 +22,13 @@ import (
 type CredentialState string
 
 const (
+	// CredentialReadyCondition indicates if referenced Credential exists and has Ready state
+	CredentialReadyCondition = "CredentialReady"
+	// CredentialPropagatedCondition indicates that CCM credentials were delivered to managed cluster
+	CredentialsPropagatedCondition = "CredentialsApplied"
+)
+
+const (
 	CredentialReady     CredentialState = "Ready"
 	CredentialNotFound  CredentialState = "Cluster Identity not found"
 	CredentialWrongType CredentialState = "Mismatched type"
@@ -37,7 +44,9 @@ type CredentialSpec struct {
 
 // CredentialStatus defines the observed state of Credential
 type CredentialStatus struct {
-	State CredentialState `json:"state,omitempty"`
+	State              CredentialState    `json:"state,omitempty"`
+	Conditions         []metav1.Condition `json:"conditions,omitempty"`
+	ClusterIdentityGen int64              `json:"clusterIdentityGen,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -53,6 +62,10 @@ type Credential struct {
 
 	Spec   CredentialSpec   `json:"spec,omitempty"`
 	Status CredentialStatus `json:"status,omitempty"`
+}
+
+func (in *Credential) GetConditions() *[]metav1.Condition {
+	return &in.Status.Conditions
 }
 
 // +kubebuilder:object:root=true

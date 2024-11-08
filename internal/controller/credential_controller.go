@@ -20,9 +20,17 @@ import (
 	"fmt"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
 )
@@ -30,16 +38,27 @@ import (
 // CredentialReconciler reconciles a Credential object
 type CredentialReconciler struct {
 	client.Client
+	tracker ClIdtyTracker
+}
+
+type ClIdtyTracker struct {
+	cache.Cache
+	controller.Controller
 }
 
 func (r *CredentialReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	l := ctrl.LoggerFrom(ctx)
 	l.Info("Credential reconcile start")
+	var err error
 
 	cred := &hmc.Credential{}
 	if err := r.Client.Get(ctx, req.NamespacedName, cred); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
+
+	defer func() {
+		err = errors.Join(err, r.updateStatus(ctx, cred))
+	}()
 
 	clIdty := &unstructured.Unstructured{}
 	clIdty.SetAPIVersion(cred.Spec.IdentityRef.APIVersion)
@@ -51,34 +70,62 @@ func (r *CredentialReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		Name:      cred.Spec.IdentityRef.Name,
 		Namespace: cred.Spec.IdentityRef.Namespace,
 	}, clIdty); err != nil {
+		errMsg := fmt.Sprintf("Failed to get ClusterIdentity %s: %s", cred.Spec.IdentityRef.Name, err)
 		if apierrors.IsNotFound(err) {
-			stateErr := r.setState(ctx, cred, hmc.CredentialNotFound)
-			if stateErr != nil {
-				err = errors.Join(err, stateErr)
-			}
-
-			l.Error(err, "ClusterIdentity not found")
-
-			return ctrl.Result{}, err
+			errMsg = fmt.Sprintf("ClusterIdentity %s not found", cred.Spec.IdentityRef.Name)
 		}
 
-		l.Error(err, "failed to get ClusterIdentity")
+		apimeta.SetStatusCondition(cred.GetConditions(), metav1.Condition{
+			Type:    hmc.CredentialReadyCondition,
+			Status:  metav1.ConditionFalse,
+			Reason:  hmc.FailedReason,
+			Message: errMsg,
+		})
 
 		return ctrl.Result{}, err
 	}
 
-	if err := r.setState(ctx, cred, hmc.CredentialReady); err != nil {
-		l.Error(err, "failed to set Credential state")
-
-		return ctrl.Result{}, err
+	gen := clIdty.GetGeneration()
+	if gen == cred.Status.ClusterIdentityGen {
+		return ctrl.Result{}, nil
 	}
+
+	clIdtyObj, ok := clIdty.DeepCopyObject().(client.Object)
+	if !ok {
+		return ctrl.Result{}, fmt.Errorf("type casting failed for %s", clIdty.GetName())
+	}
+
+	if err := r.tracker.Controller.Watch(
+		source.Kind(r.tracker.Cache, clIdtyObj,
+			handler.TypedEnqueueRequestsFromMapFunc(func(_ context.Context, _ client.Object) []ctrl.Request {
+				return []ctrl.Request{
+					{NamespacedName: types.NamespacedName{
+						Name:      cred.Name,
+						Namespace: cred.Namespace,
+					}},
+				}
+			}),
+			predicate.GenerationChangedPredicate{},
+		),
+	); err != nil {
+		return ctrl.Result{},
+			fmt.Errorf("failed to start watcher for %s/%s: %w", clIdtyObj.GetNamespace(), clIdtyObj.GetName(), err)
+	}
+
+	cred.Status.State = hmc.CredentialReady
+	cred.Status.ClusterIdentityGen = gen
+
+	apimeta.SetStatusCondition(cred.GetConditions(), metav1.Condition{
+		Type:    hmc.CredentialReadyCondition,
+		Status:  metav1.ConditionTrue,
+		Reason:  hmc.SucceededReason,
+		Message: "Credential is ready",
+	})
 
 	return ctrl.Result{}, nil
 }
 
-func (r *CredentialReconciler) setState(ctx context.Context, cred *hmc.Credential, state hmc.CredentialState) error {
-	cred.Status.State = state
-
+func (r *CredentialReconciler) updateStatus(ctx context.Context, cred *hmc.Credential) error {
 	if err := r.Client.Status().Update(ctx, cred); err != nil {
 		return fmt.Errorf("failed to update Credential %s/%s status: %w", cred.Namespace, cred.Name, err)
 	}
@@ -88,7 +135,17 @@ func (r *CredentialReconciler) setState(ctx context.Context, cred *hmc.Credentia
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *CredentialReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
+	c, err := ctrl.NewControllerManagedBy(mgr).
 		For(&hmc.Credential{}).
-		Complete(r)
+		Build(r)
+	if err != nil {
+		return fmt.Errorf("failed to build Credential controller: %w", err)
+	}
+
+	r.tracker = ClIdtyTracker{
+		Cache:      mgr.GetCache(),
+		Controller: c,
+	}
+
+	return nil
 }
