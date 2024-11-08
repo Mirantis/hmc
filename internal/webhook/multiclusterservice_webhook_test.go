@@ -26,7 +26,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/Mirantis/hmc/api/v1alpha1"
-	"github.com/Mirantis/hmc/internal/utils"
 	"github.com/Mirantis/hmc/test/objects/multiclusterservice"
 	"github.com/Mirantis/hmc/test/objects/template"
 	"github.com/Mirantis/hmc/test/scheme"
@@ -36,6 +35,7 @@ const (
 	testMCSName          = "testmcs"
 	testSvcTemplate1Name = "test-servicetemplate-1"
 	testSvcTemplate2Name = "test-servicetemplate-2"
+	testSystemNamespace  = "test-system-namespace"
 )
 
 func TestMultiClusterServiceValidateCreate(t *testing.T) {
@@ -53,7 +53,7 @@ func TestMultiClusterServiceValidateCreate(t *testing.T) {
 		warnings        admission.Warnings
 	}{
 		{
-			name: "should fail if the ServiceTemplates are not found in hmc-system namespace",
+			name: "should fail if the ServiceTemplates are not found in system namespace",
 			mcs: multiclusterservice.NewMultiClusterService(
 				multiclusterservice.WithName(testMCSName),
 				multiclusterservice.WithServiceTemplate(testSvcTemplate1Name),
@@ -76,7 +76,7 @@ func TestMultiClusterServiceValidateCreate(t *testing.T) {
 			existingObjects: []runtime.Object{
 				template.NewServiceTemplate(
 					template.WithName(testSvcTemplate1Name),
-					template.WithNamespace(utils.DefaultSystemNamespace),
+					template.WithNamespace(testSystemNamespace),
 					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{
 						Valid:           false,
 						ValidationError: "validation error example",
@@ -94,7 +94,7 @@ func TestMultiClusterServiceValidateCreate(t *testing.T) {
 			existingObjects: []runtime.Object{
 				template.NewServiceTemplate(
 					template.WithName(testSvcTemplate1Name),
-					template.WithNamespace(utils.DefaultSystemNamespace),
+					template.WithNamespace(testSystemNamespace),
 					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
 				),
 			},
@@ -109,12 +109,12 @@ func TestMultiClusterServiceValidateCreate(t *testing.T) {
 			existingObjects: []runtime.Object{
 				template.NewServiceTemplate(
 					template.WithName(testSvcTemplate1Name),
-					template.WithNamespace(utils.DefaultSystemNamespace),
+					template.WithNamespace(testSystemNamespace),
 					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
 				),
 				template.NewServiceTemplate(
 					template.WithName(testSvcTemplate2Name),
-					template.WithNamespace(utils.DefaultSystemNamespace),
+					template.WithNamespace(testSystemNamespace),
 					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
 				),
 			},
@@ -130,9 +130,8 @@ func TestMultiClusterServiceValidateCreate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			g := NewWithT(t)
-
 			c := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(tt.existingObjects...).Build()
-			validator := &MultiClusterServiceValidator{Client: c}
+			validator := &MultiClusterServiceValidator{Client: c, SystemNamespace: testSystemNamespace}
 			warn, err := validator.ValidateCreate(ctx, tt.mcs)
 			if tt.err != "" {
 				g.Expect(err).To(MatchError(tt.err))
@@ -169,7 +168,7 @@ func TestMultiClusterServiceValidateUpdate(t *testing.T) {
 		warnings        admission.Warnings
 	}{
 		{
-			name: "should fail if the ServiceTemplates are not found in hmc-system namespace",
+			name: "should fail if the ServiceTemplates are not found in system namespace",
 			newMCS: multiclusterservice.NewMultiClusterService(
 				multiclusterservice.WithName(testMCSName),
 				multiclusterservice.WithServiceTemplate(testSvcTemplate1Name),
@@ -178,7 +177,7 @@ func TestMultiClusterServiceValidateUpdate(t *testing.T) {
 			existingObjects: []runtime.Object{
 				template.NewServiceTemplate(
 					template.WithName(testSvcTemplate1Name),
-					template.WithNamespace(utils.DefaultSystemNamespace),
+					template.WithNamespace(testSystemNamespace),
 					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
 				),
 				template.NewServiceTemplate(
@@ -199,12 +198,12 @@ func TestMultiClusterServiceValidateUpdate(t *testing.T) {
 			existingObjects: []runtime.Object{
 				template.NewServiceTemplate(
 					template.WithName(testSvcTemplate1Name),
-					template.WithNamespace(utils.DefaultSystemNamespace),
+					template.WithNamespace(testSystemNamespace),
 					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
 				),
 				template.NewServiceTemplate(
 					template.WithName(testSvcTemplate2Name),
-					template.WithNamespace(utils.DefaultSystemNamespace),
+					template.WithNamespace(testSystemNamespace),
 					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{
 						Valid:           false,
 						ValidationError: "validation error example",
@@ -223,12 +222,12 @@ func TestMultiClusterServiceValidateUpdate(t *testing.T) {
 			existingObjects: []runtime.Object{
 				template.NewServiceTemplate(
 					template.WithName(testSvcTemplate1Name),
-					template.WithNamespace(utils.DefaultSystemNamespace),
+					template.WithNamespace(testSystemNamespace),
 					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
 				),
 				template.NewServiceTemplate(
 					template.WithName(testSvcTemplate2Name),
-					template.WithNamespace(utils.DefaultSystemNamespace),
+					template.WithNamespace(testSystemNamespace),
 					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
 				),
 			},
@@ -246,7 +245,7 @@ func TestMultiClusterServiceValidateUpdate(t *testing.T) {
 			g := NewWithT(t)
 
 			c := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(tt.existingObjects...).Build()
-			validator := &MultiClusterServiceValidator{Client: c}
+			validator := &MultiClusterServiceValidator{Client: c, SystemNamespace: testSystemNamespace}
 			warn, err := validator.ValidateUpdate(ctx, oldMCS, tt.newMCS)
 			if tt.err != "" {
 				g.Expect(err).To(MatchError(tt.err))

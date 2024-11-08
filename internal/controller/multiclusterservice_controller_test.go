@@ -31,13 +31,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
-	"github.com/Mirantis/hmc/internal/utils"
 )
 
 var _ = Describe("MultiClusterService Controller", func() {
 	Context("When reconciling a resource", func() {
 		const (
-			testNamespace           = utils.DefaultSystemNamespace
 			serviceTemplateName     = "test-service-0-1-0"
 			helmRepoName            = "test-helmrepo"
 			helmChartName           = "test-helmchart"
@@ -66,31 +64,31 @@ var _ = Describe("MultiClusterService Controller", func() {
 		multiClusterService := &hmc.MultiClusterService{}
 		clusterProfile := &sveltosv1beta1.ClusterProfile{}
 
-		helmRepositoryRef := types.NamespacedName{Namespace: testNamespace, Name: helmRepoName}
-		helmChartRef := types.NamespacedName{Namespace: testNamespace, Name: helmChartName}
-		serviceTemplateRef := types.NamespacedName{Namespace: testNamespace, Name: serviceTemplateName}
+		helmRepositoryRef := types.NamespacedName{Namespace: testSystemNamespace, Name: helmRepoName}
+		helmChartRef := types.NamespacedName{Namespace: testSystemNamespace, Name: helmChartName}
+		serviceTemplateRef := types.NamespacedName{Namespace: testSystemNamespace, Name: serviceTemplateName}
 		multiClusterServiceRef := types.NamespacedName{Name: multiClusterServiceName}
 		clusterProfileRef := types.NamespacedName{Name: multiClusterServiceName}
 
 		BeforeEach(func() {
 			By("creating Namespace")
-			err := k8sClient.Get(ctx, types.NamespacedName{Name: testNamespace}, namespace)
+			err := k8sClient.Get(ctx, types.NamespacedName{Name: testSystemNamespace}, namespace)
 			if err != nil && apierrors.IsNotFound(err) {
 				namespace = &corev1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: testNamespace,
+						Name: testSystemNamespace,
 					},
 				}
 				Expect(k8sClient.Create(ctx, namespace)).To(Succeed())
 			}
 
 			By("creating HelmRepository")
-			err = k8sClient.Get(ctx, types.NamespacedName{Name: helmRepoName, Namespace: testNamespace}, helmRepo)
+			err = k8sClient.Get(ctx, types.NamespacedName{Name: helmRepoName, Namespace: testSystemNamespace}, helmRepo)
 			if err != nil && apierrors.IsNotFound(err) {
 				helmRepo = &sourcev1.HelmRepository{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      helmRepoName,
-						Namespace: testNamespace,
+						Namespace: testSystemNamespace,
 					},
 					Spec: sourcev1.HelmRepositorySpec{
 						URL: "oci://test/helmrepo",
@@ -100,12 +98,12 @@ var _ = Describe("MultiClusterService Controller", func() {
 			}
 
 			By("creating HelmChart")
-			err = k8sClient.Get(ctx, types.NamespacedName{Name: helmChartName, Namespace: testNamespace}, helmChart)
+			err = k8sClient.Get(ctx, types.NamespacedName{Name: helmChartName, Namespace: testSystemNamespace}, helmChart)
 			if err != nil && apierrors.IsNotFound(err) {
 				helmChart = &sourcev1.HelmChart{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      helmChartName,
-						Namespace: testNamespace,
+						Namespace: testSystemNamespace,
 					},
 					Spec: sourcev1.HelmChartSpec{
 						SourceRef: sourcev1.LocalHelmChartSourceReference{
@@ -131,7 +129,7 @@ var _ = Describe("MultiClusterService Controller", func() {
 				serviceTemplate = &hmc.ServiceTemplate{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      serviceTemplateName,
-						Namespace: testNamespace,
+						Namespace: testSystemNamespace,
 						Labels: map[string]string{
 							hmc.HMCManagedLabelKey: "true",
 						},
@@ -142,7 +140,7 @@ var _ = Describe("MultiClusterService Controller", func() {
 							ChartRef: &helmcontrollerv2.CrossNamespaceSourceReference{
 								Kind:      "HelmChart",
 								Name:      helmChartName,
-								Namespace: testNamespace,
+								Namespace: testSystemNamespace,
 							},
 						},
 					},
@@ -195,7 +193,7 @@ var _ = Describe("MultiClusterService Controller", func() {
 			multiClusterServiceResource := &hmc.MultiClusterService{}
 			Expect(k8sClient.Get(ctx, multiClusterServiceRef, multiClusterServiceResource)).NotTo(HaveOccurred())
 
-			reconciler := &MultiClusterServiceReconciler{Client: k8sClient}
+			reconciler := &MultiClusterServiceReconciler{Client: k8sClient, SystemNamespace: testSystemNamespace}
 			Expect(k8sClient.Delete(ctx, multiClusterService)).To(Succeed())
 			// Running reconcile to remove the finalizer and delete the MultiClusterService
 			_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: multiClusterServiceRef})
@@ -219,7 +217,7 @@ var _ = Describe("MultiClusterService Controller", func() {
 
 		It("should successfully reconcile the resource", func() {
 			By("reconciling MultiClusterService")
-			multiClusterServiceReconciler := &MultiClusterServiceReconciler{Client: k8sClient}
+			multiClusterServiceReconciler := &MultiClusterServiceReconciler{Client: k8sClient, SystemNamespace: testSystemNamespace}
 
 			_, err := multiClusterServiceReconciler.Reconcile(ctx, reconcile.Request{NamespacedName: multiClusterServiceRef})
 			Expect(err).NotTo(HaveOccurred())

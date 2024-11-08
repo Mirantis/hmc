@@ -16,6 +16,7 @@ package webhook
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -26,11 +27,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/Mirantis/hmc/api/v1alpha1"
-	"github.com/Mirantis/hmc/internal/utils"
 )
 
 type MultiClusterServiceValidator struct {
 	client.Client
+	SystemNamespace string
 }
 
 const invalidMultiClusterServiceMsg = "the MultiClusterService is invalid"
@@ -62,7 +63,7 @@ func (v *MultiClusterServiceValidator) ValidateCreate(ctx context.Context, obj r
 		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected MultiClusterService but got a %T", obj))
 	}
 
-	if err := validateServices(ctx, v.Client, utils.DefaultSystemNamespace, mcs.Spec.Services); err != nil {
+	if err := validateServices(ctx, v.Client, v.SystemNamespace, mcs.Spec.Services); err != nil {
 		return nil, fmt.Errorf("%s: %w", invalidMultiClusterServiceMsg, err)
 	}
 
@@ -76,7 +77,7 @@ func (v *MultiClusterServiceValidator) ValidateUpdate(ctx context.Context, _, ne
 		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected MultiClusterService but got a %T", newObj))
 	}
 
-	if err := validateServices(ctx, v.Client, utils.DefaultSystemNamespace, mcs.Spec.Services); err != nil {
+	if err := validateServices(ctx, v.Client, v.SystemNamespace, mcs.Spec.Services); err != nil {
 		return nil, fmt.Errorf("%s: %w", invalidMultiClusterServiceMsg, err)
 	}
 
@@ -93,17 +94,16 @@ func getServiceTemplate(ctx context.Context, c client.Client, templateNamespace,
 	return tpl, c.Get(ctx, client.ObjectKey{Namespace: templateNamespace, Name: templateName}, tpl)
 }
 
-func validateServices(ctx context.Context, c client.Client, namespace string, services []v1alpha1.ServiceSpec) error {
+func validateServices(ctx context.Context, c client.Client, namespace string, services []v1alpha1.ServiceSpec) (errs error) {
 	for _, svc := range services {
 		tpl, err := getServiceTemplate(ctx, c, namespace, svc.Template)
 		if err != nil {
-			return err
+			errs = errors.Join(errs, err)
+			continue
 		}
 
-		if err := isTemplateValid(tpl.GetCommonStatus()); err != nil {
-			return err
-		}
+		errs = errors.Join(errs, isTemplateValid(tpl.GetCommonStatus()))
 	}
 
-	return nil
+	return errs
 }
