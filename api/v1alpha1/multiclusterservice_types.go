@@ -100,7 +100,7 @@ type ServiceStatus struct {
 type MultiClusterServiceStatus struct {
 	// Services contains details for the state of services.
 	Services []ServiceStatus `json:"services,omitempty"`
-	// Conditions contains details for the current state of the ManagedCluster
+	// Conditions contains details for the current state of the MultiClusterService.
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 	// ObservedGeneration is the last observed generation.
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`

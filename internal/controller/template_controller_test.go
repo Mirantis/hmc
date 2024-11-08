@@ -312,7 +312,8 @@ var _ = Describe("Template Controller", func() {
 
 			By("Having the valid cluster template status")
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(clusterTemplate), clusterTemplate)).To(Succeed())
-			Expect(clusterTemplate.Status.Valid && clusterTemplate.Status.ValidationError == "").To(BeTrue())
+			Expect(clusterTemplate.Status.Valid).To(BeTrue())
+			Expect(clusterTemplate.Status.ValidationError).To(BeEmpty())
 			Expect(clusterTemplate.Status.Providers).To(HaveLen(2))
 			Expect(clusterTemplate.Status.ProviderContracts).To(HaveLen(2))
 			Expect(clusterTemplate.Status.Providers[0]).To(Equal(someProviderName))

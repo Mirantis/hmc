@@ -54,6 +54,7 @@ import (
 const (
 	mutatingWebhookKind   = "MutatingWebhookConfiguration"
 	validatingWebhookKind = "ValidatingWebhookConfiguration"
+	testSystemNamespace   = "test-system-namespace"
 )
 
 var (
@@ -150,6 +151,9 @@ var _ = BeforeSuite(func() {
 	err = (&hmcwebhook.ManagedClusterValidator{}).SetupWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
+	err = (&hmcwebhook.MultiClusterServiceValidator{SystemNamespace: testSystemNamespace}).SetupWebhookWithManager(mgr)
+	Expect(err).NotTo(HaveOccurred())
+
 	err = (&hmcwebhook.ManagementValidator{}).SetupWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -165,7 +169,7 @@ var _ = BeforeSuite(func() {
 	err = (&hmcwebhook.ClusterTemplateValidator{}).SetupWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
-	err = (&hmcwebhook.ServiceTemplateValidator{}).SetupWebhookWithManager(mgr)
+	err = (&hmcwebhook.ServiceTemplateValidator{SystemNamespace: testSystemNamespace}).SetupWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
 	err = (&hmcwebhook.ProviderTemplateValidator{}).SetupWebhookWithManager(mgr)

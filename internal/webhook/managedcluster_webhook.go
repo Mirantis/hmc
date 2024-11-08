@@ -67,7 +67,7 @@ func (v *ManagedClusterValidator) ValidateCreate(ctx context.Context, obj runtim
 		return nil, fmt.Errorf("%s: %w", invalidManagedClusterMsg, err)
 	}
 
-	if err := isTemplateValid(template); err != nil {
+	if err := isTemplateValid(template.GetCommonStatus()); err != nil {
 		return nil, fmt.Errorf("%s: %w", invalidManagedClusterMsg, err)
 	}
 
@@ -76,6 +76,10 @@ func (v *ManagedClusterValidator) ValidateCreate(ctx context.Context, obj runtim
 	}
 
 	if err := v.validateCredential(ctx, managedCluster, template); err != nil {
+		return nil, fmt.Errorf("%s: %w", invalidManagedClusterMsg, err)
+	}
+
+	if err := validateServices(ctx, v.Client, managedCluster.Namespace, managedCluster.Spec.Services); err != nil {
 		return nil, fmt.Errorf("%s: %w", invalidManagedClusterMsg, err)
 	}
 
@@ -106,7 +110,7 @@ func (v *ManagedClusterValidator) ValidateUpdate(ctx context.Context, oldObj, ne
 			return admission.Warnings{msg}, errClusterUpgradeForbidden
 		}
 
-		if err := isTemplateValid(template); err != nil {
+		if err := isTemplateValid(template.GetCommonStatus()); err != nil {
 			return nil, fmt.Errorf("%s: %w", invalidManagedClusterMsg, err)
 		}
 
@@ -116,6 +120,10 @@ func (v *ManagedClusterValidator) ValidateUpdate(ctx context.Context, oldObj, ne
 	}
 
 	if err := v.validateCredential(ctx, newManagedCluster, template); err != nil {
+		return nil, fmt.Errorf("%s: %w", invalidManagedClusterMsg, err)
+	}
+
+	if err := validateServices(ctx, v.Client, newManagedCluster.Namespace, newManagedCluster.Spec.Services); err != nil {
 		return nil, fmt.Errorf("%s: %w", invalidManagedClusterMsg, err)
 	}
 
@@ -185,7 +193,7 @@ func (v *ManagedClusterValidator) Default(ctx context.Context, obj runtime.Objec
 		return fmt.Errorf("could not get template for the managedcluster: %w", err)
 	}
 
-	if err := isTemplateValid(template); err != nil {
+	if err := isTemplateValid(template.GetCommonStatus()); err != nil {
 		return fmt.Errorf("template is invalid: %w", err)
 	}
 
@@ -216,9 +224,9 @@ func (v *ManagedClusterValidator) getManagedClusterCredential(ctx context.Contex
 	return cred, nil
 }
 
-func isTemplateValid(template *hmcv1alpha1.ClusterTemplate) error {
-	if !template.Status.Valid {
-		return fmt.Errorf("the template is not valid: %s", template.Status.ValidationError)
+func isTemplateValid(status *hmcv1alpha1.TemplateStatusCommon) error {
+	if !status.Valid {
+		return fmt.Errorf("the template is not valid: %s", status.ValidationError)
 	}
 
 	return nil

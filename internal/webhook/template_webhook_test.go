@@ -25,6 +25,7 @@ import (
 
 	"github.com/Mirantis/hmc/api/v1alpha1"
 	"github.com/Mirantis/hmc/test/objects/managedcluster"
+	"github.com/Mirantis/hmc/test/objects/multiclusterservice"
 	"github.com/Mirantis/hmc/test/objects/template"
 	"github.com/Mirantis/hmc/test/scheme"
 )
@@ -136,6 +137,18 @@ func TestServiceTemplateValidateDelete(t *testing.T) {
 			template:        tmpl,
 			existingObjects: []runtime.Object{managedcluster.NewManagedCluster()},
 		},
+		{
+			title:    "should fail if a MultiClusterService is referencing serviceTemplate in system namespace",
+			template: template.NewServiceTemplate(template.WithNamespace(testSystemNamespace), template.WithName(tmpl.Name)),
+			existingObjects: []runtime.Object{
+				multiclusterservice.NewMultiClusterService(
+					multiclusterservice.WithName("mymulticlusterservice"),
+					multiclusterservice.WithServiceTemplate(tmpl.Name),
+				),
+			},
+			warnings: admission.Warnings{"The ServiceTemplate object can't be removed if MultiClusterService objects referencing it still exist"},
+			err:      errTemplateDeletionForbidden.Error(),
+		},
 	}
 
 	for _, tt := range tests {
@@ -146,9 +159,10 @@ func TestServiceTemplateValidateDelete(t *testing.T) {
 				NewClientBuilder().
 				WithScheme(scheme.Scheme).
 				WithRuntimeObjects(tt.existingObjects...).
-				WithIndex(tt.existingObjects[0], v1alpha1.ServicesTemplateKey, v1alpha1.ExtractServiceTemplateName).
+				WithIndex(&v1alpha1.ManagedCluster{}, v1alpha1.ServicesTemplateKey, v1alpha1.ExtractServiceTemplateFromManagedCluster).
+				WithIndex(&v1alpha1.MultiClusterService{}, v1alpha1.ServicesTemplateKey, v1alpha1.ExtractServiceTemplateFromMultiClusterService).
 				Build()
-			validator := &ServiceTemplateValidator{Client: c}
+			validator := &ServiceTemplateValidator{Client: c, SystemNamespace: testSystemNamespace}
 			warn, err := validator.ValidateDelete(ctx, tt.template)
 			if tt.err != "" {
 				g.Expect(err).To(MatchError(tt.err))

@@ -145,7 +145,7 @@ spec:
             properties:
               conditions:
                 description: Conditions contains details for the current state of
-                  the ManagedCluster
+                  the MultiClusterService.
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.

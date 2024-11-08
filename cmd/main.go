@@ -296,7 +296,8 @@ func main() {
 	}
 
 	if err = (&controller.MultiClusterServiceReconciler{
-		Client: mgr.GetClient(),
+		Client:          mgr.GetClient(),
+		SystemNamespace: currentNamespace,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "MultiClusterService")
 		os.Exit(1)
@@ -331,6 +332,10 @@ func setupWebhooks(mgr ctrl.Manager, currentNamespace string) error {
 		setupLog.Error(err, "unable to create webhook", "webhook", "ManagedCluster")
 		return err
 	}
+	if err := (&hmcwebhook.MultiClusterServiceValidator{SystemNamespace: currentNamespace}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "MultiClusterService")
+		return err
+	}
 	if err := (&hmcwebhook.ManagementValidator{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "Management")
 		return err
@@ -351,7 +356,7 @@ func setupWebhooks(mgr ctrl.Manager, currentNamespace string) error {
 		setupLog.Error(err, "unable to create webhook", "webhook", "ClusterTemplate")
 		return err
 	}
-	if err := (&hmcwebhook.ServiceTemplateValidator{}).SetupWebhookWithManager(mgr); err != nil {
+	if err := (&hmcwebhook.ServiceTemplateValidator{SystemNamespace: currentNamespace}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "ServiceTemplate")
 		return err
 	}

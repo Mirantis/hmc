@@ -44,6 +44,7 @@ import (
 // MultiClusterServiceReconciler reconciles a MultiClusterService object
 type MultiClusterServiceReconciler struct {
 	client.Client
+	SystemNamespace string
 }
 
 // Reconcile reconciles a MultiClusterService object.
@@ -114,9 +115,9 @@ func (r *MultiClusterServiceReconciler) reconcileUpdate(ctx context.Context, mcs
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	// By using DefaultSystemNamespace we are enforcing that MultiClusterService
-	// may only use ServiceTemplates that are present in the hmc-system namespace.
-	opts, err := helmChartOpts(ctx, r.Client, utils.DefaultSystemNamespace, mcs.Spec.Services)
+	// We are enforcing that MultiClusterService may only use
+	// ServiceTemplates that are present in the system namespace.
+	opts, err := helmChartOpts(ctx, r.Client, r.SystemNamespace, mcs.Spec.Services)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -179,7 +180,7 @@ func helmChartOpts(ctx context.Context, c client.Client, namespace string, servi
 		// Here we can use the same namespace for all services
 		// because if the services slice is part of:
 		// 1. ManagedCluster: Then the referred template must be in its own namespace.
-		// 2. MultiClusterService: Then the referred template must be in hmc-system namespace.
+		// 2. MultiClusterService: Then the referred template must be in system namespace.
 		tmplRef := client.ObjectKey{Name: svc.Template, Namespace: namespace}
 		if err := c.Get(ctx, tmplRef, tmpl); err != nil {
 			return nil, fmt.Errorf("failed to get ServiceTemplate %s: %w", tmplRef.String(), err)
@@ -356,7 +357,7 @@ func requeueSveltosProfileForClusterSummary(ctx context.Context, obj client.Obje
 
 	cs, ok := obj.(*sveltosv1beta1.ClusterSummary)
 	if !ok {
-		l.Error(errors.New("request is not for a ClusterSummary object"), msg, "ClusterSummary.Name", obj.GetName(), "ClusterSummary.Namespace", obj.GetNamespace())
+		l.Error(errors.New("request is not for a ClusterSummary object"), msg, "Requested.Name", obj.GetName(), "Requested.Namespace", obj.GetNamespace())
 		return []ctrl.Request{}
 	}
 

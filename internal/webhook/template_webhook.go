@@ -88,6 +88,7 @@ func (*ClusterTemplateValidator) Default(context.Context, runtime.Object) error 
 
 type ServiceTemplateValidator struct {
 	client.Client
+	SystemNamespace string
 }
 
 func (v *ServiceTemplateValidator) SetupWebhookWithManager(mgr ctrl.Manager) error {
@@ -131,6 +132,20 @@ func (v *ServiceTemplateValidator) ValidateDelete(ctx context.Context, obj runti
 
 	if len(managedClusters.Items) > 0 {
 		return admission.Warnings{"The ServiceTemplate object can't be removed if ManagedCluster objects referencing it still exist"}, errTemplateDeletionForbidden
+	}
+
+	// MultiClusterServices can only refer to serviceTemplates in system namespace.
+	if tmpl.Namespace == v.SystemNamespace {
+		multiSvcClusters := &v1alpha1.MultiClusterServiceList{}
+		if err := v.Client.List(ctx, multiSvcClusters,
+			client.MatchingFields{v1alpha1.ServicesTemplateKey: tmpl.Name},
+			client.Limit(1)); err != nil {
+			return nil, err
+		}
+
+		if len(multiSvcClusters.Items) > 0 {
+			return admission.Warnings{"The ServiceTemplate object can't be removed if MultiClusterService objects referencing it still exist"}, errTemplateDeletionForbidden
+		}
 	}
 
 	return nil, nil
