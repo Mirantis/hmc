@@ -18,32 +18,23 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
 )
 
+const defaultSyncPeriod = 15 * time.Minute
+
 // CredentialReconciler reconciles a Credential object
 type CredentialReconciler struct {
 	client.Client
-	tracker ClIdtyTracker
-}
-
-type ClIdtyTracker struct {
-	cache.Cache
-	controller.Controller
 }
 
 func (r *CredentialReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -86,32 +77,6 @@ func (r *CredentialReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	gen := clIdty.GetGeneration()
-	if gen == cred.Status.ClusterIdentityGen {
-		return ctrl.Result{}, nil
-	}
-
-	clIdtyObj, ok := clIdty.DeepCopyObject().(client.Object)
-	if !ok {
-		return ctrl.Result{}, fmt.Errorf("type casting failed for %s", clIdty.GetName())
-	}
-
-	if err := r.tracker.Controller.Watch(
-		source.Kind(r.tracker.Cache, clIdtyObj,
-			handler.TypedEnqueueRequestsFromMapFunc(func(_ context.Context, _ client.Object) []ctrl.Request {
-				return []ctrl.Request{
-					{NamespacedName: types.NamespacedName{
-						Name:      cred.Name,
-						Namespace: cred.Namespace,
-					}},
-				}
-			}),
-			predicate.GenerationChangedPredicate{},
-		),
-	); err != nil {
-		return ctrl.Result{},
-			fmt.Errorf("failed to start watcher for %s/%s: %w", clIdtyObj.GetNamespace(), clIdtyObj.GetName(), err)
-	}
-
 	cred.Status.State = hmc.CredentialReady
 	cred.Status.ClusterIdentityGen = gen
 
@@ -122,7 +87,9 @@ func (r *CredentialReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		Message: "Credential is ready",
 	})
 
-	return ctrl.Result{}, nil
+	return ctrl.Result{
+		RequeueAfter: defaultSyncPeriod,
+	}, nil
 }
 
 func (r *CredentialReconciler) updateStatus(ctx context.Context, cred *hmc.Credential) error {
@@ -135,17 +102,7 @@ func (r *CredentialReconciler) updateStatus(ctx context.Context, cred *hmc.Crede
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *CredentialReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	c, err := ctrl.NewControllerManagedBy(mgr).
+	return ctrl.NewControllerManagedBy(mgr).
 		For(&hmc.Credential{}).
-		Build(r)
-	if err != nil {
-		return fmt.Errorf("failed to build Credential controller: %w", err)
-	}
-
-	r.tracker = ClIdtyTracker{
-		Cache:      mgr.GetCache(),
-		Controller: c,
-	}
-
-	return nil
+		Complete(r)
 }
