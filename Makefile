@@ -119,7 +119,7 @@ test-e2e: cli-install
 
 .PHONY: lint
 lint: golangci-lint ## Run golangci-lint linter & yamllint
-	@$(GOLANGCI_LINT) run
+	@$(GOLANGCI_LINT) run --timeout=$(GOLANGCI_LINT_TIMEOUT)
 
 .PHONY: lint-fix
 lint-fix: golangci-lint ## Run golangci-lint linter and perform fixes
@@ -429,6 +429,7 @@ AWSCLI ?= $(LOCALBIN)/aws
 CONTROLLER_TOOLS_VERSION ?= v0.16.3
 ENVTEST_VERSION ?= release-0.17
 GOLANGCI_LINT_VERSION ?= v1.61.0
+GOLANGCI_LINT_TIMEOUT ?= 1m
 HELM_VERSION ?= v3.15.1
 KIND_VERSION ?= v0.23.0
 YQ_VERSION ?= v4.44.2
