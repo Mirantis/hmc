@@ -3,7 +3,7 @@ kind: ManagedCluster
 metadata:
   name: ${MANAGED_CLUSTER_NAME}
 spec:
-  template: aws-standalone-cp-0-0-4
+  template: ${MANAGED_CLUSTER_TEMPLATE}
   credential: ${AWS_CLUSTER_IDENTITY}-cred
   config:
     clusterIdentity:
