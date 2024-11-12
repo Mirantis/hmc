@@ -253,7 +253,7 @@ func (r *ManagedClusterReconciler) Update(ctx context.Context, managedCluster *h
 		return ctrl.Result{}, err
 	}
 
-	if cred.Status.State != hmc.CredentialReady {
+	if !cred.Status.Ready {
 		apimeta.SetStatusCondition(managedCluster.GetConditions(), metav1.Condition{
 			Type:    hmc.CredentialReadyCondition,
 			Status:  metav1.ConditionFalse,

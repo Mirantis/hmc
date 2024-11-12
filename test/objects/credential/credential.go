@@ -59,8 +59,8 @@ func WithIdentityRef(idtyRef *corev1.ObjectReference) Opt {
 	}
 }
 
-func WithState(state v1alpha1.CredentialState) Opt {
+func WithReady(ready bool) Opt {
 	return func(p *v1alpha1.Credential) {
-		p.Status.State = state
+		p.Status.Ready = ready
 	}
 }

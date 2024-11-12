@@ -164,7 +164,7 @@ var _ = Describe("ManagedCluster Controller", func() {
 				}
 				Expect(k8sClient.Create(ctx, credential)).To(Succeed())
 				credential.Status = hmc.CredentialStatus{
-					State: hmc.CredentialReady,
+					Ready: true,
 				}
 				Expect(k8sClient.Status().Update(ctx, credential)).To(Succeed())
 			}

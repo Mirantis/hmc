@@ -51,7 +51,7 @@ var (
 
 	cred = credential.NewCredential(
 		credential.WithName(testCredentialName),
-		credential.WithState(v1alpha1.CredentialReady),
+		credential.WithReady(true),
 		credential.WithIdentityRef(
 			&corev1.ObjectReference{
 				Kind: "AWSClusterStaticIdentity",
@@ -250,7 +250,7 @@ func TestManagedClusterValidateCreate(t *testing.T) {
 				mgmt,
 				credential.NewCredential(
 					credential.WithName(testCredentialName),
-					credential.WithState(v1alpha1.CredentialNotFound),
+					credential.WithReady(false),
 					credential.WithIdentityRef(
 						&corev1.ObjectReference{
 							Kind: "AWSClusterStaticIdentity",

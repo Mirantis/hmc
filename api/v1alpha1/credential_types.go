@@ -19,19 +19,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type CredentialState string
-
 const (
 	// CredentialReadyCondition indicates if referenced Credential exists and has Ready state
 	CredentialReadyCondition = "CredentialReady"
 	// CredentialPropagatedCondition indicates that CCM credentials were delivered to managed cluster
 	CredentialsPropagatedCondition = "CredentialsApplied"
-)
-
-const (
-	CredentialReady     CredentialState = "Ready"
-	CredentialNotFound  CredentialState = "Cluster Identity not found"
-	CredentialWrongType CredentialState = "Mismatched type"
 )
 
 // CredentialSpec defines the desired state of Credential
@@ -44,15 +36,17 @@ type CredentialSpec struct {
 
 // CredentialStatus defines the observed state of Credential
 type CredentialStatus struct {
-	State              CredentialState    `json:"state,omitempty"`
-	Conditions         []metav1.Condition `json:"conditions,omitempty"`
-	ClusterIdentityGen int64              `json:"clusterIdentityGen,omitempty"`
+	// +kubebuilder:default:=false
+
+	Ready      bool               `json:"ready"`
+	// Conditions contains details for the current state of the Credential.
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=cred
-// +kubebuilder:printcolumn:name="State",type=string,JSONPath=`.status.state`
+// +kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.ready`
 // +kubebuilder:printcolumn:name="Description",type=string,JSONPath=`.spec.description`
 
 // Credential is the Schema for the credentials API
