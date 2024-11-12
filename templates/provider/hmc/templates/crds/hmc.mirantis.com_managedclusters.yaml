@@ -95,8 +95,10 @@ spec:
                       minLength: 1
                       type: string
                     values:
-                      description: Values is the helm values to be passed to the template.
-                      x-kubernetes-preserve-unknown-fields: true
+                      description: |-
+                        Values is the helm values to be passed to the chart used by the template.
+                        The string type is used in order to allow for templating.
+                      type: string
                   required:
                   - name
                   - template

@@ -368,7 +368,7 @@ func (r *ManagedClusterReconciler) updateServices(ctx context.Context, mc *hmc.M
 		err = errors.Join(err, servicesErr)
 	}()
 
-	opts, err := helmChartOpts(ctx, r.Client, mc.Namespace, mc.Spec.Services)
+	opts, err := sveltos.GetHelmChartOpts(ctx, r.Client, mc.Namespace, mc.Spec.Services)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
