@@ -15,7 +15,6 @@
 package v1alpha1
 
 import (
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -40,8 +39,9 @@ const (
 
 // ServiceSpec represents a Service to be managed
 type ServiceSpec struct {
-	// Values is the helm values to be passed to the template.
-	Values *apiextensionsv1.JSON `json:"values,omitempty"`
+	// Values is the helm values to be passed to the chart used by the template.
+	// The string type is used in order to allow for templating.
+	Values string `json:"values,omitempty"`
 
 	// +kubebuilder:validation:MinLength=1
 
