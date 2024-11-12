@@ -254,7 +254,7 @@ func (v *ManagedClusterValidator) validateCredential(ctx context.Context, manage
 		return err
 	}
 
-	if cred.Status.State != hmcv1alpha1.CredentialReady {
+	if !cred.Status.Ready {
 		return errors.New("credential is not Ready")
 	}
 

@@ -73,12 +73,10 @@ func (r *CredentialReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			Message: errMsg,
 		})
 
-		return ctrl.Result{}, err
+		return ctrl.Result{
+			RequeueAfter: defaultSyncPeriod,
+		}, err
 	}
-
-	gen := clIdty.GetGeneration()
-	cred.Status.State = hmc.CredentialReady
-	cred.Status.ClusterIdentityGen = gen
 
 	apimeta.SetStatusCondition(cred.GetConditions(), metav1.Condition{
 		Type:    hmc.CredentialReadyCondition,
@@ -93,6 +91,14 @@ func (r *CredentialReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 }
 
 func (r *CredentialReconciler) updateStatus(ctx context.Context, cred *hmc.Credential) error {
+	cred.Status.Ready = false
+	for _, cond := range cred.Status.Conditions {
+		if cond.Type == hmc.CredentialReadyCondition && cond.Status == metav1.ConditionTrue {
+			cred.Status.Ready = true
+			break
+		}
+	}
+
 	if err := r.Client.Status().Update(ctx, cred); err != nil {
 		return fmt.Errorf("failed to update Credential %s/%s status: %w", cred.Namespace, cred.Name, err)
 	}
