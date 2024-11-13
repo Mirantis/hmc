@@ -3,7 +3,7 @@ kind: InfrastructureProvider
 metadata:
   name: vsphere
 spec:
-  version: v1.11.1
+  version: v1.11.3
   {{- if .Values.configSecret.name }}
   configSecret:
     name: {{ .Values.configSecret.name }}
