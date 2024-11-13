@@ -27,6 +27,7 @@ func SetupIndexers(ctx context.Context, mgr ctrl.Manager) error {
 	for _, f := range []func(context.Context, ctrl.Manager) error{
 		setupManagedClusterIndexer,
 		setupManagedClusterServicesIndexer,
+		setupManagedClusterCredentialIndexer,
 		setupReleaseVersionIndexer,
 		setupReleaseTemplatesIndexer,
 		setupClusterTemplateChainIndexer,
@@ -81,6 +82,24 @@ func ExtractServiceTemplateNamesFromManagedCluster(rawObj client.Object) []strin
 	}
 
 	return templates
+}
+
+// ManagedClusterCredentialIndexKey indexer field name to extract Credential name reference from a ManagedCluster object.
+const ManagedClusterCredentialIndexKey = ".spec.credential"
+
+func setupManagedClusterCredentialIndexer(ctx context.Context, mgr ctrl.Manager) error {
+	return mgr.GetFieldIndexer().IndexField(ctx, &ManagedCluster{}, ManagedClusterCredentialIndexKey, ExtractCredentialNameFromManagedCluster)
+}
+
+// ExtractCredentialNameFromManagedCluster returns referenced Credential name
+// declared in a ManagedCluster object.
+func ExtractCredentialNameFromManagedCluster(rawObj client.Object) []string {
+	cluster, ok := rawObj.(*ManagedCluster)
+	if !ok {
+		return nil
+	}
+
+	return []string{cluster.Spec.Credential}
 }
 
 // release

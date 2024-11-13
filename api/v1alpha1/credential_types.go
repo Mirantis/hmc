@@ -38,7 +38,7 @@ type CredentialSpec struct {
 type CredentialStatus struct {
 	// +kubebuilder:default:=false
 
-	Ready      bool               `json:"ready"`
+	Ready bool `json:"ready"`
 	// Conditions contains details for the current state of the Credential.
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }

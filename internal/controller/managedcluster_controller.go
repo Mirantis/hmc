@@ -811,5 +811,28 @@ func (r *ManagedClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				GenericFunc: func(event.GenericEvent) bool { return false },
 			}),
 		).
+		Watches(&hmc.Credential{},
+			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, o client.Object) []ctrl.Request {
+				managedClusters := &hmc.ManagedClusterList{}
+				err := r.Client.List(ctx, managedClusters,
+					client.InNamespace(o.GetNamespace()),
+					client.MatchingFields{hmc.ManagedClusterCredentialIndexKey: o.GetName()})
+				if err != nil {
+					return []ctrl.Request{}
+				}
+
+				req := []ctrl.Request{}
+				for _, cluster := range managedClusters.Items {
+					req = append(req, ctrl.Request{
+						NamespacedName: client.ObjectKey{
+							Namespace: cluster.Namespace,
+							Name:      cluster.Name,
+						},
+					})
+				}
+
+				return req
+			}),
+		).
 		Complete(r)
 }
