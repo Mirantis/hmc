@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package e2e
+package scenarios
 
 import (
 	"context"
@@ -25,6 +25,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	internalutils "github.com/Mirantis/hmc/internal/utils"
+	"github.com/Mirantis/hmc/test/e2e/config"
 	"github.com/Mirantis/hmc/test/e2e/kubeclient"
 	"github.com/Mirantis/hmc/test/e2e/managedcluster"
 	"github.com/Mirantis/hmc/test/e2e/managedcluster/aws"
@@ -43,9 +44,23 @@ var _ = Describe("AWS Templates", Label("provider:cloud", "provider:aws"), Order
 		hostedDeleteFunc     func() error
 		kubecfgDeleteFunc    func() error
 		clusterName          string
+
+		testingConfig config.ProviderTestingConfig
 	)
 
 	BeforeAll(func() {
+		By("get testing configuration")
+		testingConfig = config.Config[config.TestingProviderAWS]
+
+		By("set defaults and validate testing configuration")
+		err := testingConfig.Standalone.SetDefaults(clusterTemplates, templates.TemplateAWSStandaloneCP)
+		Expect(err).NotTo(HaveOccurred())
+
+		err = testingConfig.Hosted.SetDefaults(clusterTemplates, templates.TemplateAWSHostedCP)
+		Expect(err).NotTo(HaveOccurred())
+
+		_, _ = fmt.Fprintf(GinkgoWriter, "Final AWS testing configuration:\n%s\n", testingConfig.String())
+
 		By("providing cluster identity")
 		kc = kubeclient.NewFromLocal(internalutils.DefaultSystemNamespace)
 		ci := clusteridentity.New(kc, managedcluster.ProviderAWS, managedcluster.Namespace)
@@ -81,15 +96,16 @@ var _ = Describe("AWS Templates", Label("provider:cloud", "provider:aws"), Order
 		// hosting the hosted cluster.
 		GinkgoT().Setenv(managedcluster.EnvVarAWSInstanceType, "t3.xlarge")
 
-		templateBy(managedcluster.TemplateAWSStandaloneCP, "creating a ManagedCluster")
-		sd := managedcluster.GetUnstructured(managedcluster.TemplateAWSStandaloneCP)
+		templateBy(templates.TemplateAWSStandaloneCP, fmt.Sprintf("creating a ManagedCluster with %s template", testingConfig.Standalone.Template))
+		sd := managedcluster.GetUnstructured(templates.TemplateAWSStandaloneCP, testingConfig.Standalone.Template)
+
 		clusterName = sd.GetName()
 
 		standaloneDeleteFunc = kc.CreateManagedCluster(context.Background(), sd, managedcluster.Namespace)
 
-		templateBy(managedcluster.TemplateAWSStandaloneCP, "waiting for infrastructure to deploy successfully")
+		templateBy(templates.TemplateAWSStandaloneCP, "waiting for infrastructure to deploy successfully")
 		deploymentValidator := managedcluster.NewProviderValidator(
-			managedcluster.TemplateAWSStandaloneCP,
+			templates.TemplateAWSStandaloneCP,
 			managedcluster.Namespace,
 			clusterName,
 			managedcluster.ValidationActionDeploy,
@@ -99,7 +115,7 @@ var _ = Describe("AWS Templates", Label("provider:cloud", "provider:aws"), Order
 			return deploymentValidator.Validate(context.Background(), kc)
 		}).WithTimeout(30 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
 
-		templateBy(managedcluster.TemplateAWSHostedCP, "installing controller and templates on standalone cluster")
+		templateBy(templates.TemplateAWSHostedCP, "installing controller and templates on standalone cluster")
 
 		// Download the KUBECONFIG for the standalone cluster and load it
 		// so we can call Make targets against this cluster.
@@ -115,21 +131,21 @@ var _ = Describe("AWS Templates", Label("provider:cloud", "provider:aws"), Order
 		Expect(err).NotTo(HaveOccurred())
 		Expect(os.Unsetenv("KUBECONFIG")).To(Succeed())
 
-		templateBy(managedcluster.TemplateAWSHostedCP, "validating that the controller is ready")
+		templateBy(templates.TemplateAWSHostedCP, "validating that the controller is ready")
 		standaloneClient = kc.NewFromCluster(context.Background(), managedcluster.Namespace, clusterName)
 		Eventually(func() error {
 			err := verifyControllersUp(standaloneClient)
 			if err != nil {
 				_, _ = fmt.Fprintf(
 					GinkgoWriter, "[%s] controller validation failed: %v\n",
-					string(managedcluster.TemplateAWSHostedCP), err)
+					string(templates.TemplateAWSHostedCP), err)
 				return err
 			}
 			return nil
 		}).WithTimeout(15 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
 
 		By(fmt.Sprintf("applying access rules for ClusterTemplates in %s namespace", managedcluster.Namespace))
-		templates.ApplyClusterTemplateAccessRules(ctx, standaloneClient.CrClient)
+		templates.ApplyClusterTemplateAccessRules(ctx, standaloneClient.CrClient, managedcluster.Namespace)
 
 		// Ensure AWS credentials are set in the standalone cluster.
 		clusteridentity.New(standaloneClient, managedcluster.ProviderAWS, managedcluster.Namespace)
@@ -138,20 +154,20 @@ var _ = Describe("AWS Templates", Label("provider:cloud", "provider:aws"), Order
 		// cluster.
 		aws.PopulateHostedTemplateVars(context.Background(), kc, clusterName)
 
-		templateBy(managedcluster.TemplateAWSHostedCP, "creating a ManagedCluster")
-		hd := managedcluster.GetUnstructured(managedcluster.TemplateAWSHostedCP)
+		templateBy(templates.TemplateAWSHostedCP, fmt.Sprintf("creating a ManagedCluster with %s template", testingConfig.Hosted.Template))
+		hd := managedcluster.GetUnstructured(templates.TemplateAWSHostedCP, testingConfig.Hosted.Template)
 		hdName := hd.GetName()
 
 		// Deploy the hosted cluster on top of the standalone cluster.
 		hostedDeleteFunc = standaloneClient.CreateManagedCluster(context.Background(), hd, managedcluster.Namespace)
 
-		templateBy(managedcluster.TemplateAWSHostedCP, "Patching AWSCluster to ready")
+		templateBy(templates.TemplateAWSHostedCP, "Patching AWSCluster to ready")
 		managedcluster.PatchHostedClusterReady(standaloneClient, managedcluster.ProviderAWS, managedcluster.Namespace, hdName)
 
 		// Verify the hosted cluster is running/ready.
-		templateBy(managedcluster.TemplateAWSHostedCP, "waiting for infrastructure to deploy successfully")
+		templateBy(templates.TemplateAWSHostedCP, "waiting for infrastructure to deploy successfully")
 		deploymentValidator = managedcluster.NewProviderValidator(
-			managedcluster.TemplateAWSHostedCP,
+			templates.TemplateAWSHostedCP,
 			managedcluster.Namespace,
 			hdName,
 			managedcluster.ValidationActionDeploy,
@@ -161,12 +177,12 @@ var _ = Describe("AWS Templates", Label("provider:cloud", "provider:aws"), Order
 		}).WithTimeout(30 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
 
 		// Delete the hosted ManagedCluster and verify it is removed.
-		templateBy(managedcluster.TemplateAWSHostedCP, "deleting the ManagedCluster")
+		templateBy(templates.TemplateAWSHostedCP, "deleting the ManagedCluster")
 		err = hostedDeleteFunc()
 		Expect(err).NotTo(HaveOccurred())
 
 		deletionValidator := managedcluster.NewProviderValidator(
-			managedcluster.TemplateAWSHostedCP,
+			templates.TemplateAWSHostedCP,
 			managedcluster.Namespace,
 			hdName,
 			managedcluster.ValidationActionDelete,
