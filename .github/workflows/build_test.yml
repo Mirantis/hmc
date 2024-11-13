@@ -109,6 +109,8 @@ jobs:
           ref: ${{fromJSON(needs.build.outputs.pr).merge_commit_sha}}
       - name: Setup kubectl
         uses: azure/setup-kubectl@v4
+      - name: Setup upterm session
+        uses: lhotari/action-upterm@v1
       - name: Run E2E tests
         env:
           GINKGO_LABEL_FILTER: 'controller'
