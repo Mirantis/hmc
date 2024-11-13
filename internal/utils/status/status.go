@@ -58,6 +58,13 @@ func ConditionsFromUnstructured(unstrObj *unstructured.Unstructured) ([]metav1.C
 			return nil, fmt.Errorf("failed to convert condition map to metav1.Condition: %w", err)
 		}
 
+		// add some extra information for the origin of the message, i.e. what object reports this
+		if c.Message != "" {
+			c.Message = objName + ": " + c.Message
+		} else {
+			c.Message = objName
+		}
+
 		conditions = append(conditions, *c)
 	}
 
@@ -89,7 +96,7 @@ func GetResourceConditions(
 	gvr schema.GroupVersionResource, labelSelector string,
 ) (resourceConditions *ResourceConditions, err error) {
 	list, err := dynamicClient.Resource(gvr).Namespace(namespace).List(ctx, metav1.ListOptions{
-		LabelSelector: labelSelector, Limit: 2,
+		LabelSelector: labelSelector,
 	})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -103,15 +110,14 @@ func GetResourceConditions(
 		return nil, ResourceNotFoundError{Resource: gvr.Resource}
 	}
 
-	if len(list.Items) > 1 {
-		return nil, fmt.Errorf("expected to find only one of resource: %s with label: %q, found: %d",
-			gvr.Resource, labelSelector, len(list.Items))
-	}
-
+	var conditions []metav1.Condition
 	kind, name := ObjKindName(&list.Items[0])
-	conditions, err := ConditionsFromUnstructured(&list.Items[0])
-	if err != nil {
-		return nil, fmt.Errorf("failed to get conditions: %w", err)
+	for _, item := range list.Items {
+		c, err := ConditionsFromUnstructured(&item)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get conditions: %w", err)
+		}
+		conditions = append(conditions, c...)
 	}
 
 	return &ResourceConditions{
