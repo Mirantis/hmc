@@ -21,14 +21,15 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 
 	"github.com/Mirantis/hmc/test/e2e/kubeclient"
+	"github.com/Mirantis/hmc/test/e2e/templates"
 )
 
 // ProviderValidator is a struct that contains the necessary information to
 // validate a provider's resources.  Some providers do not support all of the
 // resources that can potentially be validated.
 type ProviderValidator struct {
-	// Template is the name of the template being validated.
-	template Template
+	// Template is the type of the template being validated.
+	template templates.Type
 	// Namespace is the namespace of the cluster to validate.
 	namespace string
 	// ClusterName is the name of the cluster to validate.
@@ -48,7 +49,7 @@ const (
 	ValidationActionDelete ValidationAction = "delete"
 )
 
-func NewProviderValidator(template Template, namespace, clusterName string, action ValidationAction) *ProviderValidator {
+func NewProviderValidator(templateType templates.Type, namespace, clusterName string, action ValidationAction) *ProviderValidator {
 	var (
 		resourcesToValidate map[string]resourceValidationFunc
 		resourceOrder       []string
@@ -63,11 +64,11 @@ func NewProviderValidator(template Template, namespace, clusterName string, acti
 		}
 		resourceOrder = []string{"clusters", "machines", "control-planes", "csi-driver"}
 
-		switch template {
-		case TemplateAWSStandaloneCP, TemplateAWSHostedCP:
+		switch templateType {
+		case templates.TemplateAWSStandaloneCP, templates.TemplateAWSHostedCP:
 			resourcesToValidate["ccm"] = validateCCM
 			resourceOrder = append(resourceOrder, "ccm")
-		case TemplateAzureStandaloneCP, TemplateVSphereStandaloneCP:
+		case templates.TemplateAzureStandaloneCP, templates.TemplateVSphereStandaloneCP:
 			delete(resourcesToValidate, "csi-driver")
 		}
 	} else {
@@ -80,7 +81,7 @@ func NewProviderValidator(template Template, namespace, clusterName string, acti
 	}
 
 	return &ProviderValidator{
-		template:            template,
+		template:            templateType,
 		namespace:           namespace,
 		clusterName:         clusterName,
 		resourcesToValidate: resourcesToValidate,

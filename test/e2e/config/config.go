@@ -22,6 +22,9 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"gopkg.in/yaml.v3"
+
+	hmc "github.com/Mirantis/hmc/api/v1alpha1"
+	"github.com/Mirantis/hmc/test/e2e/templates"
 )
 
 type TestingProvider string
@@ -66,6 +69,27 @@ func Parse() error {
 	_, _ = fmt.Fprintf(GinkgoWriter, "E2e testing configuration:\n%s\n", decodedConfig)
 
 	err = yaml.Unmarshal(decodedConfig, &Config)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *ClusterTestingConfig) SetDefaults(clusterTemplates map[string][]hmc.AvailableUpgrade, templateType templates.Type) error {
+	var err error
+	if !c.Upgrade {
+		if c.Template == "" {
+			c.Template, err = templates.FindTemplate(clusterTemplates, templateType)
+			if err != nil {
+				return err
+			}
+		}
+		return templates.ValidateTemplate(clusterTemplates, c.Template)
+	}
+	if c.Template != "" && c.UpgradeTemplate != "" {
+		return templates.ValidateUpgradeSequence(clusterTemplates, c.Template, c.UpgradeTemplate)
+	}
+	c.Template, c.UpgradeTemplate, err = templates.FindTemplatesToUpgrade(clusterTemplates, templateType, c.Template)
 	if err != nil {
 		return err
 	}

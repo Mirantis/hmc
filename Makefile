@@ -107,7 +107,7 @@ tidy:
 
 .PHONY: test
 test: generate-all envtest tidy external-crd ## Run tests.
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test $$(go list ./... | grep -v /e2e) -coverprofile cover.out
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test $$(go list ./... | grep -v /e2e/scenarios) -coverprofile cover.out
 
 # E2E_CONFIG_B64 contains the configuration for e2e testing.
 E2E_CONFIG_B64 ?= ""
@@ -120,7 +120,7 @@ test-e2e: cli-install
 		ginkgo_label_flag="-ginkgo.label-filter=$$GINKGO_LABEL_FILTER"; \
 	fi; \
 	KIND_CLUSTER_NAME="hmc-test" KIND_VERSION=$(KIND_VERSION) E2E_CONFIG_B64=$(E2E_CONFIG_B64) \
-	go test ./test/e2e/ -v -ginkgo.v -ginkgo.timeout=3h -timeout=3h $$ginkgo_label_flag
+	go test ./test/e2e/scenarios/ -v -ginkgo.v -ginkgo.timeout=3h -timeout=3h $$ginkgo_label_flag
 
 .PHONY: lint
 lint: golangci-lint fmt vet ## Run golangci-lint linter & yamllint
