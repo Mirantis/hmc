@@ -28,3 +28,20 @@ subjects:
   - kind: ServiceAccount
     name: '{{ include "hmc.fullname" . }}-controller-manager'
     namespace: '{{ .Release.Namespace }}'
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "hmc.fullname" . }}-capi-manager-rolebinding
+  namespace: {{ .Release.Namespace }}
+  labels:
+  {{- include "hmc.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: '{{ include "hmc.fullname" . }}-manager-role'
+subjects:
+  - kind: ServiceAccount
+    name: 'capi-manager'
+    namespace: '{{ .Release.Namespace }}'

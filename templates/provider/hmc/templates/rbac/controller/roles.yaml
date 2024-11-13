@@ -19,7 +19,8 @@ rules:
   - cluster.x-k8s.io
   resources:
   - clusters
-  verbs: {{ include "rbac.viewerVerbs" . | nindent 4 }}
+  verbs: {{ include "rbac.editorVerbs" . | nindent 4 }}
+    - delete
 - apiGroups:
   - helm.toolkit.fluxcd.io
   resources:
@@ -145,7 +146,8 @@ rules:
   - cluster.x-k8s.io
   resources:
   - machines
-  verbs: {{ include "rbac.viewerVerbs" . | nindent 4 }}
+  verbs: {{ include "rbac.editorVerbs" . | nindent 4 }}
+    - delete
 - apiGroups:
   - ""
   resources:
@@ -206,9 +208,54 @@ rules:
   - patch
   - update
 - apiGroups:
-  - ""
+    - ""
   resources:
-  - secrets
+    - secrets
+  verbs:
+    - get
+    - list
+- apiGroups:
+    - hmc.mirantis.com
+  resources:
+    - unmanagedclusters
+  verbs: {{ include "rbac.editorVerbs" . | nindent 4 }}
+- apiGroups:
+    - hmc.mirantis.com
+  resources:
+    - unmanagedclusters/finalizers
+  verbs:
+    - update
+- apiGroups:
+    - hmc.mirantis.com
+  resources:
+    - unmanagedclusters/status
+  verbs:
+    - get
+    - patch
+    - update
+- apiGroups:
+    - hmc.mirantis.com
+  resources:
+    - unmanagedmachines
+  verbs: {{ include "rbac.editorVerbs" . | nindent 4 }}
+- apiGroups:
+    - hmc.mirantis.com
+  resources:
+    - unmanagedmachines/finalizers
+  verbs:
+    - update
+- apiGroups:
+    - hmc.mirantis.com
+  resources:
+    - unmanagedmachines/status
+  verbs:
+    - get
+    - patch
+    - update
+- apiGroups:
+    - config.projectsveltos.io
+  resources:
+    - clustersummaries
   verbs: {{ include "rbac.viewerVerbs" . | nindent 4 }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -226,3 +273,32 @@ rules:
   verbs:
   - get
   - list
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "hmc.fullname" . }}-capi-role
+  labels:
+  {{- include "hmc.labels" . | nindent 4 }}
+    cluster.x-k8s.io/aggregate-to-manager: "true"
+rules:
+  - apiGroups:
+      - hmc.mirantis.com
+    resources:
+      - unmanagedclusters
+    verbs: {{ include "rbac.viewerVerbs" . | nindent 4 }}
+  - apiGroups:
+      - hmc.mirantis.com
+    resources:
+      - unmanagedclusters/status
+    verbs: {{ include "rbac.viewerVerbs" . | nindent 4 }}
+  - apiGroups:
+      - hmc.mirantis.com
+    resources:
+      - unmanagedmachines
+    verbs: {{ include "rbac.viewerVerbs" . | nindent 4 }}
+  - apiGroups:
+      - hmc.mirantis.com
+    resources:
+      - unmanagedmachines/status
+    verbs: {{ include "rbac.viewerVerbs" . | nindent 4 }}

@@ -176,10 +176,12 @@ var _ = Describe("MultiClusterService Controller", func() {
 						},
 					},
 					Spec: hmc.MultiClusterServiceSpec{
-						Services: []hmc.ServiceSpec{
-							{
-								Template: serviceTemplateName,
-								Name:     helmChartReleaseName,
+						ServicesType: hmc.ServicesType{
+							Services: []hmc.ServiceSpec{
+								{
+									Template: serviceTemplateName,
+									Name:     helmChartReleaseName,
+								},
 							},
 						},
 					},

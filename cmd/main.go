@@ -302,6 +302,21 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "MultiClusterService")
 		os.Exit(1)
 	}
+	if err = (&controller.UnmanagedClusterReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "UnmanagedCluster")
+		os.Exit(1)
+	}
+
+	if err = (&controller.UnmanagedMachineReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "UnmanagedMachine")
+		os.Exit(1)
+	}
 	// +kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
@@ -362,6 +377,11 @@ func setupWebhooks(mgr ctrl.Manager, currentNamespace string) error {
 	}
 	if err := (&hmcwebhook.ProviderTemplateValidator{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "ProviderTemplate")
+		return err
+	}
+	setupLog.Info("setup UnmanagedClusterValidator webhook")
+	if err := (&hmcwebhook.UnmanagedClusterValidator{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "UnmanagedCluster")
 		return err
 	}
 	return nil
