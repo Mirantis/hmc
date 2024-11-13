@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -103,32 +104,35 @@ func (r *ManagedClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	return r.Update(ctx, managedCluster)
 }
 
-func (r *ManagedClusterReconciler) setStatusFromClusterStatus(ctx context.Context, managedCluster *hmc.ManagedCluster) (requeue bool, _ error) {
+func (r *ManagedClusterReconciler) setStatusFromChildObjects(
+	ctx context.Context, managedCluster *hmc.ManagedCluster, gvr schema.GroupVersionResource, conditions []string,
+) (requeue bool, _ error) {
 	l := ctrl.LoggerFrom(ctx)
 
-	resourceConditions, err := status.GetResourceConditions(ctx, managedCluster.Namespace, r.DynamicClient, schema.GroupVersionResource{
-		Group:    "cluster.x-k8s.io",
-		Version:  "v1beta1",
-		Resource: "clusters",
-	}, labels.SelectorFromSet(map[string]string{hmc.FluxHelmChartNameKey: managedCluster.Name}).String())
+	resourceConditions, err := status.GetResourceConditions(ctx, managedCluster.Namespace, r.DynamicClient, gvr,
+		labels.SelectorFromSet(map[string]string{hmc.FluxHelmChartNameKey: managedCluster.Name}).String())
 	if err != nil {
 		if errors.As(err, &status.ResourceNotFoundError{}) {
 			l.Info(err.Error())
-			return true, nil
+			// don't error or retry if nothing is available
+			return false, nil
 		}
 		return false, fmt.Errorf("failed to get conditions: %w", err)
 	}
 
 	allConditionsComplete := true
 	for _, metaCondition := range resourceConditions.Conditions {
-		if metaCondition.Status != "True" {
-			allConditionsComplete = false
-		}
+		if slices.Contains(conditions, metaCondition.Type) {
+			if metaCondition.Status != "True" {
+				allConditionsComplete = false
+			}
 
-		if metaCondition.Reason == "" && metaCondition.Status == "True" {
-			metaCondition.Reason = hmc.SucceededReason
+			if metaCondition.Reason == "" && metaCondition.Status == "True" {
+				metaCondition.Message += " is Ready"
+				metaCondition.Reason = "Succeeded"
+			}
+			apimeta.SetStatusCondition(managedCluster.GetConditions(), metaCondition)
 		}
-		apimeta.SetStatusCondition(managedCluster.GetConditions(), metaCondition)
 	}
 
 	return !allConditionsComplete, nil
@@ -305,7 +309,7 @@ func (r *ManagedClusterReconciler) Update(ctx context.Context, managedCluster *h
 			})
 		}
 
-		requeue, err := r.setStatusFromClusterStatus(ctx, managedCluster)
+		requeue, err := r.aggregateCapoConditions(ctx, managedCluster)
 		if err != nil {
 			if requeue {
 				return ctrl.Result{RequeueAfter: DefaultRequeueInterval}, err
@@ -331,6 +335,42 @@ func (r *ManagedClusterReconciler) Update(ctx context.Context, managedCluster *h
 	}
 
 	return ctrl.Result{}, nil
+}
+
+func (r *ManagedClusterReconciler) aggregateCapoConditions(ctx context.Context, managedCluster *hmc.ManagedCluster) (bool, error) {
+	type objectToCheck struct {
+		gvr        schema.GroupVersionResource
+		conditions []string
+	}
+
+	var needToRequeue bool
+	var errs error
+	for _, obj := range []objectToCheck{
+		{
+			gvr: schema.GroupVersionResource{
+				Group:    "cluster.x-k8s.io",
+				Version:  "v1beta1",
+				Resource: "clusters",
+			},
+			conditions: []string{"ControlPlaneInitialized", "ControlPlaneReady", "InfrastructureReady"},
+		},
+		{
+			gvr: schema.GroupVersionResource{
+				Group:    "cluster.x-k8s.io",
+				Version:  "v1beta1",
+				Resource: "machinedeployments",
+			},
+			conditions: []string{"Available"},
+		},
+	} {
+		requeue, err := r.setStatusFromChildObjects(ctx, managedCluster, obj.gvr, obj.conditions)
+		errs = errors.Join(errs, err)
+		if requeue {
+			needToRequeue = true
+		}
+	}
+
+	return needToRequeue, errs
 }
 
 // updateServices reconciles services provided in ManagedCluster.Spec.Services.

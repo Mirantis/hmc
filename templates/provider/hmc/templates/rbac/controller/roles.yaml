@@ -21,6 +21,11 @@ rules:
   - clusters
   verbs: {{ include "rbac.viewerVerbs" . | nindent 4 }}
 - apiGroups:
+  - cluster.x-k8s.io
+  resources:
+  - machinedeployments
+  verbs: {{ include "rbac.viewerVerbs" . | nindent 4 }}
+- apiGroups:
   - helm.toolkit.fluxcd.io
   resources:
   - helmreleases
