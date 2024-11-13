@@ -103,12 +103,15 @@ spec:
                   type: object
                 type: array
               servicesPriority:
+                default: 100
                 description: |-
                   ServicesPriority sets the priority for the services defined in this spec.
                   Higher value means higher priority and lower means lower.
                   In case of conflict with another object managing the service,
                   the one with higher priority will get to deploy its services.
                 format: int32
+                maximum: 2147483646
+                minimum: 1
                 type: integer
               stopOnConflict:
                 default: false

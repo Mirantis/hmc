@@ -33,7 +33,6 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/kubeconfig"
-	"sigs.k8s.io/cluster-api/util/secret"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -309,18 +308,6 @@ func (r *UnmanagedClusterReconciler) reconcileDeletion(ctx context.Context, unma
 		deleteAllOpts...,
 	); err != nil && !apierrors.IsNotFound(err) {
 		return ctrl.Result{Requeue: true}, fmt.Errorf("failed to delete unmanaged machines: %w", err)
-	}
-
-	if err := r.Delete(ctx, &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: unmanagedCluster.Namespace,
-			Name:      secret.Name(unmanagedCluster.Name, secret.Kubeconfig),
-			Labels: map[string]string{
-				v1beta1.ClusterNameLabel: unmanagedCluster.Name,
-			},
-		},
-	}); err != nil && !apierrors.IsNotFound(err) {
-		return ctrl.Result{Requeue: true}, fmt.Errorf("failed to delete cluster secret: %w", err)
 	}
 
 	if err := r.Delete(ctx, &v1beta1.Cluster{

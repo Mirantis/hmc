@@ -76,11 +76,7 @@ var _ = Describe("UnmanagedCluster Controller", func() {
 						Name:      unmanagedClusterName,
 						Namespace: unmanagedClusterNamespace,
 					},
-					Spec: hmc.UnmanagedClusterSpec{
-						Services:         nil,
-						ServicesPriority: 1,
-						StopOnConflict:   true,
-					},
+					Spec: hmc.UnmanagedClusterSpec{},
 				}
 				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
 			}

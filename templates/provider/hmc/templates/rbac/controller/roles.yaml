@@ -19,7 +19,8 @@ rules:
   - cluster.x-k8s.io
   resources:
   - clusters
-  verbs: {{ include "rbac.viewerVerbs" . | nindent 4 }}
+  verbs: {{ include "rbac.editorVerbs" . | nindent 4 }}
+    - delete
 - apiGroups:
   - helm.toolkit.fluxcd.io
   resources:
@@ -145,7 +146,8 @@ rules:
   - cluster.x-k8s.io
   resources:
   - machines
-  verbs: {{ include "rbac.viewerVerbs" . | nindent 4 }}
+  verbs: {{ include "rbac.editorVerbs" . | nindent 4 }}
+    - delete
 - apiGroups:
   - ""
   resources:
@@ -250,13 +252,6 @@ rules:
     - get
     - patch
     - update
-- apiGroups:
-    - cluster.x-k8s.io
-  resources:
-    - clusters
-    - machines
-  verbs: {{ include "rbac.editorVerbs" . | nindent 4 }}
-    - delete
 - apiGroups:
     - config.projectsveltos.io
   resources:

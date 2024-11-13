@@ -58,6 +58,9 @@ type ServicesType struct {
 	// that could be installed on the target cluster.
 	Services []ServiceSpec `json:"services,omitempty"`
 
+	// +kubebuilder:default:=100
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=2147483646
 	// ServicesPriority sets the priority for the services defined in this spec.
 	// Higher value means higher priority and lower means lower.
 	// In case of conflict with another object managing the service,
