@@ -73,9 +73,7 @@ func (r *CredentialReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			Message: errMsg,
 		})
 
-		return ctrl.Result{
-			RequeueAfter: defaultSyncPeriod,
-		}, err
+		return ctrl.Result{}, err
 	}
 
 	apimeta.SetStatusCondition(cred.GetConditions(), metav1.Condition{
