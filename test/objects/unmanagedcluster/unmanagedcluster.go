@@ -14,17 +14,24 @@
 
 package unmanagedcluster
 
-import "github.com/Mirantis/hmc/api/v1alpha1"
+import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-type Opt func(unmanagedCluster *v1alpha1.UnmanagedCluster)
+	hmc "github.com/Mirantis/hmc/api/v1alpha1"
+)
+
+type Opt func(unmanagedCluster *hmc.UnmanagedCluster)
 
 const (
 	DefaultName = "hmc-uc"
 )
 
-func NewUnmanagedCluster(opts ...Opt) *v1alpha1.UnmanagedCluster {
-	uc := &v1alpha1.UnmanagedCluster{
-		Spec: v1alpha1.UnmanagedClusterSpec{Name: DefaultName},
+func NewUnmanagedCluster(opts ...Opt) *hmc.UnmanagedCluster {
+	uc := &hmc.UnmanagedCluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: DefaultName,
+		},
+		Spec: hmc.UnmanagedClusterSpec{},
 	}
 
 	for _, opt := range opts {
@@ -34,7 +41,7 @@ func NewUnmanagedCluster(opts ...Opt) *v1alpha1.UnmanagedCluster {
 }
 
 func WithNameAndNamespace(name, namespace string) Opt {
-	return func(uc *v1alpha1.UnmanagedCluster) {
+	return func(uc *hmc.UnmanagedCluster) {
 		uc.Name = name
 		uc.Namespace = namespace
 	}

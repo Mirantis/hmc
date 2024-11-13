@@ -16,12 +16,12 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"strconv"
 	"strings"
 
-	v1beta12 "github.com/k0sproject/k0smotron/api/infrastructure/v1beta1"
 	sveltosv1beta1 "github.com/projectsveltos/addon-controller/api/v1beta1"
 	"github.com/projectsveltos/libsveltos/lib/clusterproxy"
 	corev1 "k8s.io/api/core/v1"
@@ -30,7 +30,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/kubeconfig"
@@ -49,32 +48,10 @@ type UnmanagedClusterReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-// +kubebuilder:rbac:groups=hmc.mirantis.com.hmc.mirantis.com,resources=unmanagedclusters,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=hmc.mirantis.com.hmc.mirantis.com,resources=unmanagedclusters/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=hmc.mirantis.com.hmc.mirantis.com,resources=unmanagedclusters/finalizers,verbs=update
-
-// Reconcile is part of the main kubernetes reconciliation loop which aims to
-// move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the UnmanagedCluster object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
-//
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.19.0/pkg/reconcile
 func (r *UnmanagedClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	l := ctrl.LoggerFrom(ctx)
 	l.Info("Reconciling UnmanagedCluster")
-
-	if err := v1beta12.AddToScheme(r.Client.Scheme()); err != nil {
-		return ctrl.Result{}, err
-	}
-
-	if err := v1beta1.AddToScheme(r.Client.Scheme()); err != nil {
-		return ctrl.Result{}, err
-	}
-
-	unmanagedCluster := new(hmc.UnmanagedCluster)
+	unmanagedCluster := &hmc.UnmanagedCluster{}
 	if err := r.Get(ctx, req.NamespacedName, unmanagedCluster); err != nil {
 		if apierrors.IsNotFound(err) {
 			l.Info("UnmanagedCluster not found, ignoring since object must be deleted")
@@ -94,6 +71,10 @@ func (r *UnmanagedClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *UnmanagedClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	if err := v1beta1.AddToScheme(r.Client.Scheme()); err != nil {
+		return err
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&hmc.UnmanagedCluster{}).
 		Complete(r)
@@ -150,24 +131,22 @@ func (r *UnmanagedClusterReconciler) createCluster(ctx context.Context, unmanage
 			},
 		},
 	}
-	clusterObject.Status.SetTypedPhase(v1beta1.ClusterPhaseUnknown)
+
 	err = r.Client.Create(ctx, clusterObject)
 	if err != nil && !apierrors.IsAlreadyExists(err) {
-		return fmt.Errorf("failed to create unmanagedCluster object %s/%s: %s", unmanagedCluster.Namespace, unmanagedCluster.Name, err)
+		return fmt.Errorf("failed to create unmanagedCluster object %s/%s: %w", unmanagedCluster.Namespace, unmanagedCluster.Name, err)
 	}
 
 	return nil
 }
 
 func (r *UnmanagedClusterReconciler) createMachines(ctx context.Context, unmanagedCluster *hmc.UnmanagedCluster) error {
-	l := ctrl.LoggerFrom(ctx)
+	// l := ctrl.LoggerFrom(ctx)
 
 	nodelist, err := r.getNodeList(ctx, unmanagedCluster)
 	if err != nil {
 		return err
 	}
-
-	kubeConfigSecretName := secret.Name(unmanagedCluster.Name, secret.Kubeconfig)
 
 	// find any existing unmanaged machines for the cluster to see if any need to be cleaned up because
 	// the underlying node was removed
@@ -179,13 +158,17 @@ func (r *UnmanagedClusterReconciler) createMachines(ctx context.Context, unmanag
 		return fmt.Errorf("failed to list existing unmanaged machines: %w", err)
 	}
 
-	existingMachinesByName := map[string]*hmc.UnmanagedMachine{}
+	existingMachinesByName := make(map[string]*hmc.UnmanagedMachine)
 	for _, existingMachine := range existingMachines.Items {
 		existingMachinesByName[existingMachine.GetName()] = &existingMachine
 	}
 
 	for _, node := range nodelist.Items {
 		delete(existingMachinesByName, node.Name)
+		isControlPlane := false
+		if _, ok := node.Labels[v1beta1.NodeRoleLabelPrefix+"/control-plane"]; ok {
+			isControlPlane = true
+		}
 
 		unmanagedMachine := hmc.UnmanagedMachine{
 			TypeMeta: metav1.TypeMeta{
@@ -200,74 +183,13 @@ func (r *UnmanagedClusterReconciler) createMachines(ctx context.Context, unmanag
 				},
 			},
 			Spec: hmc.UnmanagedMachineSpec{
-				ProviderID:  node.Spec.ProviderID,
-				ClusterName: unmanagedCluster.Name,
-			},
-			Status: hmc.UnmanagedMachineStatus{
-				Ready: true,
+				ProviderID:   node.Spec.ProviderID,
+				ClusterName:  unmanagedCluster.Name,
+				ControlPlane: isControlPlane,
 			},
 		}
 
 		err := r.Create(ctx, &unmanagedMachine)
-		if err != nil && !apierrors.IsAlreadyExists(err) {
-			return fmt.Errorf("failed to create machine: %w", err)
-		}
-
-		ref := types.NamespacedName{Name: unmanagedMachine.Name, Namespace: unmanagedMachine.Namespace}
-		if err := r.Get(ctx, ref, &unmanagedMachine); err != nil {
-			return fmt.Errorf("failed to get unmanaged machine: %w", err)
-		}
-		unmanagedMachine.Status = hmc.UnmanagedMachineStatus{
-			Ready: true,
-		}
-		if err := r.Status().Update(ctx, &unmanagedMachine); err != nil {
-			return fmt.Errorf("failed to update unmanaged machine status: %w", err)
-		}
-
-		l.Info("Create machine", "node", node.Name)
-		machine := v1beta1.Machine{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "Machine",
-				APIVersion: v1beta1.GroupVersion.Identifier(),
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      node.Name,
-				Namespace: unmanagedCluster.Namespace,
-				Labels:    map[string]string{v1beta1.GroupVersion.Identifier(): hmc.GroupVersion.Version, v1beta1.ClusterNameLabel: unmanagedCluster.Name},
-			},
-			Spec: v1beta1.MachineSpec{
-				ClusterName: unmanagedCluster.Name,
-				Bootstrap: v1beta1.Bootstrap{
-					DataSecretName: &kubeConfigSecretName,
-				},
-				InfrastructureRef: corev1.ObjectReference{
-					Kind:       "UnmanagedMachine",
-					Namespace:  unmanagedCluster.Namespace,
-					Name:       node.Name,
-					APIVersion: hmc.GroupVersion.Identifier(),
-				},
-				ProviderID: &node.Spec.ProviderID,
-			},
-			Status: v1beta1.MachineStatus{
-				NodeRef: &corev1.ObjectReference{
-					Kind:       "Node",
-					Name:       node.Name,
-					APIVersion: "v1",
-				},
-				NodeInfo:               &corev1.NodeSystemInfo{},
-				CertificatesExpiryDate: nil,
-				BootstrapReady:         true,
-				InfrastructureReady:    true,
-			},
-		}
-
-		if _, ok := node.Labels[v1beta1.NodeRoleLabelPrefix+"/control-plane"]; ok {
-			if machine.Labels == nil {
-				machine.Labels = make(map[string]string)
-			}
-			machine.Labels[v1beta1.MachineControlPlaneLabel] = "true"
-		}
-		err = r.Create(ctx, &machine)
 		if err != nil && !apierrors.IsAlreadyExists(err) {
 			return fmt.Errorf("failed to create machine: %w", err)
 		}
@@ -283,6 +205,14 @@ func (r *UnmanagedClusterReconciler) createMachines(ctx context.Context, unmanag
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      existingUnmanagedMachine.Name,
 				Namespace: unmanagedCluster.Namespace,
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						APIVersion: hmc.GroupVersion.Identifier(),
+						Kind:       "UnmanagedMachine",
+						Name:       existingUnmanagedMachine.Name,
+						UID:        existingUnmanagedMachine.UID,
+					},
+				},
 			},
 		}); err != nil && !apierrors.IsNotFound(err) {
 			return fmt.Errorf("failed to delete orphaned machine: %w", err)
@@ -313,29 +243,19 @@ func (r *UnmanagedClusterReconciler) reconcileUnmanagedCluster(ctx context.Conte
 	}
 
 	if err := r.createCluster(ctx, unmanagedCluster); err != nil {
-		return ctrl.Result{RequeueAfter: DefaultRequeueInterval}, err
+		return ctrl.Result{Requeue: true}, err
 	}
 
 	if err := r.createServices(ctx, unmanagedCluster); err != nil {
-		return ctrl.Result{RequeueAfter: DefaultRequeueInterval}, err
+		return ctrl.Result{Requeue: true}, err
 	}
 
 	if err := r.createMachines(ctx, unmanagedCluster); err != nil {
-		return ctrl.Result{RequeueAfter: DefaultRequeueInterval}, err
+		return ctrl.Result{Requeue: true}, err
 	}
 
 	requeue, err := r.updateStatus(ctx, unmanagedCluster)
-	if err != nil {
-		if requeue {
-			return ctrl.Result{RequeueAfter: DefaultRequeueInterval}, err
-		}
-		return ctrl.Result{RequeueAfter: DefaultRequeueInterval}, err
-	}
-
-	if requeue {
-		return ctrl.Result{RequeueAfter: DefaultRequeueInterval}, nil
-	}
-	return ctrl.Result{}, nil
+	return ctrl.Result{Requeue: requeue}, err
 }
 
 func (r *UnmanagedClusterReconciler) createServices(ctx context.Context, mc *hmc.UnmanagedCluster) error {
@@ -380,7 +300,7 @@ func (r *UnmanagedClusterReconciler) reconcileDeletion(ctx context.Context, unma
 		&hmc.UnmanagedMachine{},
 		deleteAllOpts...,
 	); err != nil && !apierrors.IsNotFound(err) {
-		return ctrl.Result{RequeueAfter: DefaultRequeueInterval}, fmt.Errorf("failed to delete unmanaged machines: %w", err)
+		return ctrl.Result{Requeue: true}, fmt.Errorf("failed to delete unmanaged machines: %w", err)
 	}
 
 	if err := r.DeleteAllOf(
@@ -388,7 +308,7 @@ func (r *UnmanagedClusterReconciler) reconcileDeletion(ctx context.Context, unma
 		&v1beta1.Machine{},
 		deleteAllOpts...,
 	); err != nil && !apierrors.IsNotFound(err) {
-		return ctrl.Result{RequeueAfter: DefaultRequeueInterval}, fmt.Errorf("failed to delete unmanaged machines: %w", err)
+		return ctrl.Result{Requeue: true}, fmt.Errorf("failed to delete unmanaged machines: %w", err)
 	}
 
 	if err := r.Delete(ctx, &corev1.Secret{
@@ -400,7 +320,7 @@ func (r *UnmanagedClusterReconciler) reconcileDeletion(ctx context.Context, unma
 			},
 		},
 	}); err != nil && !apierrors.IsNotFound(err) {
-		return ctrl.Result{RequeueAfter: DefaultRequeueInterval}, fmt.Errorf("failed to delete cluster secret: %w", err)
+		return ctrl.Result{Requeue: true}, fmt.Errorf("failed to delete cluster secret: %w", err)
 	}
 
 	if err := r.Delete(ctx, &v1beta1.Cluster{
@@ -412,7 +332,7 @@ func (r *UnmanagedClusterReconciler) reconcileDeletion(ctx context.Context, unma
 			},
 		},
 	}); err != nil && !apierrors.IsNotFound(err) {
-		return ctrl.Result{RequeueAfter: DefaultRequeueInterval}, fmt.Errorf("failed to delete cluster: %w", err)
+		return ctrl.Result{Requeue: true}, fmt.Errorf("failed to delete cluster: %w", err)
 	}
 
 	if controllerutil.RemoveFinalizer(unmanagedCluster, hmc.UnmanagedClusterFinalizer) {
@@ -430,6 +350,10 @@ func (r *UnmanagedClusterReconciler) updateStatus(ctx context.Context, cluster *
 	if err != nil {
 		return true, err
 	}
+
+	defer func() {
+		err = errors.Join(err, r.Status().Update(ctx, cluster))
+	}()
 
 	allNodeCondition := metav1.Condition{
 		Type:    hmc.AllNodesCondition,
@@ -495,10 +419,6 @@ func (r *UnmanagedClusterReconciler) updateStatus(ctx context.Context, cluster *
 		} else {
 			requeue = true
 		}
-	}
-
-	if err := r.Status().Update(ctx, cluster); err != nil {
-		return true, fmt.Errorf("failed to update unmanaged cluster status: %w", err)
 	}
 
 	return requeue, nil

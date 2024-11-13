@@ -17,7 +17,6 @@ package controller
 import (
 	"context"
 
-	"github.com/k0sproject/k0smotron/api/infrastructure/v1beta1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -48,8 +47,6 @@ var _ = Describe("UnmanagedMachine Controller", func() {
 
 		BeforeEach(func() {
 			By("creating the custom resource for the Kind UnmanagedCluster")
-			Expect(v1beta1.AddToScheme(k8sClient.Scheme())).To(Succeed())
-			Expect(capi.AddToScheme(k8sClient.Scheme())).To(Succeed())
 			secretName := secret.Name(unmanagedClusterName, secret.Kubeconfig)
 
 			secret := &corev1.Secret{

@@ -18,12 +18,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 const (
 	UnmanagedClusterKind      = "UnmanagedCluster"
-	UnmanagedClusterFinalizer = "hmc.mirantis.com/unmanage-dcluster"
+	UnmanagedClusterFinalizer = "hmc.mirantis.com/unmanaged-cluster"
 	AllNodesCondition         = "AllNodesCondition"
 	NodeCondition             = "NodeCondition"
 	HelmChart                 = "HelmChart"
@@ -31,10 +28,6 @@ const (
 
 // UnmanagedClusterSpec defines the desired state of UnmanagedCluster
 type UnmanagedClusterSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	Name string `json:"name,omitempty"`
 	// Services is a list of services created via ServiceTemplates
 	// that could be installed on the target cluster.
 	Services []ServiceSpec `json:"services,omitempty"`
@@ -59,6 +52,7 @@ type UnmanagedClusterSpec struct {
 // UnmanagedClusterStatus defines the observed state of UnmanagedCluster
 type UnmanagedClusterStatus struct {
 	// Flag indicating whether the unmanaged cluster is in the ready state or not
+	// +kubebuilder:default:=false
 	Ready bool `json:"ready"`
 
 	// Conditions contains details for the current state of the ManagedCluster.

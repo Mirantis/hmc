@@ -18,20 +18,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 // UnmanagedMachineSpec defines the desired state of UnmanagedMachine
 type UnmanagedMachineSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-	ProviderID  string `json:"providerID,omitempty"`
-	ClusterName string `json:"clusterName,omitempty"`
+	ProviderID   string `json:"providerID,omitempty"`
+	ClusterName  string `json:"clusterName,omitempty"`
+	ControlPlane bool   `json:"controlPlane,omitempty"`
 }
 
 // UnmanagedMachineStatus defines the observed state of UnmanagedMachine
 type UnmanagedMachineStatus struct {
 	// Flag indicating whether the machine is in the ready state or not
+	// +kubebuilder:default:=false
 	Ready bool `json:"ready,omitempty"`
 	// Conditions contains details for the current state of the ManagedCluster
 	Conditions []metav1.Condition `json:"conditions,omitempty"`

@@ -17,7 +17,6 @@ package controller
 import (
 	"context"
 
-	"github.com/k0sproject/k0smotron/api/infrastructure/v1beta1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -49,11 +48,9 @@ var _ = Describe("UnmanagedCluster Controller", func() {
 		unmanagedcluster := &hmc.UnmanagedCluster{}
 
 		BeforeEach(func() {
-			Expect(v1beta1.AddToScheme(k8sClient.Scheme())).To(Succeed())
 			By("creating the custom resource for the Kind UnmanagedCluster")
 
 			secretName := secret.Name(unmanagedClusterName, secret.Kubeconfig)
-
 			secret := &corev1.Secret{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "Secret",
@@ -80,7 +77,6 @@ var _ = Describe("UnmanagedCluster Controller", func() {
 						Namespace: unmanagedClusterNamespace,
 					},
 					Spec: hmc.UnmanagedClusterSpec{
-						Name:             unmanagedClusterName,
 						Services:         nil,
 						ServicesPriority: 1,
 						StopOnConflict:   true,
@@ -124,8 +120,6 @@ var _ = Describe("UnmanagedCluster Controller", func() {
 				NamespacedName: typeNamespacedName,
 			})
 			Expect(err).NotTo(HaveOccurred())
-			// TODO(user): Add more specific assertions depending on your controller's reconciliation logic.
-			// Example: If you expect a certain status condition after reconciliation, verify it here.
 		})
 	})
 })

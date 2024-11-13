@@ -17,6 +17,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/projectsveltos/libsveltos/lib/clusterproxy"
 	corev1 "k8s.io/api/core/v1"
@@ -25,6 +26,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/cluster-api/api/v1beta1"
+	"sigs.k8s.io/cluster-api/util/secret"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -38,14 +41,9 @@ type UnmanagedMachineReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-// +kubebuilder:rbac:groups=hmc.mirantis.com.hmc.mirantis.com,resources=unmanagedmachines,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=hmc.mirantis.com.hmc.mirantis.com,resources=unmanagedmachines/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=hmc.mirantis.com.hmc.mirantis.com,resources=unmanagedmachines/finalizers,verbs=update
-
 func (r *UnmanagedMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	l := log.FromContext(ctx)
-
-	unmanagedMachine := new(hmc.UnmanagedMachine)
+	unmanagedMachine := &hmc.UnmanagedMachine{}
 	if err := r.Get(ctx, req.NamespacedName, unmanagedMachine); err != nil {
 		if apierrors.IsNotFound(err) {
 			l.Info("UnmanagedMachine not found, ignoring since object must be deleted")
@@ -55,18 +53,17 @@ func (r *UnmanagedMachineReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return ctrl.Result{}, err
 	}
 
-	requeue, err := r.reconcileStatus(ctx, unmanagedMachine)
+	requeue, err := r.reconcileMachine(ctx, unmanagedMachine)
 	if err != nil {
-		if requeue {
-			return ctrl.Result{RequeueAfter: DefaultRequeueInterval}, err
-		}
-		return ctrl.Result{RequeueAfter: DefaultRequeueInterval}, err
+		return ctrl.Result{Requeue: requeue}, err
 	}
 
-	if requeue {
-		return ctrl.Result{RequeueAfter: DefaultRequeueInterval}, nil
+	requeue, err = r.reconcileStatus(ctx, unmanagedMachine)
+	if err != nil {
+		return ctrl.Result{Requeue: requeue}, err
 	}
-	return ctrl.Result{}, nil
+
+	return ctrl.Result{Requeue: requeue}, nil
 }
 
 func (r *UnmanagedMachineReconciler) reconcileStatus(ctx context.Context, unmanagedMachine *hmc.UnmanagedMachine) (bool, error) {
@@ -111,7 +108,63 @@ func (r *UnmanagedMachineReconciler) reconcileStatus(ctx context.Context, unmana
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *UnmanagedMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	if err := v1beta1.AddToScheme(r.Client.Scheme()); err != nil {
+		return err
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&hmc.UnmanagedMachine{}).
 		Complete(r)
+}
+
+func (r *UnmanagedMachineReconciler) reconcileMachine(ctx context.Context, unmanagedMachine *hmc.UnmanagedMachine) (bool, error) {
+	l := log.FromContext(ctx)
+
+	secretName := secret.Name(unmanagedMachine.Spec.ClusterName, secret.Kubeconfig)
+	l.Info("Create machine", "node", unmanagedMachine.Name)
+	machine := v1beta1.Machine{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Machine",
+			APIVersion: v1beta1.GroupVersion.Identifier(),
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      unmanagedMachine.Name,
+			Namespace: unmanagedMachine.Namespace,
+			Labels: map[string]string{
+				v1beta1.GroupVersion.Identifier(): hmc.GroupVersion.Version,
+				v1beta1.ClusterNameLabel:          unmanagedMachine.Spec.ClusterName,
+			},
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion: hmc.GroupVersion.Identifier(),
+					Kind:       "UnmanagedMachine",
+					Name:       unmanagedMachine.Name,
+					UID:        unmanagedMachine.UID,
+				},
+			},
+		},
+		Spec: v1beta1.MachineSpec{
+			ClusterName: unmanagedMachine.Spec.ClusterName,
+			Bootstrap: v1beta1.Bootstrap{
+				DataSecretName: &secretName,
+			},
+			InfrastructureRef: corev1.ObjectReference{
+				Kind:       "UnmanagedMachine",
+				Namespace:  unmanagedMachine.Namespace,
+				Name:       unmanagedMachine.Name,
+				APIVersion: hmc.GroupVersion.Identifier(),
+			},
+			ProviderID: &unmanagedMachine.Spec.ProviderID,
+		},
+	}
+
+	if machine.Labels == nil {
+		machine.Labels = make(map[string]string)
+	}
+	machine.Labels[v1beta1.MachineControlPlaneLabel] = strconv.FormatBool(unmanagedMachine.Spec.ControlPlane)
+	if err := r.Create(ctx, &machine); err != nil && !apierrors.IsAlreadyExists(err) {
+		return true, fmt.Errorf("failed to create machine: %w", err)
+	}
+
+	return false, nil
 }

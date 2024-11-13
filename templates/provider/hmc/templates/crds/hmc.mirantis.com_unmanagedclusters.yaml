@@ -41,8 +41,6 @@ spec:
           spec:
             description: UnmanagedClusterSpec defines the desired state of UnmanagedCluster
             properties:
-              name:
-                type: string
               services:
                 description: |-
                   Services is a list of services created via ServiceTemplates
@@ -155,6 +153,7 @@ spec:
                   type: object
                 type: array
               ready:
+                default: false
                 description: Flag indicating whether the unmanaged cluster is in the
                   ready state or not
                 type: boolean
