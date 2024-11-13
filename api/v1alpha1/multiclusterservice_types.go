@@ -63,27 +63,7 @@ type ServiceSpec struct {
 type MultiClusterServiceSpec struct {
 	// ClusterSelector identifies target clusters to manage services on.
 	ClusterSelector metav1.LabelSelector `json:"clusterSelector,omitempty"`
-	// Services is a list of services created via ServiceTemplates
-	// that could be installed on the target cluster.
-	Services []ServiceSpec `json:"services,omitempty"`
-
-	// +kubebuilder:default:=100
-	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:validation:Maximum=2147483646
-
-	// ServicesPriority sets the priority for the services defined in this spec.
-	// Higher value means higher priority and lower means lower.
-	// In case of conflict with another object managing the service,
-	// the one with higher priority will get to deploy its services.
-	ServicesPriority int32 `json:"servicesPriority,omitempty"`
-
-	// +kubebuilder:default:=false
-
-	// StopOnConflict specifies what to do in case of a conflict.
-	// E.g. If another object is already managing a service.
-	// By default the remaining services will be deployed even if conflict is detected.
-	// If set to true, the deployment will stop after encountering the first conflict.
-	StopOnConflict bool `json:"stopOnConflict,omitempty"`
+	ServicesType    `json:",inline"`
 }
 
 // ServiceStatus contains details for the state of services.
