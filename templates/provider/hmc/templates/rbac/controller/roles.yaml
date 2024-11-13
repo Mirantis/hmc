@@ -206,18 +206,50 @@ rules:
   - patch
   - update
 - apiGroups:
-  - ""
+    - ""
   resources:
-  - secrets
-  verbs: {{ include "rbac.editorVerbs" . | nindent 4 }}
+    - secrets
+  verbs:
+    - get
+    - list
 - apiGroups:
     - hmc.mirantis.com
   resources:
     - unmanagedclusters
-    - unmanagedclusters/status
-    - unmanagedmachines
-    - unmanagedmachines/status
   verbs: {{ include "rbac.editorVerbs" . | nindent 4 }}
+- apiGroups:
+    - hmc.mirantis.com
+  resources:
+    - unmanagedclusters/finalizers
+  verbs:
+    - update
+- apiGroups:
+    - hmc.mirantis.com
+  resources:
+    - unmanagedclusters/status
+  verbs:
+    - get
+    - patch
+    - update
+- apiGroups:
+    - hmc.mirantis.com
+  resources:
+    - unmanagedmachines
+  verbs: {{ include "rbac.editorVerbs" . | nindent 4 }}
+- apiGroups:
+    - hmc.mirantis.com
+  resources:
+    - unmanagedmachines/finalizers
+  verbs:
+    - update
+- apiGroups:
+    - hmc.mirantis.com
+  resources:
+    - unmanagedmachines/status
+  verbs:
+    - get
+    - patch
+    - update
 - apiGroups:
     - cluster.x-k8s.io
   resources:
@@ -259,7 +291,19 @@ rules:
       - hmc.mirantis.com
     resources:
       - unmanagedclusters
+    verbs: {{ include "rbac.viewerVerbs" . | nindent 4 }}
+  - apiGroups:
+      - hmc.mirantis.com
+    resources:
       - unmanagedclusters/status
+    verbs: {{ include "rbac.viewerVerbs" . | nindent 4 }}
+  - apiGroups:
+      - hmc.mirantis.com
+    resources:
       - unmanagedmachines
+    verbs: {{ include "rbac.viewerVerbs" . | nindent 4 }}
+  - apiGroups:
+      - hmc.mirantis.com
+    resources:
       - unmanagedmachines/status
     verbs: {{ include "rbac.viewerVerbs" . | nindent 4 }}
