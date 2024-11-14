@@ -169,6 +169,24 @@ var _ = Context("Azure Templates", Label("provider:cloud", "provider:azure"), Or
 			return deploymentValidator.Validate(context.Background(), standaloneClient)
 		}).WithTimeout(90 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
 
+		if testingConfig.Standalone.Upgrade {
+			managedcluster.Upgrade(ctx, kc.CrClient, managedcluster.Namespace, sdName, testingConfig.Standalone.UpgradeTemplate)
+			Eventually(func() error {
+				return deploymentValidator.Validate(context.Background(), kc)
+			}).WithTimeout(30 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
+
+			// Validate hosted deployment
+			Eventually(func() error {
+				return deploymentValidator.Validate(context.Background(), standaloneClient)
+			}).WithTimeout(30 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
+		}
+		if testingConfig.Hosted.Upgrade {
+			managedcluster.Upgrade(ctx, standaloneClient.CrClient, managedcluster.Namespace, hdName, testingConfig.Hosted.UpgradeTemplate)
+			Eventually(func() error {
+				return deploymentValidator.Validate(context.Background(), standaloneClient)
+			}).WithTimeout(30 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
+		}
+
 		By("verify the deployment deletes successfully")
 		err = hostedDeleteFunc()
 		Expect(err).NotTo(HaveOccurred())

@@ -21,6 +21,7 @@ import (
 	"os"
 	"path/filepath"
 
+	hcv2 "github.com/fluxcd/helm-controller/api/v2"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
@@ -140,6 +141,9 @@ func newKubeClient(configBytes []byte, namespace string) *KubeClient {
 
 	err = hmcmirantiscomv1alpha1.AddToScheme(scheme)
 	Expect(err).NotTo(HaveOccurred(), "failed to add HMC API to scheme")
+
+	err = hcv2.AddToScheme(scheme)
+	Expect(err).NotTo(HaveOccurred(), "failed to add Flux helm controller API to scheme")
 
 	crClient, err := crclient.New(config, crclient.Options{Scheme: scheme})
 	Expect(err).NotTo(HaveOccurred(), "failed to create controller runtime client")

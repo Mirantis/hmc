@@ -33,6 +33,8 @@ import (
 )
 
 var _ = Context("vSphere Templates", Label("provider:onprem", "provider:vsphere"), Ordered, func() {
+	ctx := context.Background()
+
 	var (
 		kc          *kubeclient.KubeClient
 		deleteFunc  func() error
@@ -113,5 +115,12 @@ var _ = Context("vSphere Templates", Label("provider:onprem", "provider:vsphere"
 		Eventually(func() error {
 			return deploymentValidator.Validate(context.Background(), kc)
 		}).WithTimeout(30 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
+
+		if testingConfig.Standalone.Upgrade {
+			managedcluster.Upgrade(ctx, kc.CrClient, managedcluster.Namespace, clusterName, testingConfig.Standalone.UpgradeTemplate)
+			Eventually(func() error {
+				return deploymentValidator.Validate(context.Background(), kc)
+			}).WithTimeout(30 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
+		}
 	})
 })
