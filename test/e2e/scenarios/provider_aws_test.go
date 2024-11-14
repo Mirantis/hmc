@@ -176,6 +176,24 @@ var _ = Describe("AWS Templates", Label("provider:cloud", "provider:aws"), Order
 			return deploymentValidator.Validate(context.Background(), standaloneClient)
 		}).WithTimeout(30 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
 
+		if testingConfig.Standalone.Upgrade {
+			managedcluster.Upgrade(ctx, kc.CrClient, managedcluster.Namespace, clusterName, testingConfig.Standalone.UpgradeTemplate)
+			Eventually(func() error {
+				return deploymentValidator.Validate(context.Background(), kc)
+			}).WithTimeout(30 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
+
+			// Validate hosted deployment
+			Eventually(func() error {
+				return deploymentValidator.Validate(context.Background(), standaloneClient)
+			}).WithTimeout(30 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
+		}
+		if testingConfig.Hosted.Upgrade {
+			managedcluster.Upgrade(ctx, standaloneClient.CrClient, managedcluster.Namespace, hdName, testingConfig.Hosted.UpgradeTemplate)
+			Eventually(func() error {
+				return deploymentValidator.Validate(context.Background(), standaloneClient)
+			}).WithTimeout(30 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
+		}
+
 		// Delete the hosted ManagedCluster and verify it is removed.
 		templateBy(templates.TemplateAWSHostedCP, "deleting the ManagedCluster")
 		err = hostedDeleteFunc()
