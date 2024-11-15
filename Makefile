@@ -72,6 +72,34 @@ set-hmc-version: yq
 	$(YQ) eval '.metadata.name = "hmc-$(FQDN_VERSION)"' -i $(PROVIDER_TEMPLATES_DIR)/hmc-templates/files/release.yaml
 	$(YQ) eval '.spec.hmc.template = "hmc-$(FQDN_VERSION)"' -i $(PROVIDER_TEMPLATES_DIR)/hmc-templates/files/release.yaml
 
+.PHONY: test-hmc-version
+test-hmc-version: yq
+	@TEMPLATE_DIR=templates/provider/hmc-templates/files/templates/*; \
+	git checkout templates/cluster/; \
+	git checkout templates/provider/hmc-templates/files/templates/; \
+	cutversion=$$(echo $(VERSION) | sed "s/.*-//g"); \
+	for template in $$TEMPLATE_DIR; do \
+  		if  [ $$(yq eval '.kind' $$template) = 'ClusterTemplate' ]; then \
+  			echo $$template; \
+  			sed -i "s/chartVersion:.*[^$$cutversion].*/&-$$cutversion/g" "$$template"; \
+  		fi; \
+	done; \
+	CHART_DIR=templates/cluster/**/Chart.yaml; \
+	for chart in $$CHART_DIR; do \
+	  echo $$chart; \
+	  sed -i "s/version:.*[^$$cutversion]*./&-$$cutversion/g" "$$chart"; \
+	done
+
+#@RELEASE_FILE=templates/provider/hmc-templates/files/release.bak; \
+#cutversion=$$(echo $(VERSION) | sed "s/.*-//g"); \
+#for provider in $$(yq eval -o=json $$RELEASE_FILE | jq -cr '.spec.providers[].template'); do \
+#  if echo "$$provider" | grep -q -v "projectsveltos"; then \
+#  	echo $$provider-$$cutversion; \
+#  	sed -i "s/template:.*$$provider/&-$$cutversion/g" $$RELEASE_FILE; \
+# fi; \
+# done
+#@VERSION=$(VERSION) hack/templateversions.sh
+
 .PHONY: hmc-chart-release
 hmc-chart-release: set-hmc-version templates-generate ## Generate hmc helm chart
 
@@ -347,7 +375,7 @@ dev-eks-creds: dev-aws-creds
 dev-apply: kind-deploy registry-deploy dev-push dev-deploy dev-templates dev-release
 
 .PHONY: test-apply
-test-apply: set-hmc-version helm-package dev-deploy dev-templates dev-release
+test-apply: set-hmc-version test-hmc-version helm-push dev-deploy dev-templates dev-release
 
 .PHONY: dev-destroy
 dev-destroy: kind-undeploy registry-undeploy ## Destroy the development environment by deleting the kind cluster and local registry.
