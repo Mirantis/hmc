@@ -18,14 +18,19 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
 )
+
+const defaultSyncPeriod = 15 * time.Minute
 
 // CredentialReconciler reconciles a Credential object
 type CredentialReconciler struct {
@@ -35,11 +40,16 @@ type CredentialReconciler struct {
 func (r *CredentialReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	l := ctrl.LoggerFrom(ctx)
 	l.Info("Credential reconcile start")
+	var err error
 
 	cred := &hmc.Credential{}
 	if err := r.Client.Get(ctx, req.NamespacedName, cred); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
+
+	defer func() {
+		err = errors.Join(err, r.updateStatus(ctx, cred))
+	}()
 
 	clIdty := &unstructured.Unstructured{}
 	clIdty.SetAPIVersion(cred.Spec.IdentityRef.APIVersion)
@@ -51,33 +61,41 @@ func (r *CredentialReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		Name:      cred.Spec.IdentityRef.Name,
 		Namespace: cred.Spec.IdentityRef.Namespace,
 	}, clIdty); err != nil {
+		errMsg := fmt.Sprintf("Failed to get ClusterIdentity %s: %s", cred.Spec.IdentityRef.Name, err)
 		if apierrors.IsNotFound(err) {
-			stateErr := r.setState(ctx, cred, hmc.CredentialNotFound)
-			if stateErr != nil {
-				err = errors.Join(err, stateErr)
-			}
-
-			l.Error(err, "ClusterIdentity not found")
-
-			return ctrl.Result{}, err
+			errMsg = fmt.Sprintf("ClusterIdentity %s not found", cred.Spec.IdentityRef.Name)
 		}
 
-		l.Error(err, "failed to get ClusterIdentity")
+		apimeta.SetStatusCondition(cred.GetConditions(), metav1.Condition{
+			Type:    hmc.CredentialReadyCondition,
+			Status:  metav1.ConditionFalse,
+			Reason:  hmc.FailedReason,
+			Message: errMsg,
+		})
 
 		return ctrl.Result{}, err
 	}
 
-	if err := r.setState(ctx, cred, hmc.CredentialReady); err != nil {
-		l.Error(err, "failed to set Credential state")
+	apimeta.SetStatusCondition(cred.GetConditions(), metav1.Condition{
+		Type:    hmc.CredentialReadyCondition,
+		Status:  metav1.ConditionTrue,
+		Reason:  hmc.SucceededReason,
+		Message: "Credential is ready",
+	})
 
-		return ctrl.Result{}, err
-	}
-
-	return ctrl.Result{}, nil
+	return ctrl.Result{
+		RequeueAfter: defaultSyncPeriod,
+	}, nil
 }
 
-func (r *CredentialReconciler) setState(ctx context.Context, cred *hmc.Credential, state hmc.CredentialState) error {
-	cred.Status.State = state
+func (r *CredentialReconciler) updateStatus(ctx context.Context, cred *hmc.Credential) error {
+	cred.Status.Ready = false
+	for _, cond := range cred.Status.Conditions {
+		if cond.Type == hmc.CredentialReadyCondition && cond.Status == metav1.ConditionTrue {
+			cred.Status.Ready = true
+			break
+		}
+	}
 
 	if err := r.Client.Status().Update(ctx, cred); err != nil {
 		return fmt.Errorf("failed to update Credential %s/%s status: %w", cred.Namespace, cred.Name, err)
