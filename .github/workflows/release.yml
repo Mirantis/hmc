@@ -65,10 +65,12 @@ jobs:
         run: |
           make airgap-package
 
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-east-1
+          aws-access-key-id: ${{ secrets.ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.SECRET_ACCESS_KEY }}
+
       - name: Upload airgap bundle
-        env:
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.SECRET_ACCESS_KEY }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.ACCESS_KEY_ID }}
-        run: |
-          make awscli
-          ./bin/aws s3 cp bin/hmc-airgap-${{ env.VERSION }}.tgz s3://binary2a-mirantis-com.s3.amazonaws.com/hmc-airgap-${{ env.VERSION }}.tgz
+        run: aws s3 cp bin/hmc-airgap-${{ env.VERSION }}.tgz s3://binary2a-mirantis-com.s3.amazonaws.com/hmc-airgap-${{ env.VERSION }}.tgz
