@@ -162,63 +162,72 @@ echo -e "\nPulling images for HMC extensions...\n"
 
 # Next, we need to build a list of images used by k0s extensions.  Walk the
 # templates directory and extract the images used by the extensions.
-for template in $(find ${templates_dir} -name 'k0s*.yaml');
+for template in $(find ${TEMPLATES_DIR} -mindepth 2 -name Chart.yaml -type f -exec dirname {} \;);
 do
-    if [[ $template == *"k0smotron"* ]]; then
-        extensions_path=".spec.k0sConfig.spec.extensions.helm"
-    else
-        extensions_path=".spec.k0sConfigSpec.k0s.spec.extensions.helm"
-    fi
-
-    repos=$(grep -vw "{{" ${template} | $YQ e "${extensions_path}.repositories[] | [.url, .name] | join(\";\")")
-    for repo in $repos
+    for k0sconfig_path in $(find "${template}" -name 'k0s*.yaml');
     do
-        url=${repo%;*}
-        chartname=${repo#*;}
-        version=$(grep -vw "{{" ${template} |
-            $YQ e "${extensions_path}.charts[] | select(.chartname == \"*${chartname}*\") | .version")
-        name=$(grep -vw "{{" ${template} |
-            $YQ e "${extensions_path}.charts[] | select(.chartname == \"*${chartname}*\") | .name")
-        grep -vw "{{" $template | $YQ e "${extensions_path}.charts[] | select(.chartname == \"*$chartname*\") | .values" > ${name}-values.yaml
-
-        if [[ $url == "" ]] || [[ $name == "" ]] || [[ $version == "" ]]; then
-            echo "Error: Failed to get URL, name, or version from ${template}"
-            exit 1
-        fi
-
-        # Use 'helm template' to get the images used by the extension.
-        if [[ $name == "kube-vip" ]]; then
-            # FIXME: This is a temporary workaround for kube-vip, if we use
-            # a custom image tag in the future we'll need to update this.
-            # kube-vip is a special case where our yaml values result in invalid
-            # Helm template output, for now render the YAML without values.
-            template_output=$(${HELM} template --repo ${url} --version ${version} ${name})
+        if [[ k0sconfig_path == *"k0smotron"* ]]; then
+            extensions_path=".spec.k0sConfig.spec.extensions.helm"
         else
-            template_output=$(${HELM} template --repo ${url} --version ${version} ${name} --values ${name}-values.yaml)
-            if [[ $? -ne 0 ]]; then
-                echo "Error: Failed to get images from Helm template for ${name}, trying to output values with debug..."
-
-                template_output=$(${HELM} template --repo ${url} --version ${version} ${name} --values ${name}-values.yaml --debug)
-                if [[ $? -ne 0 ]]; then
-                    echo "Error: Failed to get images from Helm template for ${name} with debug output"
-                    exit 1
-                fi
-            fi
+            extensions_path=".spec.k0sConfigSpec.k0s.spec.extensions.helm"
         fi
 
-        for image in $(${HELM} template --repo ${url} --version ${version} ${name} --values ${name}-values.yaml | $YQ -N e .spec.template.spec.containers[].image);
-        do
-            docker pull ${image}
-            if [[ $? -ne 0 ]]; then
-                echo "Error: Failed to pull ${image}"
-                exit 1
-            fi
+      repos=$(grep -vw "{{" ${k0sconfig_path} | $YQ e "${extensions_path}.repositories[] | [.url, .name] | join(\";\")")
+      for repo in $repos
+      do
+          url=${repo%;*}
+          chartname=${repo#*;}
+          version=$(grep -vw "{{" ${k0sconfig_path} |
+              $YQ e "${extensions_path}.charts[] | select(.chartname == \"*${chartname}*\") | .version")
+          name=$(grep -vw "{{" ${k0sconfig_path} |
+              $YQ e "${extensions_path}.charts[] | select(.chartname == \"*${chartname}*\") | .name")
 
-            EXTENSION_IMAGES_BUNDLED="$EXTENSION_IMAGES_BUNDLED $image"
-        done
+          if [[ $name != "kube-vip" ]]; then
+              k0sconfig="${k0sconfig_path#$template/}"
+              echo -e "Processing k0sconfig file: ${k0sconfig}\n"
+              ${HELM} template "${template}" --show-only "${k0sconfig}" |
+                  $YQ e "${extensions_path}.charts[] | select(.chartname == \"*$chartname*\") | .values" > ${name}-values.yaml
+          fi
 
-        rm $name-values.yaml
-    done
+          if [[ $url == "" ]] || [[ $name == "" ]] || [[ $version == "" ]]; then
+              echo "Error: Failed to get URL, name, or version from ${k0sconfig_path}"
+              exit 1
+          fi
+
+          # Use 'helm template' to get the images used by the extension.
+          if [[ $name == "kube-vip" ]]; then
+              # FIXME: This is a temporary workaround for kube-vip, if we use
+              # a custom image tag in the future we'll need to update this.
+              # kube-vip is a special case where our yaml values result in invalid
+              # Helm template output, for now render the YAML without values.
+              template_output=$(${HELM} template --repo ${url} --version ${version} ${name})
+          else
+              template_output=$(${HELM} template --repo ${url} --version ${version} ${name} --values ${name}-values.yaml)
+              if [[ $? -ne 0 ]]; then
+                  echo "Error: Failed to get images from Helm template for ${name}, trying to output values with debug..."
+
+                  template_output=$(${HELM} template --repo ${url} --version ${version} ${name} --values ${name}-values.yaml --debug)
+                  if [[ $? -ne 0 ]]; then
+                      echo "Error: Failed to get images from Helm template for ${name} with debug output"
+                      exit 1
+                  fi
+              fi
+          fi
+
+          for image in $(echo "${template_output}" | $YQ -N e .spec.template.spec.containers[].image);
+          do
+              docker pull ${image}
+              if [[ $? -ne 0 ]]; then
+                  echo "Error: Failed to pull ${image}"
+                  exit 1
+              fi
+
+              EXTENSION_IMAGES_BUNDLED="$EXTENSION_IMAGES_BUNDLED $image"
+          done
+
+          rm -f $name-values.yaml
+      done
+  done
 done
 
 echo -e "\nSaving images...\n"
