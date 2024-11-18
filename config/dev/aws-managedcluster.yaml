@@ -1,17 +1,30 @@
 apiVersion: hmc.mirantis.com/v1alpha1
 kind: ManagedCluster
 metadata:
-  name: aws-dev
-  namespace: ${NAMESPACE}
+  name: wali-aws-dev
+  namespace: hmc-system
 spec:
   template: aws-standalone-cp-0-0-3
   credential: aws-cluster-identity-cred
   config:
+    clusterIdentity:
+      name: aws-cluster-identity
+      namespace: hmc-system
     controlPlane:
+      amiID: ami-0eb9fdcf0d07bd5ef
       instanceType: t3.small
     controlPlaneNumber: 1
-    publicIP: false
-    region: ${AWS_REGION}
+    publicIP: true
+    region: ca-central-1
     worker:
+      amiID: ami-0eb9fdcf0d07bd5ef
       instanceType: t3.small
     workersNumber: 1
+  credential: aws-cluster-identity-cred
+  services:
+    - template: kyverno-3-2-6
+      name: kyverno
+      namespace: kyverno
+  servicesPriority: 1000
+  stopOnConflict: false
+  template: aws-standalone-cp-0-0-2

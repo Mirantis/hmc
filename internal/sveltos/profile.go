@@ -22,6 +22,7 @@ import (
 	sourcev1 "github.com/fluxcd/source-controller/api/v1"
 	sveltosv1beta1 "github.com/projectsveltos/addon-controller/api/v1beta1"
 	libsveltosv1beta1 "github.com/projectsveltos/libsveltos/api/v1beta1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -40,6 +41,7 @@ type ReconcileProfileOpts struct {
 }
 
 type HelmChartOpts struct {
+	CredentialsSecretRef  *corev1.SecretReference
 	Values                string
 	RepositoryURL         string
 	RepositoryName        string
@@ -174,8 +176,7 @@ func GetHelmChartOpts(ctx context.Context, c client.Client, namespace string, se
 		}
 
 		chartName := chart.Spec.Chart
-
-		opts = append(opts, HelmChartOpts{
+		opt := HelmChartOpts{
 			Values:        svc.Values,
 			RepositoryURL: repo.Spec.URL,
 			// We don't have repository name so chart name becomes repository name.
@@ -202,7 +203,16 @@ func GetHelmChartOpts(ctx context.Context, c client.Client, namespace string, se
 			// over plain HTTP, which is different than what InsecureSkipTLSVerify is meant for.
 			// See: https://github.com/fluxcd/source-controller/pull/1288
 			PlainHTTP: repo.Spec.Insecure,
-		})
+		}
+
+		if repo.Spec.SecretRef != nil {
+			opt.CredentialsSecretRef = &corev1.SecretReference{
+				Name:      repo.Spec.SecretRef.Name,
+				Namespace: namespace,
+			}
+		}
+
+		opts = append(opts, opt)
 	}
 
 	return opts, nil
@@ -237,11 +247,14 @@ func Spec(opts *ReconcileProfileOpts) (*sveltosv1beta1.Spec, error) {
 			RegistryCredentialsConfig: &sveltosv1beta1.RegistryCredentialsConfig{
 				PlainHTTP:             hc.PlainHTTP,
 				InsecureSkipTLSVerify: hc.InsecureSkipTLSVerify,
+				CredentialsSecretRef:  hc.CredentialsSecretRef,
 			},
 		}
 
 		if hc.PlainHTTP {
 			// InsecureSkipTLSVerify is redundant in this case.
+			// At the time of implementation, Sveltos would return an error when PlainHTTP
+			// and InsecureSkipTLSVerify were both set, so verify before removing.
 			helmChart.RegistryCredentialsConfig.InsecureSkipTLSVerify = false
 		}
 
