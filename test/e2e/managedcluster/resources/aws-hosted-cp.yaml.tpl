@@ -3,7 +3,7 @@ kind: ManagedCluster
 metadata:
   name: ${MANAGED_CLUSTER_NAME}
 spec:
-  template: aws-hosted-cp-0-0-2
+  template: aws-hosted-cp-0-0-3
   credential: ${AWS_CLUSTER_IDENTITY}-cred
   config:
     clusterIdentity:
