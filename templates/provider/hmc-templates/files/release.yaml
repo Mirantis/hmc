@@ -18,6 +18,6 @@ spec:
     - name: cluster-api-provider-vsphere
       template: cluster-api-provider-vsphere-0-0-3
     - name: cluster-api-provider-aws
-      template: cluster-api-provider-aws-0-0-2
+      template: cluster-api-provider-aws-0-0-3
     - name: projectsveltos
       template: projectsveltos-0-42-0
