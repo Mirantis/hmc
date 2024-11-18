@@ -67,8 +67,8 @@ jobs:
 
       - name: Upload airgap bundle
         env:
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.SECRET_ACCESS_KEY }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.ACCESS_KEY_ID }}
         run: |
           make awscli
           ./bin/aws s3 cp bin/hmc-airgap-${{ env.VERSION }}.tgz s3://binary2a-mirantis-com.s3.amazonaws.com/hmc-airgap-${{ env.VERSION }}.tgz
