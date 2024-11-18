@@ -73,4 +73,4 @@ jobs:
           aws-secret-access-key: ${{ secrets.SECRET_ACCESS_KEY }}
 
       - name: Upload airgap bundle
-        run: aws s3 cp bin/hmc-airgap-${{ env.VERSION }}.tgz s3://binary2a-mirantis-com.s3.amazonaws.com/hmc-airgap-${{ env.VERSION }}.tgz
+        run: aws s3 cp bin/hmc-airgap-${{ env.VERSION }}.tgz s3://binary2a-mirantis-com/hmc-airgap-${{ env.VERSION }}.tgz
