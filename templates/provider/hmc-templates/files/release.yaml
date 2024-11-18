@@ -1,13 +1,13 @@
 apiVersion: hmc.mirantis.com/v1alpha1
 kind: Release
 metadata:
-  name: hmc-0-0-3
+  name: hmc-0-0-4
   annotations:
     helm.sh/resource-policy: keep
 spec:
-  version: 0.0.3
+  version: 0.0.4
   hmc:
-    template: hmc-0-0-3
+    template: hmc-0-0-4
   capi:
     template: cluster-api-0-0-3
   providers:
