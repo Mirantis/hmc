@@ -20,13 +20,13 @@ Detailed documentation is available in [Project 0x2A Docs](https://mirantis.gith
 ### TL;DR
 
 ```bash
-kubectl apply -f https://github.com/Mirantis/hmc/releases/download/v0.0.3/install.yaml
+kubectl apply -f https://github.com/Mirantis/hmc/releases/download/v0.0.4/install.yaml
 ```
 
 or install using `helm`
 
 ```bash
-helm install hmc oci://ghcr.io/mirantis/hmc/charts/hmc --version 0.0.3 -n hmc-system --create-namespace
+helm install hmc oci://ghcr.io/mirantis/hmc/charts/hmc --version 0.0.4 -n hmc-system --create-namespace
 ```
 
 Then follow the [Deploy a managed cluster](#deploy-a-managed-cluster) guide to
@@ -83,7 +83,7 @@ spec:
   - name: cluster-api-provider-azure
   - name: cluster-api-provider-vsphere
   - name: projectsveltos
-  release: hmc-0-0-3
+  release: hmc-0-0-4
 ```
 
 There are two options to override the default management configuration of HMC:

@@ -1,10 +1,10 @@
 apiVersion: hmc.mirantis.com/v1alpha1
 kind: ProviderTemplate
 metadata:
-  name: hmc-0-0-3
+  name: hmc-0-0-4
   annotations:
     helm.sh/resource-policy: keep
 spec:
   helm:
     chartName: hmc
-    chartVersion: 0.0.3
+    chartVersion: 0.0.4
