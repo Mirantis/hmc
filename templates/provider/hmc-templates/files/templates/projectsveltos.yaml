@@ -1,10 +1,10 @@
 apiVersion: hmc.mirantis.com/v1alpha1
 kind: ProviderTemplate
 metadata:
-  name: projectsveltos-0-41-1
+  name: projectsveltos-0-42-0
   annotations:
     helm.sh/resource-policy: keep
 spec:
   helm:
     chartName: projectsveltos
-    chartVersion: 0.41.1
+    chartVersion: 0.42.0
