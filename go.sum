@@ -678,6 +678,8 @@ sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.30.3 h1:2770sDpzrjjsA
 sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.30.3/go.mod h1:Ve9uj1L+deCXFrPOk1LpFXqTg7LCFzFso6PA48q/XZw=
 sigs.k8s.io/cluster-api v1.8.5 h1:lNA2fPN4fkXEs+oOQlnwxT/4VwRFBpv5kkSoJG8nqBA=
 sigs.k8s.io/cluster-api v1.8.5/go.mod h1:pXv5LqLxuIbhGIXykyNKiJh+KrLweSBajVHHitPLyoY=
+sigs.k8s.io/cluster-api-operator v0.14.0 h1:0QgO6+XGrNNJnNHKBwvQD5v6w+EaH3Z0RL1nL3wpjA4=
+sigs.k8s.io/cluster-api-operator v0.14.0/go.mod h1:euShpVN6HyxXas28HkrYxhCPVDW1UV6ljbRBAeCxp8Y=
 sigs.k8s.io/cluster-api-provider-azure v1.17.1 h1:f1sTGfv6hAN9WrxeawE4pQ2nRhEKb7AJjH6MhU/wAzg=
 sigs.k8s.io/cluster-api-provider-azure v1.17.1/go.mod h1:16VtsvIpK8qtNHplG2ZHZ74/JKTzOUQIAWWutjnpvEc=
 sigs.k8s.io/cluster-api-provider-vsphere v1.11.3 h1:ONrHsZgiR3L/W4572mn9xvdVnqE0fNogIJI5TeaQI0I=

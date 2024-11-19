@@ -20,6 +20,8 @@ import (
 	"time"
 
 	helmcontrollerv2 "github.com/fluxcd/helm-controller/api/v2"
+	fluxmeta "github.com/fluxcd/pkg/apis/meta"
+	fluxconditions "github.com/fluxcd/pkg/runtime/conditions"
 	sourcev1 "github.com/fluxcd/source-controller/api/v1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -27,6 +29,8 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	capioperator "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -102,6 +106,20 @@ var _ = Describe("Management Controller", func() {
 				interval = time.Millisecond * 250
 			)
 
+			coreComponents := map[string]struct {
+				templateName    string
+				helmReleaseName string
+			}{
+				"hmc": {
+					templateName:    "test-release-hmc",
+					helmReleaseName: "hmc",
+				},
+				"capi": {
+					templateName:    "test-release-capi",
+					helmReleaseName: "capi",
+				},
+			}
+
 			// NOTE: other tests for some reason are manipulating with the NS globally and interfer with each other,
 			// so try to avoid depending on their implementation ignoring its removal
 			By("Creating the hmc-system namespace")
@@ -120,8 +138,8 @@ var _ = Describe("Management Controller", func() {
 				},
 				Spec: hmcmirantiscomv1alpha1.ReleaseSpec{
 					Version: "test-version",
-					HMC:     hmcmirantiscomv1alpha1.CoreProviderTemplate{Template: "test-release-hmc"},
-					CAPI:    hmcmirantiscomv1alpha1.CoreProviderTemplate{Template: "test-release-capi"},
+					HMC:     hmcmirantiscomv1alpha1.CoreProviderTemplate{Template: coreComponents["hmc"].templateName},
+					CAPI:    hmcmirantiscomv1alpha1.CoreProviderTemplate{Template: coreComponents["capi"].templateName},
 				},
 			}
 			Expect(k8sClient.Create(ctx, release)).To(Succeed())
@@ -242,7 +260,79 @@ var _ = Describe("Management Controller", func() {
 			By("Checking the Management object does not have the removed component in its spec")
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(mgmt), mgmt)).To(Succeed())
 			Expect(mgmt.Status.AvailableProviders).To(BeEmpty())
+
+			By("Checking the Management components status is populated")
+
 			Expect(mgmt.Status.Components).To(HaveLen(2)) // required: capi, hmc
+			Expect(mgmt.Status.Components).To(BeEquivalentTo(map[string]hmcmirantiscomv1alpha1.ComponentStatus{
+				hmcmirantiscomv1alpha1.CoreHMCName: {
+					Success:  false,
+					Template: providerTemplateRequiredComponent,
+					Error:    fmt.Sprintf("HelmRelease %s/%s Ready condition is not updated yet", helmReleaseNamespace, coreComponents["hmc"].helmReleaseName),
+				},
+				hmcmirantiscomv1alpha1.CoreCAPIName: {
+					Success:  false,
+					Template: providerTemplateRequiredComponent,
+					Error:    fmt.Sprintf("HelmRelease %s/%s Ready condition is not updated yet", helmReleaseNamespace, coreComponents["capi"].helmReleaseName),
+				},
+			}))
+
+			By("Update core HelmReleases with Ready condition")
+
+			for _, coreComponent := range coreComponents {
+				helmRelease := &helmcontrollerv2.HelmRelease{}
+				err := k8sClient.Get(ctx, types.NamespacedName{
+					Namespace: helmReleaseNamespace,
+					Name:      coreComponent.helmReleaseName,
+				}, helmRelease)
+				Expect(err).NotTo(HaveOccurred())
+
+				fluxconditions.Set(helmRelease, &metav1.Condition{
+					Type:   fluxmeta.ReadyCondition,
+					Reason: helmcontrollerv2.InstallSucceededReason,
+					Status: metav1.ConditionTrue,
+				})
+				helmRelease.Status.History = helmcontrollerv2.Snapshots{
+					{
+						Name:          coreComponent.helmReleaseName,
+						FirstDeployed: metav1.Now(),
+						LastDeployed:  metav1.Now(),
+					},
+				}
+				Expect(k8sClient.Status().Update(ctx, helmRelease)).To(Succeed())
+			}
+
+			By("Create Cluster API CoreProvider object")
+
+			coreProvider := &capioperator.CoreProvider{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "capi",
+					Namespace: utils.DefaultSystemNamespace,
+					Labels: map[string]string{
+						"helm.toolkit.fluxcd.io/name": coreComponents["capi"].helmReleaseName,
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, coreProvider)).To(Succeed())
+
+			coreProvider.Status.Conditions = clusterv1.Conditions{
+				{
+					Type:               clusterv1.ReadyCondition,
+					Status:             "True",
+					LastTransitionTime: metav1.Now(),
+				},
+			}
+
+			Expect(k8sClient.Status().Update(ctx, coreProvider)).To(Succeed())
+
+			By("Reconciling the Management object again to ensure the components status is updated")
+
+			_, err = controllerReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: client.ObjectKeyFromObject(mgmt),
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(mgmt), mgmt)).To(Succeed())
 			Expect(mgmt.Status.Components).To(BeEquivalentTo(map[string]hmcmirantiscomv1alpha1.ComponentStatus{
 				hmcmirantiscomv1alpha1.CoreHMCName:  {Success: true, Template: providerTemplateRequiredComponent},
 				hmcmirantiscomv1alpha1.CoreCAPIName: {Success: true, Template: providerTemplateRequiredComponent},
@@ -265,6 +355,10 @@ var _ = Describe("Management Controller", func() {
 			Eventually(func() bool {
 				return apierrors.IsNotFound(k8sClient.Get(ctx, client.ObjectKeyFromObject(providerTemplateRequired), &hmcmirantiscomv1alpha1.ProviderTemplate{}))
 			}).WithTimeout(timeout).WithPolling(interval).Should(BeTrue())
+
+			coreProvider.Finalizers = nil
+			Expect(k8sClient.Update(ctx, coreProvider)).To(Succeed())
+			Expect(k8sClient.Delete(ctx, coreProvider)).To(Succeed())
 		})
 	})
 })

@@ -23,7 +23,8 @@ import (
 	"strings"
 
 	fluxv2 "github.com/fluxcd/helm-controller/api/v2"
-	"github.com/fluxcd/pkg/apis/meta"
+	fluxmeta "github.com/fluxcd/pkg/apis/meta"
+	fluxconditions "github.com/fluxcd/pkg/runtime/conditions"
 	sourcev1 "github.com/fluxcd/source-controller/api/v1"
 	"helm.sh/helm/v3/pkg/chartutil"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -32,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -118,6 +120,8 @@ func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Manag
 			components:             make(map[string]hmc.ComponentStatus),
 			compatibilityContracts: make(map[string]hmc.CompatibilityContracts),
 		}
+
+		requeue bool
 	)
 	for _, component := range components {
 		l.V(1).Info("reconciling components", "component", component)
@@ -152,12 +156,11 @@ func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Manag
 			continue
 		}
 
-		if component.Template != hmc.CoreHMCName {
-			if err := r.checkProviderStatus(ctx, component.Template); err != nil {
-				updateComponentsStatus(statusAccumulator, component, nil, fmt.Sprintf("Failed to check provider status: %s", err))
-				errs = errors.Join(errs, err)
-				continue
-			}
+		if err := r.checkProviderStatus(ctx, component); err != nil {
+			l.Info("Provider is not yet ready", "template", component.Template, "err", err)
+			requeue = true
+			updateComponentsStatus(statusAccumulator, component, nil, err.Error())
+			continue
 		}
 
 		updateComponentsStatus(statusAccumulator, component, template, "")
@@ -176,6 +179,9 @@ func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Manag
 	if errs != nil {
 		l.Error(errs, "Multiple errors during Management reconciliation")
 		return ctrl.Result{}, errs
+	}
+	if requeue {
+		return ctrl.Result{RequeueAfter: DefaultRequeueInterval}, nil
 	}
 
 	return ctrl.Result{}, nil
@@ -256,9 +262,31 @@ func (r *ManagementReconciler) ensureTemplateManagement(ctx context.Context, mgm
 // checkProviderStatus checks the status of a provider associated with a given
 // ProviderTemplate name. Since there's no way to determine resource Kind from
 // the given template iterate over all possible provider types.
-func (r *ManagementReconciler) checkProviderStatus(ctx context.Context, providerTemplateName string) error {
-	var errs error
+func (r *ManagementReconciler) checkProviderStatus(ctx context.Context, component component) error {
+	helmReleaseName := component.helmReleaseName
+	hr := &fluxv2.HelmRelease{}
+	err := r.Get(ctx, types.NamespacedName{Namespace: r.SystemNamespace, Name: helmReleaseName}, hr)
+	if err != nil {
+		return fmt.Errorf("failed to check provider status: %w", err)
+	}
 
+	hrReadyCondition := fluxconditions.Get(hr, fluxmeta.ReadyCondition)
+	if hrReadyCondition == nil || hrReadyCondition.ObservedGeneration != hr.Generation {
+		return fmt.Errorf("HelmRelease %s/%s Ready condition is not updated yet", r.SystemNamespace, helmReleaseName)
+	}
+	if !fluxconditions.IsReady(hr) {
+		return fmt.Errorf("HelmRelease %s/%s is not yet ready: %s", r.SystemNamespace, helmReleaseName, hrReadyCondition.Message)
+	}
+
+	if hr.Status.History.Latest() == nil {
+		return fmt.Errorf("HelmRelease %s/%s has empty deployment history in the status", r.SystemNamespace, helmReleaseName)
+	}
+
+	if !component.isCAPIProvider {
+		return nil
+	}
+	var errs error
+	var providerFound bool
 	for _, resourceType := range []string{
 		"coreproviders",
 		"infrastructureproviders",
@@ -272,28 +300,32 @@ func (r *ManagementReconciler) checkProviderStatus(ctx context.Context, provider
 		}
 
 		resourceConditions, err := status.GetResourceConditions(ctx, r.SystemNamespace, r.DynamicClient, gvr,
-			labels.SelectorFromSet(map[string]string{hmc.FluxHelmChartNameKey: providerTemplateName}).String(),
+			labels.SelectorFromSet(map[string]string{hmc.FluxHelmChartNameKey: hr.Status.History.Latest().Name}).String(),
 		)
 		if err != nil {
 			if errors.As(err, &status.ResourceNotFoundError{}) {
 				// Check the next resource type.
 				continue
 			}
-
-			return fmt.Errorf("failed to get status for template: %s: %w", providerTemplateName, err)
+			return fmt.Errorf("failed to get conditions from %s: %w", gvr.Resource, err)
 		}
 
-		var falseConditionTypes []string
+		providerFound = true
+
+		var falseConditionMessages []string
 		for _, condition := range resourceConditions.Conditions {
 			if condition.Status != metav1.ConditionTrue {
-				falseConditionTypes = append(falseConditionTypes, condition.Type)
+				falseConditionMessages = append(falseConditionMessages, condition.Message)
 			}
 		}
 
-		if len(falseConditionTypes) > 0 {
-			errs = errors.Join(errs, fmt.Errorf("%s: %s is not yet ready, has false conditions: %s",
-				resourceConditions.Name, resourceConditions.Kind, strings.Join(falseConditionTypes, ", ")))
+		if len(falseConditionMessages) > 0 {
+			errs = errors.Join(errs, fmt.Errorf("%s is not yet ready: %s",
+				resourceConditions.Kind, strings.Join(falseConditionMessages, ", ")))
 		}
+	}
+	if !providerFound {
+		return errors.New("waiting for Cluster API Provider objects to be created")
 	}
 
 	return errs
@@ -373,8 +405,9 @@ type component struct {
 	helmReleaseName string
 	targetNamespace string
 	// helm release dependencies
-	dependsOn       []meta.NamespacedObjectReference
+	dependsOn       []fluxmeta.NamespacedObjectReference
 	createNamespace bool
+	isCAPIProvider  bool
 }
 
 func applyHMCDefaults(config *apiextensionsv1.JSON) (*apiextensionsv1.JSON, error) {
@@ -427,7 +460,7 @@ func getWrappedComponents(ctx context.Context, cl client.Client, mgmt *hmc.Manag
 
 	capiComp := component{
 		Component: mgmt.Spec.Core.CAPI, helmReleaseName: hmc.CoreCAPIName,
-		dependsOn: []meta.NamespacedObjectReference{{Name: hmc.CoreHMCName}},
+		dependsOn: []fluxmeta.NamespacedObjectReference{{Name: hmc.CoreHMCName}}, isCAPIProvider: true,
 	}
 	if capiComp.Template == "" {
 		capiComp.Template = release.Spec.CAPI.Template
@@ -439,7 +472,7 @@ func getWrappedComponents(ctx context.Context, cl client.Client, mgmt *hmc.Manag
 	for _, p := range mgmt.Spec.Providers {
 		c := component{
 			Component: p.Component, helmReleaseName: p.Name,
-			dependsOn: []meta.NamespacedObjectReference{{Name: hmc.CoreCAPIName}},
+			dependsOn: []fluxmeta.NamespacedObjectReference{{Name: hmc.CoreCAPIName}}, isCAPIProvider: true,
 		}
 		// Try to find corresponding provider in the Release object
 		if c.Template == "" {
@@ -449,6 +482,7 @@ func getWrappedComponents(ctx context.Context, cl client.Client, mgmt *hmc.Manag
 		if p.Name == hmc.ProviderSveltosName {
 			c.targetNamespace = sveltosTargetNamespace
 			c.createNamespace = true
+			c.isCAPIProvider = false
 		}
 
 		components = append(components, c)
