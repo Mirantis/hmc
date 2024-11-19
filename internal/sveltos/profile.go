@@ -69,7 +69,7 @@ func ReconcileClusterProfile(
 	}
 
 	operation, err := ctrl.CreateOrUpdate(ctx, cl, cp, func() error {
-		spec, err := Spec(&opts)
+		spec, err := GetSpec(&opts)
 		if err != nil {
 			return err
 		}
@@ -106,7 +106,7 @@ func ReconcileProfile(
 	}
 
 	operation, err := ctrl.CreateOrUpdate(ctx, cl, p, func() error {
-		spec, err := Spec(&opts)
+		spec, err := GetSpec(&opts)
 		if err != nil {
 			return err
 		}
@@ -218,9 +218,9 @@ func GetHelmChartOpts(ctx context.Context, c client.Client, namespace string, se
 	return opts, nil
 }
 
-// Spec returns a spec object to be used with
+// GetSpec returns a spec object to be used with
 // a Sveltos Profile or ClusterProfile object.
-func Spec(opts *ReconcileProfileOpts) (*sveltosv1beta1.Spec, error) {
+func GetSpec(opts *ReconcileProfileOpts) (*sveltosv1beta1.Spec, error) {
 	tier, err := priorityToTier(opts.Priority)
 	if err != nil {
 		return nil, err

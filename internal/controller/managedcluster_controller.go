@@ -101,7 +101,7 @@ func (r *ManagedClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 	}
 
-	return r.Update(ctx, managedCluster)
+	return r.reconcileUpdate(ctx, managedCluster)
 }
 
 func (r *ManagedClusterReconciler) setStatusFromChildObjects(
@@ -138,34 +138,33 @@ func (r *ManagedClusterReconciler) setStatusFromChildObjects(
 	return !allConditionsComplete, nil
 }
 
-func (r *ManagedClusterReconciler) Update(ctx context.Context, managedCluster *hmc.ManagedCluster) (result ctrl.Result, err error) {
+func (r *ManagedClusterReconciler) reconcileUpdate(ctx context.Context, mc *hmc.ManagedCluster) (_ ctrl.Result, err error) {
 	l := ctrl.LoggerFrom(ctx)
 
-	if controllerutil.AddFinalizer(managedCluster, hmc.ManagedClusterFinalizer) {
-		if err := r.Client.Update(ctx, managedCluster); err != nil {
-			return ctrl.Result{}, fmt.Errorf("failed to update managedCluster %s/%s: %w", managedCluster.Namespace, managedCluster.Name, err)
+	if controllerutil.AddFinalizer(mc, hmc.ManagedClusterFinalizer) {
+		if err := r.Client.Update(ctx, mc); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to update managedCluster %s/%s: %w", mc.Namespace, mc.Name, err)
 		}
 		return ctrl.Result{}, nil
 	}
 
-	if len(managedCluster.Status.Conditions) == 0 {
-		managedCluster.InitConditions()
+	if len(mc.Status.Conditions) == 0 {
+		mc.InitConditions()
 	}
 
-	template := &hmc.ClusterTemplate{}
+	clusterTpl := &hmc.ClusterTemplate{}
 
 	defer func() {
-		err = errors.Join(err, r.updateStatus(ctx, managedCluster, template))
+		err = errors.Join(err, r.updateStatus(ctx, mc, clusterTpl))
 	}()
 
-	templateRef := client.ObjectKey{Name: managedCluster.Spec.Template, Namespace: managedCluster.Namespace}
-	if err := r.Get(ctx, templateRef, template); err != nil {
+	if err = r.Get(ctx, client.ObjectKey{Name: mc.Spec.Template, Namespace: mc.Namespace}, clusterTpl); err != nil {
 		l.Error(err, "Failed to get Template")
 		errMsg := fmt.Sprintf("failed to get provided template: %s", err)
 		if apierrors.IsNotFound(err) {
 			errMsg = "provided template is not found"
 		}
-		apimeta.SetStatusCondition(managedCluster.GetConditions(), metav1.Condition{
+		apimeta.SetStatusCondition(mc.GetConditions(), metav1.Condition{
 			Type:    hmc.TemplateReadyCondition,
 			Status:  metav1.ConditionFalse,
 			Reason:  hmc.FailedReason,
@@ -174,9 +173,32 @@ func (r *ManagedClusterReconciler) Update(ctx context.Context, managedCluster *h
 		return ctrl.Result{}, err
 	}
 
-	if !template.Status.Valid {
+	clusterRes, clusterErr := r.updateCluster(ctx, mc, clusterTpl)
+	servicesRes, servicesErr := r.updateServices(ctx, mc)
+
+	if err = errors.Join(clusterErr, servicesErr); err != nil {
+		return ctrl.Result{}, err
+	}
+	if !clusterRes.IsZero() {
+		return clusterRes, nil
+	}
+	if !servicesRes.IsZero() {
+		return servicesRes, nil
+	}
+
+	return ctrl.Result{}, nil
+}
+
+func (r *ManagedClusterReconciler) updateCluster(ctx context.Context, mc *hmc.ManagedCluster, clusterTpl *hmc.ClusterTemplate) (result ctrl.Result, err error) {
+	l := ctrl.LoggerFrom(ctx)
+
+	if clusterTpl == nil {
+		return ctrl.Result{}, errors.New("cluster template cannot be nil")
+	}
+
+	if !clusterTpl.Status.Valid {
 		errMsg := "provided template is not marked as valid"
-		apimeta.SetStatusCondition(managedCluster.GetConditions(), metav1.Condition{
+		apimeta.SetStatusCondition(mc.GetConditions(), metav1.Condition{
 			Type:    hmc.TemplateReadyCondition,
 			Status:  metav1.ConditionFalse,
 			Reason:  hmc.FailedReason,
@@ -185,18 +207,18 @@ func (r *ManagedClusterReconciler) Update(ctx context.Context, managedCluster *h
 		return ctrl.Result{}, errors.New(errMsg)
 	}
 	// template is ok, propagate data from it
-	managedCluster.Status.KubernetesVersion = template.Status.KubernetesVersion
+	mc.Status.KubernetesVersion = clusterTpl.Status.KubernetesVersion
 
-	apimeta.SetStatusCondition(managedCluster.GetConditions(), metav1.Condition{
+	apimeta.SetStatusCondition(mc.GetConditions(), metav1.Condition{
 		Type:    hmc.TemplateReadyCondition,
 		Status:  metav1.ConditionTrue,
 		Reason:  hmc.SucceededReason,
 		Message: "Template is valid",
 	})
 
-	source, err := r.getSource(ctx, template.Status.ChartRef)
+	source, err := r.getSource(ctx, clusterTpl.Status.ChartRef)
 	if err != nil {
-		apimeta.SetStatusCondition(managedCluster.GetConditions(), metav1.Condition{
+		apimeta.SetStatusCondition(mc.GetConditions(), metav1.Condition{
 			Type:    hmc.HelmChartReadyCondition,
 			Status:  metav1.ConditionFalse,
 			Reason:  hmc.FailedReason,
@@ -207,7 +229,7 @@ func (r *ManagedClusterReconciler) Update(ctx context.Context, managedCluster *h
 	l.Info("Downloading Helm chart")
 	hcChart, err := helm.DownloadChartFromArtifact(ctx, source.GetArtifact())
 	if err != nil {
-		apimeta.SetStatusCondition(managedCluster.GetConditions(), metav1.Condition{
+		apimeta.SetStatusCondition(mc.GetConditions(), metav1.Condition{
 			Type:    hmc.HelmChartReadyCondition,
 			Status:  metav1.ConditionFalse,
 			Reason:  hmc.FailedReason,
@@ -219,14 +241,14 @@ func (r *ManagedClusterReconciler) Update(ctx context.Context, managedCluster *h
 	l.Info("Initializing Helm client")
 	getter := helm.NewMemoryRESTClientGetter(r.Config, r.RESTMapper())
 	actionConfig := new(action.Configuration)
-	err = actionConfig.Init(getter, managedCluster.Namespace, "secret", l.Info)
+	err = actionConfig.Init(getter, mc.Namespace, "secret", l.Info)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
 	l.Info("Validating Helm chart with provided values")
-	if err := validateReleaseWithValues(ctx, actionConfig, managedCluster, hcChart); err != nil {
-		apimeta.SetStatusCondition(managedCluster.GetConditions(), metav1.Condition{
+	if err := validateReleaseWithValues(ctx, actionConfig, mc, hcChart); err != nil {
+		apimeta.SetStatusCondition(mc.GetConditions(), metav1.Condition{
 			Type:    hmc.HelmChartReadyCondition,
 			Status:  metav1.ConditionFalse,
 			Reason:  hmc.FailedReason,
@@ -235,7 +257,7 @@ func (r *ManagedClusterReconciler) Update(ctx context.Context, managedCluster *h
 		return ctrl.Result{}, err
 	}
 
-	apimeta.SetStatusCondition(managedCluster.GetConditions(), metav1.Condition{
+	apimeta.SetStatusCondition(mc.GetConditions(), metav1.Condition{
 		Type:    hmc.HelmChartReadyCondition,
 		Status:  metav1.ConditionTrue,
 		Reason:  hmc.SucceededReason,
@@ -244,11 +266,11 @@ func (r *ManagedClusterReconciler) Update(ctx context.Context, managedCluster *h
 
 	cred := &hmc.Credential{}
 	err = r.Client.Get(ctx, client.ObjectKey{
-		Name:      managedCluster.Spec.Credential,
-		Namespace: managedCluster.Namespace,
+		Name:      mc.Spec.Credential,
+		Namespace: mc.Namespace,
 	}, cred)
 	if err != nil {
-		apimeta.SetStatusCondition(managedCluster.GetConditions(), metav1.Condition{
+		apimeta.SetStatusCondition(mc.GetConditions(), metav1.Condition{
 			Type:    hmc.CredentialReadyCondition,
 			Status:  metav1.ConditionFalse,
 			Reason:  hmc.FailedReason,
@@ -258,7 +280,7 @@ func (r *ManagedClusterReconciler) Update(ctx context.Context, managedCluster *h
 	}
 
 	if !cred.Status.Ready {
-		apimeta.SetStatusCondition(managedCluster.GetConditions(), metav1.Condition{
+		apimeta.SetStatusCondition(mc.GetConditions(), metav1.Condition{
 			Type:    hmc.CredentialReadyCondition,
 			Status:  metav1.ConditionFalse,
 			Reason:  hmc.FailedReason,
@@ -266,72 +288,72 @@ func (r *ManagedClusterReconciler) Update(ctx context.Context, managedCluster *h
 		})
 	}
 
-	apimeta.SetStatusCondition(managedCluster.GetConditions(), metav1.Condition{
+	apimeta.SetStatusCondition(mc.GetConditions(), metav1.Condition{
 		Type:    hmc.CredentialReadyCondition,
 		Status:  metav1.ConditionTrue,
 		Reason:  hmc.SucceededReason,
 		Message: "Credential is Ready",
 	})
 
-	if !managedCluster.Spec.DryRun {
-		helmValues, err := setIdentityHelmValues(managedCluster.Spec.Config, cred.Spec.IdentityRef)
-		if err != nil {
-			return ctrl.Result{}, fmt.Errorf("error setting identity values: %w", err)
-		}
+	if mc.Spec.DryRun {
+		return ctrl.Result{}, nil
+	}
 
-		hr, _, err := helm.ReconcileHelmRelease(ctx, r.Client, managedCluster.Name, managedCluster.Namespace, helm.ReconcileHelmReleaseOpts{
-			Values: helmValues,
-			OwnerReference: &metav1.OwnerReference{
-				APIVersion: hmc.GroupVersion.String(),
-				Kind:       hmc.ManagedClusterKind,
-				Name:       managedCluster.Name,
-				UID:        managedCluster.UID,
-			},
-			ChartRef: template.Status.ChartRef,
+	helmValues, err := setIdentityHelmValues(mc.Spec.Config, cred.Spec.IdentityRef)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("error setting identity values: %w", err)
+	}
+
+	hr, _, err := helm.ReconcileHelmRelease(ctx, r.Client, mc.Name, mc.Namespace, helm.ReconcileHelmReleaseOpts{
+		Values: helmValues,
+		OwnerReference: &metav1.OwnerReference{
+			APIVersion: hmc.GroupVersion.String(),
+			Kind:       hmc.ManagedClusterKind,
+			Name:       mc.Name,
+			UID:        mc.UID,
+		},
+		ChartRef: clusterTpl.Status.ChartRef,
+	})
+	if err != nil {
+		apimeta.SetStatusCondition(mc.GetConditions(), metav1.Condition{
+			Type:    hmc.HelmReleaseReadyCondition,
+			Status:  metav1.ConditionFalse,
+			Reason:  hmc.FailedReason,
+			Message: err.Error(),
 		})
-		if err != nil {
-			apimeta.SetStatusCondition(managedCluster.GetConditions(), metav1.Condition{
-				Type:    hmc.HelmReleaseReadyCondition,
-				Status:  metav1.ConditionFalse,
-				Reason:  hmc.FailedReason,
-				Message: err.Error(),
-			})
-			return ctrl.Result{}, err
-		}
+		return ctrl.Result{}, err
+	}
 
-		hrReadyCondition := fluxconditions.Get(hr, fluxmeta.ReadyCondition)
-		if hrReadyCondition != nil {
-			apimeta.SetStatusCondition(managedCluster.GetConditions(), metav1.Condition{
-				Type:    hmc.HelmReleaseReadyCondition,
-				Status:  hrReadyCondition.Status,
-				Reason:  hrReadyCondition.Reason,
-				Message: hrReadyCondition.Message,
-			})
-		}
+	hrReadyCondition := fluxconditions.Get(hr, fluxmeta.ReadyCondition)
+	if hrReadyCondition != nil {
+		apimeta.SetStatusCondition(mc.GetConditions(), metav1.Condition{
+			Type:    hmc.HelmReleaseReadyCondition,
+			Status:  hrReadyCondition.Status,
+			Reason:  hrReadyCondition.Reason,
+			Message: hrReadyCondition.Message,
+		})
+	}
 
-		requeue, err := r.aggregateCapoConditions(ctx, managedCluster)
-		if err != nil {
-			if requeue {
-				return ctrl.Result{RequeueAfter: DefaultRequeueInterval}, err
-			}
-
-			return ctrl.Result{}, err
-		}
-
+	requeue, err := r.aggregateCapoConditions(ctx, mc)
+	if err != nil {
 		if requeue {
-			return ctrl.Result{RequeueAfter: DefaultRequeueInterval}, nil
+			return ctrl.Result{RequeueAfter: DefaultRequeueInterval}, err
 		}
 
-		if !fluxconditions.IsReady(hr) {
-			return ctrl.Result{RequeueAfter: DefaultRequeueInterval}, nil
-		}
+		return ctrl.Result{}, err
+	}
 
-		if err := r.reconcileCredentialPropagation(ctx, managedCluster); err != nil {
-			l.Error(err, "failed to reconcile credentials propagation")
-			return ctrl.Result{}, err
-		}
+	if requeue {
+		return ctrl.Result{RequeueAfter: DefaultRequeueInterval}, nil
+	}
 
-		return r.updateServices(ctx, managedCluster)
+	if !fluxconditions.IsReady(hr) {
+		return ctrl.Result{RequeueAfter: DefaultRequeueInterval}, nil
+	}
+
+	if err := r.reconcileCredentialPropagation(ctx, mc); err != nil {
+		l.Error(err, "failed to reconcile credentials propagation")
+		return ctrl.Result{}, err
 	}
 
 	return ctrl.Result{}, nil
@@ -375,6 +397,9 @@ func (r *ManagedClusterReconciler) aggregateCapoConditions(ctx context.Context, 
 
 // updateServices reconciles services provided in ManagedCluster.Spec.Services.
 func (r *ManagedClusterReconciler) updateServices(ctx context.Context, mc *hmc.ManagedCluster) (_ ctrl.Result, err error) {
+	l := ctrl.LoggerFrom(ctx)
+	l.Info("Reconciling Services")
+
 	// servicesErr is handled separately from err because we do not want
 	// to set the condition of SveltosProfileReady type to "False"
 	// if there is an error while retrieving status for the services.
@@ -452,6 +477,7 @@ func (r *ManagedClusterReconciler) updateServices(ctx context.Context, mc *hmc.M
 		return ctrl.Result{}, nil
 	}
 	mc.Status.Services = servicesStatus
+	l.Info("Successfully updated status of services")
 
 	return ctrl.Result{}, nil
 }
