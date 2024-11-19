@@ -161,6 +161,8 @@ jobs:
       - name: Setup kubectl
         uses: azure/setup-kubectl@v4
       - uses: actions/checkout@v4
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
       - name: Run E2E tests
         env:
           GINKGO_LABEL_FILTER: 'provider:cloud'
