@@ -89,6 +89,7 @@ jobs:
         run: |
           make hmc-chart-release
           make helm-push
+          make set-hmc-version test-hmc-version helm-push
 
   controller-e2etest:
     name: E2E Controller

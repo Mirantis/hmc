@@ -363,7 +363,7 @@ dev-eks-creds: dev-aws-creds
 dev-apply: kind-deploy registry-deploy dev-push dev-deploy dev-templates dev-release
 
 .PHONY: test-apply
-test-apply: set-hmc-version test-hmc-version helm-push dev-deploy dev-templates dev-release
+test-apply: set-hmc-version test-hmc-version dev-deploy dev-templates dev-release
 
 .PHONY: dev-destroy
 dev-destroy: kind-undeploy registry-undeploy ## Destroy the development environment by deleting the kind cluster and local registry.
