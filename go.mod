@@ -3,7 +3,7 @@ module github.com/Mirantis/hmc
 go 1.22.7
 
 require (
-	github.com/Masterminds/semver/v3 v3.3.0
+	github.com/Masterminds/semver/v3 v3.3.1
 	github.com/a8m/envsubst v1.4.2
 	github.com/cert-manager/cert-manager v1.16.1
 	github.com/fluxcd/helm-controller/api v1.1.0
