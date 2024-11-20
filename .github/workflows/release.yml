@@ -61,7 +61,7 @@ jobs:
 
       - name: Build airgap bundle
         env:
-          IMG: 'ghcr.io/mirantis/hmc:${{ env.VERSION }}'
+          IMG: 'ghcr.io/mirantis/hmc/controller:${{ env.VERSION }}'
         run: |
           make airgap-package
 
