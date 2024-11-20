@@ -189,7 +189,7 @@ func (r *ManagedClusterReconciler) reconcileUpdate(ctx context.Context, mc *hmc.
 	return ctrl.Result{}, nil
 }
 
-func (r *ManagedClusterReconciler) updateCluster(ctx context.Context, mc *hmc.ManagedCluster, clusterTpl *hmc.ClusterTemplate) (result ctrl.Result, err error) {
+func (r *ManagedClusterReconciler) updateCluster(ctx context.Context, mc *hmc.ManagedCluster, clusterTpl *hmc.ClusterTemplate) (ctrl.Result, error) {
 	l := ctrl.LoggerFrom(ctx)
 
 	if clusterTpl == nil {
