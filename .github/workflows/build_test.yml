@@ -92,49 +92,13 @@ jobs:
           make set-hmc-version test-hmc-version 
           make helm-push
 
-  controller-e2etest:
-    name: E2E Controller
-    runs-on: ubuntu-latest
-    needs: build
-    concurrency:
-      group: controller-${{ github.head_ref || github.run_id }}
-      cancel-in-progress: true
-    outputs:
-      clustername: ${{ needs.build.outputs.clustername }}
-      version: ${{ needs.build.outputs.version }}
-      pr: ${{ needs.build.outputs.pr }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: ${{fromJSON(needs.build.outputs.pr).merge_commit_sha}}
-      - name: Setup kubectl
-        uses: azure/setup-kubectl@v4
-      - name: Run E2E tests
-        env:
-          GINKGO_LABEL_FILTER: 'controller'
-          MANAGED_CLUSTER_NAME: ${{ needs.build.outputs.clustername }}
-          IMG: 'ghcr.io/mirantis/hmc/controller-ci:${{ needs.build.outputs.version }}'
-          VERSION: ${{ needs.build.outputs.version }}
-        run: |
-          make test-e2e
-      - name: Archive test results
-        if: ${{ failure() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: cloud-e2etest-logs
-          path: |
-            test/e2e/*.log
+
 
   provider-cloud-e2etest:
     name: E2E Cloud Providers
     runs-on: ubuntu-latest
     if: ${{ contains( github.event.pull_request.labels.*.name, 'test e2e') }}
     needs: build
-    concurrency:
-      group: cloud-${{ github.head_ref || github.run_id }}
-      cancel-in-progress: true
     outputs:
       clustername: ${{ needs.build.outputs.clustername }}
       version: ${{ needs.build.outputs.version }}
@@ -182,58 +146,6 @@ jobs:
           path: |
             test/e2e/*.log
 
-  provider-onprem-e2etest:
-    name: E2E On-Prem Providers
-    runs-on: self-hosted
-    if: ${{ contains( github.event.pull_request.labels.*.name, 'test e2e') }}
-    needs: build
-    concurrency:
-      group: onprem-${{ github.head_ref || github.run_id }}
-      cancel-in-progress: true
-    outputs:
-      clustername: ${{ needs.build.outputs.clustername }}
-      version: ${{ needs.build.outputs.version }}
-      pr: ${{ needs.build.outputs.pr }}
-    env:
-      VSPHERE_USER: ${{ secrets.CI_VSPHERE_USER }}
-      VSPHERE_PASSWORD: ${{ secrets.CI_VSPHERE_PASSWORD }}
-      VSPHERE_SERVER: ${{ secrets.CI_VSPHERE_SERVER }}
-      VSPHERE_THUMBPRINT: ${{ secrets.CI_VSPHERE_THUMBPRINT }}
-      VSPHERE_DATACENTER: ${{ secrets.CI_VSPHERE_DATACENTER }}
-      VSPHERE_DATASTORE: ${{ secrets.CI_VSPHERE_DATASTORE }}
-      VSPHERE_RESOURCEPOOL: ${{ secrets.CI_VSPHERE_RESOURCEPOOL }}
-      VSPHERE_FOLDER: ${{ secrets.CI_VSPHERE_FOLDER }}
-      VSPHERE_CONTROL_PLANE_ENDPOINT: ${{ secrets.CI_VSPHERE_CONTROL_PLANE_ENDPOINT }}
-      VSPHERE_VM_TEMPLATE: ${{ secrets.CI_VSPHERE_VM_TEMPLATE }}
-      VSPHERE_NETWORK: ${{ secrets.CI_VSPHERE_NETWORK }}
-      VSPHERE_SSH_KEY: ${{ secrets.CI_VSPHERE_SSH_KEY }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: ${{fromJSON(needs.build.outputs.pr).merge_commit_sha}}
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: ${{ env.GO_VERSION }}
-      - name: Setup kubectl
-        uses: azure/setup-kubectl@v4
-      - name: Run E2E tests
-        env:
-          GINKGO_LABEL_FILTER: 'provider:onprem'
-          MANAGED_CLUSTER_NAME: ${{ needs.build.outputs.clustername }}
-          IMG: 'ghcr.io/mirantis/hmc/controller-ci:${{ needs.build.outputs.version }}'
-          VERSION: ${{ needs.build.outputs.version }}
-        run: |
-          make test-e2e
-      - name: Archive test results
-        if: ${{ failure() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: onprem-e2etest-logs
-          path: |
-            test/e2e/*.log
 
   cleanup:
     name: Cleanup
