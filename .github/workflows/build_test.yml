@@ -20,6 +20,7 @@ env:
   GO_VERSION: '1.22'
   REGISTRY_REPO: 'oci://ghcr.io/mirantis/hmc/charts-ci'
 
+
 jobs:
   build:
     name: Build and Unit Test
