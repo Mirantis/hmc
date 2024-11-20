@@ -127,7 +127,7 @@ export KUBECONFIG=<path-to-management-kubeconfig>
 kubectl get clustertemplate -n hmc-system
 ```
 
-If you want to deploy hosted control plate template, make sure to check
+If you want to deploy hosted control plane template, make sure to check
 additional notes on Hosted control plane in 2A Docs, see
 [Documentation](#documentation).
 
