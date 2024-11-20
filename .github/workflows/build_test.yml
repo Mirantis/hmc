@@ -151,6 +151,8 @@ jobs:
     steps:
       - name: Setup tmate session
         uses: mxschmitt/action-tmate@v3
+        with:
+          sudo: false
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
