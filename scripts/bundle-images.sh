@@ -131,7 +131,7 @@ fi
 
 echo -e "\nPulling images for HMC components...\n"
 
-for image in $(docker exec -it ${control_plane} crictl images | sed 1,1d | awk '{print $1":"$2}' | grep -v 'kindest');
+for image in $(docker exec ${control_plane} crictl images | sed 1,1d | awk '{print $1":"$2}' | grep -v 'kindest');
 do
     if [[ $image == "" ]]; then
         echo "Error: Failed to get image from KIND cluster, image string should not be empty"
