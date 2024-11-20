@@ -4,7 +4,7 @@ metadata:
   name: aws-dev
   namespace: ${NAMESPACE}
 spec:
-  template: aws-standalone-cp-0-0-2
+  template: aws-standalone-cp-0-0-3
   credential: aws-cluster-identity-cred
   config:
     controlPlane:
