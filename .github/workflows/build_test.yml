@@ -21,10 +21,6 @@ env:
   REGISTRY_REPO: 'oci://ghcr.io/mirantis/hmc/charts-ci'
 
 jobs:
-  build:
-    concurrency:
-      group: build-${{ github.head_ref || github.run_id }}
-      cancel-in-progress: true
     name: Build and Unit Test
     runs-on: ubuntu-latest
     outputs:
