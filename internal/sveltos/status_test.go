@@ -134,8 +134,8 @@ func TestSetStatusConditions(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			conditions := []metav1.Condition{}
-			require.NoError(t, SetStatusConditions(&tc.summary, &conditions))
+			conditions, err := GetStatusConditions(&tc.summary)
+			require.NoError(t, err)
 			assert.Len(t, conditions, 1)
 			assert.Equal(t, tc.expectCondition.Type, conditions[0].Type)
 			assert.Equal(t, tc.expectCondition.Status, conditions[0].Status)

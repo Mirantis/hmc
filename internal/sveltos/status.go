@@ -25,12 +25,13 @@ import (
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
 )
 
-// SetStatusConditions transforms status from Sveltos ClusterSummary
-// object and sets it into the provided list of conditions.
-func SetStatusConditions(summary *sveltosv1beta1.ClusterSummary, conditions *[]metav1.Condition) error {
+// GetStatusConditions returns a list of conditions from provided ClusterSummary.
+func GetStatusConditions(summary *sveltosv1beta1.ClusterSummary) ([]metav1.Condition, error) {
 	if summary == nil {
-		return errors.New("nil summary provided")
+		return nil, errors.New("error getting status from ClusterSummary: nil summary provided")
 	}
+
+	conditions := []metav1.Condition{}
 
 	for _, x := range summary.Status.FeatureSummaries {
 		msg := ""
@@ -40,7 +41,7 @@ func SetStatusConditions(summary *sveltosv1beta1.ClusterSummary, conditions *[]m
 			status = metav1.ConditionFalse
 		}
 
-		apimeta.SetStatusCondition(conditions, metav1.Condition{
+		apimeta.SetStatusCondition(&conditions, metav1.Condition{
 			Message: msg,
 			Reason:  string(x.Status),
 			Status:  status,
@@ -54,7 +55,7 @@ func SetStatusConditions(summary *sveltosv1beta1.ClusterSummary, conditions *[]m
 			status = metav1.ConditionFalse
 		}
 
-		apimeta.SetStatusCondition(conditions, metav1.Condition{
+		apimeta.SetStatusCondition(&conditions, metav1.Condition{
 			Message: helmReleaseConditionMessage(x.ReleaseNamespace, x.ReleaseName, x.ConflictMessage),
 			Reason:  string(x.Status),
 			Status:  status,
@@ -62,7 +63,7 @@ func SetStatusConditions(summary *sveltosv1beta1.ClusterSummary, conditions *[]m
 		})
 	}
 
-	return nil
+	return conditions, nil
 }
 
 // HelmReleaseReadyConditionType returns a SveltosHelmReleaseReady
