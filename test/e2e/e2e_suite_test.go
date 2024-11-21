@@ -93,6 +93,7 @@ func verifyControllersUp(kc *kubeclient.KubeClient) error {
 		managedcluster.ProviderAWS,
 		managedcluster.ProviderAzure,
 		managedcluster.ProviderVSphere,
+		managedcluster.ProviderK0smotron,
 	}
 
 	for _, provider := range providers {
