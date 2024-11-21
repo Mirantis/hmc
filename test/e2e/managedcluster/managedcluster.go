@@ -33,12 +33,15 @@ import (
 type ProviderType string
 
 const (
-	ProviderCAPI      ProviderType = "cluster-api"
-	ProviderAWS       ProviderType = "infrastructure-aws"
-	ProviderAzure     ProviderType = "infrastructure-azure"
-	ProviderVSphere   ProviderType = "infrastructure-vsphere"
-	ProviderK0smotron ProviderType = "infrastructure-k0sproject-k0smotron"
-	providerLabel                  = "cluster.x-k8s.io/provider"
+	ProviderCAPI                  ProviderType = "cluster-api"
+	ProviderAWS                   ProviderType = "infrastructure-aws"
+	ProviderAzure                 ProviderType = "infrastructure-azure"
+	ProviderVSphere               ProviderType = "infrastructure-vsphere"
+	ProviderK0smotron             ProviderType = "infrastructure-k0sproject-k0smotron"
+	ProviderK0smotronBootstrap    ProviderType = "bootstrap-k0sproject-k0smotron"
+	ProviderK0smotronControlPlane ProviderType = "control-plane-k0sproject-k0smotron"
+
+	providerLabel = "cluster.x-k8s.io/provider"
 )
 
 type Template string
