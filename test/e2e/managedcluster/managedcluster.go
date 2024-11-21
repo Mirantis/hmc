@@ -27,6 +27,7 @@ import (
 	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"github.com/Mirantis/hmc/internal/build"
 	"github.com/Mirantis/hmc/test/utils"
 )
 
@@ -140,6 +141,9 @@ func GetUnstructured(templateName Template) *unstructured.Unstructured {
 	default:
 		Fail(fmt.Sprintf("Unsupported template: %s", templateName))
 	}
+
+	buildVersion := build.Version[strings.LastIndex(build.Version, "-")+1 : len(build.Version)]
+	GinkgoT().Setenv("BUILD_VERSION", buildVersion)
 
 	managedClusterConfigBytes, err := envsubst.Bytes(managedClusterTemplateBytes)
 	Expect(err).NotTo(HaveOccurred(), "failed to substitute environment variables")
