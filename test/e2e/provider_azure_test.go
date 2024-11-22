@@ -23,7 +23,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"gopkg.in/yaml.v3"
 
 	internalutils "github.com/Mirantis/hmc/internal/utils"
 	"github.com/Mirantis/hmc/test/e2e/kubeclient"
@@ -83,9 +82,6 @@ var _ = Context("Azure Templates", Label("provider:cloud", "provider:azure"), Or
 		sd := managedcluster.GetUnstructured(managedcluster.TemplateAzureStandaloneCP)
 		sdName = sd.GetName()
 
-		yamlSd, err := yaml.Marshal(sd)
-		Expect(err).NotTo(HaveOccurred())
-		_, _ = fmt.Fprintf(GinkgoWriter, "Cluster being applied\n %s", yamlSd)
 		standaloneDeleteFunc := kc.CreateManagedCluster(context.Background(), sd)
 
 		// verify the standalone cluster is deployed correctly
@@ -112,7 +108,7 @@ var _ = Context("Azure Templates", Label("provider:cloud", "provider:azure"), Or
 		By("Deploy onto standalone cluster")
 		GinkgoT().Setenv("KUBECONFIG", kubeCfgPath)
 		cmd := exec.Command("make", "test-apply")
-		_, err = utils.Run(cmd)
+		_, err := utils.Run(cmd)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(os.Unsetenv("KUBECONFIG")).To(Succeed())
 
