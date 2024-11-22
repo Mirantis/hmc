@@ -239,7 +239,7 @@ func updateServicesStatus(ctx context.Context, c client.Client, profileRef clien
 			idx = len(servicesStatus) - 1
 		}
 
-		conditions, err := sveltos.GetStatusConditions(&summary)
+		conditions, err := sveltos.SetStatusConditions(&summary)
 		if err != nil {
 			return nil, err
 		}

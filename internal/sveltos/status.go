@@ -25,8 +25,8 @@ import (
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
 )
 
-// GetStatusConditions returns a list of conditions from provided ClusterSummary.
-func GetStatusConditions(summary *sveltosv1beta1.ClusterSummary) ([]metav1.Condition, error) {
+// SetStatusConditions creates & sets a list of conditions from provided ClusterSummary and returns it.
+func SetStatusConditions(summary *sveltosv1beta1.ClusterSummary) ([]metav1.Condition, error) {
 	if summary == nil {
 		return nil, errors.New("error getting status from ClusterSummary: nil summary provided")
 	}
