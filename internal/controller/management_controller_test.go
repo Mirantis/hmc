@@ -157,8 +157,10 @@ var _ = Describe("Management Controller", func() {
 				},
 				Spec: hmcmirantiscomv1alpha1.ProviderTemplateSpec{
 					Helm: hmcmirantiscomv1alpha1.HelmSpec{
-						ChartName:    "required-chart",
-						ChartVersion: "required-version",
+						ChartSpec: &sourcev1.HelmChartSpec{
+							Chart:   "required-chart",
+							Version: "required-version",
+						},
 					},
 				},
 			}

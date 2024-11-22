@@ -29,6 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/Mirantis/hmc/api/v1alpha1"
+	"github.com/Mirantis/hmc/internal/helm"
 )
 
 var errTemplateDeletionForbidden = errors.New("template deletion is forbidden")
@@ -95,7 +96,12 @@ func (v *ClusterTemplateValidator) ValidateDelete(ctx context.Context, obj runti
 }
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type.
-func (*ClusterTemplateValidator) Default(context.Context, runtime.Object) error {
+func (*ClusterTemplateValidator) Default(_ context.Context, obj runtime.Object) error {
+	template, ok := obj.(*v1alpha1.ClusterTemplate)
+	if !ok {
+		return apierrors.NewBadRequest(fmt.Sprintf("expected ClusterTemplate but got a %T", obj))
+	}
+	setHelmChartDefaults(template.GetHelmSpec())
 	return nil
 }
 
@@ -168,7 +174,12 @@ func (v *ServiceTemplateValidator) ValidateDelete(ctx context.Context, obj runti
 }
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type.
-func (*ServiceTemplateValidator) Default(_ context.Context, _ runtime.Object) error {
+func (*ServiceTemplateValidator) Default(_ context.Context, obj runtime.Object) error {
+	template, ok := obj.(*v1alpha1.ServiceTemplate)
+	if !ok {
+		return apierrors.NewBadRequest(fmt.Sprintf("expected ServiceTemplate but got a %T", obj))
+	}
+	setHelmChartDefaults(template.GetHelmSpec())
 	return nil
 }
 
@@ -229,7 +240,12 @@ func (v *ProviderTemplateValidator) ValidateDelete(ctx context.Context, obj runt
 }
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type.
-func (*ProviderTemplateValidator) Default(_ context.Context, _ runtime.Object) error {
+func (*ProviderTemplateValidator) Default(_ context.Context, obj runtime.Object) error {
+	template, ok := obj.(*v1alpha1.ProviderTemplate)
+	if !ok {
+		return apierrors.NewBadRequest(fmt.Sprintf("expected ProviderTemplate but got a %T", obj))
+	}
+	setHelmChartDefaults(template.GetHelmSpec())
 	return nil
 }
 
@@ -266,4 +282,17 @@ func getOwnersWithKind(template client.Object, kind string) []string {
 		}
 	}
 	return owners
+}
+
+func setHelmChartDefaults(helmSpec *v1alpha1.HelmSpec) {
+	if helmSpec == nil || helmSpec.ChartSpec == nil {
+		return
+	}
+	chartSpec := helmSpec.ChartSpec
+	if chartSpec.SourceRef.Name == "" && chartSpec.SourceRef.Kind == "" {
+		chartSpec.SourceRef = v1alpha1.DefaultSourceRef
+	}
+	if chartSpec.Interval.Duration == 0 {
+		chartSpec.Interval.Duration = helm.DefaultReconcileInterval
+	}
 }

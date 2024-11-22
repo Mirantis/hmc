@@ -41,11 +41,7 @@ import (
 	"github.com/Mirantis/hmc/internal/utils"
 )
 
-const (
-	defaultRepoName = "hmc-templates"
-
-	defaultRequeueTime = 1 * time.Minute
-)
+const defaultRequeueTime = 1 * time.Minute
 
 // TemplateReconciler reconciles a *Template object
 type TemplateReconciler struct {
@@ -184,8 +180,8 @@ func (r *TemplateReconciler) ReconcileTemplate(ctx context.Context, template tem
 			return ctrl.Result{}, err
 		}
 	} else {
-		if helmSpec.ChartName == "" {
-			err := errors.New("neither chartName nor chartRef is set")
+		if helmSpec.ChartSpec == nil {
+			err := errors.New("neither chartSpec nor chartRef is set")
 			l.Error(err, "invalid helm chart reference")
 			return ctrl.Result{}, err
 		}
@@ -194,7 +190,7 @@ func (r *TemplateReconciler) ReconcileTemplate(ctx context.Context, template tem
 			if namespace == "" {
 				namespace = r.SystemNamespace
 			}
-			err := helm.ReconcileHelmRepository(ctx, r.Client, defaultRepoName, namespace, r.DefaultRegistryConfig.HelmRepositorySpec())
+			err := helm.ReconcileHelmRepository(ctx, r.Client, hmc.DefaultRepoName, namespace, r.DefaultRegistryConfig.HelmRepositorySpec())
 			if err != nil {
 				l.Error(err, "Failed to reconcile default HelmRepository")
 				return ctrl.Result{}, err
@@ -314,25 +310,9 @@ func (r *TemplateReconciler) reconcileHelmChart(ctx context.Context, template te
 		}
 
 		helmChart.Labels[hmc.HMCManagedLabelKey] = hmc.HMCManagedLabelValue
-		helmChart.OwnerReferences = []metav1.OwnerReference{
-			{
-				APIVersion: hmc.GroupVersion.String(),
-				Kind:       template.GetObjectKind().GroupVersionKind().Kind,
-				Name:       template.GetName(),
-				UID:        template.GetUID(),
-			},
-		}
+		utils.AddOwnerReference(helmChart, template)
 
-		helmChart.Spec = sourcev1.HelmChartSpec{
-			Chart:   helmSpec.ChartName,
-			Version: helmSpec.ChartVersion,
-			SourceRef: sourcev1.LocalHelmChartSourceReference{
-				Kind: sourcev1.HelmRepositoryKind,
-				Name: defaultRepoName,
-			},
-			Interval: metav1.Duration{Duration: helm.DefaultReconcileInterval},
-		}
-
+		helmChart.Spec = *helmSpec.ChartSpec
 		return nil
 	})
 
