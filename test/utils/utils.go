@@ -38,6 +38,9 @@ func Run(cmd *exec.Cmd) ([]byte, error) {
 	command := prepareCmd(cmd)
 	_, _ = fmt.Fprintf(GinkgoWriter, "running: %s\n", command)
 
+	cmd.Stdout = GinkgoWriter
+	cmd.Stderr = GinkgoWriter
+	
 	output, err := cmd.Output()
 	if err != nil {
 		return nil, handleCmdError(err, command)

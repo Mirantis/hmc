@@ -107,8 +107,8 @@ var _ = Describe("AWS Templates", Label("provider:cloud", "provider:aws"), Order
 
 		GinkgoT().Setenv("KUBECONFIG", kubeCfgPath)
 		cmd := exec.Command("make", "test-apply")
-		output, err := utils.Run(cmd)
-		_, _ = fmt.Fprintf(GinkgoWriter, "%s\n", output)
+		_, err := utils.Run(cmd)
+		//_, _ = fmt.Fprintf(GinkgoWriter, "%s\n", output)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(os.Unsetenv("KUBECONFIG")).To(Succeed())
 
