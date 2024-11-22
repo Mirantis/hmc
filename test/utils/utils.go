@@ -46,6 +46,8 @@ func Run(cmd *exec.Cmd) ([]byte, error) {
 		return nil, handleCmdError(err, command)
 	}
 
+	_, _ = fmt.Fprintf(GinkgoWriter, "done running: %s\n", command)
+
 	return nil, nil
 }
 
