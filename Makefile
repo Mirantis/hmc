@@ -139,9 +139,7 @@ test-e2e: cli-install
 	@if [ "$$GINKGO_LABEL_FILTER" ]; then \
 		ginkgo_label_flag="-ginkgo.label-filter=$$GINKGO_LABEL_FILTER"; \
 	fi; \
-	KIND_CLUSTER_NAME="hmc-test" KIND_VERSION=$(KIND_VERSION) dlv test ./test/e2e/ --headless -l :2345 --only-same-user=false --log --api-version=2 --accept-multiclient -- -ginkgo.v
-
-	#KIND_CLUSTER_NAME="hmc-test" KIND_VERSION=$(KIND_VERSION) go test ./test/e2e/ -v -ginkgo.v -ginkgo.timeout=3h -timeout=3h $$ginkgo_label_flag
+	KIND_CLUSTER_NAME="hmc-test" KIND_VERSION=$(KIND_VERSION) go test ./test/e2e/ -v -ginkgo.v -ginkgo.timeout=3h -timeout=3h $$ginkgo_label_flag
 
 .PHONY: lint
 lint: golangci-lint ## Run golangci-lint linter & yamllint

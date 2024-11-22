@@ -41,12 +41,12 @@ func Run(cmd *exec.Cmd) ([]byte, error) {
 	cmd.Stdout = GinkgoWriter
 	cmd.Stderr = GinkgoWriter
 
-	output, err := cmd.Output()
+	err := cmd.Run()
 	if err != nil {
 		return nil, handleCmdError(err, command)
 	}
 
-	return output, nil
+	return nil, nil
 }
 
 func handleCmdError(err error, command string) error {
