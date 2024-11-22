@@ -47,8 +47,13 @@ metadata:
     helm.sh/resource-policy: keep
 spec:
   helm:
-    chartName: $name
-    chartVersion: $version
+    chartSpec:
+      chart: $name
+      version: $version
+      interval: 10m0s
+      sourceRef:
+        kind: HelmRepository
+        name: hmc-templates
 EOF
 
             echo "Generated $TEMPLATES_OUTPUT_DIR/$name.yaml"

@@ -60,10 +60,6 @@ spec:
                 description: HelmSpec references a Helm chart representing the HMC
                   template
                 properties:
-                  chartName:
-                    description: ChartName is a name of a Helm chart representing
-                      the template in the HMC repository.
-                    type: string
                   chartRef:
                     description: |-
                       ChartRef is a reference to a source controller resource containing the
@@ -94,14 +90,149 @@ spec:
                     - kind
                     - name
                     type: object
-                  chartVersion:
-                    description: ChartVersion is a version of a Helm chart representing
-                      the template in the HMC repository.
-                    type: string
+                  chartSpec:
+                    description: ChartSpec defines the desired state of the HelmChart
+                      to be created by the controller
+                    properties:
+                      chart:
+                        description: |-
+                          Chart is the name or path the Helm chart is available at in the
+                          SourceRef.
+                        type: string
+                      ignoreMissingValuesFiles:
+                        description: |-
+                          IgnoreMissingValuesFiles controls whether to silently ignore missing values
+                          files rather than failing.
+                        type: boolean
+                      interval:
+                        description: |-
+                          Interval at which the HelmChart SourceRef is checked for updates.
+                          This interval is approximate and may be subject to jitter to ensure
+                          efficient use of resources.
+                        pattern: ^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$
+                        type: string
+                      reconcileStrategy:
+                        default: ChartVersion
+                        description: |-
+                          ReconcileStrategy determines what enables the creation of a new artifact.
+                          Valid values are ('ChartVersion', 'Revision').
+                          See the documentation of the values for an explanation on their behavior.
+                          Defaults to ChartVersion when omitted.
+                        enum:
+                        - ChartVersion
+                        - Revision
+                        type: string
+                      sourceRef:
+                        description: SourceRef is the reference to the Source the
+                          chart is available at.
+                        properties:
+                          apiVersion:
+                            description: APIVersion of the referent.
+                            type: string
+                          kind:
+                            description: |-
+                              Kind of the referent, valid values are ('HelmRepository', 'GitRepository',
+                              'Bucket').
+                            enum:
+                            - HelmRepository
+                            - GitRepository
+                            - Bucket
+                            type: string
+                          name:
+                            description: Name of the referent.
+                            type: string
+                        required:
+                        - kind
+                        - name
+                        type: object
+                      suspend:
+                        description: |-
+                          Suspend tells the controller to suspend the reconciliation of this
+                          source.
+                        type: boolean
+                      valuesFiles:
+                        description: |-
+                          ValuesFiles is an alternative list of values files to use as the chart
+                          values (values.yaml is not included by default), expected to be a
+                          relative path in the SourceRef.
+                          Values files are merged in the order of this list with the last file
+                          overriding the first. Ignored when omitted.
+                        items:
+                          type: string
+                        type: array
+                      verify:
+                        description: |-
+                          Verify contains the secret name containing the trusted public keys
+                          used to verify the signature and specifies which provider to use to check
+                          whether OCI image is authentic.
+                          This field is only supported when using HelmRepository source with spec.type 'oci'.
+                          Chart dependencies, which are not bundled in the umbrella chart artifact, are not verified.
+                        properties:
+                          matchOIDCIdentity:
+                            description: |-
+                              MatchOIDCIdentity specifies the identity matching criteria to use
+                              while verifying an OCI artifact which was signed using Cosign keyless
+                              signing. The artifact's identity is deemed to be verified if any of the
+                              specified matchers match against the identity.
+                            items:
+                              description: |-
+                                OIDCIdentityMatch specifies options for verifying the certificate identity,
+                                i.e. the issuer and the subject of the certificate.
+                              properties:
+                                issuer:
+                                  description: |-
+                                    Issuer specifies the regex pattern to match against to verify
+                                    the OIDC issuer in the Fulcio certificate. The pattern must be a
+                                    valid Go regular expression.
+                                  type: string
+                                subject:
+                                  description: |-
+                                    Subject specifies the regex pattern to match against to verify
+                                    the identity subject in the Fulcio certificate. The pattern must
+                                    be a valid Go regular expression.
+                                  type: string
+                              required:
+                              - issuer
+                              - subject
+                              type: object
+                            type: array
+                          provider:
+                            default: cosign
+                            description: Provider specifies the technology used to
+                              sign the OCI Artifact.
+                            enum:
+                            - cosign
+                            - notation
+                            type: string
+                          secretRef:
+                            description: |-
+                              SecretRef specifies the Kubernetes Secret containing the
+                              trusted public keys.
+                            properties:
+                              name:
+                                description: Name of the referent.
+                                type: string
+                            required:
+                            - name
+                            type: object
+                        required:
+                        - provider
+                        type: object
+                      version:
+                        default: '*'
+                        description: |-
+                          Version is the chart version semver expression, ignored for charts from
+                          GitRepository and Bucket sources. Defaults to latest when omitted.
+                        type: string
+                    required:
+                    - chart
+                    - interval
+                    - sourceRef
+                    type: object
                 type: object
                 x-kubernetes-validations:
-                - message: either chartName or chartRef must be set
-                  rule: (has(self.chartName) && !has(self.chartRef)) || (!has(self.chartName)
+                - message: either chartSpec or chartRef must be set
+                  rule: (has(self.chartSpec) && !has(self.chartRef)) || (!has(self.chartSpec)
                     && has(self.chartRef))
               k8sConstraint:
                 description: Constraint describing compatible K8S versions of the

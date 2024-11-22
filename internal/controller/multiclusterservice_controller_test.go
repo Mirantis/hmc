@@ -162,8 +162,10 @@ var _ = Describe("MultiClusterService Controller", func() {
 					},
 					Spec: hmc.ServiceTemplateSpec{
 						Helm: hmc.HelmSpec{
-							ChartName:    helmChartName,
-							ChartVersion: helmChartVersion,
+							ChartSpec: &sourcev1.HelmChartSpec{
+								Chart:   helmChartName,
+								Version: helmChartVersion,
+							},
 						},
 					},
 				}

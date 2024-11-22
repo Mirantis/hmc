@@ -20,6 +20,7 @@ import (
 	"time"
 
 	helmcontrollerv2 "github.com/fluxcd/helm-controller/api/v2"
+	sourcev1 "github.com/fluxcd/source-controller/api/v1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -52,7 +53,7 @@ var _ = Describe("Template Chain Controller", func() {
 		}
 
 		chartName := "test"
-		templateHelmSpec := hmcmirantiscomv1alpha1.HelmSpec{ChartName: chartName}
+		templateHelmSpec := hmcmirantiscomv1alpha1.HelmSpec{ChartSpec: &sourcev1.HelmChartSpec{Chart: chartName}}
 		chartRef := &helmcontrollerv2.CrossNamespaceSourceReference{
 			Kind:      "HelmChart",
 			Namespace: utils.DefaultSystemNamespace,
