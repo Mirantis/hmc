@@ -91,7 +91,7 @@ func (t *Tracker) trackManagedClusterHeartbeat(ctx context.Context) error {
 			string(managedCluster.UID),
 			clusterID,
 			managedCluster.Spec.Template,
-			template.Spec.Helm.ChartVersion,
+			template.Spec.Helm.ChartSpec.Version,
 			template.Status.Providers,
 		)
 		if err != nil {

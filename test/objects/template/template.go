@@ -134,9 +134,8 @@ func ManagedByHMC() Opt {
 func WithHelmSpec(helmSpec v1alpha1.HelmSpec) Opt {
 	return func(t Template) {
 		spec := t.GetHelmSpec()
-		spec.ChartName = helmSpec.ChartName
+		spec.ChartSpec = helmSpec.ChartSpec
 		spec.ChartRef = helmSpec.ChartRef
-		spec.ChartVersion = helmSpec.ChartVersion
 	}
 }
 

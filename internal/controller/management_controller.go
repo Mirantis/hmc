@@ -142,13 +142,19 @@ func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Manag
 			continue
 		}
 
-		if _, _, err := helm.ReconcileHelmRelease(ctx, r.Client, component.helmReleaseName, r.SystemNamespace, helm.ReconcileHelmReleaseOpts{
+		hrReconcileOpts := helm.ReconcileHelmReleaseOpts{
 			Values:          component.Config,
 			ChartRef:        template.Status.ChartRef,
 			DependsOn:       component.dependsOn,
 			TargetNamespace: component.targetNamespace,
 			CreateNamespace: component.createNamespace,
-		}); err != nil {
+		}
+		reconcileInterval := template.Spec.Helm.ChartSpec.Interval.Duration
+		if reconcileInterval != 0 {
+			hrReconcileOpts.ReconcileInterval = &reconcileInterval
+		}
+
+		if _, _, err := helm.ReconcileHelmRelease(ctx, r.Client, component.helmReleaseName, r.SystemNamespace, hrReconcileOpts); err != nil {
 			errMsg := fmt.Sprintf("Failed to reconcile HelmRelease %s/%s: %s", r.SystemNamespace, component.helmReleaseName, err)
 			updateComponentsStatus(statusAccumulator, component, nil, errMsg)
 			errs = errors.Join(errs, errors.New(errMsg))

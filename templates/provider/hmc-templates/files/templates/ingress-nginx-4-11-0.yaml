@@ -6,5 +6,10 @@ metadata:
     helm.sh/resource-policy: keep
 spec:
   helm:
-    chartName: ingress-nginx
-    chartVersion: 4.11.0
+    chartSpec:
+      chart: ingress-nginx
+      version: 4.11.0
+      interval: 10m0s
+      sourceRef:
+        kind: HelmRepository
+        name: hmc-templates
