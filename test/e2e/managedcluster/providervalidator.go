@@ -54,12 +54,13 @@ func NewProviderValidator(template Template, clusterName string, action Validati
 
 	if action == ValidationActionDeploy {
 		resourcesToValidate = map[string]resourceValidationFunc{
-			"clusters":       validateCluster,
-			"machines":       validateMachines,
-			"control-planes": validateK0sControlPlanes,
-			"csi-driver":     validateCSIDriver,
+			"clusters":          validateCluster,
+			"machines":          validateMachines,
+			"control-planes":    validateK0sControlPlanes,
+			"csi-driver":        validateCSIDriver,
+			"cluster-templates": validateClusterTemplates,
 		}
-		resourceOrder = []string{"clusters", "machines", "control-planes", "csi-driver"}
+		resourceOrder = []string{"clusters", "machines", "control-planes", "csi-driver", "cluster-templates"}
 
 		switch template {
 		case TemplateAWSStandaloneCP, TemplateAWSHostedCP:

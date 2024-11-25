@@ -275,17 +275,14 @@ func (ci *ClusterIdentity) waitForCredentialReady(kc *kubeclient.KubeClient) {
 
 		ready, found, err := unstructured.NestedBool(creds.Object, "status", "ready")
 		if err != nil {
-			By(fmt.Sprintf("Credential credential %s error getting status field: %w", credName, err))
 			return err
 		}
 
 		if !found {
-			By(fmt.Sprintf("ready status not found on credential %s", credName))
 			return fmt.Errorf("ready status not found on credential %s", credName)
 		}
 
 		if !ready {
-			By(fmt.Sprintf("credential %s not ready", credName))
 			return fmt.Errorf("credential %s not ready", credName)
 		}
 
