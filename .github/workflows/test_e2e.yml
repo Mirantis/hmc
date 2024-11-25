@@ -102,6 +102,8 @@ jobs:
       AZURE_CLIENT_SECRET: ${{ secrets.CI_AZURE_CLIENT_SECRET }}
       BUILD_VERSION: ${{ needs.build.outputs.cutversion }}
     steps:
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
