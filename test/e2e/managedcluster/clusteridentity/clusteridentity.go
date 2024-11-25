@@ -134,7 +134,7 @@ func New(kc *kubeclient.KubeClient, provider managedcluster.ProviderType) *Clust
 	ci.createSecret(kc)
 	ci.createClusterIdentity(kc)
 	ci.createCredential(kc)
-
+	ci.waitForCredentialReady(kc)
 	return &ci
 }
 
@@ -251,4 +251,44 @@ func (ci *ClusterIdentity) createClusterIdentity(kc *kubeclient.KubeClient) {
 	}
 
 	kc.CreateOrUpdateUnstructuredObject(ci.GroupVersionResource, id, ci.Namespaced)
+}
+
+func (ci *ClusterIdentity) waitForCredentialReady(kc *kubeclient.KubeClient) {
+	GinkgoHelper()
+
+	By(fmt.Sprintf("waiting for %s credential to be ready", ci.Kind))
+
+	ctx := context.Background()
+	credName := fmt.Sprintf("%s-cred", ci.IdentityName)
+
+	gvr := schema.GroupVersionResource{
+		Group:    "hmc.mirantis.com",
+		Version:  "v1alpha1",
+		Resource: "credentials",
+	}
+
+	Eventually(func() error {
+		creds, err := kc.GetDynamicClient(gvr, true).Get(ctx, credName, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+
+		ready, found, err := unstructured.NestedBool(creds.Object, "status", "ready")
+		if err != nil {
+			By(fmt.Sprintf("Credential credential %s error getting status field: %w", credName, err))
+			return err
+		}
+
+		if !found {
+			By(fmt.Sprintf("ready status not found on credential %s", credName))
+			return fmt.Errorf("ready status not found on credential %s", credName)
+		}
+
+		if !ready {
+			By(fmt.Sprintf("credential %s not ready", credName))
+			return fmt.Errorf("credential %s not ready", credName)
+		}
+
+		return nil
+	}).WithTimeout(time.Minute).WithPolling(5 * time.Second).Should(Succeed())
 }
