@@ -31,7 +31,7 @@ func SetStatusConditions(summary *sveltosv1beta1.ClusterSummary) ([]metav1.Condi
 		return nil, errors.New("error getting status from ClusterSummary: nil summary provided")
 	}
 
-	conditions := []metav1.Condition{}
+	conditions := make([]metav1.Condition, 0, len(summary.Status.FeatureSummaries)+len(summary.Status.HelmReleaseSummaries))
 
 	for _, x := range summary.Status.FeatureSummaries {
 		msg := ""
