@@ -124,6 +124,10 @@ var _ = Describe("AWS Templates", Label("provider:cloud", "provider:aws"), Order
 			return nil
 		}).WithTimeout(15 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
 
+		Eventually(func() error {
+			return managedcluster.ValidateClusterTemplates(context.Background(), standaloneClient)
+		}).WithTimeout(30 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
+
 		// Ensure AWS credentials are set in the standalone cluster.
 		clusteridentity.New(standaloneClient, managedcluster.ProviderAWS)
 

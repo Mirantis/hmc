@@ -123,6 +123,10 @@ var _ = Context("Azure Templates", Label("provider:cloud", "provider:azure"), Or
 			return nil
 		}).WithTimeout(15 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
 
+		Eventually(func() error {
+			return managedcluster.ValidateClusterTemplates(context.Background(), standaloneClient)
+		}).WithTimeout(30 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
+
 		By("Create azure credential secret")
 		clusteridentity.New(standaloneClient, managedcluster.ProviderAzure)
 

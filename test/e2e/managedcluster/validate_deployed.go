@@ -139,30 +139,6 @@ func validateK0sControlPlanes(ctx context.Context, kc *kubeclient.KubeClient, cl
 	return nil
 }
 
-func validateClusterTemplates(ctx context.Context, client *kubeclient.KubeClient, _ string) error {
-	templates, err := client.ListClusterTemplates(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to list cluster templates: %w", err)
-	}
-
-	for _, template := range templates {
-		valid, found, err := unstructured.NestedBool(template.Object, "status", "valid")
-		if err != nil {
-			return fmt.Errorf("failed to get valid flag for template %s: %w", template.GetName(), err)
-		}
-
-		if !found {
-			return fmt.Errorf("valid flag for template %s not found", template.GetName())
-		}
-
-		if !valid {
-			return fmt.Errorf("template %s is still invalid", template.GetName())
-		}
-	}
-
-	return nil
-}
-
 // validateCSIDriver validates that the provider CSI driver is functioning
 // by creating a PVC and verifying it enters "Bound" status.
 func validateCSIDriver(ctx context.Context, kc *kubeclient.KubeClient, clusterName string) error {

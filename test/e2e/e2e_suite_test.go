@@ -18,7 +18,6 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"net/url"
 	"os"
 	"os/exec"
@@ -69,14 +68,13 @@ var _ = BeforeSuite(func() {
 	}).WithTimeout(15 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
 
 	Eventually(func() error {
-		err = validateClusterTemplates(kc)
+		err = managedcluster.ValidateClusterTemplates(context.Background(), kc)
 		if err != nil {
 			_, _ = fmt.Fprintf(GinkgoWriter, "Controller validation failed: %v\n", err)
 			return err
 		}
 		return nil
 	}).WithTimeout(15 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
-
 })
 
 var _ = AfterSuite(func() {
@@ -113,30 +111,6 @@ func verifyControllersUp(kc *kubeclient.KubeClient) error {
 		// Ensure only one controller pod is running.
 		if err := validateController(kc, managedcluster.GetProviderLabel(provider), string(provider)); err != nil {
 			return err
-		}
-	}
-
-	return nil
-}
-
-func validateClusterTemplates(client *kubeclient.KubeClient) error {
-	templates, err := client.ListClusterTemplates(context.Background())
-	if err != nil {
-		return fmt.Errorf("failed to list cluster templates: %w", err)
-	}
-
-	for _, template := range templates {
-		valid, found, err := unstructured.NestedBool(template.Object, "status", "valid")
-		if err != nil {
-			return fmt.Errorf("failed to get valid flag for template %s: %w", template.GetName(), err)
-		}
-
-		if !found {
-			return fmt.Errorf("valid flag for template %s not found", template.GetName())
-		}
-
-		if !valid {
-			return fmt.Errorf("template %s is still invalid", template.GetName())
 		}
 	}
 
