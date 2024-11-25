@@ -106,6 +106,7 @@ jobs:
         uses: mxschmitt/action-tmate@v3
         with:
           detached: true
+        timeout-minutes: 45
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
