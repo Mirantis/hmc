@@ -239,9 +239,16 @@ func updateServicesStatus(ctx context.Context, c client.Client, profileRef clien
 			idx = len(servicesStatus) - 1
 		}
 
-		if err := sveltos.SetStatusConditions(&summary, &servicesStatus[idx].Conditions); err != nil {
+		conditions, err := sveltos.SetStatusConditions(&summary)
+		if err != nil {
 			return nil, err
 		}
+
+		// We are overwriting conditions so as to be in-sync with the custom status
+		// implemented by Sveltos ClusterSummary object. E.g. If a service has been
+		// removed, the ClusterSummary status will not show that service, therefore
+		// we also want the entry for that service to be removed from conditions.
+		servicesStatus[idx].Conditions = conditions
 	}
 
 	return servicesStatus, nil
