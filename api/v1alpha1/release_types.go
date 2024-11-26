@@ -23,6 +23,8 @@ const (
 
 	// TemplatesCreatedCondition indicates that all templates associated with the Release are created.
 	TemplatesCreatedCondition = "TemplatesCreated"
+	// TemplatesValidCondition indicates that all templates associated with the Release are valid.
+	TemplatesValidCondition = "TemplatesValid"
 )
 
 // ReleaseSpec defines the desired state of Release
