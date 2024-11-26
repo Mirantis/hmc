@@ -34,6 +34,7 @@ func SetupIndexers(ctx context.Context, mgr ctrl.Manager) error {
 		setupServiceTemplateChainIndexer,
 		setupClusterTemplateProvidersIndexer,
 		setupMultiClusterServiceServicesIndexer,
+		setupOwnerReferenceIndexers,
 	} {
 		merr = errors.Join(merr, f(ctx, mgr))
 	}
@@ -209,4 +210,30 @@ func ExtractServiceTemplateNamesFromMultiClusterService(rawObj client.Object) []
 	}
 
 	return templates
+}
+
+// ownerref indexers
+
+// OwnerRefIndexKey indexer field name to extract ownerReference names from objects
+const OwnerRefIndexKey = ".metadata.ownerReferences"
+
+func setupOwnerReferenceIndexers(ctx context.Context, mgr ctrl.Manager) error {
+	var merr error
+	for _, obj := range []client.Object{
+		&ProviderTemplate{},
+	} {
+		err := mgr.GetFieldIndexer().IndexField(ctx, obj, OwnerRefIndexKey, ExtractOwnerReferences)
+		merr = errors.Join(err)
+	}
+	return merr
+}
+
+// ExtractOwnerReferences returns a list of ownerReference names
+func ExtractOwnerReferences(rawObj client.Object) []string {
+	ownerRefs := rawObj.GetOwnerReferences()
+	owners := make([]string, 0, len(ownerRefs))
+	for _, ref := range ownerRefs {
+		owners = append(owners, ref.Name)
+	}
+	return owners
 }
