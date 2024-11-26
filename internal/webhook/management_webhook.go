@@ -53,7 +53,17 @@ var (
 )
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type.
-func (*ManagementValidator) ValidateCreate(_ context.Context, _ runtime.Object) (admission.Warnings, error) {
+func (v *ManagementValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+	mgmt, ok := obj.(*hmcv1alpha1.Management)
+	if !ok {
+		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected Management but got a %T", obj))
+	}
+	if err := validateRelease(ctx, v.Client, mgmt.Spec.Release); err != nil {
+		return nil,
+			apierrors.NewInvalid(mgmt.GroupVersionKind().GroupKind(), mgmt.Name, field.ErrorList{
+				field.Forbidden(field.NewPath("spec", "release"), err.Error()),
+			})
+	}
 	return nil, nil
 }
 
@@ -69,6 +79,15 @@ func (v *ManagementValidator) ValidateUpdate(ctx context.Context, oldObj, newObj
 	oldMgmt, ok := oldObj.(*hmcv1alpha1.Management)
 	if !ok {
 		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected Management but got a %T", oldObj))
+	}
+
+	if oldMgmt.Spec.Release != newMgmt.Spec.Release {
+		if err := validateRelease(ctx, v.Client, newMgmt.Spec.Release); err != nil {
+			return nil,
+				apierrors.NewInvalid(newMgmt.GroupVersionKind().GroupKind(), newMgmt.Name, field.ErrorList{
+					field.Forbidden(field.NewPath("spec", "release"), err.Error()),
+				})
+		}
 	}
 
 	if err := checkComponentsRemoval(ctx, v.Client, oldMgmt, newMgmt); err != nil {
@@ -232,6 +251,17 @@ func (v *ManagementValidator) ValidateDelete(ctx context.Context, _ runtime.Obje
 		return admission.Warnings{"The Management object can't be removed if ManagedCluster objects still exist"}, errManagementDeletionForbidden
 	}
 	return nil, nil
+}
+
+func validateRelease(ctx context.Context, cl client.Client, releaseName string) error {
+	release := &hmcv1alpha1.Release{}
+	if err := cl.Get(ctx, client.ObjectKey{Name: releaseName}, release); err != nil {
+		return err
+	}
+	if !release.Status.Ready {
+		return fmt.Errorf("release \"%s\" status is not ready", releaseName)
+	}
+	return nil
 }
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type.
