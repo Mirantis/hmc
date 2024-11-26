@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	hcv2 "github.com/fluxcd/helm-controller/api/v2"
 	fluxmeta "github.com/fluxcd/pkg/apis/meta"
@@ -78,12 +79,17 @@ func (r *ReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 		}
 		defer func() {
 			release.Status.ObservedGeneration = release.Generation
+			for _, condition := range release.Status.Conditions {
+				if condition.Status != metav1.ConditionTrue {
+					release.Status.Ready = false
+				}
+			}
 			err = errors.Join(err, r.Status().Update(ctx, release))
 		}()
 	}
 
 	err = r.reconcileHMCTemplates(ctx, release.Name, release.Spec.Version, release.UID)
-	r.updateTemplatesCondition(release, err)
+	r.updateTemplatesCreatedCondition(release, err)
 	if err != nil {
 		l.Error(err, "failed to reconcile HMC Templates")
 		return ctrl.Result{}, err
@@ -91,14 +97,60 @@ func (r *ReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 
 	if release.Name == "" {
 		if err := r.ensureManagement(ctx); err != nil {
-			l.Error(err, "failed to get or create Management object")
+			l.Error(err, "failed to create Management object")
 			return ctrl.Result{}, err
 		}
+		return ctrl.Result{}, nil
 	}
+	err = r.validateProviderTemplates(ctx, release.Name, release.Templates())
+	updateTemplatesValidCondition(release, err)
+	if err != nil {
+		l.Error(err, "failed to validate provider templates")
+		return ctrl.Result{}, err
+	}
+	release.Status.Ready = true
 	return ctrl.Result{}, nil
 }
 
-func (r *ReleaseReconciler) updateTemplatesCondition(release *hmc.Release, err error) {
+func (r *ReleaseReconciler) validateProviderTemplates(ctx context.Context, releaseName string, expectedTemplates []string) error {
+	providerTemplates := &hmc.ProviderTemplateList{}
+	if err := r.List(ctx, providerTemplates, client.MatchingFields{hmc.OwnerRefIndexKey: releaseName}); err != nil {
+		return err
+	}
+	validTemplates := make(map[string]bool)
+	for _, t := range providerTemplates.Items {
+		validTemplates[t.Name] = t.Status.ObservedGeneration == t.Generation && t.Status.Valid
+	}
+	invalidTemplates := []string{}
+	for _, t := range expectedTemplates {
+		if !validTemplates[t] {
+			invalidTemplates = append(invalidTemplates, t)
+		}
+	}
+	if len(invalidTemplates) > 0 {
+		return fmt.Errorf("missing or invalid templates: %s", strings.Join(invalidTemplates, ", "))
+	}
+	return nil
+}
+
+func updateTemplatesValidCondition(release *hmc.Release, err error) {
+	condition := metav1.Condition{
+		Type:               hmc.TemplatesValidCondition,
+		Status:             metav1.ConditionTrue,
+		ObservedGeneration: release.Generation,
+		Reason:             hmc.SucceededReason,
+		Message:            "All templates are valid",
+	}
+	if err != nil {
+		condition.Status = metav1.ConditionFalse
+		condition.Message = err.Error()
+		condition.Reason = hmc.FailedReason
+		release.Status.Ready = false
+	}
+	meta.SetStatusCondition(&release.Status.Conditions, condition)
+}
+
+func (r *ReleaseReconciler) updateTemplatesCreatedCondition(release *hmc.Release, err error) {
 	condition := metav1.Condition{
 		Type:               hmc.TemplatesCreatedCondition,
 		Status:             metav1.ConditionTrue,
