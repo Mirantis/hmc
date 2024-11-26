@@ -42,6 +42,9 @@ func New(opts ...Opt) *v1alpha1.Release {
 				Template: DefaultCAPITemplateName,
 			},
 		},
+		Status: v1alpha1.ReleaseStatus{
+			Ready: true,
+		},
 	}
 
 	for _, opt := range opts {
@@ -66,5 +69,11 @@ func WithHMCTemplateName(v string) Opt {
 func WithCAPITemplateName(v string) Opt {
 	return func(r *v1alpha1.Release) {
 		r.Spec.CAPI.Template = v
+	}
+}
+
+func WithReadyStatus(ready bool) Opt {
+	return func(r *v1alpha1.Release) {
+		r.Status.Ready = ready
 	}
 }

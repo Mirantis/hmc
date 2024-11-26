@@ -33,6 +33,62 @@ import (
 	"github.com/Mirantis/hmc/test/scheme"
 )
 
+func TestManagementValidateCreate(t *testing.T) {
+	g := NewWithT(t)
+
+	ctx := admission.NewContextWithRequest(context.Background(), admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{Operation: admissionv1.Create}})
+
+	tests := []struct {
+		name            string
+		management      *v1alpha1.Management
+		existingObjects []runtime.Object
+		err             string
+		warnings        admission.Warnings
+	}{
+		{
+			name: "release is not ready, should fail",
+			management: management.NewManagement(
+				management.WithRelease(release.DefaultName),
+			),
+			existingObjects: []runtime.Object{
+				release.New(
+					release.WithName(release.DefaultName),
+					release.WithReadyStatus(false),
+				),
+			},
+			err: fmt.Sprintf(`Management "%s" is invalid: spec.release: Forbidden: release "%s" status is not ready`, management.DefaultName, release.DefaultName),
+		},
+		{
+			name: "should succeed",
+			management: management.NewManagement(
+				management.WithRelease(release.DefaultName),
+			),
+			existingObjects: []runtime.Object{
+				release.New(
+					release.WithName(release.DefaultName),
+				),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(_ *testing.T) {
+			c := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(tt.existingObjects...).Build()
+			validator := &ManagementValidator{Client: c}
+
+			warn, err := validator.ValidateCreate(ctx, tt.management)
+			if tt.err != "" {
+				g.Expect(err).To(HaveOccurred())
+				g.Expect(err).To(MatchError(tt.err))
+			} else {
+				g.Expect(err).To(Succeed())
+			}
+
+			g.Expect(warn).To(Equal(tt.warnings))
+		})
+	}
+}
+
 func TestManagementValidateUpdate(t *testing.T) {
 	g := NewWithT(t)
 
@@ -78,8 +134,7 @@ func TestManagementValidateUpdate(t *testing.T) {
 				management.WithProviders(),
 				management.WithRelease(release.DefaultName),
 			),
-			warnings: admission.Warnings{"Some of the providers cannot be removed"},
-			err:      fmt.Sprintf(`Management "%s" is invalid: spec.providers: Forbidden: failed to get Release %s: releases.hmc.mirantis.com "%s" not found`, management.DefaultName, release.DefaultName, release.DefaultName),
+			err: fmt.Sprintf(`Management "%s" is invalid: spec.release: Forbidden: releases.hmc.mirantis.com "%s" not found`, management.DefaultName, release.DefaultName),
 		},
 		{
 			name: "removed provider does not have related providertemplate, should fail",
@@ -292,6 +347,21 @@ func TestManagementValidateUpdate(t *testing.T) {
 					template.WithValidationStatus(validStatus),
 				),
 			},
+		},
+		{
+			name: "release is not ready, should fail",
+			oldMgmt: management.NewManagement(
+				management.WithRelease("old-release"),
+			),
+			management: management.NewManagement(
+				management.WithRelease(release.DefaultName),
+			),
+			existingObjects: []runtime.Object{
+				release.New(
+					release.WithReadyStatus(false),
+				),
+			},
+			err: fmt.Sprintf(`Management "%s" is invalid: spec.release: Forbidden: release "%s" status is not ready`, management.DefaultName, release.DefaultName),
 		},
 	}
 
