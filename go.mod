@@ -18,7 +18,7 @@ require (
 	github.com/projectsveltos/addon-controller v0.42.1
 	github.com/projectsveltos/libsveltos v0.42.1
 	github.com/segmentio/analytics-go v3.1.0+incompatible
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.16.3
 	k8s.io/api v0.31.3
