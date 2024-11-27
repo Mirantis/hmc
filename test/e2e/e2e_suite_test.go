@@ -66,6 +66,15 @@ var _ = BeforeSuite(func() {
 		}
 		return nil
 	}).WithTimeout(15 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
+
+	Eventually(func() error {
+		err = managedcluster.ValidateClusterTemplates(context.Background(), kc)
+		if err != nil {
+			_, _ = fmt.Fprintf(GinkgoWriter, "Controller validation failed: %v\n", err)
+			return err
+		}
+		return nil
+	}).WithTimeout(15 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
 })
 
 var _ = AfterSuite(func() {
@@ -93,6 +102,9 @@ func verifyControllersUp(kc *kubeclient.KubeClient) error {
 		managedcluster.ProviderAWS,
 		managedcluster.ProviderAzure,
 		managedcluster.ProviderVSphere,
+		managedcluster.ProviderK0smotron,
+		managedcluster.ProviderK0smotronBootstrap,
+		managedcluster.ProviderK0smotronControlPlane,
 	}
 
 	for _, provider := range providers {

@@ -72,8 +72,33 @@ set-hmc-version: yq
 	$(YQ) eval '.metadata.name = "hmc-$(FQDN_VERSION)"' -i $(PROVIDER_TEMPLATES_DIR)/hmc-templates/files/release.yaml
 	$(YQ) eval '.spec.hmc.template = "hmc-$(FQDN_VERSION)"' -i $(PROVIDER_TEMPLATES_DIR)/hmc-templates/files/release.yaml
 
+.PHONY: test-hmc-version
+test-hmc-version: yq
+	@TEMPLATE_DIR=templates/provider/hmc-templates/files/templates/*; \
+	cutversion=$$(echo $(VERSION) | sed "s/.*-//g"); \
+	echo "cutversion = $cutversion"; \
+	for template in $$TEMPLATE_DIR; do \
+  		if  [ $$($(YQ) eval '.kind' $$template) = 'ClusterTemplate' ]; then \
+  			if grep --quiet "chartVersion:.*-"$$cutversion $$template; then \
+              echo "skipping already processed templates $$template"; \
+  			else \
+  			    echo $$template; \
+  				sed -i "s/chartVersion:.*[^$$cutversion].*/&-$$cutversion/g" "$$template"; \
+  			fi \
+  		fi; \
+	done; \
+	CHART_DIR=templates/cluster/**/Chart.yaml; \
+	for chart in $$CHART_DIR; do \
+	  if grep --quiet "version:.*-$$cutversion" $$chart; then \
+		echo "skipping already processed templates $$chart"; \
+		else \
+			echo $$chart; \
+			sed -i "s/version:.*[^$$cutversion]*./&-$$cutversion/g" "$$chart"; \
+		fi \
+	done
+
 .PHONY: hmc-chart-release
-hmc-chart-release: set-hmc-version templates-generate ## Generate hmc helm chart
+hmc-chart-release: set-hmc-version test-hmc-version templates-generate ## Generate hmc helm chart
 
 .PHONY: hmc-dist-release
 hmc-dist-release: $(HELM) $(YQ)
@@ -110,7 +135,7 @@ test: generate-all fmt vet envtest tidy external-crd ## Run tests.
 
 # Utilize Kind or modify the e2e tests to load the image locally, enabling
 # compatibility with other vendors.
-.PHONY: test-e2e # Run the e2e tests using a Kind k8s instance as the management cluster.
+.PHONY: test-e2e test-hmc-version# Run the e2e tests using a Kind k8s instance as the management cluster.
 test-e2e: cli-install
 	@if [ "$$GINKGO_LABEL_FILTER" ]; then \
 		ginkgo_label_flag="-ginkgo.label-filter=$$GINKGO_LABEL_FILTER"; \
@@ -352,7 +377,7 @@ dev-eks-creds: dev-aws-creds
 dev-apply: kind-deploy registry-deploy dev-push dev-deploy dev-templates dev-release
 
 .PHONY: test-apply
-test-apply: set-hmc-version helm-package dev-deploy dev-templates dev-release
+test-apply: set-hmc-version test-hmc-version helm-package dev-deploy dev-templates dev-release
 
 .PHONY: dev-destroy
 dev-destroy: kind-undeploy registry-undeploy ## Destroy the development environment by deleting the kind cluster and local registry.

@@ -15,6 +15,7 @@
 package managedcluster
 
 import (
+	"context"
 	_ "embed"
 	"fmt"
 	"os"
@@ -26,17 +27,22 @@ import (
 	. "github.com/onsi/gomega"
 	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/env"
 
+	"github.com/Mirantis/hmc/test/e2e/kubeclient"
 	"github.com/Mirantis/hmc/test/utils"
 )
 
 type ProviderType string
 
 const (
-	ProviderCAPI    ProviderType = "cluster-api"
-	ProviderAWS     ProviderType = "infrastructure-aws"
-	ProviderAzure   ProviderType = "infrastructure-azure"
-	ProviderVSphere ProviderType = "infrastructure-vsphere"
+	ProviderCAPI                  ProviderType = "cluster-api"
+	ProviderAWS                   ProviderType = "infrastructure-aws"
+	ProviderAzure                 ProviderType = "infrastructure-azure"
+	ProviderVSphere               ProviderType = "infrastructure-vsphere"
+	ProviderK0smotron             ProviderType = "infrastructure-k0sproject-k0smotron"
+	ProviderK0smotronBootstrap    ProviderType = "bootstrap-k0sproject-k0smotron"
+	ProviderK0smotronControlPlane ProviderType = "control-plane-k0sproject-k0smotron"
 
 	providerLabel = "cluster.x-k8s.io/provider"
 )
@@ -138,15 +144,46 @@ func GetUnstructured(templateName Template) *unstructured.Unstructured {
 		Fail(fmt.Sprintf("Unsupported template: %s", templateName))
 	}
 
+	version := env.GetString("VERSION", "")
+	index := strings.LastIndex(env.GetString("VERSION", ""), "-")
+	if index > 0 {
+		version = version[index:]
+	}
+	GinkgoT().Setenv("BUILD_VERSION", version)
+
 	managedClusterConfigBytes, err := envsubst.Bytes(managedClusterTemplateBytes)
 	Expect(err).NotTo(HaveOccurred(), "failed to substitute environment variables")
 
 	var managedClusterConfig map[string]any
-
+	By(fmt.Sprintf("Cluster being applied\n %s", managedClusterConfigBytes))
 	err = yaml.Unmarshal(managedClusterConfigBytes, &managedClusterConfig)
 	Expect(err).NotTo(HaveOccurred(), "failed to unmarshal deployment config")
 
 	return &unstructured.Unstructured{Object: managedClusterConfig}
+}
+
+func ValidateClusterTemplates(ctx context.Context, client *kubeclient.KubeClient) error {
+	templates, err := client.ListClusterTemplates(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to list cluster templates: %w", err)
+	}
+
+	for _, template := range templates {
+		valid, found, err := unstructured.NestedBool(template.Object, "status", "valid")
+		if err != nil {
+			return fmt.Errorf("failed to get valid flag for template %s: %w", template.GetName(), err)
+		}
+
+		if !found {
+			return fmt.Errorf("valid flag for template %s not found", template.GetName())
+		}
+
+		if !valid {
+			return fmt.Errorf("template %s is still invalid", template.GetName())
+		}
+	}
+
+	return nil
 }
 
 func ValidateDeploymentVars(v []string) {
