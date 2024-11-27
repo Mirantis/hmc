@@ -52,14 +52,23 @@ func PopulateHostedTemplateVars(ctx context.Context, kc *kubeclient.KubeClient, 
 	Expect(err).NotTo(HaveOccurred(), "failed to get AWS cluster subnets")
 	Expect(found).To(BeTrue(), "AWS cluster has no subnets")
 
-	subnet, ok := subnets[0].(map[string]any)
-	Expect(ok).To(BeTrue(), "failed to cast subnet to map")
+	// find the first public subnet
+	for _, s := range subnets {
+		subnet, ok := s.(map[string]any)
+		Expect(ok).To(BeTrue(), "failed to cast subnet to map")
 
-	subnetID, ok := subnet["resourceID"].(string)
-	Expect(ok).To(BeTrue(), "failed to cast subnet ID to string")
+		if isPublic, ok := subnet["isPublic"].(bool); ok && isPublic {
+			subnetID, ok := subnet["resourceID"].(string)
+			Expect(ok).To(BeTrue(), "failed to cast subnet ID to string")
 
-	subnetAZ, ok := subnet["availabilityZone"].(string)
-	Expect(ok).To(BeTrue(), "failed to cast subnet availability zone to string")
+			subnetAZ, ok := subnet["availabilityZone"].(string)
+			Expect(ok).To(BeTrue(), "failed to cast subnet availability zone to string")
+
+			GinkgoT().Setenv(managedcluster.EnvVarAWSSubnetID, subnetID)
+			GinkgoT().Setenv(managedcluster.EnvVarAWSSubnetAvailabilityZone, subnetAZ)
+			break
+		}
+	}
 
 	securityGroupID, found, err := unstructured.NestedString(
 		awsCluster.Object, "status", "networkStatus", "securityGroups", "node", "id")
@@ -67,7 +76,6 @@ func PopulateHostedTemplateVars(ctx context.Context, kc *kubeclient.KubeClient, 
 	Expect(found).To(BeTrue(), "AWS cluster has no security group ID")
 
 	GinkgoT().Setenv(managedcluster.EnvVarAWSVPCID, vpcID)
-	GinkgoT().Setenv(managedcluster.EnvVarAWSSubnetID, subnetID)
-	GinkgoT().Setenv(managedcluster.EnvVarAWSSubnetAvailabilityZone, subnetAZ)
+
 	GinkgoT().Setenv(managedcluster.EnvVarAWSSecurityGroupID, securityGroupID)
 }

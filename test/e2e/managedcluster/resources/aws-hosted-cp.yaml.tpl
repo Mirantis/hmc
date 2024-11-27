@@ -14,6 +14,7 @@ spec:
     subnets:
       - id: ${AWS_SUBNET_ID}
         availabilityZone: ${AWS_SUBNET_AVAILABILITY_ZONE}
+        isPublic: true
     instanceType: ${AWS_INSTANCE_TYPE:=t3.medium}
     securityGroupIDs:
       - ${AWS_SG_ID}
