@@ -49,7 +49,8 @@ func TestE2E(t *testing.T) {
 var _ = BeforeSuite(func() {
 	GinkgoT().Setenv(managedcluster.EnvVarNamespace, internalutils.DefaultSystemNamespace)
 
-	By(fmt.Sprintf("building and deploying the controller-manager - Version: %s", env.GetString("VERSION", "")))
+	By(fmt.Sprintf("building and deploying the controller-manager - Version: %s",
+		env.GetString("VERSION", "")))
 	cmd := exec.Command("make", "kind-deploy")
 	output, err := utils.Run(cmd)
 	_, _ = fmt.Fprint(GinkgoWriter, string(output))
