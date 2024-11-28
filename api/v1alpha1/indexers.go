@@ -222,14 +222,14 @@ func setupOwnerReferenceIndexers(ctx context.Context, mgr ctrl.Manager) error {
 	for _, obj := range []client.Object{
 		&ProviderTemplate{},
 	} {
-		err := mgr.GetFieldIndexer().IndexField(ctx, obj, OwnerRefIndexKey, ExtractOwnerReferences)
-		merr = errors.Join(err)
+		merr = errors.Join(merr, mgr.GetFieldIndexer().IndexField(ctx, obj, OwnerRefIndexKey, extractOwnerReferences))
 	}
+
 	return merr
 }
 
-// ExtractOwnerReferences returns a list of ownerReference names
-func ExtractOwnerReferences(rawObj client.Object) []string {
+// extractOwnerReferences returns a list of ownerReference names
+func extractOwnerReferences(rawObj client.Object) []string {
 	ownerRefs := rawObj.GetOwnerReferences()
 	owners := make([]string, 0, len(ownerRefs))
 	for _, ref := range ownerRefs {
