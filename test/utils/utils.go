@@ -38,17 +38,12 @@ func Run(cmd *exec.Cmd) ([]byte, error) {
 	command := prepareCmd(cmd)
 	_, _ = fmt.Fprintf(GinkgoWriter, "running: %s\n", command)
 
-	cmd.Stdout = GinkgoWriter
-	cmd.Stderr = GinkgoWriter
-
-	err := cmd.Run()
+	output, err := cmd.Output()
 	if err != nil {
 		return nil, handleCmdError(err, command)
 	}
 
-	_, _ = fmt.Fprintf(GinkgoWriter, "done running: %s\n", command)
-
-	return nil, nil
+	return output, nil
 }
 
 func handleCmdError(err error, command string) error {

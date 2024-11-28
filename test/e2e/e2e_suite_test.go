@@ -51,10 +51,12 @@ var _ = BeforeSuite(func() {
 
 	By(fmt.Sprintf("building and deploying the controller-manager - Version: %s", env.GetString("VERSION", "")))
 	cmd := exec.Command("make", "kind-deploy")
-	_, err := utils.Run(cmd)
+	output, err := utils.Run(cmd)
+	_, _ = fmt.Fprint(GinkgoWriter, string(output))
 	Expect(err).NotTo(HaveOccurred())
-	exec.Command("make", "VERSION=", env.GetString("VERSION", ""), "test-apply")
-	_, err = utils.Run(cmd)
+	cmd = exec.Command("make", fmt.Sprintf("VERSION=%s", env.GetString("VERSION", "")), "test-apply")
+	output, err = utils.Run(cmd)
+	_, _ = fmt.Fprint(GinkgoWriter, string(output))
 	Expect(err).NotTo(HaveOccurred())
 
 	By("validating that the hmc-controller and CAPI provider controllers are running and ready")

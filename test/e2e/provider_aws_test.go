@@ -107,8 +107,9 @@ var _ = Describe("AWS Templates", Label("provider:cloud", "provider:aws"), Order
 		kubeCfgPath, kubecfgDeleteFunc = kc.WriteKubeconfig(context.Background(), clusterName)
 
 		GinkgoT().Setenv("KUBECONFIG", kubeCfgPath)
-		cmd := exec.Command("make", "VERSION=", env.GetString("VERSION", ""), "test-apply")
-		_, err := utils.Run(cmd)
+		cmd := exec.Command("make", fmt.Sprintf("VERSION=%s", env.GetString("VERSION", "")), "test-apply")
+		output, err := utils.Run(cmd)
+		_, _ = fmt.Fprint(GinkgoWriter, string(output))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(os.Unsetenv("KUBECONFIG")).To(Succeed())
 

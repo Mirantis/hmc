@@ -108,8 +108,9 @@ var _ = Context("Azure Templates", Label("provider:cloud", "provider:azure"), Or
 
 		By("Deploy onto standalone cluster")
 		GinkgoT().Setenv("KUBECONFIG", kubeCfgPath)
-		cmd := exec.Command("make", "VERSION=", env.GetString("VERSION", ""), "test-apply")
-		_, err := utils.Run(cmd)
+		cmd := exec.Command("make", fmt.Sprintf("VERSION=%s", env.GetString("VERSION", "")), "test-apply")
+		output, err := utils.Run(cmd)
+		_, _ = fmt.Fprint(GinkgoWriter, string(output))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(os.Unsetenv("KUBECONFIG")).To(Succeed())
 
