@@ -18,6 +18,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"k8s.io/utils/env"
 	"net/url"
 	"os"
 	"os/exec"
@@ -48,11 +49,11 @@ func TestE2E(t *testing.T) {
 var _ = BeforeSuite(func() {
 	GinkgoT().Setenv(managedcluster.EnvVarNamespace, internalutils.DefaultSystemNamespace)
 
-	By("building and deploying the controller-manager")
+	By(fmt.Sprintf("building and deploying the controller-manager - Version: %s", env.GetString("VERSION", "")))
 	cmd := exec.Command("make", "kind-deploy")
 	_, err := utils.Run(cmd)
 	Expect(err).NotTo(HaveOccurred())
-	cmd = exec.Command("make", "test-apply")
+	exec.Command("make", "VERSION=", env.GetString("VERSION", ""), "test-apply")
 	_, err = utils.Run(cmd)
 	Expect(err).NotTo(HaveOccurred())
 
