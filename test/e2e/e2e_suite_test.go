@@ -18,7 +18,6 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"k8s.io/utils/env"
 	"net/url"
 	"os"
 	"os/exec"
@@ -31,6 +30,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/env"
 	"k8s.io/utils/ptr"
 
 	internalutils "github.com/Mirantis/hmc/internal/utils"
