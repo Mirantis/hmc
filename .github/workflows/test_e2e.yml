@@ -144,6 +144,11 @@ jobs:
       AZURE_CLIENT_ID: ${{ secrets.CI_AZURE_CLIENT_ID }}
       AZURE_CLIENT_SECRET: ${{ secrets.CI_AZURE_CLIENT_SECRET }}
     steps:
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        with:
+          detached: true
+        timeout-minutes: 90
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
