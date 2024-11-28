@@ -1,0 +1,22 @@
+apiVersion: hmc.mirantis.com/v1alpha1
+kind: ManagedCluster
+metadata:
+  name: openstack-dev
+  namespace: ${NAMESPACE}
+spec:
+  template: openstack-standalone-cp-0-0-1
+  credential: openstack-cluster-identity-cred
+  config:
+    controlPlaneNumber: 1
+    workersNumber: 1
+    controlPlane:
+      flavor: m1.medium
+      image:
+        filter:
+          name: "ubuntu-2204-kube-v1.31.1"
+    worker:
+      flavor: m1.medium
+      image:
+        filter:
+          name: "ubuntu-2204-kube-v1.31.1"
+    authURL: ${OS_AUTH_URL}
