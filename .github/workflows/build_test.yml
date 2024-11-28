@@ -31,6 +31,7 @@ jobs:
       version: ${{ steps.vars.outputs.version }}
       clustername: ${{ steps.vars.outputs.clustername }}
       pr: ${{ steps.pr.outputs.result }}
+      merge_commit_sha: ${{fromJSON(steps.pr.outputs.result).merge_commit_sha}}
     steps:
       - name: Get PR ref
         uses: actions/github-script@v7
