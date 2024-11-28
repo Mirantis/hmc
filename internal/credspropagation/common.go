@@ -30,8 +30,9 @@ import (
 
 type PropagationCfg struct {
 	Client            client.Client
-	ClusterDeployment *hmc.ClusterDeployment
 	KubeconfSecret    *corev1.Secret
+	IdentityRef       *corev1.ObjectReference
+	ClusterDeployment *hmc.ClusterDeployment
 	SystemNamespace   string
 }
 
@@ -53,11 +54,11 @@ func applyCCMConfigs(ctx context.Context, kubeconfSecret *corev1.Secret, objects
 	return nil
 }
 
-func makeSecret(name, namespace string, data map[string][]byte) *corev1.Secret {
+func makeSecret(name string, data map[string][]byte) *corev1.Secret {
 	s := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: namespace,
+			Namespace: metav1.NamespaceSystem,
 		},
 		Data: data,
 	}
@@ -65,11 +66,11 @@ func makeSecret(name, namespace string, data map[string][]byte) *corev1.Secret {
 	return s
 }
 
-func makeConfigMap(name, namespace string, data map[string]string) *corev1.ConfigMap {
+func makeConfigMap(name string, data map[string]string) *corev1.ConfigMap {
 	c := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: namespace,
+			Namespace: metav1.NamespaceSystem,
 		},
 		Data: data,
 	}
@@ -86,7 +87,11 @@ func makeClientFromSecret(kubeconfSecret *corev1.Secret) (client.Client, error) 
 	if err != nil {
 		return nil, err
 	}
-	return client.New(restConfig, client.Options{
+	cl, err := client.New(restConfig, client.Options{
 		Scheme: scheme,
 	})
+	if err != nil {
+		return nil, err
+	}
+	return cl, nil
 }

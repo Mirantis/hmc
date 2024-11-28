@@ -684,6 +684,8 @@ sigs.k8s.io/cluster-api-operator v0.14.0 h1:0QgO6+XGrNNJnNHKBwvQD5v6w+EaH3Z0RL1n
 sigs.k8s.io/cluster-api-operator v0.14.0/go.mod h1:euShpVN6HyxXas28HkrYxhCPVDW1UV6ljbRBAeCxp8Y=
 sigs.k8s.io/cluster-api-provider-azure v1.17.2 h1:uS9ggE/bryI0hiOWHBa56nYHkWmsPZW3bzYeAddL4vM=
 sigs.k8s.io/cluster-api-provider-azure v1.17.2/go.mod h1:ohdf0TYutOn5vKsXpNVeZUVfUSNIwNhfF6wDjbiqPI0=
+sigs.k8s.io/cluster-api-provider-openstack v0.11.3 h1:ZJ3G+m11bgaD227EuFjuFsFC95MRzJm9JbDIte0xwII=
+sigs.k8s.io/cluster-api-provider-openstack v0.11.3/go.mod h1:0rH6yksLcuwWK/SoSoCOJi4A0kOSL3qrA+qvDVZ9NjU=
 sigs.k8s.io/cluster-api-provider-vsphere v1.12.0 h1:9ze+1JSdLAGiLklsnORvj/vs2XpR9jyVmkT0Dwo1nuc=
 sigs.k8s.io/cluster-api-provider-vsphere v1.12.0/go.mod h1:2y9fsZQ3qjT1kL6IXiOUVcyV0n8DLBQGvyPnId9xRzk=
 sigs.k8s.io/controller-runtime v0.19.3 h1:XO2GvC9OPftRst6xWCpTgBZO04S2cbp0Qqkj8bX1sPw=

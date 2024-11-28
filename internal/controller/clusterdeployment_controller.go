@@ -355,7 +355,7 @@ func (r *ClusterDeploymentReconciler) updateCluster(ctx context.Context, mc *hmc
 	}
 
 	if mc.Spec.PropagateCredentials {
-		if err := r.reconcileCredentialPropagation(ctx, mc); err != nil {
+		if err := r.reconcileCredentialPropagation(ctx, mc, cred); err != nil {
 			l.Error(err, "failed to reconcile credentials propagation")
 			return ctrl.Result{}, err
 		}
@@ -696,7 +696,7 @@ func (r *ClusterDeploymentReconciler) objectsAvailable(ctx context.Context, name
 	return len(itemsList.Items) != 0, nil
 }
 
-func (r *ClusterDeploymentReconciler) reconcileCredentialPropagation(ctx context.Context, clusterDeployment *hmc.ClusterDeployment) error {
+func (r *ClusterDeploymentReconciler) reconcileCredentialPropagation(ctx context.Context, clusterDeployment *hmc.ClusterDeployment, credential *hmc.Credential) error {
 	l := ctrl.LoggerFrom(ctx)
 	l.Info("Reconciling CCM credentials propagation")
 
@@ -715,8 +715,9 @@ func (r *ClusterDeploymentReconciler) reconcileCredentialPropagation(ctx context
 
 	propnCfg := &credspropagation.PropagationCfg{
 		Client:            r.Client,
-		ClusterDeployment: clusterDeployment,
+		IdentityRef:       credential.Spec.IdentityRef,
 		KubeconfSecret:    kubeconfSecret,
+		ClusterDeployment: clusterDeployment,
 		SystemNamespace:   r.SystemNamespace,
 	}
 
