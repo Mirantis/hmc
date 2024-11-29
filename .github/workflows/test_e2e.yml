@@ -86,6 +86,7 @@ jobs:
         run: |
           make hmc-chart-release
           make helm-push
+          make FORCE_PUSH=true test-hmc-version helm-push
 
   controller-e2etest:
     name: E2E Controller

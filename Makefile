@@ -322,7 +322,7 @@ helm-push: helm-package
 		else \
 			chart_exists=$$($(HELM) pull $$repo_flag $(REGISTRY_REPO) $$chart_name --version $$chart_version --destination /tmp 2>&1 | grep "not found" || true); \
 		fi; \
-		if [ -z "$$chart_exists" ]; then \
+		if [ -z "$$chart_exists" ] && [ -z $$FORCE_PUSH ]; then \
 			echo "Chart $$chart_name version $$chart_version already exists in the repository."; \
 		else \
 			if $(REGISTRY_IS_OCI); then \
