@@ -81,7 +81,7 @@ var _ = BeforeSuite(func() {
 
 	ctx, cancel = context.WithCancel(context.TODO())
 
-	validatingWebhooks, mutatingWebhooks, err := loadWebhooks(
+	_, mutatingWebhooks, err := loadWebhooks(
 		filepath.Join("..", "..", "templates", "provider", "hmc", "templates", "webhooks.yaml"),
 	)
 	Expect(err).NotTo(HaveOccurred())
@@ -101,8 +101,7 @@ var _ = BeforeSuite(func() {
 		BinaryAssetsDirectory: filepath.Join("..", "..", "bin", "k8s",
 			fmt.Sprintf("1.29.0-%s-%s", runtime.GOOS, runtime.GOARCH)),
 		WebhookInstallOptions: envtest.WebhookInstallOptions{
-			MutatingWebhooks:   mutatingWebhooks,
-			ValidatingWebhooks: validatingWebhooks,
+			MutatingWebhooks: mutatingWebhooks,
 		},
 	}
 
