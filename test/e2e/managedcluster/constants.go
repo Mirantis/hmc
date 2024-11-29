@@ -25,15 +25,13 @@ const (
 	EnvVarNoCleanup = "NO_CLEANUP"
 
 	// AWS
-	EnvVarAWSAccessKeyID            = "AWS_ACCESS_KEY_ID"
-	EnvVarAWSSecretAccessKey        = "AWS_SECRET_ACCESS_KEY"
-	EnvVarAWSVPCID                  = "AWS_VPC_ID"
-	EnvVarAWSSubnetID               = "AWS_SUBNET_ID"
-	EnvVarAWSSubnetAvailabilityZone = "AWS_SUBNET_AVAILABILITY_ZONE"
-	EnvVarAWSInstanceType           = "AWS_INSTANCE_TYPE"
-	EnvVarAWSSecurityGroupID        = "AWS_SG_ID"
-	EnvVarAWSClusterIdentity        = "AWS_CLUSTER_IDENTITY"
-	EnvVarSubnets                   = "AWS_SUBNETS"
+	EnvVarAWSAccessKeyID     = "AWS_ACCESS_KEY_ID"
+	EnvVarAWSSecretAccessKey = "AWS_SECRET_ACCESS_KEY"
+	EnvVarAWSVPCID           = "AWS_VPC_ID"
+	EnvVarAWSInstanceType    = "AWS_INSTANCE_TYPE"
+	EnvVarAWSSecurityGroupID = "AWS_SG_ID"
+	EnvVarAWSClusterIdentity = "AWS_CLUSTER_IDENTITY"
+	EnvVarAWSSubnets         = "AWS_SUBNETS"
 
 	// VSphere
 	EnvVarVSphereUser            = "VSPHERE_USER"

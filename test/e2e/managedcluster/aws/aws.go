@@ -67,7 +67,7 @@ func PopulateHostedTemplateVars(ctx context.Context, kc *kubeclient.KubeClient, 
 
 	subnetYaml, err := yaml.Marshal(subnetMaps)
 	Expect(err).NotTo(HaveOccurred(), "failed to get marshall subnet maps")
-	GinkgoT().Setenv(managedcluster.EnvVarSubnets, string(subnetYaml))
+	GinkgoT().Setenv(managedcluster.EnvVarAWSSubnets, string(subnetYaml))
 
 	securityGroupID, found, err := unstructured.NestedString(
 		awsCluster.Object, "status", "networkStatus", "securityGroups", "node", "id")
