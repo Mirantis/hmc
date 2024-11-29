@@ -33,7 +33,7 @@ const (
 	EnvVarAWSInstanceType           = "AWS_INSTANCE_TYPE"
 	EnvVarAWSSecurityGroupID        = "AWS_SG_ID"
 	EnvVarAWSClusterIdentity        = "AWS_CLUSTER_IDENTITY"
-	EnvVarPublicIP                  = "AWS_PUBLIC_IP"
+	EnvVarSubnets                   = "AWS_SUBNETS"
 
 	// VSphere
 	EnvVarVSphereUser            = "VSPHERE_USER"

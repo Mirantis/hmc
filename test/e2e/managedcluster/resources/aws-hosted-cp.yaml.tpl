@@ -12,9 +12,7 @@ spec:
     vpcID: ${AWS_VPC_ID}
     region: ${AWS_REGION}
     subnets:
-      - id: ${AWS_SUBNET_ID}
-        availabilityZone: ${AWS_SUBNET_AVAILABILITY_ZONE}
-        isPublic: true
+      ${AWS_SUBNETS}
     instanceType: ${AWS_INSTANCE_TYPE:=t3.medium}
     securityGroupIDs:
       - ${AWS_SG_ID}
