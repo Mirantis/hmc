@@ -17,6 +17,7 @@
 package aws
 
 import (
+	"bytes"
 	"context"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -65,9 +66,13 @@ func PopulateHostedTemplateVars(ctx context.Context, kc *kubeclient.KubeClient, 
 		}
 	}
 
-	subnetYaml, err := yaml.Marshal(subnetMaps)
+	buf := bytes.Buffer{}
+	enc := yaml.NewEncoder(&buf)
+	enc.SetIndent(5)
+	err = enc.Encode(&subnetMaps)
 	Expect(err).NotTo(HaveOccurred(), "failed to get marshall subnet maps")
-	GinkgoT().Setenv(managedcluster.EnvVarAWSSubnets, string(subnetYaml))
+	subnetYaml := buf.String()
+	GinkgoT().Setenv(managedcluster.EnvVarAWSSubnets, subnetYaml)
 
 	securityGroupID, found, err := unstructured.NestedString(
 		awsCluster.Object, "status", "networkStatus", "securityGroups", "node", "id")

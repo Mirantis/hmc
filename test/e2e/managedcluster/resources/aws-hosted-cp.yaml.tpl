@@ -12,7 +12,7 @@ spec:
     vpcID: ${AWS_VPC_ID}
     region: ${AWS_REGION}
     subnets:
-      ${AWS_SUBNETS}
+${AWS_SUBNETS}
     instanceType: ${AWS_INSTANCE_TYPE:=t3.medium}
     securityGroupIDs:
       - ${AWS_SG_ID}
