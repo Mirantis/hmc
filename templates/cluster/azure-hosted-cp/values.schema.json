@@ -100,8 +100,8 @@
       "required": [
         "vnetName",
         "nodeSubnetName",
-        "routeTableName",
-        "securityGroupName",
+        "nodeRouteTableName",
+        "nodeSecurityGroupName",
         "cpSubnetName",
         "cpRouteTableName",
         "cpSecurityGroupName"
