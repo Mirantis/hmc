@@ -364,5 +364,9 @@ func setupWebhooks(mgr ctrl.Manager, currentNamespace string) error {
 		setupLog.Error(err, "unable to create webhook", "webhook", "ProviderTemplate")
 		return err
 	}
+	if err := (&hmcwebhook.ReleaseValidator{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "Release")
+		return err
+	}
 	return nil
 }
