@@ -34,6 +34,7 @@ const (
 type ManagementSpec struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
+
 	// Release references the Release object.
 	Release string `json:"release"`
 	// Core holds the core Management components that are mandatory.
@@ -42,6 +43,8 @@ type ManagementSpec struct {
 
 	// Providers is the list of supported CAPI providers.
 	Providers []Provider `json:"providers,omitempty"`
+
+	Backup ManagementBackup `json:"backup,omitempty"`
 }
 
 // Core represents a structure describing core Management components.
@@ -50,6 +53,18 @@ type Core struct {
 	HMC Component `json:"hmc,omitempty"`
 	// CAPI represents the core Cluster API component and references the Cluster API template.
 	CAPI Component `json:"capi,omitempty"`
+}
+
+// ManagementBackup enables a feature to backup HMC objects into a cloud.
+type ManagementBackup struct {
+	// +kubebuilder:default=false
+
+	// Flag to indicate whether the backup feature is enabled.
+	// If set to true, [Velero] platform will be installed.
+	// If set to false, creation or modification of Backups/Restores will be blocked.
+	//
+	// [Velero]: https://velero.io
+	Enabled bool `json:"enabled"`
 }
 
 // Component represents HMC management component
@@ -116,6 +131,8 @@ type ManagementStatus struct {
 	CAPIContracts map[string]CompatibilityContracts `json:"capiContracts,omitempty"`
 	// Components indicates the status of installed HMC components and CAPI providers.
 	Components map[string]ComponentStatus `json:"components,omitempty"`
+	// BackupName is a name of the management cluster scheduled backup.
+	BackupName string `json:"backupName,omitempty"`
 	// Release indicates the current Release object.
 	Release string `json:"release,omitempty"`
 	// AvailableProviders holds all available CAPI providers.

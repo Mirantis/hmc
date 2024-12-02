@@ -42,6 +42,22 @@ spec:
           spec:
             description: ManagementSpec defines the desired state of Management
             properties:
+              backup:
+                description: ManagementBackup enables a feature to backup HMC objects
+                  into a cloud.
+                properties:
+                  enabled:
+                    default: false
+                    description: |-
+                      Flag to indicate whether the backup feature is enabled.
+                      If set to true, [Velero] platform will be installed.
+                      If set to false, creation or modification of Backups/Restores will be blocked.
+
+                      [Velero]: https://velero.io
+                    type: boolean
+                required:
+                - enabled
+                type: object
               core:
                 description: |-
                   Core holds the core Management components that are mandatory.
@@ -118,6 +134,10 @@ spec:
                 items:
                   type: string
                 type: array
+              backupName:
+                description: BackupName is a name of the management cluster scheduled
+                  backup.
+                type: string
               capiContracts:
                 additionalProperties:
                   additionalProperties:
