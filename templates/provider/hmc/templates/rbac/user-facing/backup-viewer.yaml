@@ -1,0 +1,14 @@
+# permissions for end users to view backups.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    hmc.mirantis.com/aggregate-to-global-viewer: "true"
+  name: {{ include "hmc.fullname" . }}-backup-viewer-role
+rules:
+- apiGroups:
+  - hmc.mirantis.com
+  resources:
+  - backups
+  - backups/status
+  verbs: {{ include "rbac.viewerVerbs" . | nindent 6 }}
