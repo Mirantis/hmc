@@ -72,6 +72,12 @@ func WithCAPITemplateName(v string) Opt {
 	}
 }
 
+func WithProviders(v ...v1alpha1.NamedProviderTemplate) Opt {
+	return func(r *v1alpha1.Release) {
+		r.Spec.Providers = v
+	}
+}
+
 func WithReadyStatus(ready bool) Opt {
 	return func(r *v1alpha1.Release) {
 		r.Status.Ready = ready
