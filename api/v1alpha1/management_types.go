@@ -85,6 +85,25 @@ func GetDefaultProviders() []Provider {
 	}
 }
 
+// Templates returns a list of provider templates explicitly defined in the Management object
+func (in *Management) Templates() []string {
+	templates := []string{}
+	if in.Spec.Core != nil {
+		if in.Spec.Core.CAPI.Template != "" {
+			templates = append(templates, in.Spec.Core.CAPI.Template)
+		}
+		if in.Spec.Core.HMC.Template != "" {
+			templates = append(templates, in.Spec.Core.HMC.Template)
+		}
+	}
+	for _, p := range in.Spec.Providers {
+		if p.Template != "" {
+			templates = append(templates, p.Template)
+		}
+	}
+	return templates
+}
+
 // ManagementStatus defines the observed state of Management
 type ManagementStatus struct {
 	// For each CAPI provider name holds its compatibility [contract versions]

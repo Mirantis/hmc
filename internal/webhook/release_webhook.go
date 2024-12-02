@@ -16,7 +16,11 @@ package webhook
 
 import (
 	"context"
+	"fmt"
+	"slices"
+	"strings"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -52,6 +56,36 @@ func (*ReleaseValidator) ValidateUpdate(_ context.Context, _, _ runtime.Object) 
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (*ReleaseValidator) ValidateDelete(_ context.Context, _ runtime.Object) (admission.Warnings, error) {
+func (v *ReleaseValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+	release, ok := obj.(*hmcv1alpha1.Release)
+	if !ok {
+		return admission.Warnings{"Wrong object"}, apierrors.NewBadRequest(fmt.Sprintf("expected Release but got a %T", obj))
+	}
+	mgmtList := &hmcv1alpha1.ManagementList{}
+	if err := v.List(ctx, mgmtList); err != nil {
+		return nil, err
+	}
+	if len(mgmtList.Items) == 0 {
+		return nil, nil
+	}
+	if len(mgmtList.Items) > 1 {
+		return nil, fmt.Errorf("expected 1 Management object, got %d", len(mgmtList.Items))
+	}
+
+	mgmt := mgmtList.Items[0]
+	if mgmt.Spec.Release == release.Name {
+		return nil, fmt.Errorf("release %s is still in use", release.Name)
+	}
+
+	templates := release.Templates()
+	templatesInUse := []string{}
+	for _, t := range mgmt.Templates() {
+		if slices.Contains(templates, t) {
+			templatesInUse = append(templatesInUse, t)
+		}
+	}
+	if len(templatesInUse) > 0 {
+		return nil, fmt.Errorf("the following ProviderTemplates associated with the Release are still in use: %s", strings.Join(templatesInUse, ", "))
+	}
 	return nil, nil
 }

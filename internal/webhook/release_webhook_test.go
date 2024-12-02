@@ -15,15 +15,97 @@
 package webhook
 
 import (
-	. "github.com/onsi/ginkgo/v2"
+	"context"
+	"fmt"
+	"testing"
+
+	. "github.com/onsi/gomega"
+	admissionv1 "k8s.io/api/admission/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	"github.com/Mirantis/hmc/api/v1alpha1"
+	"github.com/Mirantis/hmc/test/objects/management"
+	"github.com/Mirantis/hmc/test/objects/release"
+	"github.com/Mirantis/hmc/test/scheme"
 )
 
-var _ = Describe("Release Webhook", func() {
-	Context("When creating Release under Validating Webhook", func() {
-		It("Should deny if a required field is empty", func() {
-		})
+func TestReleaseValidateDelete(t *testing.T) {
+	g := NewWithT(t)
 
-		It("Should admit if all required fields are provided", func() {
+	ctx := admission.NewContextWithRequest(context.Background(), admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{Operation: admissionv1.Delete}})
+
+	tests := []struct {
+		name            string
+		release         *v1alpha1.Release
+		existingObjects []runtime.Object
+		err             string
+	}{
+		{
+			name:            "should fail if > 1 Management",
+			release:         release.New(),
+			existingObjects: []runtime.Object{management.NewManagement(), management.NewManagement(management.WithName("second"))},
+			err:             "expected 1 Management object, got 2",
+		},
+		{
+			name:            "should fail if Release is in use",
+			release:         release.New(),
+			existingObjects: []runtime.Object{management.NewManagement(management.WithRelease(release.DefaultName))},
+			err:             fmt.Sprintf("release %s is still in use", release.DefaultName),
+		},
+		{
+			name: "should fail if some providers are in use",
+			release: release.New(release.WithProviders(
+				v1alpha1.NamedProviderTemplate{CoreProviderTemplate: v1alpha1.CoreProviderTemplate{Template: "template-in-use-1"}},
+				v1alpha1.NamedProviderTemplate{CoreProviderTemplate: v1alpha1.CoreProviderTemplate{Template: "template-in-use-2"}},
+				v1alpha1.NamedProviderTemplate{CoreProviderTemplate: v1alpha1.CoreProviderTemplate{Template: "template-not-in-use"}}),
+				release.WithCAPITemplateName("template-capi-in-use"),
+				release.WithHMCTemplateName("template-hmc-in-use"),
+			),
+			existingObjects: []runtime.Object{management.NewManagement(
+				management.WithRelease("some-release"),
+				management.WithProviders(
+					v1alpha1.Provider{Component: v1alpha1.Component{Template: "template-in-use-1"}},
+					v1alpha1.Provider{Component: v1alpha1.Component{Template: "template-in-use-2"}},
+				),
+				management.WithCoreComponents(&v1alpha1.Core{
+					HMC:  v1alpha1.Component{Template: "template-hmc-in-use"},
+					CAPI: v1alpha1.Component{Template: "template-capi-in-use"},
+				}),
+			)},
+			err: "the following ProviderTemplates associated with the Release are still in use: template-capi-in-use, template-hmc-in-use, template-in-use-1, template-in-use-2",
+		},
+		{
+			name: "should succeed",
+			release: release.New(release.WithProviders(
+				v1alpha1.NamedProviderTemplate{CoreProviderTemplate: v1alpha1.CoreProviderTemplate{Template: "template-not-in-use"}},
+			)),
+			existingObjects: []runtime.Object{management.NewManagement(
+				management.WithRelease("some-release"),
+				management.WithProviders(
+					v1alpha1.Provider{Component: v1alpha1.Component{Template: "template-in-use"}},
+				),
+			)},
+		},
+		{
+			name:    "should succeed if Management doesn't exist",
+			release: release.New(),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(_ *testing.T) {
+			c := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(tt.existingObjects...).Build()
+			validator := &ReleaseValidator{Client: c}
+
+			_, err := validator.ValidateDelete(ctx, tt.release)
+			if tt.err != "" {
+				g.Expect(err).To(HaveOccurred())
+				g.Expect(err).To(MatchError(tt.err))
+			} else {
+				g.Expect(err).To(Succeed())
+			}
 		})
-	})
-})
+	}
+}
