@@ -266,8 +266,8 @@ func validateCCM(ctx context.Context, kc *kubeclient.KubeClient, clusterName str
 	}
 
 	for _, i := range service.Status.LoadBalancer.Ingress {
-		fmt.Printf("HOSTNAME=%s, IP=%s", i.Hostname, i.IP)
-		fmt.Printf("service status=%v", service.Status)
+		_, _ = fmt.Fprintf(GinkgoWriter, "HOSTNAME=%s, IP=%s", i.Hostname, i.IP)
+		_, _ = fmt.Fprintf(GinkgoWriter, "service status=%v", service.Status)
 		if i.Hostname != "" || i.IP != "" {
 			return nil
 		}

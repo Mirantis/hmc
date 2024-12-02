@@ -77,7 +77,6 @@ func SetAzureEnvironmentVariables(clusterName string, kc *kubeclient.KubeClient)
 	resourceGroup := spec["resourceGroup"]
 	GinkgoT().Setenv("AZURE_RESOURCE_GROUP", fmt.Sprintf("%s", resourceGroup))
 
-	var subnetMap map[string]any
 	for _, subnet := range subnets {
 		sMap, ok := subnet.(map[string]any)
 		Expect(ok).To(BeTrue())
@@ -89,7 +88,7 @@ func SetAzureEnvironmentVariables(clusterName string, kc *kubeclient.KubeClient)
 
 		subnetName := sMap["name"]
 
-		securityGroup, found, err := unstructured.NestedMap(subnetMap, "securityGroup")
+		securityGroup, found, err := unstructured.NestedMap(sMap, "securityGroup")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(found).To(BeTrue())
 		securityGroupName := securityGroup["name"]
