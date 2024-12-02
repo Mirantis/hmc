@@ -1,6 +1,6 @@
 module github.com/Mirantis/hmc
 
-go 1.22.7
+go 1.22.10
 
 require (
 	github.com/Masterminds/semver/v3 v3.3.1
@@ -19,6 +19,7 @@ require (
 	github.com/projectsveltos/libsveltos v0.44.0
 	github.com/segmentio/analytics-go v3.1.0+incompatible
 	github.com/stretchr/testify v1.10.0
+	github.com/vmware-tanzu/velero v1.15.0
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.16.3
 	k8s.io/api v0.31.3
