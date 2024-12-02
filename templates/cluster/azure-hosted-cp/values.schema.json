@@ -101,7 +101,10 @@
         "vnetName",
         "nodeSubnetName",
         "routeTableName",
-        "securityGroupName"
+        "securityGroupName",
+        "cpSubnetName",
+        "cpRouteTableName",
+        "cpSecurityGroupName"
       ],
       "properties": {
         "vnetName": {

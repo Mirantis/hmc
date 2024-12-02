@@ -87,26 +87,27 @@ func SetAzureEnvironmentVariables(clusterName string, kc *kubeclient.KubeClient)
 		Expect(exists).To(BeTrue())
 		routeTableName := routeTable["name"]
 
-		if routeTableName != nil && len(fmt.Sprintf("%s", routeTableName)) > 0 {
-			subnetMap = sMap
-			break
+		subnetName := sMap["name"]
+
+		securityGroup, found, err := unstructured.NestedMap(subnetMap, "securityGroup")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(found).To(BeTrue())
+		securityGroupName := securityGroup["name"]
+
+		role, exists, err := unstructured.NestedString(sMap, "role")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(exists).To(BeTrue())
+
+		if role == "control-plane" {
+			GinkgoT().Setenv("AZURE_CP_SUBNET", fmt.Sprintf("%s", subnetName))
+			GinkgoT().Setenv("AZURE_CP_SECURITY_GROUP", fmt.Sprintf("%s", securityGroupName))
+			GinkgoT().Setenv("AZURE_CP_ROUTE_TABLE", fmt.Sprintf("%s", routeTableName))
+		} else {
+			GinkgoT().Setenv("AZURE_NODE_SUBNET", fmt.Sprintf("%s", subnetName))
+			GinkgoT().Setenv("AZURE_NODE_SECURITY_GROUP", fmt.Sprintf("%s", securityGroupName))
+			GinkgoT().Setenv("AZURE_NODE_ROUTE_TABLE", fmt.Sprintf("%s", routeTableName))
 		}
 	}
-
-	subnetName := subnetMap["name"]
-	GinkgoT().Setenv("AZURE_NODE_SUBNET", fmt.Sprintf("%s", subnetName))
-
-	securityGroup, found, err := unstructured.NestedMap(subnetMap, "securityGroup")
-	Expect(err).NotTo(HaveOccurred())
-	Expect(found).To(BeTrue())
-	securityGroupName := securityGroup["name"]
-	GinkgoT().Setenv("AZURE_SECURITY_GROUP", fmt.Sprintf("%s", securityGroupName))
-
-	routeTable, found, err := unstructured.NestedMap(subnetMap, "routeTable")
-	Expect(err).NotTo(HaveOccurred())
-	Expect(found).To(BeTrue())
-	routeTableName := routeTable["name"]
-	GinkgoT().Setenv("AZURE_ROUTE_TABLE", fmt.Sprintf("%s", routeTableName))
 }
 
 // CreateDefaultStorageClass configures the default storage class for Azure

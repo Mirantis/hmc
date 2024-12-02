@@ -24,8 +24,11 @@ resourceGroup: ""
 network:
   vnetName: ""
   nodeSubnetName: ""
-  routeTableName: ""
-  securityGroupName: ""
+  nodeRouteTableName: ""
+  nodeSecurityGroupName: ""
+  cpSubnetName: ""
+  cpRouteTableName: ""
+  cpSecurityGroupName: ""
 # Azure machines parameters
 
 sshPublicKey: ""
