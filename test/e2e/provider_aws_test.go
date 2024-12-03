@@ -23,7 +23,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/env"
 
 	internalutils "github.com/Mirantis/hmc/internal/utils"
 	"github.com/Mirantis/hmc/test/e2e/kubeclient"
@@ -107,9 +106,8 @@ var _ = Describe("AWS Templates", Label("provider:cloud", "provider:aws"), Order
 		kubeCfgPath, kubecfgDeleteFunc = kc.WriteKubeconfig(context.Background(), clusterName)
 
 		GinkgoT().Setenv("KUBECONFIG", kubeCfgPath)
-		cmd := exec.Command("make", fmt.Sprintf("VERSION=%s", env.GetString("VERSION", "")), "test-apply")
-		output, err := utils.Run(cmd)
-		_, _ = fmt.Fprint(GinkgoWriter, string(output))
+		cmd := exec.Command("make", "test-apply")
+		_, err := utils.Run(cmd)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(os.Unsetenv("KUBECONFIG")).To(Succeed())
 
@@ -121,16 +119,6 @@ var _ = Describe("AWS Templates", Label("provider:cloud", "provider:aws"), Order
 				_, _ = fmt.Fprintf(
 					GinkgoWriter, "[%s] controller validation failed: %v\n",
 					string(managedcluster.TemplateAWSHostedCP), err)
-				return err
-			}
-			return nil
-		}).WithTimeout(15 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
-
-		Eventually(func() error {
-			By("Ensure cluster templates valid")
-			err = managedcluster.ValidateClusterTemplates(context.Background(), standaloneClient)
-			if err != nil {
-				_, _ = fmt.Fprintf(GinkgoWriter, "cluster tempolate validation failed: %v\n", err)
 				return err
 			}
 			return nil

@@ -15,20 +15,19 @@ spec:
     vnet:
       resourceGroup: {{ .Values.resourceGroup }}
       name: {{ .Values.network.vnetName }}
-    subnets:
-      - name: {{ .Values.network.nodeSubnetName }}
-        # TODO this is just a test, if this works we need to consider changing this to be able to specify multiple subnets
-        role: node
-        routeTable:
-          name: {{ .Values.network.nodeRouteTableName }}
-        securityGroup:
-          name: {{ .Values.network.nodeSecurityGroupName }}
-      - name: {{ .Values.network.cpSubnetName }}
-        role: control-plane
-        routeTable:
-          name: {{ .Values.network.cpRouteTableName }}
-        securityGroup:
-          name: {{ .Values.network.cpSecurityGroupName }}
+#    subnets:
+#      - name: {{ .Values.network.nodeSubnetName }}
+#        role: node
+#        routeTable:
+#          name: {{ .Values.network.nodeRouteTableName }}
+#        securityGroup:
+#          name: {{ .Values.network.nodeSecurityGroupName }}
+#      - name: {{ .Values.network.cpSubnetName }}
+#        role: control-plane
+#        routeTable:
+#          name: {{ .Values.network.cpRouteTableName }}
+#        securityGroup:
+#          name: {{ .Values.network.cpSecurityGroupName }}
   location: {{ .Values.location }}
   {{- if .Values.bastion.enabled }}
   {{- with .Values.bastion.bastionSpec }}
