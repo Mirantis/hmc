@@ -1,10 +1,10 @@
 apiVersion: hmc.mirantis.com/v1alpha1
 kind: ProviderTemplate
 metadata:
-  name: k0smotron-0-0-3
+  name: k0smotron-0-0-4
   annotations:
     helm.sh/resource-policy: keep
 spec:
   helm:
     chartName: k0smotron
-    chartVersion: 0.0.3
+    chartVersion: 0.0.4

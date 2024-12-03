@@ -133,6 +133,7 @@ add-license: addlicense
 
 TEMPLATES_DIR := templates
 PROVIDER_TEMPLATES_DIR := $(TEMPLATES_DIR)/provider
+export PROVIDER_TEMPLATES_DIR
 CHARTS_PACKAGE_DIR ?= $(LOCALBIN)/charts
 EXTENSION_CHARTS_PACKAGE_DIR ?= $(LOCALBIN)/charts/extensions
 $(EXTENSION_CHARTS_PACKAGE_DIR): | $(LOCALBIN)
@@ -147,8 +148,12 @@ $(IMAGES_PACKAGE_DIR): | $(LOCALBIN)
 
 TEMPLATE_FOLDERS = $(patsubst $(TEMPLATES_DIR)/%,%,$(wildcard $(TEMPLATES_DIR)/*))
 
+.PHONY: collect-airgap-providers
+collect-airgap-providers: yq helm clusterctl $(PROVIDER_TEMPLATES_DIR) $(LOCALBIN)
+	$(SHELL) hack/collect-airgap-providers.sh
+
 .PHONY: helm-package
-helm-package: $(CHARTS_PACKAGE_DIR) $(EXTENSION_CHARTS_PACKAGE_DIR) helm
+helm-package: $(CHARTS_PACKAGE_DIR) $(EXTENSION_CHARTS_PACKAGE_DIR) helm collect-airgap-providers
 	@make $(patsubst %,package-%-tmpl,$(TEMPLATE_FOLDERS))
 
 bundle-images: dev-apply $(IMAGES_PACKAGE_DIR) ## Create a tarball with all images used by HMC.
@@ -388,6 +393,7 @@ cli-install: clusterawsadm clusterctl cloud-nuke envsubst yq awscli ## Install t
 
 ## Location to install dependencies to
 LOCALBIN ?= $(shell pwd)/bin
+export LOCALBIN
 $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 
@@ -419,10 +425,13 @@ CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen-$(CONTROLLER_TOOLS_VERSION)
 ENVTEST ?= $(LOCALBIN)/setup-envtest-$(ENVTEST_VERSION)
 GOLANGCI_LINT = $(LOCALBIN)/golangci-lint-$(GOLANGCI_LINT_VERSION)
 HELM ?= $(LOCALBIN)/helm-$(HELM_VERSION)
+export HELM
 KIND ?= $(LOCALBIN)/kind-$(KIND_VERSION)
 YQ ?= $(LOCALBIN)/yq-$(YQ_VERSION)
+export YQ
 CLUSTERAWSADM ?= $(LOCALBIN)/clusterawsadm
 CLUSTERCTL ?= $(LOCALBIN)/clusterctl
+export CLUSTERCTL
 CLOUDNUKE ?= $(LOCALBIN)/cloud-nuke
 AZURENUKE ?= $(LOCALBIN)/azure-nuke
 ADDLICENSE ?= $(LOCALBIN)/addlicense-$(ADDLICENSE_VERSION)
@@ -440,7 +449,7 @@ YQ_VERSION ?= v4.44.2
 CLOUDNUKE_VERSION = v0.37.1
 AZURENUKE_VERSION = v1.1.0
 CLUSTERAWSADM_VERSION ?= v2.5.2
-CLUSTERCTL_VERSION ?= v1.7.3
+CLUSTERCTL_VERSION ?= v1.8.5
 ADDLICENSE_VERSION ?= v1.1.1
 ENVSUBST_VERSION ?= v1.4.2
 AWSCLI_VERSION ?= 2.17.42
@@ -525,7 +534,8 @@ $(CLUSTERAWSADM): | $(LOCALBIN)
 .PHONY: clusterctl
 clusterctl: $(CLUSTERCTL) ## Download clusterctl locally if necessary.
 $(CLUSTERCTL): | $(LOCALBIN)
-	$(call go-install-tool,$(CLUSTERCTL),sigs.k8s.io/cluster-api/cmd/clusterctl,${CLUSTERCTL_VERSION})
+	curl -fsL https://github.com/kubernetes-sigs/cluster-api/releases/download/$(CLUSTERCTL_VERSION)/clusterctl-$(HOSTOS)-$(HOSTARCH) -o $(CLUSTERCTL)
+	chmod +x $(CLUSTERCTL)
 
 .PHONY: addlicense
 addlicense: $(ADDLICENSE) ## Download addlicense locally if necessary.
