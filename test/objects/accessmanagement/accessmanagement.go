@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package templatemanagement
+package accessmanagement
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -21,32 +21,32 @@ import (
 )
 
 const (
-	DefaultName = "hmc-tm"
+	DefaultName = "hmc-am"
 )
 
-type Opt func(tm *v1alpha1.TemplateManagement)
+type Opt func(am *v1alpha1.AccessManagement)
 
-func NewTemplateManagement(opts ...Opt) *v1alpha1.TemplateManagement {
-	tm := &v1alpha1.TemplateManagement{
+func NewAccessManagement(opts ...Opt) *v1alpha1.AccessManagement {
+	am := &v1alpha1.AccessManagement{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: DefaultName,
 		},
 	}
 
 	for _, opt := range opts {
-		opt(tm)
+		opt(am)
 	}
-	return tm
+	return am
 }
 
 func WithName(name string) Opt {
-	return func(tm *v1alpha1.TemplateManagement) {
-		tm.Name = name
+	return func(am *v1alpha1.AccessManagement) {
+		am.Name = name
 	}
 }
 
 func WithAccessRules(accessRules []v1alpha1.AccessRule) Opt {
-	return func(tm *v1alpha1.TemplateManagement) {
-		tm.Spec.AccessRules = accessRules
+	return func(am *v1alpha1.AccessManagement) {
+		am.Spec.AccessRules = accessRules
 	}
 }

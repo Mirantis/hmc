@@ -29,50 +29,50 @@ import (
 	"github.com/Mirantis/hmc/api/v1alpha1"
 )
 
-var errTemplateManagementDeletionForbidden = errors.New("TemplateManagement deletion is forbidden")
+var errAccessManagementDeletionForbidden = errors.New("AccessManagement deletion is forbidden")
 
-type TemplateManagementValidator struct {
+type AccessManagementValidator struct {
 	client.Client
 	SystemNamespace string
 }
 
-func (v *TemplateManagementValidator) SetupWebhookWithManager(mgr ctrl.Manager) error {
+func (v *AccessManagementValidator) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	v.Client = mgr.GetClient()
 	return ctrl.NewWebhookManagedBy(mgr).
-		For(&v1alpha1.TemplateManagement{}).
+		For(&v1alpha1.AccessManagement{}).
 		WithValidator(v).
 		WithDefaulter(v).
 		Complete()
 }
 
 var (
-	_ webhook.CustomValidator = &TemplateManagementValidator{}
-	_ webhook.CustomDefaulter = &TemplateManagementValidator{}
+	_ webhook.CustomValidator = &AccessManagementValidator{}
+	_ webhook.CustomDefaulter = &AccessManagementValidator{}
 )
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type.
-func (v *TemplateManagementValidator) ValidateCreate(ctx context.Context, _ runtime.Object) (admission.Warnings, error) {
+func (v *AccessManagementValidator) ValidateCreate(ctx context.Context, _ runtime.Object) (admission.Warnings, error) {
 	itemsList := &metav1.PartialObjectMetadataList{}
-	itemsList.SetGroupVersionKind(v1alpha1.GroupVersion.WithKind(v1alpha1.TemplateManagementKind))
+	itemsList.SetGroupVersionKind(v1alpha1.GroupVersion.WithKind(v1alpha1.AccessManagementKind))
 
 	if err := v.List(ctx, itemsList, client.Limit(1)); err != nil {
 		return nil, err
 	}
 
 	if len(itemsList.Items) > 0 {
-		return nil, errors.New("TemplateManagement object already exists")
+		return nil, errors.New("AccessManagement object already exists")
 	}
 
 	return nil, nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type.
-func (*TemplateManagementValidator) ValidateUpdate(_ context.Context, _, _ runtime.Object) (admission.Warnings, error) {
+func (*AccessManagementValidator) ValidateUpdate(_ context.Context, _, _ runtime.Object) (admission.Warnings, error) {
 	return nil, nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
-func (v *TemplateManagementValidator) ValidateDelete(ctx context.Context, _ runtime.Object) (admission.Warnings, error) {
+func (v *AccessManagementValidator) ValidateDelete(ctx context.Context, _ runtime.Object) (admission.Warnings, error) {
 	partialList := &metav1.PartialObjectMetadataList{}
 	partialList.SetGroupVersionKind(v1alpha1.GroupVersion.WithKind(v1alpha1.ManagementKind))
 
@@ -83,7 +83,7 @@ func (v *TemplateManagementValidator) ValidateDelete(ctx context.Context, _ runt
 	if len(partialList.Items) > 0 {
 		mgmt := partialList.Items[0]
 		if mgmt.DeletionTimestamp == nil {
-			return nil, errTemplateManagementDeletionForbidden
+			return nil, errAccessManagementDeletionForbidden
 		}
 	}
 
@@ -91,6 +91,6 @@ func (v *TemplateManagementValidator) ValidateDelete(ctx context.Context, _ runt
 }
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type.
-func (*TemplateManagementValidator) Default(context.Context, runtime.Object) error {
+func (*AccessManagementValidator) Default(context.Context, runtime.Object) error {
 	return nil
 }

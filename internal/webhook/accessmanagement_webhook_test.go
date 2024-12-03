@@ -26,32 +26,32 @@ import (
 
 	"github.com/Mirantis/hmc/api/v1alpha1"
 	"github.com/Mirantis/hmc/internal/utils"
+	am "github.com/Mirantis/hmc/test/objects/accessmanagement"
 	"github.com/Mirantis/hmc/test/objects/management"
-	tm "github.com/Mirantis/hmc/test/objects/templatemanagement"
 	"github.com/Mirantis/hmc/test/scheme"
 )
 
-func TestTemplateManagementValidateCreate(t *testing.T) {
+func TestAccessManagementValidateCreate(t *testing.T) {
 	g := NewWithT(t)
 
 	ctx := context.Background()
 
 	tests := []struct {
 		name            string
-		tm              *v1alpha1.TemplateManagement
+		am              *v1alpha1.AccessManagement
 		existingObjects []runtime.Object
 		err             string
 		warnings        admission.Warnings
 	}{
 		{
-			name:            "should fail if the TemplateManagement object already exists",
-			tm:              tm.NewTemplateManagement(tm.WithName("new")),
-			existingObjects: []runtime.Object{tm.NewTemplateManagement(tm.WithName(v1alpha1.TemplateManagementName))},
-			err:             "TemplateManagement object already exists",
+			name:            "should fail if the AccessManagement object already exists",
+			am:              am.NewAccessManagement(am.WithName("new")),
+			existingObjects: []runtime.Object{am.NewAccessManagement(am.WithName(v1alpha1.AccessManagementName))},
+			err:             "AccessManagement object already exists",
 		},
 		{
 			name: "should succeed",
-			tm:   tm.NewTemplateManagement(tm.WithName("new")),
+			am:   am.NewAccessManagement(am.WithName("new")),
 		},
 	}
 
@@ -62,8 +62,8 @@ func TestTemplateManagementValidateCreate(t *testing.T) {
 				WithRuntimeObjects(tt.existingObjects...).
 				WithIndex(&v1alpha1.ManagedCluster{}, v1alpha1.ManagedClusterTemplateIndexKey, v1alpha1.ExtractTemplateNameFromManagedCluster).
 				Build()
-			validator := &TemplateManagementValidator{Client: c, SystemNamespace: utils.DefaultSystemNamespace}
-			warn, err := validator.ValidateCreate(ctx, tt.tm)
+			validator := &AccessManagementValidator{Client: c, SystemNamespace: utils.DefaultSystemNamespace}
+			warn, err := validator.ValidateCreate(ctx, tt.am)
 			if tt.err != "" {
 				g.Expect(err).To(HaveOccurred())
 				if err.Error() != tt.err {
@@ -81,33 +81,33 @@ func TestTemplateManagementValidateCreate(t *testing.T) {
 	}
 }
 
-func TestTemplateManagementValidateDelete(t *testing.T) {
+func TestAccessManagementValidateDelete(t *testing.T) {
 	g := NewWithT(t)
 
 	ctx := context.Background()
 
-	tmName := "test"
+	amName := "test"
 
 	tests := []struct {
 		name            string
-		tm              *v1alpha1.TemplateManagement
+		am              *v1alpha1.AccessManagement
 		existingObjects []runtime.Object
 		err             string
 		warnings        admission.Warnings
 	}{
 		{
 			name:            "should fail if Management object exists and was not deleted",
-			tm:              tm.NewTemplateManagement(tm.WithName(tmName)),
+			am:              am.NewAccessManagement(am.WithName(amName)),
 			existingObjects: []runtime.Object{management.NewManagement()},
-			err:             "TemplateManagement deletion is forbidden",
+			err:             "AccessManagement deletion is forbidden",
 		},
 		{
 			name: "should succeed if Management object is not found",
-			tm:   tm.NewTemplateManagement(tm.WithName(tmName)),
+			am:   am.NewAccessManagement(am.WithName(amName)),
 		},
 		{
 			name:            "should succeed if Management object was deleted",
-			tm:              tm.NewTemplateManagement(tm.WithName(tmName)),
+			am:              am.NewAccessManagement(am.WithName(amName)),
 			existingObjects: []runtime.Object{management.NewManagement(management.WithDeletionTimestamp(metav1.Now()))},
 		},
 	}
@@ -119,8 +119,8 @@ func TestTemplateManagementValidateDelete(t *testing.T) {
 				WithRuntimeObjects(tt.existingObjects...).
 				WithIndex(&v1alpha1.ManagedCluster{}, v1alpha1.ManagedClusterTemplateIndexKey, v1alpha1.ExtractTemplateNameFromManagedCluster).
 				Build()
-			validator := &TemplateManagementValidator{Client: c, SystemNamespace: utils.DefaultSystemNamespace}
-			warn, err := validator.ValidateDelete(ctx, tt.tm)
+			validator := &AccessManagementValidator{Client: c, SystemNamespace: utils.DefaultSystemNamespace}
+			warn, err := validator.ValidateDelete(ctx, tt.am)
 			if tt.err != "" {
 				g.Expect(err).To(HaveOccurred())
 				if err.Error() != tt.err {
