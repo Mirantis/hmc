@@ -104,9 +104,7 @@ func (r *ManagedClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	return r.reconcileUpdate(ctx, managedCluster)
 }
 
-func (r *ManagedClusterReconciler) setStatusFromChildObjects(
-	ctx context.Context, managedCluster *hmc.ManagedCluster, gvr schema.GroupVersionResource, conditions []string,
-) (requeue bool, _ error) {
+func (r *ManagedClusterReconciler) setStatusFromChildObjects(ctx context.Context, managedCluster *hmc.ManagedCluster, gvr schema.GroupVersionResource, conditions []string) (requeue bool, _ error) {
 	l := ctrl.LoggerFrom(ctx)
 
 	resourceConditions, err := status.GetResourceConditions(ctx, managedCluster.Namespace, r.DynamicClient, gvr,
@@ -123,11 +121,11 @@ func (r *ManagedClusterReconciler) setStatusFromChildObjects(
 	allConditionsComplete := true
 	for _, metaCondition := range resourceConditions.Conditions {
 		if slices.Contains(conditions, metaCondition.Type) {
-			if metaCondition.Status != "True" {
+			if metaCondition.Status != metav1.ConditionTrue {
 				allConditionsComplete = false
 			}
 
-			if metaCondition.Reason == "" && metaCondition.Status == "True" {
+			if metaCondition.Reason == "" && metaCondition.Status == metav1.ConditionTrue {
 				metaCondition.Message += " is Ready"
 				metaCondition.Reason = "Succeeded"
 			}
@@ -359,13 +357,12 @@ func (r *ManagedClusterReconciler) updateCluster(ctx context.Context, mc *hmc.Ma
 	return ctrl.Result{}, nil
 }
 
-func (r *ManagedClusterReconciler) aggregateCapoConditions(ctx context.Context, managedCluster *hmc.ManagedCluster) (bool, error) {
+func (r *ManagedClusterReconciler) aggregateCapoConditions(ctx context.Context, managedCluster *hmc.ManagedCluster) (requeue bool, _ error) {
 	type objectToCheck struct {
 		gvr        schema.GroupVersionResource
 		conditions []string
 	}
 
-	var needToRequeue bool
 	var errs error
 	for _, obj := range []objectToCheck{
 		{
@@ -385,14 +382,14 @@ func (r *ManagedClusterReconciler) aggregateCapoConditions(ctx context.Context, 
 			conditions: []string{"Available"},
 		},
 	} {
-		requeue, err := r.setStatusFromChildObjects(ctx, managedCluster, obj.gvr, obj.conditions)
+		needRequeue, err := r.setStatusFromChildObjects(ctx, managedCluster, obj.gvr, obj.conditions)
 		errs = errors.Join(errs, err)
-		if requeue {
-			needToRequeue = true
+		if needRequeue {
+			requeue = true
 		}
 	}
 
-	return needToRequeue, errs
+	return requeue, errs
 }
 
 // updateServices reconciles services provided in ManagedCluster.Spec.Services.
