@@ -202,6 +202,11 @@ func (r *ManagementReconciler) cleanupRemovedComponents(ctx context.Context, man
 	}
 
 	for _, hr := range managedHelmReleases.Items {
+		// do not remove non-management related components (#703)
+		if len(hr.OwnerReferences) > 0 {
+			continue
+		}
+
 		componentName := hr.Name // providers(components) names map 1-1 to the helmreleases names
 
 		if componentName == hmc.CoreCAPIName ||
