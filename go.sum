@@ -264,6 +264,8 @@ github.com/hashicorp/golang-lru/arc/v2 v2.0.5 h1:l2zaLDubNhW4XO3LnliVj0GXO3+/CGN
 github.com/hashicorp/golang-lru/arc/v2 v2.0.5/go.mod h1:ny6zBSQZi2JxIeYcv7kt2sH2PXJtirBN7RDhRpxPkxU=
 github.com/hashicorp/golang-lru/v2 v2.0.5 h1:wW7h1TG88eUIJ2i69gaE3uNVtEPIagzhGvHgwfx2Vm4=
 github.com/hashicorp/golang-lru/v2 v2.0.5/go.mod h1:QeFd9opnmA6QUJc5vARoKUSoFhyfM2/ZepoAG6RGpeM=
+github.com/hexops/gotextdiff v1.0.3 h1:gitA9+qJrrTCsiCl7+kh75nPqQt1cx4ZkudSTLoUqJM=
+github.com/hexops/gotextdiff v1.0.3/go.mod h1:pSWU5MAI3yDq+fZBTazCSJysOMbxWL1BSow5/V2vxeg=
 github.com/huandu/xstrings v1.5.0 h1:2ag3IFq9ZDANvthTwTiqSSZLjDc+BedvHPAp5tJy2TI=
 github.com/huandu/xstrings v1.5.0/go.mod h1:y5/lhBue+AyNmUVz9RLU9xbLR0o4KIIExikq4ovT0aE=
 github.com/imdario/mergo v0.3.16 h1:wwQJbIsHYGMUyLSPrEq1CT16AhnhNJQ51+4fdHUnCl4=
@@ -384,10 +386,10 @@ github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 h1:Jamvg5psRI
 github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/poy/onpar v1.1.2 h1:QaNrNiZx0+Nar5dLgTVp5mXkyoVFIbepjyEoGSnhbAY=
 github.com/poy/onpar v1.1.2/go.mod h1:6X8FLNoxyr9kkmnlqpK6LSoiOtrO6MICtWwEuWkLjzg=
-github.com/projectsveltos/addon-controller v0.42.1 h1:aOANJXJJWdBC1grRmsv7kPfdCBMpXV5Ps+fjAHytWSU=
-github.com/projectsveltos/addon-controller v0.42.1/go.mod h1:qkvF2iwBQsWp+mre3nC6JIg+gVlB8fzY2gN3mOwSvDA=
-github.com/projectsveltos/libsveltos v0.42.1 h1:B7c8cF+vhR5AZJT8D4h19PSJfZqWUCR3CKEDUf032JI=
-github.com/projectsveltos/libsveltos v0.42.1/go.mod h1:XPev2TKsMxVG5LwhbbMkcCs/U0730ZMmOXIvu2HEtWo=
+github.com/projectsveltos/addon-controller v0.43.0 h1:7+rQD7v2wnHVPcp88l8xs9HWrWvHSDDZx8I6wirtSsM=
+github.com/projectsveltos/addon-controller v0.43.0/go.mod h1:mDXUi1qmLyXI5HkZ3F3Pl78guFElZmK3eGAo0DREKRA=
+github.com/projectsveltos/libsveltos v0.43.0 h1:3M7r7TbEbMJ3Xlb0MTxK4QDnH+5P5+dT0J+7+iGSUsg=
+github.com/projectsveltos/libsveltos v0.43.0/go.mod h1:4hqQRjwZ/DZ6u0haL3zhdARZ3lpspLv57rkhpXIzbsg=
 github.com/prometheus/client_golang v0.9.1/go.mod h1:7SWBe2y4D6OKWSNQJUaRYU/AaXPKyh/dDVn+NZz0KFw=
 github.com/prometheus/client_golang v1.0.0/go.mod h1:db9x61etRT2tGnBNRi70OPL5FsnadC4Ky3P0J6CfImo=
 github.com/prometheus/client_golang v1.1.0/go.mod h1:I1FGZT9+L76gKKOs5djB6ezCbFQP1xR9D75/vuwEF3g=
