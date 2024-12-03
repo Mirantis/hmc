@@ -188,7 +188,7 @@ func (r *ReleaseReconciler) ensureManagement(ctx context.Context) error {
 		return nil
 	}
 	if !apierrors.IsNotFound(err) {
-		return fmt.Errorf("failed to get %s Management object: %w", hmc.TemplateManagementName, err)
+		return fmt.Errorf("failed to get %s Management object: %w", hmc.AccessManagementName, err)
 	}
 	mgmtObj.Spec.Release, err = r.getCurrentReleaseName(ctx)
 	if err != nil {
@@ -227,7 +227,7 @@ func (r *ReleaseReconciler) ensureManagement(ctx context.Context) error {
 	}
 	err = r.Create(ctx, mgmtObj)
 	if err != nil {
-		return fmt.Errorf("failed to create %s Management object: %w", hmc.TemplateManagementName, err)
+		return fmt.Errorf("failed to create %s Management object: %w", hmc.AccessManagementName, err)
 	}
 
 	l.Info("Successfully created Management object with default configuration")

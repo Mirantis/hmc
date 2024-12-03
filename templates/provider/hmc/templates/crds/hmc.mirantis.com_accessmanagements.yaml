@@ -4,23 +4,22 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.16.3
-  name: templatemanagements.hmc.mirantis.com
+  name: accessmanagements.hmc.mirantis.com
 spec:
   group: hmc.mirantis.com
   names:
-    kind: TemplateManagement
-    listKind: TemplateManagementList
-    plural: templatemanagements
+    kind: AccessManagement
+    listKind: AccessManagementList
+    plural: accessmanagements
     shortNames:
-    - tm
-    singular: templatemanagement
+    - am
+    singular: accessmanagement
   scope: Cluster
   versions:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: TemplateManagement is the Schema for the templatemanagements
-          API
+        description: AccessManagement is the Schema for the AccessManagements API
         properties:
           apiVersion:
             description: |-
@@ -40,15 +39,15 @@ spec:
           metadata:
             type: object
           spec:
-            description: TemplateManagementSpec defines the desired state of TemplateManagement
+            description: AccessManagementSpec defines the desired state of AccessManagement
             properties:
               accessRules:
                 description: |-
                   AccessRules is the list of access rules. Each AccessRule enforces
-                  Templates distribution to the TargetNamespaces.
+                  objects distribution to the TargetNamespaces.
                 items:
                   description: |-
-                    AccessRule is the definition of the TemplateManagement access rule. Each AccessRule enforces
+                    AccessRule is the definition of the AccessManagement access rule. Each AccessRule enforces
                     Templates distribution to the TargetNamespaces
                   properties:
                     clusterTemplateChains:
@@ -67,7 +66,7 @@ spec:
                       type: array
                     targetNamespaces:
                       description: |-
-                        TargetNamespaces defines the namespaces where selected Templates will be distributed.
+                        TargetNamespaces defines the namespaces where selected objects will be distributed.
                         Templates will be distributed to all namespaces if unset.
                       properties:
                         list:
@@ -140,13 +139,13 @@ spec:
                 type: array
             type: object
           status:
-            description: TemplateManagementStatus defines the observed state of TemplateManagement
+            description: AccessManagementStatus defines the observed state of AccessManagement
             properties:
               current:
                 description: Current reflects the applied access rules configuration.
                 items:
                   description: |-
-                    AccessRule is the definition of the TemplateManagement access rule. Each AccessRule enforces
+                    AccessRule is the definition of the AccessManagement access rule. Each AccessRule enforces
                     Templates distribution to the TargetNamespaces
                   properties:
                     clusterTemplateChains:
@@ -165,7 +164,7 @@ spec:
                       type: array
                     targetNamespaces:
                       description: |-
-                        TargetNamespaces defines the namespaces where selected Templates will be distributed.
+                        TargetNamespaces defines the namespaces where selected objects will be distributed.
                         Templates will be distributed to all namespaces if unset.
                       properties:
                         list:

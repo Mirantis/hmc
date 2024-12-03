@@ -175,10 +175,10 @@ webhooks:
       service:
         name: {{ include "hmc.webhook.serviceName" . }}
         namespace: {{ include "hmc.webhook.serviceNamespace" . }}
-        path: /validate-hmc-mirantis-com-v1alpha1-templatemanagement
+        path: /validate-hmc-mirantis-com-v1alpha1-accessmanagement
     failurePolicy: Fail
     matchPolicy: Equivalent
-    name: validation.templatemanagement.hmc.mirantis.com
+    name: validation.accessmanagement.hmc.mirantis.com
     rules:
       - apiGroups:
           - hmc.mirantis.com
@@ -189,7 +189,7 @@ webhooks:
           - UPDATE
           - DELETE
         resources:
-          - templatemanagements
+          - accessmanagements
     sideEffects: None
   - admissionReviewVersions:
       - v1

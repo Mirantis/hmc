@@ -69,7 +69,7 @@ resources:
   controller: true
   domain: hmc.mirantis.com
   group: hmc.mirantis.com
-  kind: TemplateManagement
+  kind: AccessManagement
   path: github.com/Mirantis/hmc/api/v1alpha1
   version: v1alpha1
 - api:

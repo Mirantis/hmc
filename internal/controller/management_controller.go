@@ -50,11 +50,11 @@ import (
 // ManagementReconciler reconciles a Management object
 type ManagementReconciler struct {
 	client.Client
-	Scheme                   *runtime.Scheme
-	Config                   *rest.Config
-	DynamicClient            *dynamic.DynamicClient
-	SystemNamespace          string
-	CreateTemplateManagement bool
+	Scheme                 *runtime.Scheme
+	Config                 *rest.Config
+	DynamicClient          *dynamic.DynamicClient
+	SystemNamespace        string
+	CreateAccessManagement bool
 }
 
 func (r *ManagementReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -96,8 +96,8 @@ func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Manag
 		return ctrl.Result{}, err
 	}
 
-	if err := r.ensureTemplateManagement(ctx, management); err != nil {
-		l.Error(err, "failed to ensure TemplateManagement is created")
+	if err := r.ensureAccessManagement(ctx, management); err != nil {
+		l.Error(err, "failed to ensure AccessManagement is created")
 		return ctrl.Result{}, err
 	}
 
@@ -227,15 +227,15 @@ func (r *ManagementReconciler) cleanupRemovedComponents(ctx context.Context, man
 	return errs
 }
 
-func (r *ManagementReconciler) ensureTemplateManagement(ctx context.Context, mgmt *hmc.Management) error {
+func (r *ManagementReconciler) ensureAccessManagement(ctx context.Context, mgmt *hmc.Management) error {
 	l := ctrl.LoggerFrom(ctx)
-	if !r.CreateTemplateManagement {
+	if !r.CreateAccessManagement {
 		return nil
 	}
-	l.Info("Ensuring TemplateManagement is created")
-	tmObj := &hmc.TemplateManagement{
+	l.Info("Ensuring AccessManagement is created")
+	amObj := &hmc.AccessManagement{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: hmc.TemplateManagementName,
+			Name: hmc.AccessManagementName,
 			OwnerReferences: []metav1.OwnerReference{
 				{
 					APIVersion: hmc.GroupVersion.String(),
@@ -247,19 +247,19 @@ func (r *ManagementReconciler) ensureTemplateManagement(ctx context.Context, mgm
 		},
 	}
 	err := r.Get(ctx, client.ObjectKey{
-		Name: hmc.TemplateManagementName,
-	}, tmObj)
+		Name: hmc.AccessManagementName,
+	}, amObj)
 	if err == nil {
 		return nil
 	}
 	if !apierrors.IsNotFound(err) {
-		return fmt.Errorf("failed to get %s TemplateManagement object: %w", hmc.TemplateManagementName, err)
+		return fmt.Errorf("failed to get %s AccessManagement object: %w", hmc.AccessManagementName, err)
 	}
-	err = r.Create(ctx, tmObj)
+	err = r.Create(ctx, amObj)
 	if err != nil {
-		return fmt.Errorf("failed to create %s TemplateManagement object: %w", hmc.TemplateManagementName, err)
+		return fmt.Errorf("failed to create %s AccessManagement object: %w", hmc.AccessManagementName, err)
 	}
-	l.Info("Successfully created TemplateManagement object")
+	l.Info("Successfully created AccessManagement object")
 
 	return nil
 }
@@ -427,9 +427,9 @@ func applyHMCDefaults(config *apiextensionsv1.JSON) (*apiextensionsv1.JSON, erro
 	// Those are only needed for the initial installation
 	enforcedValues := map[string]any{
 		"controller": map[string]any{
-			"createManagement":         false,
-			"createTemplateManagement": false,
-			"createRelease":            false,
+			"createManagement":       false,
+			"createAccessManagement": false,
+			"createRelease":          false,
 		},
 	}
 

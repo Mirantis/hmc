@@ -30,25 +30,25 @@ import (
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
 )
 
-// TemplateManagementReconciler reconciles a TemplateManagement object
-type TemplateManagementReconciler struct {
+// AccessManagementReconciler reconciles an AccessManagement object
+type AccessManagementReconciler struct {
 	client.Client
 	Config          *rest.Config
 	SystemNamespace string
 }
 
-func (r *TemplateManagementReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, err error) {
+func (r *AccessManagementReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, err error) {
 	l := ctrl.LoggerFrom(ctx)
-	l.Info("Reconciling TemplateManagement")
+	l.Info("Reconciling AccessManagement")
 
-	templateMgmt := &hmc.TemplateManagement{}
-	if err := r.Get(ctx, req.NamespacedName, templateMgmt); err != nil {
+	accessMgmt := &hmc.AccessManagement{}
+	if err := r.Get(ctx, req.NamespacedName, accessMgmt); err != nil {
 		if apierrors.IsNotFound(err) {
-			l.Info("TemplateManagement not found, ignoring since object must be deleted")
+			l.Info("AccessManagement not found, ignoring since object must be deleted")
 			return ctrl.Result{}, nil
 		}
 
-		l.Error(err, "Failed to get TemplateManagement")
+		l.Error(err, "Failed to get AccessManagement")
 		return ctrl.Result{}, err
 	}
 
@@ -57,9 +57,9 @@ func (r *TemplateManagementReconciler) Reconcile(ctx context.Context, req ctrl.R
 		if err != nil {
 			statusErr = err.Error()
 		}
-		templateMgmt.Status.Error = statusErr
-		templateMgmt.Status.ObservedGeneration = templateMgmt.Generation
-		err = errors.Join(err, r.updateStatus(ctx, templateMgmt))
+		accessMgmt.Status.Error = statusErr
+		accessMgmt.Status.ObservedGeneration = accessMgmt.Generation
+		err = errors.Join(err, r.updateStatus(ctx, accessMgmt))
 	}()
 
 	systemCtChains, managedCtChains, err := r.getCurrentTemplateChains(ctx, hmc.ClusterTemplateChainKind)
@@ -75,7 +75,7 @@ func (r *TemplateManagementReconciler) Reconcile(ctx context.Context, req ctrl.R
 	keepStChains := make(map[string]bool)
 
 	var errs error
-	for _, rule := range templateMgmt.Spec.AccessRules {
+	for _, rule := range accessMgmt.Spec.AccessRules {
 		namespaces, err := getTargetNamespaces(ctx, r.Client, rule.TargetNamespaces)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -133,7 +133,7 @@ func (r *TemplateManagementReconciler) Reconcile(ctx context.Context, req ctrl.R
 		return ctrl.Result{}, errs
 	}
 
-	templateMgmt.Status.Current = templateMgmt.Spec.AccessRules
+	accessMgmt.Status.Current = accessMgmt.Spec.AccessRules
 	return ctrl.Result{}, nil
 }
 
@@ -141,7 +141,7 @@ func getNamespacedName(namespace, name string) string {
 	return fmt.Sprintf("%s/%s", namespace, name)
 }
 
-func (r *TemplateManagementReconciler) getCurrentTemplateChains(ctx context.Context, templateChainKind string) (map[string]templateChain, []templateChain, error) {
+func (r *AccessManagementReconciler) getCurrentTemplateChains(ctx context.Context, templateChainKind string) (map[string]templateChain, []templateChain, error) {
 	var templateChains []templateChain
 	switch templateChainKind {
 	case hmc.ClusterTemplateChainKind:
@@ -222,7 +222,7 @@ func getTargetNamespaces(ctx context.Context, cl client.Client, targetNamespaces
 	return result, nil
 }
 
-func (r *TemplateManagementReconciler) createTemplateChain(ctx context.Context, source templateChain, targetNamespace string) error {
+func (r *AccessManagementReconciler) createTemplateChain(ctx context.Context, source templateChain, targetNamespace string) error {
 	l := ctrl.LoggerFrom(ctx)
 
 	meta := metav1.ObjectMeta{
@@ -252,7 +252,7 @@ func (r *TemplateManagementReconciler) createTemplateChain(ctx context.Context, 
 	return nil
 }
 
-func (r *TemplateManagementReconciler) deleteTemplateChain(ctx context.Context, chain templateChain) error {
+func (r *AccessManagementReconciler) deleteTemplateChain(ctx context.Context, chain templateChain) error {
 	l := ctrl.LoggerFrom(ctx)
 
 	err := r.Delete(ctx, chain)
@@ -266,16 +266,16 @@ func (r *TemplateManagementReconciler) deleteTemplateChain(ctx context.Context, 
 	return nil
 }
 
-func (r *TemplateManagementReconciler) updateStatus(ctx context.Context, templateMgmt *hmc.TemplateManagement) error {
-	if err := r.Status().Update(ctx, templateMgmt); err != nil {
-		return fmt.Errorf("failed to update status for TemplateManagement %s: %w", templateMgmt.Name, err)
+func (r *AccessManagementReconciler) updateStatus(ctx context.Context, accessMgmt *hmc.AccessManagement) error {
+	if err := r.Status().Update(ctx, accessMgmt); err != nil {
+		return fmt.Errorf("failed to update status for AccessManagement %s: %w", accessMgmt.Name, err)
 	}
 	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *TemplateManagementReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *AccessManagementReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&hmc.TemplateManagement{}).
+		For(&hmc.AccessManagement{}).
 		Complete(r)
 }

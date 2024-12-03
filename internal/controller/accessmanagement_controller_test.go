@@ -27,14 +27,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
+	am "github.com/Mirantis/hmc/test/objects/accessmanagement"
 	tc "github.com/Mirantis/hmc/test/objects/templatechain"
-	tm "github.com/Mirantis/hmc/test/objects/templatemanagement"
 )
 
 var _ = Describe("Template Management Controller", func() {
 	Context("When reconciling a resource", func() {
 		const (
-			tmName              = "hmc-tm"
+			amName              = "hmc-am"
 			ctChainName         = "hmc-ct-chain"
 			stChainName         = "hmc-st-chain"
 			ctChainToDeleteName = "hmc-ct-chain-to-delete"
@@ -103,9 +103,9 @@ var _ = Describe("Template Management Controller", func() {
 			},
 		}
 
-		tm := tm.NewTemplateManagement(
-			tm.WithName(tmName),
-			tm.WithAccessRules(accessRules),
+		am := am.NewAccessManagement(
+			am.WithName(amName),
+			am.WithAccessRules(accessRules),
 		)
 
 		ctChain := tc.NewClusterTemplateChain(tc.WithName(ctChainName), tc.WithNamespace(systemNamespace.Name), tc.ManagedByHMC())
@@ -126,10 +126,10 @@ var _ = Describe("Template Management Controller", func() {
 					Expect(k8sClient.Create(ctx, ns)).To(Succeed())
 				}
 			}
-			By("creating the custom resource for the Kind TemplateManagement")
-			err = k8sClient.Get(ctx, types.NamespacedName{Name: tmName}, tm)
+			By("creating the custom resource for the Kind AccessManagement")
+			err = k8sClient.Get(ctx, types.NamespacedName{Name: amName}, am)
 			if err != nil && errors.IsNotFound(err) {
-				Expect(k8sClient.Create(ctx, tm)).To(Succeed())
+				Expect(k8sClient.Create(ctx, am)).To(Succeed())
 			}
 
 			By("creating custom resources for the Kind ClusterTemplateChain and ServiceTemplateChain")
@@ -176,12 +176,12 @@ var _ = Describe("Template Management Controller", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			By("Reconciling the created resource")
-			controllerReconciler := &TemplateManagementReconciler{
+			controllerReconciler := &AccessManagementReconciler{
 				Client:          k8sClient,
 				SystemNamespace: systemNamespace.Name,
 			}
 			_, err = controllerReconciler.Reconcile(ctx, reconcile.Request{
-				NamespacedName: types.NamespacedName{Name: tmName},
+				NamespacedName: types.NamespacedName{Name: amName},
 			})
 			Expect(err).NotTo(HaveOccurred())
 			/*

@@ -57,7 +57,7 @@ rules:
 - apiGroups:
   - hmc.mirantis.com
   resources:
-  - templatemanagements
+  - accessmanagements
   - clustertemplatechains
   - servicetemplatechains
   verbs: {{ include "rbac.editorVerbs" . | nindent 4 }}
@@ -85,7 +85,7 @@ rules:
   - hmc.mirantis.com
   resources:
   - managements/status
-  - templatemanagements/status
+  - accessmanagements/status
   verbs:
   - get
   - patch

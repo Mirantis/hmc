@@ -70,7 +70,7 @@ func main() {
 		insecureRegistry          bool
 		registryCredentialsSecret string
 		createManagement          bool
-		createTemplateManagement  bool
+		createAccessManagement    bool
 		createRelease             bool
 		createTemplates           bool
 		hmcTemplatesChartName     string
@@ -92,8 +92,8 @@ func main() {
 		"Secret containing authentication credentials for the registry.")
 	flag.BoolVar(&insecureRegistry, "insecure-registry", false, "Allow connecting to an HTTP registry.")
 	flag.BoolVar(&createManagement, "create-management", true, "Create a Management object with default configuration upon initial installation.")
-	flag.BoolVar(&createTemplateManagement, "create-template-management", true,
-		"Create a TemplateManagement object upon initial installation.")
+	flag.BoolVar(&createAccessManagement, "create-access-management", true,
+		"Create an AccessManagement object upon initial installation.")
 	flag.BoolVar(&createRelease, "create-release", true, "Create an HMC Release upon initial installation.")
 	flag.BoolVar(&createTemplates, "create-templates", true, "Create HMC Templates based on Release objects.")
 	flag.StringVar(&hmcTemplatesChartName, "hmc-templates-chart-name", "hmc-templates",
@@ -223,22 +223,22 @@ func main() {
 		os.Exit(1)
 	}
 	if err = (&controller.ManagementReconciler{
-		Client:                   mgr.GetClient(),
-		Scheme:                   mgr.GetScheme(),
-		Config:                   mgr.GetConfig(),
-		DynamicClient:            dc,
-		SystemNamespace:          currentNamespace,
-		CreateTemplateManagement: createTemplateManagement,
+		Client:                 mgr.GetClient(),
+		Scheme:                 mgr.GetScheme(),
+		Config:                 mgr.GetConfig(),
+		DynamicClient:          dc,
+		SystemNamespace:        currentNamespace,
+		CreateAccessManagement: createAccessManagement,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Management")
 		os.Exit(1)
 	}
-	if err = (&controller.TemplateManagementReconciler{
+	if err = (&controller.AccessManagementReconciler{
 		Client:          mgr.GetClient(),
 		Config:          mgr.GetConfig(),
 		SystemNamespace: currentNamespace,
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "TemplateManagement")
+		setupLog.Error(err, "unable to create controller", "controller", "AccessManagement")
 		os.Exit(1)
 	}
 
@@ -340,8 +340,8 @@ func setupWebhooks(mgr ctrl.Manager, currentNamespace string) error {
 		setupLog.Error(err, "unable to create webhook", "webhook", "Management")
 		return err
 	}
-	if err := (&hmcwebhook.TemplateManagementValidator{SystemNamespace: currentNamespace}).SetupWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "TemplateManagement")
+	if err := (&hmcwebhook.AccessManagementValidator{SystemNamespace: currentNamespace}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "AccessManagement")
 		return err
 	}
 	if err := (&hmcwebhook.ClusterTemplateChainValidator{}).SetupWebhookWithManager(mgr); err != nil {

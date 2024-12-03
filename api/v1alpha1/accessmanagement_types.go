@@ -18,17 +18,21 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const TemplateManagementKind = "TemplateManagement"
+const (
+	AccessManagementKind = "AccessManagement"
 
-// TemplateManagementSpec defines the desired state of TemplateManagement
-type TemplateManagementSpec struct {
+	AccessManagementName = "hmc"
+)
+
+// AccessManagementSpec defines the desired state of AccessManagement
+type AccessManagementSpec struct {
 	// AccessRules is the list of access rules. Each AccessRule enforces
-	// Templates distribution to the TargetNamespaces.
+	// objects distribution to the TargetNamespaces.
 	AccessRules []AccessRule `json:"accessRules,omitempty"`
 }
 
-// TemplateManagementStatus defines the observed state of TemplateManagement
-type TemplateManagementStatus struct {
+// AccessManagementStatus defines the observed state of AccessManagement
+type AccessManagementStatus struct {
 	// Error is the error message occurred during the reconciliation (if any)
 	Error string `json:"error,omitempty"`
 	// Current reflects the applied access rules configuration.
@@ -37,10 +41,10 @@ type TemplateManagementStatus struct {
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 }
 
-// AccessRule is the definition of the TemplateManagement access rule. Each AccessRule enforces
+// AccessRule is the definition of the AccessManagement access rule. Each AccessRule enforces
 // Templates distribution to the TargetNamespaces
 type AccessRule struct {
-	// TargetNamespaces defines the namespaces where selected Templates will be distributed.
+	// TargetNamespaces defines the namespaces where selected objects will be distributed.
 	// Templates will be distributed to all namespaces if unset.
 	TargetNamespaces TargetNamespaces `json:"targetNamespaces,omitempty"`
 	// ClusterTemplateChains lists the names of ClusterTemplateChains whose ClusterTemplates
@@ -68,26 +72,26 @@ type TargetNamespaces struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:shortName=tm,scope=Cluster
+// +kubebuilder:resource:shortName=am,scope=Cluster
 
-// TemplateManagement is the Schema for the templatemanagements API
-type TemplateManagement struct {
+// AccessManagement is the Schema for the AccessManagements API
+type AccessManagement struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   TemplateManagementSpec   `json:"spec,omitempty"`
-	Status TemplateManagementStatus `json:"status,omitempty"`
+	Spec   AccessManagementSpec   `json:"spec,omitempty"`
+	Status AccessManagementStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 
-// TemplateManagementList contains a list of TemplateManagement
-type TemplateManagementList struct {
+// AccessManagementList contains a list of AccessManagement
+type AccessManagementList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []TemplateManagement `json:"items"`
+	Items           []AccessManagement `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&TemplateManagement{}, &TemplateManagementList{})
+	SchemeBuilder.Register(&AccessManagement{}, &AccessManagementList{})
 }

@@ -116,7 +116,7 @@
         "createManagement": {
           "type": "boolean"
         },
-        "createTemplateManagement": {
+        "createAccessManagement": {
           "type": "boolean"
         },
         "createTemplate": {
