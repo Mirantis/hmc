@@ -59,6 +59,9 @@ var _ = Describe("Management Controller", func() {
 						Name:      resourceName,
 						Namespace: "default",
 					},
+					Spec: hmcmirantiscomv1alpha1.ManagementSpec{
+						Release: "test-release-name",
+					},
 				}
 				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
 			}

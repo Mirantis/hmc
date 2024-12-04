@@ -104,6 +104,8 @@ spec:
                 type: array
               release:
                 description: Release references the Release object.
+                maxLength: 253
+                minLength: 1
                 type: string
             required:
             - release

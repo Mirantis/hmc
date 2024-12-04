@@ -44,11 +44,13 @@ type ServiceSpec struct {
 	Values string `json:"values,omitempty"`
 
 	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
 
 	// Template is a reference to a Template object located in the same namespace.
 	Template string `json:"template"`
 
 	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
 
 	// Name is the chart release.
 	Name string `json:"name"`

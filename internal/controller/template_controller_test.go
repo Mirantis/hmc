@@ -262,6 +262,9 @@ var _ = Describe("Template Controller", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: mgmtName,
 				},
+				Spec: hmcmirantiscomv1alpha1.ManagementSpec{
+					Release: "test-release",
+				},
 			}
 			Expect(k8sClient.Create(ctx, mgmt)).To(Succeed())
 			mgmt.Status = hmcmirantiscomv1alpha1.ManagementStatus{

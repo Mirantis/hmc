@@ -33,6 +33,8 @@ const (
 
 // ManagementSpec defines the desired state of Management
 type ManagementSpec struct {
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
 	// Release references the Release object.
 	Release string `json:"release"`
 	// Core holds the core Management components that are mandatory.

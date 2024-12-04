@@ -138,7 +138,9 @@ var _ = Describe("ManagedCluster Controller", func() {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: hmc.ManagementName,
 					},
-					Spec: hmc.ManagementSpec{},
+					Spec: hmc.ManagementSpec{
+						Release: "test-release",
+					},
 				}
 				Expect(k8sClient.Create(ctx, management)).To(Succeed())
 				management.Status = hmc.ManagementStatus{
