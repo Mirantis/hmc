@@ -28,17 +28,22 @@ import (
 
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
 	am "github.com/Mirantis/hmc/test/objects/accessmanagement"
+	"github.com/Mirantis/hmc/test/objects/credential"
 	tc "github.com/Mirantis/hmc/test/objects/templatechain"
 )
 
 var _ = Describe("Template Management Controller", func() {
 	Context("When reconciling a resource", func() {
 		const (
-			amName              = "hmc-am"
-			ctChainName         = "hmc-ct-chain"
-			stChainName         = "hmc-st-chain"
+			amName = "hmc-am"
+
+			ctChainName = "hmc-ct-chain"
+			stChainName = "hmc-st-chain"
+			credName    = "test-cred"
+
 			ctChainToDeleteName = "hmc-ct-chain-to-delete"
 			stChainToDeleteName = "hmc-st-chain-to-delete"
+			credToDeleteName    = "test-cred-to-delete"
 
 			namespace1Name = "namespace1"
 			namespace2Name = "namespace2"
@@ -46,7 +51,13 @@ var _ = Describe("Template Management Controller", func() {
 
 			ctChainUnmanagedName = "ct-chain-unmanaged"
 			stChainUnmanagedName = "st-chain-unmanaged"
+			credUnmanagedName    = "test-cred-unmanaged"
 		)
+
+		credIdentityRef := &corev1.ObjectReference{
+			Kind: "AWSClusterStaticIdentity",
+			Name: "awsclid",
+		}
 
 		ctx := context.Background()
 
@@ -85,6 +96,7 @@ var _ = Describe("Template Management Controller", func() {
 					},
 				},
 				ClusterTemplateChains: []string{ctChainName},
+				Credentials:           []string{credName},
 			},
 			{
 				// Target namespace: namespace1
@@ -93,6 +105,7 @@ var _ = Describe("Template Management Controller", func() {
 				},
 				ClusterTemplateChains: []string{ctChainName},
 				ServiceTemplateChains: []string{stChainName},
+				Credentials:           []string{credName},
 			},
 			{
 				// Target namespace: namespace3
@@ -117,6 +130,24 @@ var _ = Describe("Template Management Controller", func() {
 		ctChainUnmanaged := tc.NewClusterTemplateChain(tc.WithName(ctChainUnmanagedName), tc.WithNamespace(namespace1Name))
 		stChainUnmanaged := tc.NewServiceTemplateChain(tc.WithName(stChainUnmanagedName), tc.WithNamespace(namespace2Name))
 
+		cred := credential.NewCredential(
+			credential.WithName(credName),
+			credential.WithNamespace(systemNamespace.Name),
+			credential.ManagedByHMC(),
+			credential.WithIdentityRef(credIdentityRef),
+		)
+		credToDelete := credential.NewCredential(
+			credential.WithName(credToDeleteName),
+			credential.WithNamespace(namespace3Name),
+			credential.ManagedByHMC(),
+			credential.WithIdentityRef(credIdentityRef),
+		)
+		credUnmanaged := credential.NewCredential(
+			credential.WithName(credUnmanagedName),
+			credential.WithNamespace(namespace2Name),
+			credential.WithIdentityRef(credIdentityRef),
+		)
+
 		BeforeEach(func() {
 			By("creating test namespaces")
 			var err error
@@ -132,14 +163,15 @@ var _ = Describe("Template Management Controller", func() {
 				Expect(k8sClient.Create(ctx, am)).To(Succeed())
 			}
 
-			By("creating custom resources for the Kind ClusterTemplateChain and ServiceTemplateChain")
-			for _, chain := range []crclient.Object{
+			By("creating custom resources for the Kind ClusterTemplateChain, ServiceTemplateChain amd Credentials")
+			for _, obj := range []crclient.Object{
 				ctChain, ctChainToDelete, ctChainUnmanaged,
 				stChain, stChainToDelete, stChainUnmanaged,
+				cred, credToDelete, credUnmanaged,
 			} {
-				err = k8sClient.Get(ctx, types.NamespacedName{Name: chain.GetName(), Namespace: chain.GetNamespace()}, chain)
+				err = k8sClient.Get(ctx, types.NamespacedName{Name: obj.GetName(), Namespace: obj.GetNamespace()}, obj)
 				if err != nil && errors.IsNotFound(err) {
-					Expect(k8sClient.Create(ctx, chain)).To(Succeed())
+					Expect(k8sClient.Create(ctx, obj)).To(Succeed())
 				}
 			}
 		})
@@ -159,6 +191,13 @@ var _ = Describe("Template Management Controller", func() {
 					Expect(crclient.IgnoreNotFound(err)).To(Succeed())
 				}
 			}
+			for _, c := range []*hmc.Credential{cred, credToDelete, credUnmanaged} {
+				for _, ns := range []*corev1.Namespace{systemNamespace, namespace1, namespace2, namespace3} {
+					c.Namespace = ns.Name
+					err := k8sClient.Delete(ctx, c)
+					Expect(crclient.IgnoreNotFound(err)).To(Succeed())
+				}
+			}
 			for _, ns := range []*corev1.Namespace{namespace1, namespace2, namespace3} {
 				err := k8sClient.Get(ctx, types.NamespacedName{Name: ns.Name}, ns)
 				Expect(err).NotTo(HaveOccurred())
@@ -171,8 +210,13 @@ var _ = Describe("Template Management Controller", func() {
 			ctChainUnmanagedBefore := &hmc.ClusterTemplateChain{}
 			err := k8sClient.Get(ctx, types.NamespacedName{Namespace: ctChainUnmanaged.Namespace, Name: ctChainUnmanaged.Name}, ctChainUnmanagedBefore)
 			Expect(err).NotTo(HaveOccurred())
+
 			stChainUnmanagedBefore := &hmc.ServiceTemplateChain{}
 			err = k8sClient.Get(ctx, types.NamespacedName{Namespace: stChainUnmanaged.Namespace, Name: stChainUnmanaged.Name}, stChainUnmanagedBefore)
+			Expect(err).NotTo(HaveOccurred())
+
+			credUnmanagedBefore := &hmc.Credential{}
+			err = k8sClient.Get(ctx, types.NamespacedName{Namespace: credUnmanaged.Namespace, Name: credUnmanaged.Name}, credUnmanagedBefore)
 			Expect(err).NotTo(HaveOccurred())
 
 			By("Reconciling the created resource")
@@ -194,17 +238,26 @@ var _ = Describe("Template Management Controller", func() {
 					* namespace2/st-chain-unmanaged - should be unchanged (unmanaged by HMC)
 					* namespace2/hmc-ct-chain-to-delete - should be deleted
 					* namespace3/hmc-st-chain-to-delete - should be deleted
+
+					* namespace1/test-cred - should be created
+					* namespace2/test-cred - should be created
+					* namespace2/test-cred-unmanaged - should be unchanged (unmanaged by HMC)
+					* namespace3/test-cred-to delete - should be deleted
 			*/
 			verifyObjectCreated(ctx, namespace1Name, ctChain)
 			verifyObjectCreated(ctx, namespace1Name, stChain)
 			verifyObjectCreated(ctx, namespace2Name, ctChain)
 			verifyObjectCreated(ctx, namespace3Name, stChain)
+			verifyObjectCreated(ctx, namespace1Name, cred)
+			verifyObjectCreated(ctx, namespace2Name, cred)
 
 			verifyObjectUnchanged(ctx, namespace1Name, ctChainUnmanaged, ctChainUnmanagedBefore)
 			verifyObjectUnchanged(ctx, namespace2Name, stChainUnmanaged, stChainUnmanagedBefore)
+			verifyObjectUnchanged(ctx, namespace2Name, credUnmanaged, credUnmanagedBefore)
 
 			verifyObjectDeleted(ctx, namespace2Name, ctChainToDelete)
 			verifyObjectDeleted(ctx, namespace3Name, stChainToDelete)
+			verifyObjectDeleted(ctx, namespace3Name, credToDelete)
 		})
 	})
 })
