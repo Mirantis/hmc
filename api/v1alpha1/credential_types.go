@@ -20,6 +20,8 @@ import (
 )
 
 const (
+	CredentialKind = "Credential"
+
 	// CredentialReadyCondition indicates if referenced Credential exists and has Ready state
 	CredentialReadyCondition = "CredentialReady"
 	// CredentialPropagatedCondition indicates that CCM credentials were delivered to managed cluster

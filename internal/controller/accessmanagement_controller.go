@@ -70,9 +70,14 @@ func (r *AccessManagementReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	if err != nil {
 		return ctrl.Result{}, err
 	}
+	systemCredentials, managedCredentials, err := r.getCredentials(ctx)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 
 	keepCtChains := make(map[string]bool)
 	keepStChains := make(map[string]bool)
+	keepCredentials := make(map[string]bool)
 
 	var errs error
 	for _, rule := range accessMgmt.Spec.AccessRules {
@@ -105,23 +110,34 @@ func (r *AccessManagementReconciler) Reconcile(ctx context.Context, req ctrl.Req
 					continue
 				}
 			}
+			for _, credentialName := range rule.Credentials {
+				keepCredentials[getNamespacedName(namespace, credentialName)] = true
+				if systemCredentials[credentialName] == nil {
+					errs = errors.Join(errs, fmt.Errorf("credential %s/%s is not found", r.SystemNamespace, credentialName))
+					continue
+				}
+				errs = errors.Join(errs, r.createCredential(ctx, namespace, credentialName, systemCredentials[credentialName]))
+			}
 		}
 	}
 
-	for _, managedChain := range append(managedCtChains, managedStChains...) {
+	managedObjects := append(append(managedCtChains, managedStChains...), managedCredentials...)
+	for _, managedObject := range managedObjects {
 		keep := false
-		templateNamespacedName := getNamespacedName(managedChain.GetNamespace(), managedChain.GetName())
-		switch managedChain.GetObjectKind().GroupVersionKind().Kind {
+		namespacedName := getNamespacedName(managedObject.GetNamespace(), managedObject.GetName())
+		switch managedObject.GetObjectKind().GroupVersionKind().Kind {
 		case hmc.ClusterTemplateChainKind:
-			keep = keepCtChains[templateNamespacedName]
+			keep = keepCtChains[namespacedName]
 		case hmc.ServiceTemplateChainKind:
-			keep = keepStChains[templateNamespacedName]
+			keep = keepStChains[namespacedName]
+		case hmc.CredentialKind:
+			keep = keepCredentials[namespacedName]
 		default:
-			errs = errors.Join(errs, fmt.Errorf("invalid TemplateChain kind. Supported kinds are %s and %s", hmc.ClusterTemplateChainKind, hmc.ServiceTemplateChainKind))
+			errs = errors.Join(errs, fmt.Errorf("invalid kind. Supported kinds are %s, %s and %s", hmc.ClusterTemplateChainKind, hmc.ServiceTemplateChainKind, hmc.CredentialKind))
 		}
 
 		if !keep {
-			err := r.deleteTemplateChain(ctx, managedChain)
+			err := r.deleteManagedObject(ctx, managedObject)
 			if err != nil {
 				errs = errors.Join(errs, err)
 				continue
@@ -141,7 +157,7 @@ func getNamespacedName(namespace, name string) string {
 	return fmt.Sprintf("%s/%s", namespace, name)
 }
 
-func (r *AccessManagementReconciler) getCurrentTemplateChains(ctx context.Context, templateChainKind string) (map[string]templateChain, []templateChain, error) {
+func (r *AccessManagementReconciler) getCurrentTemplateChains(ctx context.Context, templateChainKind string) (map[string]templateChain, []client.Object, error) {
 	var templateChains []templateChain
 	switch templateChainKind {
 	case hmc.ClusterTemplateChainKind:
@@ -168,7 +184,7 @@ func (r *AccessManagementReconciler) getCurrentTemplateChains(ctx context.Contex
 
 	var (
 		systemTemplateChains  = make(map[string]templateChain, len(templateChains))
-		managedTemplateChains = make([]templateChain, 0, len(templateChains))
+		managedTemplateChains = make([]client.Object, 0, len(templateChains))
 	)
 	for _, chain := range templateChains {
 		if chain.GetNamespace() == r.SystemNamespace {
@@ -182,6 +198,29 @@ func (r *AccessManagementReconciler) getCurrentTemplateChains(ctx context.Contex
 	}
 
 	return systemTemplateChains, managedTemplateChains, nil
+}
+
+func (r *AccessManagementReconciler) getCredentials(ctx context.Context) (map[string]*hmc.CredentialSpec, []client.Object, error) {
+	credentialList := &hmc.CredentialList{}
+	err := r.List(ctx, credentialList)
+	if err != nil {
+		return nil, nil, err
+	}
+	var (
+		systemCredentials  = make(map[string]*hmc.CredentialSpec, len(credentialList.Items))
+		managedCredentials = make([]client.Object, 0, len(credentialList.Items))
+	)
+	for _, cred := range credentialList.Items {
+		if cred.Namespace == r.SystemNamespace {
+			systemCredentials[cred.Name] = &cred.Spec
+			continue
+		}
+
+		if cred.GetLabels()[hmc.HMCManagedLabelKey] == hmc.HMCManagedLabelValue {
+			managedCredentials = append(managedCredentials, &cred)
+		}
+	}
+	return systemCredentials, managedCredentials, nil
 }
 
 func getTargetNamespaces(ctx context.Context, cl client.Client, targetNamespaces hmc.TargetNamespaces) ([]string, error) {
@@ -252,17 +291,37 @@ func (r *AccessManagementReconciler) createTemplateChain(ctx context.Context, so
 	return nil
 }
 
-func (r *AccessManagementReconciler) deleteTemplateChain(ctx context.Context, chain templateChain) error {
+func (r *AccessManagementReconciler) createCredential(ctx context.Context, namespace, name string, spec *hmc.CredentialSpec) error {
 	l := ctrl.LoggerFrom(ctx)
 
-	err := r.Delete(ctx, chain)
+	target := &hmc.Credential{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+			Labels: map[string]string{
+				hmc.HMCManagedLabelKey: hmc.HMCManagedLabelValue,
+			},
+		},
+		Spec: *spec,
+	}
+	if err := r.Create(ctx, target); client.IgnoreAlreadyExists(err) != nil {
+		return err
+	}
+	l.Info("Credential was successfully created", "namespace", namespace, "name", name)
+	return nil
+}
+
+func (r *AccessManagementReconciler) deleteManagedObject(ctx context.Context, obj client.Object) error {
+	l := ctrl.LoggerFrom(ctx)
+
+	err := r.Delete(ctx, obj)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil
 		}
 		return err
 	}
-	l.Info(chain.GetObjectKind().GroupVersionKind().Kind+" was successfully deleted", "chain namespace", chain.GetNamespace(), "chain name", chain.GetName())
+	l.Info(obj.GetObjectKind().GroupVersionKind().Kind+" was successfully deleted", "namespace", obj.GetNamespace(), "name", obj.GetName())
 	return nil
 }
 

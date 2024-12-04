@@ -42,10 +42,10 @@ type AccessManagementStatus struct {
 }
 
 // AccessRule is the definition of the AccessManagement access rule. Each AccessRule enforces
-// Templates distribution to the TargetNamespaces
+// Templates and Credentials distribution to the TargetNamespaces
 type AccessRule struct {
 	// TargetNamespaces defines the namespaces where selected objects will be distributed.
-	// Templates will be distributed to all namespaces if unset.
+	// Templates and Credentials will be distributed to all namespaces if unset.
 	TargetNamespaces TargetNamespaces `json:"targetNamespaces,omitempty"`
 	// ClusterTemplateChains lists the names of ClusterTemplateChains whose ClusterTemplates
 	// will be distributed to all namespaces specified in TargetNamespaces.
@@ -53,6 +53,9 @@ type AccessRule struct {
 	// ServiceTemplateChains lists the names of ServiceTemplateChains whose ServiceTemplates
 	// will be distributed to all namespaces specified in TargetNamespaces.
 	ServiceTemplateChains []string `json:"serviceTemplateChains,omitempty"`
+	// Credentials is the list of Credential names that will be distributed to all the
+	// namespaces specified in TargetNamespaces.
+	Credentials []string `json:"credentials,omitempty"`
 }
 
 // +kubebuilder:validation:XValidation:rule="((has(self.stringSelector) ? 1 : 0) + (has(self.selector) ? 1 : 0) + (has(self.list) ? 1 : 0)) <= 1", message="only one of spec.targetNamespaces.selector or spec.targetNamespaces.stringSelector or spec.targetNamespaces.list can be specified"
