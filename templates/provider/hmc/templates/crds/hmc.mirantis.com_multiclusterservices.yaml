@@ -100,6 +100,7 @@ spec:
                       type: boolean
                     name:
                       description: Name is the chart release.
+                      maxLength: 253
                       minLength: 1
                       type: string
                     namespace:
@@ -110,6 +111,7 @@ spec:
                     template:
                       description: Template is a reference to a Template object located
                         in the same namespace.
+                      maxLength: 253
                       minLength: 1
                       type: string
                     values:

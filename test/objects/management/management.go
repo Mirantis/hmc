@@ -18,6 +18,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/Mirantis/hmc/api/v1alpha1"
+	"github.com/Mirantis/hmc/test/objects/release"
 )
 
 const (
@@ -35,6 +36,9 @@ func NewManagement(opts ...Opt) *v1alpha1.Management {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:       DefaultName,
 			Finalizers: []string{v1alpha1.ManagementFinalizer},
+		},
+		Spec: v1alpha1.ManagementSpec{
+			Release: release.DefaultName,
 		},
 	}
 

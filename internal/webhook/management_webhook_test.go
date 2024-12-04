@@ -129,12 +129,13 @@ func TestManagementValidateUpdate(t *testing.T) {
 			name: "release does not exist, should fail",
 			oldMgmt: management.NewManagement(
 				management.WithProviders(componentAwsDefaultTpl),
+				management.WithRelease("previous-release"),
 			),
 			management: management.NewManagement(
 				management.WithProviders(),
-				management.WithRelease(release.DefaultName),
+				management.WithRelease("new-release"),
 			),
-			err: fmt.Sprintf(`Management "%s" is invalid: spec.release: Forbidden: releases.hmc.mirantis.com "%s" not found`, management.DefaultName, release.DefaultName),
+			err: fmt.Sprintf(`Management "%s" is invalid: spec.release: Forbidden: releases.hmc.mirantis.com "new-release" not found`, management.DefaultName),
 		},
 		{
 			name: "removed provider does not have related providertemplate, should fail",

@@ -55,6 +55,7 @@ type ManagedClusterSpec struct {
 	Config *apiextensionsv1.JSON `json:"config,omitempty"`
 
 	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
 
 	// Template is a reference to a Template object located in the same namespace.
 	Template string `json:"template"`
