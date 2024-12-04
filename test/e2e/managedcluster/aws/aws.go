@@ -65,9 +65,12 @@ func PopulateHostedTemplateVars(ctx context.Context, kc *kubeclient.KubeClient, 
 			"isPublic":         subnet["isPublic"],
 			"availabilityZone": subnet["availabilityZone"],
 			"id":               subnet["resourceID"],
-			"natGatewayId":     subnet["natGatewayId"],
 			"routeTableId":     subnet["routeTableId"],
-			"zoneType":         subnet["availability-zone"],
+			"zoneType":         "availability-zone",
+		}
+
+		if natGatewayID, exists := subnet["natGatewayId"]; exists && natGatewayID != "" {
+			subnetMaps[i]["natGatewayId"] = natGatewayID
 		}
 	}
 	var subnetsFormatted string
