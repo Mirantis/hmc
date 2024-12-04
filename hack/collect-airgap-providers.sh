@@ -23,10 +23,11 @@ set -e
 PROVIDER_LIST_FILE="${LOCALBIN}/providers.yaml"
 REPOSITORIES_FILE="${LOCALBIN}/capi-repositories.yaml"
 DOWNLOAD_LIST_FILE="${LOCALBIN}/download-list"
+EXCLUDED_PROVIDERS='hmc*\|projectsveltos\|cluster-api-provider-aws\|cluster-api-provider-azure'
 
 $CLUSTERCTL config repositories -o yaml > $REPOSITORIES_FILE
 
-for tmpl in $(ls --color=never -1 $PROVIDER_TEMPLATES_DIR | grep -v 'hmc*\|projectsveltos'); do
+for tmpl in $(ls --color=never -1 $PROVIDER_TEMPLATES_DIR | grep -v $EXCLUDED_PROVIDERS); do
     $HELM template ${PROVIDER_TEMPLATES_DIR}/${tmpl} |
 	path="${PROVIDER_TEMPLATES_DIR}/${tmpl}" $YQ 'select(.apiVersion | test("operator.cluster.x-k8s.io.*")) | [{"name": .metadata.name, "version": .spec.version, "kind": .kind, "path": strenv(path)}]';
 done | grep -v '\[\]' > $PROVIDER_LIST_FILE
