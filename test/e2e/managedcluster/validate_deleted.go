@@ -101,3 +101,21 @@ func validateK0sControlPlanesDeleted(ctx context.Context, kc *kubeclient.KubeCli
 
 	return nil
 }
+
+func validateAWSManagedControlPlanesDeleted(ctx context.Context, kc *kubeclient.KubeClient, clusterName string) error {
+	controlPlanes, err := kc.ListAWSManagedControlPlanes(ctx, clusterName)
+	if err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+
+	var cpNames []string
+	if len(controlPlanes) > 0 {
+		for _, cp := range controlPlanes {
+			cpNames = append(cpNames, cp.GetName())
+
+			return fmt.Errorf("AWS Managed control planes still exist: %s", cpNames)
+		}
+	}
+
+	return nil
+}

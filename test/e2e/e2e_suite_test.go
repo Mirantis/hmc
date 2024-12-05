@@ -217,8 +217,10 @@ func collectLogArtifacts(kc *kubeclient.KubeClient, clusterName string, provider
 			"describe", "cluster", clusterName, "--namespace", internalutils.DefaultSystemNamespace, "--show-conditions=all")
 		output, err := utils.Run(cmd)
 		if err != nil {
-			utils.WarnError(fmt.Errorf("failed to get clusterctl log: %w", err))
-			return
+			if !strings.Contains(err.Error(), "unable to verify clusterctl version") {
+				utils.WarnError(fmt.Errorf("failed to get clusterctl log: %w", err))
+				return
+			}
 		}
 		err = os.WriteFile(filepath.Join("test/e2e", host+"-"+"clusterctl.log"), output, 0o644)
 		if err != nil {
