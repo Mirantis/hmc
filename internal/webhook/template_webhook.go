@@ -66,16 +66,16 @@ func (v *ClusterTemplateValidator) ValidateDelete(ctx context.Context, obj runti
 		return admission.Warnings{"Wrong object"}, apierrors.NewBadRequest(fmt.Sprintf("expected ClusterTemplate but got a %T", obj))
 	}
 
-	managedClusters := &v1alpha1.ManagedClusterList{}
-	if err := v.Client.List(ctx, managedClusters,
+	clusterDeployments := &v1alpha1.ClusterDeploymentList{}
+	if err := v.Client.List(ctx, clusterDeployments,
 		client.InNamespace(template.Namespace),
-		client.MatchingFields{v1alpha1.ManagedClusterTemplateIndexKey: template.Name},
+		client.MatchingFields{v1alpha1.ClusterDeploymentTemplateIndexKey: template.Name},
 		client.Limit(1)); err != nil {
 		return nil, err
 	}
 
-	if len(managedClusters.Items) > 0 {
-		return admission.Warnings{"The ClusterTemplate object can't be removed if ManagedCluster objects referencing it still exist"}, errTemplateDeletionForbidden
+	if len(clusterDeployments.Items) > 0 {
+		return admission.Warnings{"The ClusterTemplate object can't be removed if ClusterDeployment objects referencing it still exist"}, errTemplateDeletionForbidden
 	}
 
 	return nil, nil
@@ -122,16 +122,16 @@ func (v *ServiceTemplateValidator) ValidateDelete(ctx context.Context, obj runti
 		return admission.Warnings{"Wrong object"}, apierrors.NewBadRequest(fmt.Sprintf("expected ServiceTemplate but got a %T", obj))
 	}
 
-	managedClusters := &v1alpha1.ManagedClusterList{}
-	if err := v.Client.List(ctx, managedClusters,
+	clusterDeployments := &v1alpha1.ClusterDeploymentList{}
+	if err := v.Client.List(ctx, clusterDeployments,
 		client.InNamespace(tmpl.Namespace),
-		client.MatchingFields{v1alpha1.ManagedClusterServiceTemplatesIndexKey: tmpl.Name},
+		client.MatchingFields{v1alpha1.ClusterDeploymentServiceTemplatesIndexKey: tmpl.Name},
 		client.Limit(1)); err != nil {
 		return nil, err
 	}
 
-	if len(managedClusters.Items) > 0 {
-		return admission.Warnings{"The ServiceTemplate object can't be removed if ManagedCluster objects referencing it still exist"}, errTemplateDeletionForbidden
+	if len(clusterDeployments.Items) > 0 {
+		return admission.Warnings{"The ServiceTemplate object can't be removed if ClusterDeployment objects referencing it still exist"}, errTemplateDeletionForbidden
 	}
 
 	// MultiClusterServices can only refer to serviceTemplates in system namespace.

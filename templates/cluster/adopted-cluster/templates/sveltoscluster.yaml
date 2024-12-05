@@ -1,0 +1,10 @@
+apiVersion: lib.projectsveltos.io/v1beta1
+kind: SveltosCluster
+metadata:
+  labels:
+    projectsveltos.io/k8s-version: v1.31.1
+  name: {{ include "cluster.name" . }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  consecutiveFailureThreshold: {{ .Values.consecutiveFailureThreshold }}
+  kubeconfigName: {{ .Values.clusterIdentity.name }}

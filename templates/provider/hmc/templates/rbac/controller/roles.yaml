@@ -33,18 +33,18 @@ rules:
 - apiGroups:
   - hmc.mirantis.com
   resources:
-  - managedclusters
+  - clusterdeployments
   verbs: {{ include "rbac.editorVerbs" . | nindent 4 }}
 - apiGroups:
   - hmc.mirantis.com
   resources:
-  - managedclusters/finalizers
+  - clusterdeployments/finalizers
   verbs:
   - update
 - apiGroups:
   - hmc.mirantis.com
   resources:
-  - managedclusters/status
+  - clusterdeployments/status
   verbs:
   - get
   - patch

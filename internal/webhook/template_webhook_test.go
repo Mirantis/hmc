@@ -24,7 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/Mirantis/hmc/api/v1alpha1"
-	"github.com/Mirantis/hmc/test/objects/managedcluster"
+	"github.com/Mirantis/hmc/test/objects/clusterdeployment"
 	"github.com/Mirantis/hmc/test/objects/multiclusterservice"
 	"github.com/Mirantis/hmc/test/objects/template"
 	"github.com/Mirantis/hmc/test/scheme"
@@ -44,32 +44,32 @@ func TestClusterTemplateValidateDelete(t *testing.T) {
 		warnings        admission.Warnings
 	}{
 		{
-			name:     "should fail if ManagedCluster objects exist in the same namespace",
+			name:     "should fail if ClusterDeployment objects exist in the same namespace",
 			template: tpl,
-			existingObjects: []runtime.Object{managedcluster.NewManagedCluster(
-				managedcluster.WithNamespace(namespace),
-				managedcluster.WithClusterTemplate(tpl.Name),
+			existingObjects: []runtime.Object{clusterdeployment.NewClusterDeployment(
+				clusterdeployment.WithNamespace(namespace),
+				clusterdeployment.WithClusterTemplate(tpl.Name),
 			)},
-			warnings: admission.Warnings{"The ClusterTemplate object can't be removed if ManagedCluster objects referencing it still exist"},
+			warnings: admission.Warnings{"The ClusterTemplate object can't be removed if ClusterDeployment objects referencing it still exist"},
 			err:      "template deletion is forbidden",
 		},
 		{
-			name:     "should succeed if some ManagedCluster from another namespace references the template",
+			name:     "should succeed if some ClusterDeployment from another namespace references the template",
 			template: tpl,
-			existingObjects: []runtime.Object{managedcluster.NewManagedCluster(
-				managedcluster.WithNamespace("new"),
-				managedcluster.WithClusterTemplate(tpl.Name),
+			existingObjects: []runtime.Object{clusterdeployment.NewClusterDeployment(
+				clusterdeployment.WithNamespace("new"),
+				clusterdeployment.WithClusterTemplate(tpl.Name),
 			)},
 		},
 		{
 			name:            "should be OK because of a different cluster",
 			template:        tpl,
-			existingObjects: []runtime.Object{managedcluster.NewManagedCluster()},
+			existingObjects: []runtime.Object{clusterdeployment.NewClusterDeployment()},
 		},
 		{
 			name:            "should succeed",
 			template:        template.NewClusterTemplate(),
-			existingObjects: []runtime.Object{managedcluster.NewManagedCluster(managedcluster.WithClusterTemplate(tplTest.Name))},
+			existingObjects: []runtime.Object{clusterdeployment.NewClusterDeployment(clusterdeployment.WithClusterTemplate(tplTest.Name))},
 		},
 	}
 
@@ -80,7 +80,7 @@ func TestClusterTemplateValidateDelete(t *testing.T) {
 			c := fake.NewClientBuilder().
 				WithScheme(scheme.Scheme).
 				WithRuntimeObjects(tt.existingObjects...).
-				WithIndex(&v1alpha1.ManagedCluster{}, v1alpha1.ManagedClusterTemplateIndexKey, v1alpha1.ExtractTemplateNameFromManagedCluster).
+				WithIndex(&v1alpha1.ClusterDeployment{}, v1alpha1.ClusterDeploymentTemplateIndexKey, v1alpha1.ExtractTemplateNameFromClusterDeployment).
 				Build()
 			validator := &ClusterTemplateValidator{Client: c}
 			warn, err := validator.ValidateDelete(ctx, tt.template)
@@ -111,31 +111,31 @@ func TestServiceTemplateValidateDelete(t *testing.T) {
 		err             string
 	}{
 		{
-			title:    "should fail if ManagedCluster exists in same namespace",
+			title:    "should fail if ClusterDeployment exists in same namespace",
 			template: tmpl,
 			existingObjects: []runtime.Object{
-				managedcluster.NewManagedCluster(
-					managedcluster.WithNamespace(tmpl.Namespace),
-					managedcluster.WithServiceTemplate(tmpl.Name),
+				clusterdeployment.NewClusterDeployment(
+					clusterdeployment.WithNamespace(tmpl.Namespace),
+					clusterdeployment.WithServiceTemplate(tmpl.Name),
 				),
 			},
-			warnings: admission.Warnings{"The ServiceTemplate object can't be removed if ManagedCluster objects referencing it still exist"},
+			warnings: admission.Warnings{"The ServiceTemplate object can't be removed if ClusterDeployment objects referencing it still exist"},
 			err:      errTemplateDeletionForbidden.Error(),
 		},
 		{
-			title:    "should succeed if managedCluster referencing ServiceTemplate is another namespace",
+			title:    "should succeed if ClusterDeployment referencing ServiceTemplate is another namespace",
 			template: tmpl,
 			existingObjects: []runtime.Object{
-				managedcluster.NewManagedCluster(
-					managedcluster.WithNamespace("someothernamespace"),
-					managedcluster.WithServiceTemplate(tmpl.Name),
+				clusterdeployment.NewClusterDeployment(
+					clusterdeployment.WithNamespace("someothernamespace"),
+					clusterdeployment.WithServiceTemplate(tmpl.Name),
 				),
 			},
 		},
 		{
 			title:           "should be OK because of a different cluster",
 			template:        tmpl,
-			existingObjects: []runtime.Object{managedcluster.NewManagedCluster()},
+			existingObjects: []runtime.Object{clusterdeployment.NewClusterDeployment()},
 		},
 		{
 			title:    "should fail if a MultiClusterService is referencing serviceTemplate in system namespace",
@@ -159,7 +159,7 @@ func TestServiceTemplateValidateDelete(t *testing.T) {
 				NewClientBuilder().
 				WithScheme(scheme.Scheme).
 				WithRuntimeObjects(tt.existingObjects...).
-				WithIndex(&v1alpha1.ManagedCluster{}, v1alpha1.ManagedClusterServiceTemplatesIndexKey, v1alpha1.ExtractServiceTemplateNamesFromManagedCluster).
+				WithIndex(&v1alpha1.ClusterDeployment{}, v1alpha1.ClusterDeploymentServiceTemplatesIndexKey, v1alpha1.ExtractServiceTemplateNamesFromClusterDeployment).
 				WithIndex(&v1alpha1.MultiClusterService{}, v1alpha1.MultiClusterServiceTemplatesIndexKey, v1alpha1.ExtractServiceTemplateNamesFromMultiClusterService).
 				Build()
 			validator := &ServiceTemplateValidator{Client: c, SystemNamespace: testSystemNamespace}
