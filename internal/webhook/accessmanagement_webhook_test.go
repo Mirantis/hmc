@@ -60,7 +60,7 @@ func TestAccessManagementValidateCreate(t *testing.T) {
 			c := fake.NewClientBuilder().
 				WithScheme(scheme.Scheme).
 				WithRuntimeObjects(tt.existingObjects...).
-				WithIndex(&v1alpha1.ManagedCluster{}, v1alpha1.ManagedClusterTemplateIndexKey, v1alpha1.ExtractTemplateNameFromManagedCluster).
+				WithIndex(&v1alpha1.ClusterDeployment{}, v1alpha1.ClusterDeploymentTemplateIndexKey, v1alpha1.ExtractTemplateNameFromClusterDeployment).
 				Build()
 			validator := &AccessManagementValidator{Client: c, SystemNamespace: utils.DefaultSystemNamespace}
 			warn, err := validator.ValidateCreate(ctx, tt.am)
@@ -117,7 +117,7 @@ func TestAccessManagementValidateDelete(t *testing.T) {
 			c := fake.NewClientBuilder().
 				WithScheme(scheme.Scheme).
 				WithRuntimeObjects(tt.existingObjects...).
-				WithIndex(&v1alpha1.ManagedCluster{}, v1alpha1.ManagedClusterTemplateIndexKey, v1alpha1.ExtractTemplateNameFromManagedCluster).
+				WithIndex(&v1alpha1.ClusterDeployment{}, v1alpha1.ClusterDeploymentTemplateIndexKey, v1alpha1.ExtractTemplateNameFromClusterDeployment).
 				Build()
 			validator := &AccessManagementValidator{Client: c, SystemNamespace: utils.DefaultSystemNamespace}
 			warn, err := validator.ValidateDelete(ctx, tt.am)
