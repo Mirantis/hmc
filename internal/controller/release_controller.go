@@ -249,7 +249,7 @@ func (r *ReleaseReconciler) reconcileHMCTemplates(ctx context.Context, releaseNa
 	if releaseName == "" {
 		releaseName = utils.ReleaseNameFromVersion(build.Version)
 		releaseVersion = build.Version
-		err := helm.ReconcileHelmRepository(ctx, r.Client, defaultRepoName, r.SystemNamespace, r.DefaultRegistryConfig.HelmRepositorySpec())
+		err := helm.ReconcileHelmRepository(ctx, r.Client, hmc.DefaultRepoName, r.SystemNamespace, r.DefaultRegistryConfig.HelmRepositorySpec())
 		if err != nil {
 			l.Error(err, "Failed to reconcile default HelmRepository", "namespace", r.SystemNamespace)
 			return err
@@ -280,13 +280,10 @@ func (r *ReleaseReconciler) reconcileHMCTemplates(ctx context.Context, releaseNa
 		}
 		helmChart.Labels[hmc.HMCManagedLabelKey] = hmc.HMCManagedLabelValue
 		helmChart.Spec = sourcev1.HelmChartSpec{
-			Chart:   r.HMCTemplatesChartName,
-			Version: releaseVersion,
-			SourceRef: sourcev1.LocalHelmChartSourceReference{
-				Kind: sourcev1.HelmRepositoryKind,
-				Name: defaultRepoName,
-			},
-			Interval: metav1.Duration{Duration: helm.DefaultReconcileInterval},
+			Chart:     r.HMCTemplatesChartName,
+			Version:   releaseVersion,
+			SourceRef: hmc.DefaultSourceRef,
+			Interval:  metav1.Duration{Duration: helm.DefaultReconcileInterval},
 		}
 		return nil
 	})
