@@ -1,0 +1,10 @@
+apiVersion: hmc.mirantis.com/v1alpha1
+kind: ProviderTemplate
+metadata:
+  name: cluster-api-provider-openstack-0-0-1
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  helm:
+    chartName: cluster-api-provider-openstack
+    chartVersion: 0.0.1
