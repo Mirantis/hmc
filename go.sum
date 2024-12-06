@@ -143,8 +143,8 @@ github.com/fluxcd/pkg/apis/acl v0.3.0 h1:UOrKkBTOJK+OlZX7n8rWt2rdBmDCoTK+f5TY2Lc
 github.com/fluxcd/pkg/apis/acl v0.3.0/go.mod h1:WVF9XjSMVBZuU+HTTiSebGAWMgM7IYexFLyVWbK9bNY=
 github.com/fluxcd/pkg/apis/kustomize v1.6.1 h1:22FJc69Mq4i8aCxnKPlddHhSMyI4UPkQkqiAdWFcqe0=
 github.com/fluxcd/pkg/apis/kustomize v1.6.1/go.mod h1:5dvQ4IZwz0hMGmuj8tTWGtarsuxW0rWsxJOwC6i+0V8=
-github.com/fluxcd/pkg/apis/meta v1.6.1 h1:maLhcRJ3P/70ArLCY/LF/YovkxXbX+6sTWZwZQBeNq0=
-github.com/fluxcd/pkg/apis/meta v1.6.1/go.mod h1:YndB/gxgGZmKfqpAfFxyCDNFJFP0ikpeJzs66jwq280=
+github.com/fluxcd/pkg/apis/meta v1.7.0 h1:pDbPrBGgsiWV4bx8j+hodwv1Ysbj/pHP+FH46aTZOfs=
+github.com/fluxcd/pkg/apis/meta v1.7.0/go.mod h1:OJGH7I//SNO6zcso80oBRuf5H8oU8etZDeTgCcH7qHo=
 github.com/fluxcd/pkg/http/fetch v0.12.1 h1:Iap/cdKols3fW39/MyTGqNXHglaA1FJsWtFgYG2hbCQ=
 github.com/fluxcd/pkg/http/fetch v0.12.1/go.mod h1:t3JL+uqJ46Wm0CwVRn6Pf/3kOqh45tMoR0pMxLhextQ=
 github.com/fluxcd/pkg/runtime v0.49.1 h1:Xyruu1VvkaKZaAhm/32tHJnHab9aU3HzZCf+w6Xoq2A=
