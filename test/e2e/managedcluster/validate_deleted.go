@@ -28,9 +28,9 @@ import (
 )
 
 // validateClusterDeleted validates that the Cluster resource has been deleted.
-func validateClusterDeleted(ctx context.Context, kc *kubeclient.KubeClient, clusterName string) error {
+func validateClusterDeleted(ctx context.Context, kc *kubeclient.KubeClient, namespace, clusterName string) error {
 	// Validate that the Cluster resource has been deleted
-	cluster, err := kc.GetCluster(ctx, clusterName)
+	cluster, err := kc.GetCluster(ctx, namespace, clusterName)
 	if err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
@@ -64,8 +64,8 @@ func validateClusterDeleted(ctx context.Context, kc *kubeclient.KubeClient, clus
 
 // validateMachineDeploymentsDeleted validates that all MachineDeployments have
 // been deleted.
-func validateMachineDeploymentsDeleted(ctx context.Context, kc *kubeclient.KubeClient, clusterName string) error {
-	machineDeployments, err := kc.ListMachineDeployments(ctx, clusterName)
+func validateMachineDeploymentsDeleted(ctx context.Context, kc *kubeclient.KubeClient, namespace, clusterName string) error {
+	machineDeployments, err := kc.ListMachineDeployments(ctx, namespace, clusterName)
 	if err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
@@ -84,8 +84,8 @@ func validateMachineDeploymentsDeleted(ctx context.Context, kc *kubeclient.KubeC
 
 // validateK0sControlPlanesDeleted validates that all k0scontrolplanes have
 // been deleted.
-func validateK0sControlPlanesDeleted(ctx context.Context, kc *kubeclient.KubeClient, clusterName string) error {
-	controlPlanes, err := kc.ListK0sControlPlanes(ctx, clusterName)
+func validateK0sControlPlanesDeleted(ctx context.Context, kc *kubeclient.KubeClient, namespace, clusterName string) error {
+	controlPlanes, err := kc.ListK0sControlPlanes(ctx, namespace, clusterName)
 	if err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}

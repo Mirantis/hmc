@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package e2e
+package scenarios
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"time"
 
@@ -23,27 +24,45 @@ import (
 	. "github.com/onsi/gomega"
 
 	internalutils "github.com/Mirantis/hmc/internal/utils"
+	"github.com/Mirantis/hmc/test/e2e/config"
 	"github.com/Mirantis/hmc/test/e2e/kubeclient"
 	"github.com/Mirantis/hmc/test/e2e/managedcluster"
 	"github.com/Mirantis/hmc/test/e2e/managedcluster/clusteridentity"
 	"github.com/Mirantis/hmc/test/e2e/managedcluster/vsphere"
+	"github.com/Mirantis/hmc/test/e2e/templates"
 )
 
 var _ = Context("vSphere Templates", Label("provider:onprem", "provider:vsphere"), Ordered, func() {
+	ctx := context.Background()
+
 	var (
 		kc          *kubeclient.KubeClient
 		deleteFunc  func() error
 		clusterName string
 		err         error
+
+		testingConfig config.ProviderTestingConfig
 	)
 
 	BeforeAll(func() {
+		By("get testing configuration")
+		testingConfig = config.Config[config.TestingProviderVsphere]
+
+		By("set defaults and validate testing configuration")
+		err := testingConfig.Standalone.SetDefaults(clusterTemplates, templates.TemplateVSphereStandaloneCP)
+		Expect(err).NotTo(HaveOccurred())
+
+		err = testingConfig.Hosted.SetDefaults(clusterTemplates, templates.TemplateVSphereHostedCP)
+		Expect(err).NotTo(HaveOccurred())
+
+		_, _ = fmt.Fprintf(GinkgoWriter, "Final Vsphere testing configuration:\n%s\n", testingConfig.String())
+
 		By("ensuring that env vars are set correctly")
 		vsphere.CheckEnv()
 		By("creating kube client")
 		kc = kubeclient.NewFromLocal(internalutils.DefaultSystemNamespace)
 		By("providing cluster identity")
-		ci := clusteridentity.New(kc, managedcluster.ProviderVSphere)
+		ci := clusteridentity.New(kc, managedcluster.ProviderVSphere, managedcluster.Namespace)
 		By("setting VSPHERE_CLUSTER_IDENTITY env variable")
 		Expect(os.Setenv(managedcluster.EnvVarVSphereClusterIdentity, ci.IdentityName)).Should(Succeed())
 	})
@@ -65,7 +84,8 @@ var _ = Context("vSphere Templates", Label("provider:onprem", "provider:vsphere"
 		// fails to do so.
 		if deleteFunc != nil && !noCleanup() {
 			deletionValidator := managedcluster.NewProviderValidator(
-				managedcluster.TemplateVSphereStandaloneCP,
+				templates.TemplateVSphereStandaloneCP,
+				managedcluster.Namespace,
 				clusterName,
 				managedcluster.ValidationActionDelete,
 			)
@@ -79,20 +99,28 @@ var _ = Context("vSphere Templates", Label("provider:onprem", "provider:vsphere"
 	})
 
 	It("should deploy standalone managed cluster", func() {
-		By("creating a managed cluster")
-		d := managedcluster.GetUnstructured(managedcluster.TemplateVSphereStandaloneCP)
+		By(fmt.Sprintf("creating a managed cluster with %s template", testingConfig.Standalone.Template))
+		d := managedcluster.GetUnstructured(templates.TemplateVSphereStandaloneCP, testingConfig.Standalone.Template)
 		clusterName = d.GetName()
 
-		deleteFunc = kc.CreateManagedCluster(context.Background(), d)
+		deleteFunc = kc.CreateManagedCluster(context.Background(), d, managedcluster.Namespace)
 
 		By("waiting for infrastructure providers to deploy successfully")
 		deploymentValidator := managedcluster.NewProviderValidator(
-			managedcluster.TemplateVSphereStandaloneCP,
+			templates.TemplateVSphereStandaloneCP,
+			managedcluster.Namespace,
 			clusterName,
 			managedcluster.ValidationActionDeploy,
 		)
 		Eventually(func() error {
 			return deploymentValidator.Validate(context.Background(), kc)
 		}).WithTimeout(30 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
+
+		if testingConfig.Standalone.Upgrade {
+			managedcluster.Upgrade(ctx, kc.CrClient, managedcluster.Namespace, clusterName, testingConfig.Standalone.UpgradeTemplate)
+			Eventually(func() error {
+				return deploymentValidator.Validate(context.Background(), kc)
+			}).WithTimeout(30 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
+		}
 	})
 })
