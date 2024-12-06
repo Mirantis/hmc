@@ -349,7 +349,7 @@ func (r *ManagedClusterReconciler) updateCluster(ctx context.Context, mc *hmc.Ma
 		return ctrl.Result{RequeueAfter: DefaultRequeueInterval}, nil
 	}
 
-	if err := r.reconcileCredentialPropagation(ctx, mc); err != nil {
+	if err := r.reconcileCredentialPropagation(ctx, mc, cred); err != nil {
 		l.Error(err, "failed to reconcile credentials propagation")
 		return ctrl.Result{}, err
 	}
@@ -691,7 +691,7 @@ func (r *ManagedClusterReconciler) objectsAvailable(ctx context.Context, namespa
 	return len(itemsList.Items) != 0, nil
 }
 
-func (r *ManagedClusterReconciler) reconcileCredentialPropagation(ctx context.Context, managedCluster *hmc.ManagedCluster) error {
+func (r *ManagedClusterReconciler) reconcileCredentialPropagation(ctx context.Context, managedCluster *hmc.ManagedCluster, credential *hmc.Credential) error {
 	l := ctrl.LoggerFrom(ctx)
 	l.Info("Reconciling CCM credentials propagation")
 
@@ -757,6 +757,25 @@ func (r *ManagedClusterReconciler) reconcileCredentialPropagation(ctx context.Co
 				Status:  metav1.ConditionTrue,
 				Reason:  hmc.SucceededReason,
 				Message: "vSphere CCM credentials created",
+			})
+		case "openstack":
+			l.Info("OpenStack creds propagation start")
+			if err := credspropagation.PropagateOpenStackSecrets(ctx, propnCfg, credential); err != nil {
+				errMsg := fmt.Sprintf("failed to create OpenStack CCM credentials: %s", err)
+				apimeta.SetStatusCondition(managedCluster.GetConditions(), metav1.Condition{
+					Type:    hmc.CredentialsPropagatedCondition,
+					Status:  metav1.ConditionFalse,
+					Reason:  hmc.FailedReason,
+					Message: errMsg,
+				})
+				return errors.New(errMsg)
+			}
+
+			apimeta.SetStatusCondition(managedCluster.GetConditions(), metav1.Condition{
+				Type:    hmc.CredentialsPropagatedCondition,
+				Status:  metav1.ConditionTrue,
+				Reason:  hmc.SucceededReason,
+				Message: "OpenStack CCM credentials created",
 			})
 		default:
 			apimeta.SetStatusCondition(managedCluster.GetConditions(), metav1.Condition{
