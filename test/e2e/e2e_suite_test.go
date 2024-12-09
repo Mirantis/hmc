@@ -74,7 +74,7 @@ var _ = BeforeSuite(func() {
 	Eventually(func() error {
 		err = managedcluster.ValidateClusterTemplates(context.Background(), kc)
 		if err != nil {
-			_, _ = fmt.Fprintf(GinkgoWriter, "cluster tempolate validation failed: %v\n", err)
+			_, _ = fmt.Fprintf(GinkgoWriter, "cluster template validation failed: %v\n", err)
 			return err
 		}
 		return nil
