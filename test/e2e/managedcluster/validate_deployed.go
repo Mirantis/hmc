@@ -34,10 +34,10 @@ import (
 
 // resourceValidationFunc is intended to validate a specific kubernetes
 // resource.
-type resourceValidationFunc func(context.Context, *kubeclient.KubeClient, string) error
+type resourceValidationFunc func(context.Context, *kubeclient.KubeClient, string, string) error
 
-func validateCluster(ctx context.Context, kc *kubeclient.KubeClient, clusterName string) error {
-	cluster, err := kc.GetCluster(ctx, clusterName)
+func validateCluster(ctx context.Context, kc *kubeclient.KubeClient, namespace, clusterName string) error {
+	cluster, err := kc.GetCluster(ctx, namespace, clusterName)
 	if err != nil {
 		return err
 	}
@@ -58,8 +58,8 @@ func validateCluster(ctx context.Context, kc *kubeclient.KubeClient, clusterName
 	return utils.ValidateConditionsTrue(cluster)
 }
 
-func validateMachines(ctx context.Context, kc *kubeclient.KubeClient, clusterName string) error {
-	machines, err := kc.ListMachines(ctx, clusterName)
+func validateMachines(ctx context.Context, kc *kubeclient.KubeClient, namespace, clusterName string) error {
+	machines, err := kc.ListMachines(ctx, namespace, clusterName)
 	if err != nil {
 		return err
 	}
@@ -67,7 +67,7 @@ func validateMachines(ctx context.Context, kc *kubeclient.KubeClient, clusterNam
 	if len(machines) == 0 {
 		// No machines have been created yet, check for MachineDeployments to
 		// provide some debug information as to why no machines are present.
-		md, err := kc.ListMachineDeployments(ctx, clusterName)
+		md, err := kc.ListMachineDeployments(ctx, namespace, clusterName)
 		if err != nil {
 			return fmt.Errorf("failed to list machine deployments: %w", err)
 		}
@@ -98,8 +98,8 @@ func validateMachines(ctx context.Context, kc *kubeclient.KubeClient, clusterNam
 	return nil
 }
 
-func validateK0sControlPlanes(ctx context.Context, kc *kubeclient.KubeClient, clusterName string) error {
-	controlPlanes, err := kc.ListK0sControlPlanes(ctx, clusterName)
+func validateK0sControlPlanes(ctx context.Context, kc *kubeclient.KubeClient, namespace, clusterName string) error {
+	controlPlanes, err := kc.ListK0sControlPlanes(ctx, namespace, clusterName)
 	if err != nil {
 		return err
 	}
@@ -141,8 +141,8 @@ func validateK0sControlPlanes(ctx context.Context, kc *kubeclient.KubeClient, cl
 
 // validateCSIDriver validates that the provider CSI driver is functioning
 // by creating a PVC and verifying it enters "Bound" status.
-func validateCSIDriver(ctx context.Context, kc *kubeclient.KubeClient, clusterName string) error {
-	clusterKC := kc.NewFromCluster(ctx, "default", clusterName)
+func validateCSIDriver(ctx context.Context, kc *kubeclient.KubeClient, namespace, clusterName string) error {
+	clusterKC := kc.NewFromCluster(ctx, namespace, clusterName)
 
 	pvcName := clusterName + "-csi-test-pvc"
 
@@ -228,8 +228,8 @@ func validateCSIDriver(ctx context.Context, kc *kubeclient.KubeClient, clusterNa
 // validateCCM validates that the provider's cloud controller manager is
 // functional by creating a LoadBalancer service and verifying it is assigned
 // an external IP.
-func validateCCM(ctx context.Context, kc *kubeclient.KubeClient, clusterName string) error {
-	clusterKC := kc.NewFromCluster(ctx, "default", clusterName)
+func validateCCM(ctx context.Context, kc *kubeclient.KubeClient, namespace, clusterName string) error {
+	clusterKC := kc.NewFromCluster(ctx, namespace, clusterName)
 
 	createdServiceName := "loadbalancer-" + clusterName
 

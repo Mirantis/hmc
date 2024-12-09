@@ -166,7 +166,7 @@ GINKGO_LABEL_FILTER="provider:cloud" make test-e2e
 would run all cloud provider tests.  To see a list of all available labels run:
 
 ```bash
-ginkgo labels ./test/e2e
+ginkgo labels ./test/e2e/scenarios
 ```
 
 ### Nuke created resources

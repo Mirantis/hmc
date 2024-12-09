@@ -21,14 +21,17 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 
 	"github.com/Mirantis/hmc/test/e2e/kubeclient"
+	"github.com/Mirantis/hmc/test/e2e/templates"
 )
 
 // ProviderValidator is a struct that contains the necessary information to
 // validate a provider's resources.  Some providers do not support all of the
 // resources that can potentially be validated.
 type ProviderValidator struct {
-	// Template is the name of the template being validated.
-	template Template
+	// Template is the type of the template being validated.
+	template templates.Type
+	// Namespace is the namespace of the cluster to validate.
+	namespace string
 	// ClusterName is the name of the cluster to validate.
 	clusterName string
 	// ResourcesToValidate is a map of resource names to their validation
@@ -46,7 +49,7 @@ const (
 	ValidationActionDelete ValidationAction = "delete"
 )
 
-func NewProviderValidator(template Template, clusterName string, action ValidationAction) *ProviderValidator {
+func NewProviderValidator(templateType templates.Type, namespace, clusterName string, action ValidationAction) *ProviderValidator {
 	var (
 		resourcesToValidate map[string]resourceValidationFunc
 		resourceOrder       []string
@@ -61,11 +64,11 @@ func NewProviderValidator(template Template, clusterName string, action Validati
 		}
 		resourceOrder = []string{"clusters", "machines", "control-planes", "csi-driver"}
 
-		switch template {
-		case TemplateAWSStandaloneCP, TemplateAWSHostedCP:
+		switch templateType {
+		case templates.TemplateAWSStandaloneCP, templates.TemplateAWSHostedCP:
 			resourcesToValidate["ccm"] = validateCCM
 			resourceOrder = append(resourceOrder, "ccm")
-		case TemplateAzureStandaloneCP, TemplateVSphereStandaloneCP:
+		case templates.TemplateAzureStandaloneCP, templates.TemplateVSphereStandaloneCP:
 			delete(resourcesToValidate, "csi-driver")
 		}
 	} else {
@@ -78,7 +81,8 @@ func NewProviderValidator(template Template, clusterName string, action Validati
 	}
 
 	return &ProviderValidator{
-		template:            template,
+		template:            templateType,
+		namespace:           namespace,
 		clusterName:         clusterName,
 		resourcesToValidate: resourcesToValidate,
 		resourceOrder:       resourceOrder,
@@ -103,12 +107,12 @@ func (p *ProviderValidator) Validate(ctx context.Context, kc *kubeclient.KubeCli
 			continue
 		}
 
-		if err := validator(ctx, kc, p.clusterName); err != nil {
-			_, _ = fmt.Fprintf(GinkgoWriter, "[%s/%s] validation error: %v\n", p.template, name, err)
+		if err := validator(ctx, kc, p.namespace, p.clusterName); err != nil {
+			_, _ = fmt.Fprintf(GinkgoWriter, "Template %s [%s/%s] validation error: %v\n", p.template, p.namespace, name, err)
 			return err
 		}
 
-		_, _ = fmt.Fprintf(GinkgoWriter, "[%s/%s] validation succeeded\n", p.template, name)
+		_, _ = fmt.Fprintf(GinkgoWriter, "Template %s [%s/%s] validation succeeded\n", p.template, p.namespace, name)
 		delete(p.resourcesToValidate, name)
 	}
 
