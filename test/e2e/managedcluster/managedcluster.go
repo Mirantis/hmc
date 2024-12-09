@@ -50,6 +50,7 @@ const (
 	TemplateAzureStandaloneCP   Template = "azure-standalone-cp"
 	TemplateVSphereStandaloneCP Template = "vsphere-standalone-cp"
 	TemplateVSphereHostedCP     Template = "vsphere-hosted-cp"
+	TemplateEKSCP               Template = "aws-eks-cp"
 )
 
 //go:embed resources/aws-standalone-cp.yaml.tpl
@@ -69,6 +70,9 @@ var vsphereStandaloneCPManagedClusterTemplateBytes []byte
 
 //go:embed resources/vsphere-hosted-cp.yaml.tpl
 var vsphereHostedCPManagedClusterTemplateBytes []byte
+
+//go:embed resources/aws-eks-cp.yaml.tpl
+var eksCPManagedClusterTemplateBytes []byte
 
 func FilterAllProviders() []string {
 	return []string{
@@ -134,6 +138,8 @@ func GetUnstructured(templateName Template) *unstructured.Unstructured {
 		managedClusterTemplateBytes = azureHostedCPManagedClusterTemplateBytes
 	case TemplateAzureStandaloneCP:
 		managedClusterTemplateBytes = azureStandaloneCPManagedClusterTemplateBytes
+	case TemplateEKSCP:
+		managedClusterTemplateBytes = eksCPManagedClusterTemplateBytes
 	default:
 		Fail(fmt.Sprintf("Unsupported template: %s", templateName))
 	}
