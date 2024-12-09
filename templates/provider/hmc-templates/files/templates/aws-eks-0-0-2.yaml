@@ -6,5 +6,10 @@ metadata:
     helm.sh/resource-policy: keep
 spec:
   helm:
-    chartName: aws-eks
-    chartVersion: 0.0.2
+    chartSpec:
+      chart: aws-eks
+      version: 0.0.2
+      interval: 10m0s
+      sourceRef:
+        kind: HelmRepository
+        name: hmc-templates

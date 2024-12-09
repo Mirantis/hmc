@@ -302,7 +302,7 @@ func (r *ManagedClusterReconciler) updateCluster(ctx context.Context, mc *hmc.Ma
 		return ctrl.Result{}, fmt.Errorf("error setting identity values: %w", err)
 	}
 
-	hr, _, err := helm.ReconcileHelmRelease(ctx, r.Client, mc.Name, mc.Namespace, helm.ReconcileHelmReleaseOpts{
+	hrReconcileOpts := helm.ReconcileHelmReleaseOpts{
 		Values: helmValues,
 		OwnerReference: &metav1.OwnerReference{
 			APIVersion: hmc.GroupVersion.String(),
@@ -311,7 +311,13 @@ func (r *ManagedClusterReconciler) updateCluster(ctx context.Context, mc *hmc.Ma
 			UID:        mc.UID,
 		},
 		ChartRef: clusterTpl.Status.ChartRef,
-	})
+	}
+	reconcileInterval := clusterTpl.Spec.Helm.ChartSpec.Interval.Duration
+	if reconcileInterval != 0 {
+		hrReconcileOpts.ReconcileInterval = &reconcileInterval
+	}
+
+	hr, _, err := helm.ReconcileHelmRelease(ctx, r.Client, mc.Name, mc.Namespace, hrReconcileOpts)
 	if err != nil {
 		apimeta.SetStatusCondition(mc.GetConditions(), metav1.Condition{
 			Type:    hmc.HelmReleaseReadyCondition,
