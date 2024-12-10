@@ -33,10 +33,10 @@ import (
 func PropagateVSphereSecrets(ctx context.Context, cfg *PropagationCfg) error {
 	vsphereCluster := &capv.VSphereCluster{}
 	if err := cfg.Client.Get(ctx, client.ObjectKey{
-		Name:      cfg.ManagedCluster.Name,
-		Namespace: cfg.ManagedCluster.Namespace,
+		Name:      cfg.ClusterDeployment.Name,
+		Namespace: cfg.ClusterDeployment.Namespace,
 	}, vsphereCluster); err != nil {
-		return fmt.Errorf("failed to get VSphereCluster %s: %w", cfg.ManagedCluster.Name, err)
+		return fmt.Errorf("failed to get VSphereCluster %s: %w", cfg.ClusterDeployment.Name, err)
 	}
 
 	vsphereClIdty := &capv.VSphereClusterIdentity{}
@@ -59,14 +59,14 @@ func PropagateVSphereSecrets(ctx context.Context, cfg *PropagationCfg) error {
 		ctx,
 		vsphereMachines,
 		&client.ListOptions{
-			Namespace: cfg.ManagedCluster.Namespace,
+			Namespace: cfg.ClusterDeployment.Namespace,
 			LabelSelector: labels.SelectorFromSet(map[string]string{
-				hmc.ClusterNameLabelKey: cfg.ManagedCluster.Name,
+				hmc.ClusterNameLabelKey: cfg.ClusterDeployment.Name,
 			}),
 			Limit: 1,
 		},
 	); err != nil {
-		return fmt.Errorf("failed to list VSphereMachines for cluster %s: %w", cfg.ManagedCluster.Name, err)
+		return fmt.Errorf("failed to list VSphereMachines for cluster %s: %w", cfg.ClusterDeployment.Name, err)
 	}
 	ccmSecret, ccmConfig, err := generateVSphereCCMConfigs(vsphereCluster, vsphereSecret, &vsphereMachines.Items[0])
 	if err != nil {

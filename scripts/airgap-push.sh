@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 # This script can be used to help users re-tag and push images and Helm charts
-# into a private registry for use when deploying HMC ManagedClusters into an
+# into a private registry for use when deploying HMC ClusterDeployments into an
 # air-gapped environment.  This script is packaged as part of the airgap bundle
 # for convenience.
 

@@ -8,5 +8,5 @@ rules:
   - apiGroups:
       - hmc.mirantis.com
     resources:
-      - managedclusters
+      - clusterdeployments
     verbs: {{ include "rbac.editorVerbs" . | nindent 6 }}

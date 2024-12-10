@@ -123,6 +123,9 @@ func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Manag
 
 		requeue bool
 	)
+
+	statusAccumulator.providers = append(statusAccumulator.providers, "infrastructure-internal")
+
 	for _, component := range components {
 		l.V(1).Info("reconciling components", "component", component)
 		template := new(hmc.ProviderTemplate)
