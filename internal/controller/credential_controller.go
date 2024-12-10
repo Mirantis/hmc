@@ -37,10 +37,9 @@ type CredentialReconciler struct {
 	client.Client
 }
 
-func (r *CredentialReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *CredentialReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, err error) {
 	l := ctrl.LoggerFrom(ctx)
 	l.Info("Credential reconcile start")
-	var err error
 
 	cred := &hmc.Credential{}
 	if err := r.Client.Get(ctx, req.NamespacedName, cred); err != nil {
