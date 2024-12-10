@@ -30,6 +30,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/env"
 	"k8s.io/utils/ptr"
 
 	internalutils "github.com/Mirantis/hmc/internal/utils"
@@ -48,12 +49,15 @@ func TestE2E(t *testing.T) {
 var _ = BeforeSuite(func() {
 	GinkgoT().Setenv(managedcluster.EnvVarNamespace, internalutils.DefaultSystemNamespace)
 
-	By("building and deploying the controller-manager")
+	By(fmt.Sprintf("building and deploying the controller-manager - Version: %s",
+		env.GetString("VERSION", "")))
 	cmd := exec.Command("make", "kind-deploy")
-	_, err := utils.Run(cmd)
+	output, err := utils.Run(cmd)
+	_, _ = fmt.Fprint(GinkgoWriter, string(output))
 	Expect(err).NotTo(HaveOccurred())
-	cmd = exec.Command("make", "test-apply")
-	_, err = utils.Run(cmd)
+	cmd = exec.Command("make", fmt.Sprintf("VERSION=%s", env.GetString("VERSION", "")), "test-apply")
+	output, err = utils.Run(cmd)
+	_, _ = fmt.Fprint(GinkgoWriter, string(output))
 	Expect(err).NotTo(HaveOccurred())
 
 	By("validating that the hmc-controller and CAPI provider controllers are running and ready")
@@ -62,6 +66,15 @@ var _ = BeforeSuite(func() {
 		err = verifyControllersUp(kc)
 		if err != nil {
 			_, _ = fmt.Fprintf(GinkgoWriter, "Controller validation failed: %v\n", err)
+			return err
+		}
+		return nil
+	}).WithTimeout(15 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
+
+	Eventually(func() error {
+		err = managedcluster.ValidateClusterTemplates(context.Background(), kc)
+		if err != nil {
+			_, _ = fmt.Fprintf(GinkgoWriter, "cluster template validation failed: %v\n", err)
 			return err
 		}
 		return nil
@@ -93,6 +106,9 @@ func verifyControllersUp(kc *kubeclient.KubeClient) error {
 		managedcluster.ProviderAWS,
 		managedcluster.ProviderAzure,
 		managedcluster.ProviderVSphere,
+		managedcluster.ProviderK0smotron,
+		managedcluster.ProviderK0smotronBootstrap,
+		managedcluster.ProviderK0smotronControlPlane,
 	}
 
 	for _, provider := range providers {

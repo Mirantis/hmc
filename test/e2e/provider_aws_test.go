@@ -124,6 +124,14 @@ var _ = Describe("AWS Templates", Label("provider:cloud", "provider:aws"), Order
 			return nil
 		}).WithTimeout(15 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
 
+		Eventually(func() error {
+			err = managedcluster.ValidateClusterTemplates(context.Background(), standaloneClient)
+			if err != nil {
+				_, _ = fmt.Fprintf(GinkgoWriter, "cluster template validation failed: %v\n", err)
+				return err
+			}
+			return nil
+		}).WithTimeout(15 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
 		// Ensure AWS credentials are set in the standalone cluster.
 		clusteridentity.New(standaloneClient, managedcluster.ProviderAWS)
 

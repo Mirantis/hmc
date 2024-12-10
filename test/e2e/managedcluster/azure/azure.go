@@ -76,22 +76,37 @@ func SetAzureEnvironmentVariables(clusterName string, kc *kubeclient.KubeClient)
 
 	resourceGroup := spec["resourceGroup"]
 	GinkgoT().Setenv("AZURE_RESOURCE_GROUP", fmt.Sprintf("%s", resourceGroup))
-	subnetMap, ok := subnets[0].(map[string]any)
-	Expect(ok).To(BeTrue())
-	subnetName := subnetMap["name"]
-	GinkgoT().Setenv("AZURE_NODE_SUBNET", fmt.Sprintf("%s", subnetName))
 
-	securityGroup, found, err := unstructured.NestedMap(subnetMap, "securityGroup")
-	Expect(err).NotTo(HaveOccurred())
-	Expect(found).To(BeTrue())
-	securityGroupName := securityGroup["name"]
-	GinkgoT().Setenv("AZURE_SECURITY_GROUP", fmt.Sprintf("%s", securityGroupName))
+	for _, subnet := range subnets {
+		sMap, ok := subnet.(map[string]any)
+		Expect(ok).To(BeTrue())
 
-	routeTable, found, err := unstructured.NestedMap(subnetMap, "routeTable")
-	Expect(err).NotTo(HaveOccurred())
-	Expect(found).To(BeTrue())
-	routeTableName := routeTable["name"]
-	GinkgoT().Setenv("AZURE_ROUTE_TABLE", fmt.Sprintf("%s", routeTableName))
+		routeTable, exists, err := unstructured.NestedMap(sMap, "routeTable")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(exists).To(BeTrue())
+		routeTableName := routeTable["name"]
+
+		subnetName := sMap["name"]
+
+		securityGroup, found, err := unstructured.NestedMap(sMap, "securityGroup")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(found).To(BeTrue())
+		securityGroupName := securityGroup["name"]
+
+		role, exists, err := unstructured.NestedString(sMap, "role")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(exists).To(BeTrue())
+
+		if role == "control-plane" {
+			GinkgoT().Setenv("AZURE_CP_SUBNET", fmt.Sprintf("%s", subnetName))
+			GinkgoT().Setenv("AZURE_CP_SECURITY_GROUP", fmt.Sprintf("%s", securityGroupName))
+			GinkgoT().Setenv("AZURE_CP_ROUTE_TABLE", fmt.Sprintf("%s", routeTableName))
+		} else {
+			GinkgoT().Setenv("AZURE_NODE_SUBNET", fmt.Sprintf("%s", subnetName))
+			GinkgoT().Setenv("AZURE_NODE_SECURITY_GROUP", fmt.Sprintf("%s", securityGroupName))
+			GinkgoT().Setenv("AZURE_NODE_ROUTE_TABLE", fmt.Sprintf("%s", routeTableName))
+		}
+	}
 }
 
 // CreateDefaultStorageClass configures the default storage class for Azure

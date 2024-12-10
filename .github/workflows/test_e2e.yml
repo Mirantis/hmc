@@ -1,0 +1,269 @@
+name: CI
+on:
+  pull_request:
+    types:
+      - labeled
+      - opened
+      - synchronize
+      - reopened
+    paths-ignore:
+      - 'config/**'
+      - '**.md'
+  push:
+    tags:
+      - '*'
+
+env:
+  GO_VERSION: '1.22'
+  REGISTRY_REPO: 'oci://ghcr.io/mirantis/hmc/charts-ci'
+
+jobs:
+  build:
+    concurrency:
+      group: build-${{ github.head_ref || github.run_id }}
+      cancel-in-progress: true
+    name: Build and Unit Test
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.vars.outputs.version }}
+      clustername: ${{ steps.vars.outputs.clustername }}
+      pr: ${{ steps.pr.outputs.result }}
+    steps:
+      - name: Get PR ref
+        uses: actions/github-script@v7
+        id: pr
+        with:
+          script: |
+            const { data: pullRequest } = await github.rest.pulls.get({
+              ...context.repo,
+              pull_number: context.payload.pull_request.number,
+            });
+            return pullRequest
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{fromJSON(steps.pr.outputs.result).merge_commit_sha}}
+          fetch-depth: 0
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: false
+      - name: Lint
+        run: GOLANGCI_LINT_TIMEOUT=10m make lint
+      - name: Verify all generated pieces are up-to-date
+        run: make generate-all && git add -N . && git diff --exit-code
+      - name: Unit tests
+        run: |
+          make test
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Login to GHCR
+        uses: docker/login-action@v3.3.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Get outputs
+        id: vars
+        run: |
+          GIT_VERSION=$(git describe --tags --always)
+          echo "version=${GIT_VERSION:1}" >> $GITHUB_OUTPUT
+          echo "clustername=ci-$(date +%s | cut -b6-10)" >> $GITHUB_OUTPUT
+      - name: Build and push HMC controller image
+        uses: docker/build-push-action@v6
+        with:
+          build-args: |
+            LD_FLAGS=-s -w -X github.com/Mirantis/hmc/internal/build.Version=${{ steps.vars.outputs.version }}
+          context: .
+          platforms: linux/amd64
+          tags: |
+            ghcr.io/mirantis/hmc/controller-ci:${{ steps.vars.outputs.version }}
+          push: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Prepare and push HMC template charts
+        run: |
+          make hmc-chart-release
+          make helm-push
+          make FORCE_PUSH=true test-hmc-version helm-push
+
+  controller-e2etest:
+    name: E2E Controller
+    runs-on: ubuntu-latest
+    needs: build
+    concurrency:
+      group: controller-${{ github.head_ref || github.run_id }}
+      cancel-in-progress: true
+    outputs:
+      clustername: ${{ needs.build.outputs.clustername }}
+      version: ${{ needs.build.outputs.version }}
+      pr: ${{ needs.build.outputs.pr }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{fromJSON(needs.build.outputs.pr).merge_commit_sha}}
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+      - name: Run E2E tests
+        env:
+          GINKGO_LABEL_FILTER: 'controller'
+          MANAGED_CLUSTER_NAME: ${{ needs.build.outputs.clustername }}
+          IMG: 'ghcr.io/mirantis/hmc/controller-ci:${{ needs.build.outputs.version }}'
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          make test-e2e
+      - name: Archive test results
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloud-e2etest-logs
+          path: |
+            test/e2e/*.log
+
+  provider-cloud-e2etest:
+    name: E2E Cloud Providers
+    runs-on: ubuntu-latest
+    if: ${{ contains( github.event.pull_request.labels.*.name, 'test e2e') }}
+    needs: build
+    concurrency:
+      group: cloud-${{ github.head_ref || github.run_id }}
+      cancel-in-progress: true
+    outputs:
+      clustername: ${{ needs.build.outputs.clustername }}
+      version: ${{ needs.build.outputs.version }}
+      pr: ${{ needs.build.outputs.pr }}
+    env:
+      AWS_REGION: us-west-2
+      AWS_ACCESS_KEY_ID: ${{ secrets.CI_AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.CI_AWS_SECRET_ACCESS_KEY }}
+      AZURE_REGION: westus2
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.CI_AZURE_SUBSCRIPTION_ID }}
+      AZURE_TENANT_ID: ${{ secrets.CI_AZURE_TENANT_ID }}
+      AZURE_CLIENT_ID: ${{ secrets.CI_AZURE_CLIENT_ID }}
+      AZURE_CLIENT_SECRET: ${{ secrets.CI_AZURE_CLIENT_SECRET }}
+    steps:
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        with:
+          detached: true
+        timeout-minutes: 90
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{fromJSON(needs.build.outputs.pr).merge_commit_sha}}
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+      - uses: actions/checkout@v4
+      - name: Run E2E tests
+        env:
+          GINKGO_LABEL_FILTER: 'provider:cloud'
+          MANAGED_CLUSTER_NAME: ${{ needs.build.outputs.clustername }}
+          IMG: 'ghcr.io/mirantis/hmc/controller-ci:${{ needs.build.outputs.version }}'
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          make test-e2e
+      - name: Archive test results
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloud-e2etest-logs
+          path: |
+            test/e2e/*.log
+
+  provider-onprem-e2etest:
+    name: E2E On-Prem Providers
+    runs-on: self-hosted
+    if: ${{ contains( github.event.pull_request.labels.*.name, 'test e2e') }}
+    needs: build
+    concurrency:
+      group: onprem-${{ github.head_ref || github.run_id }}
+      cancel-in-progress: true
+    outputs:
+      clustername: ${{ needs.build.outputs.clustername }}
+      version: ${{ needs.build.outputs.version }}
+      pr: ${{ needs.build.outputs.pr }}
+    env:
+      VSPHERE_USER: ${{ secrets.CI_VSPHERE_USER }}
+      VSPHERE_PASSWORD: ${{ secrets.CI_VSPHERE_PASSWORD }}
+      VSPHERE_SERVER: ${{ secrets.CI_VSPHERE_SERVER }}
+      VSPHERE_THUMBPRINT: ${{ secrets.CI_VSPHERE_THUMBPRINT }}
+      VSPHERE_DATACENTER: ${{ secrets.CI_VSPHERE_DATACENTER }}
+      VSPHERE_DATASTORE: ${{ secrets.CI_VSPHERE_DATASTORE }}
+      VSPHERE_RESOURCEPOOL: ${{ secrets.CI_VSPHERE_RESOURCEPOOL }}
+      VSPHERE_FOLDER: ${{ secrets.CI_VSPHERE_FOLDER }}
+      VSPHERE_CONTROL_PLANE_ENDPOINT: ${{ secrets.CI_VSPHERE_CONTROL_PLANE_ENDPOINT }}
+      VSPHERE_VM_TEMPLATE: ${{ secrets.CI_VSPHERE_VM_TEMPLATE }}
+      VSPHERE_NETWORK: ${{ secrets.CI_VSPHERE_NETWORK }}
+      VSPHERE_SSH_KEY: ${{ secrets.CI_VSPHERE_SSH_KEY }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{fromJSON(needs.build.outputs.pr).merge_commit_sha}}
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+      - name: Run E2E tests
+        env:
+          GINKGO_LABEL_FILTER: 'provider:onprem'
+          MANAGED_CLUSTER_NAME: ${{ needs.build.outputs.clustername }}
+          IMG: 'ghcr.io/mirantis/hmc/controller-ci:${{ needs.build.outputs.version }}'
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          make test-e2e
+      - name: Archive test results
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: onprem-e2etest-logs
+          path: |
+            test/e2e/*.log
+
+  cleanup:
+    name: Cleanup
+    needs:
+      - build
+      - provider-cloud-e2etest
+    runs-on: ubuntu-latest
+    if: ${{ always() && !contains(needs.provider-cloud-e2etest.result, 'skipped') && contains(needs.build.result, 'success') }}
+    timeout-minutes: 15
+    outputs:
+      clustername: ${{ needs.build.outputs.clustername }}
+      version: ${{ needs.build.outputs.version }}
+      pr: ${{ needs.build.outputs.pr }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{fromJSON(needs.build.outputs.pr).merge_commit_sha}}
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: AWS Test Resources
+        env:
+          AWS_REGION: us-west-2
+          AWS_ACCESS_KEY_ID: ${{ secrets.CI_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.CI_AWS_SECRET_ACCESS_KEY }}
+          AZURE_REGION: westus2
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.CI_AZURE_SUBSCRIPTION_ID }}
+          AZURE_TENANT_ID: ${{ secrets.CI_AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.CI_AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.CI_AZURE_CLIENT_SECRET }}
+          CLUSTER_NAME: '${{ needs.build.outputs.clustername }}'
+        run: |
+          make dev-aws-nuke
+          make dev-azure-nuke
