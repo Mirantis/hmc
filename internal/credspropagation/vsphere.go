@@ -119,8 +119,8 @@ func generateVSphereCCMConfigs(vCl *capv.VSphereCluster, vScrt *corev1.Secret, v
 	cmData := map[string]string{
 		"vsphere.conf": string(ccmCfgYaml),
 	}
-	return makeSecret(secretName, metav1.NamespaceSystem, secretData),
-		makeConfigMap("cloud-config", metav1.NamespaceSystem, cmData),
+	return makeSecret(secretName, secretData),
+		makeConfigMap("cloud-config", cmData),
 		nil
 }
 
@@ -161,5 +161,5 @@ datacenters = "{{ .Datacenter }}"
 		"csi-vsphere.conf": buf.Bytes(),
 	}
 
-	return makeSecret("vcenter-config-secret", metav1.NamespaceSystem, secretData), nil
+	return makeSecret("vcenter-config-secret", secretData), nil
 }
