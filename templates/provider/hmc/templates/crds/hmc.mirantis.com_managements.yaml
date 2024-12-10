@@ -55,6 +55,12 @@ spec:
 
                       [Velero]: https://velero.io
                     type: boolean
+                  schedule:
+                    default: 0 */6 * * *
+                    description: |-
+                      Schedule is a Cron expression defining when to run the scheduled Backup.
+                      Default value is to backup every 6 hours.
+                    type: string
                 required:
                 - enabled
                 type: object

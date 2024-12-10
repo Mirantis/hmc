@@ -264,6 +264,10 @@ func (in *BackupStatus) DeepCopyInto(out *BackupStatus) {
 		*out = new(velerov1.ScheduleStatus)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.NextAttempt != nil {
+		in, out := &in.NextAttempt, &out.NextAttempt
+		*out = (*in).DeepCopy()
+	}
 	if in.LastBackup != nil {
 		in, out := &in.LastBackup, &out.LastBackup
 		*out = new(velerov1.BackupStatus)
