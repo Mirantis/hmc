@@ -4,7 +4,7 @@ metadata:
   name: ${MANAGED_CLUSTER_NAME}
   namespace: ${NAMESPACE}
 spec:
-  template: azure-standalone-cp-0-0-3
+  template: azure-standalone-cp-0-0-4
   credential: ${AZURE_CLUSTER_IDENTITY}-cred
   config:
     controlPlaneNumber: 1
