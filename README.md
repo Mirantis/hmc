@@ -217,7 +217,7 @@ spec:
       iamInstanceProfile: nodes.cluster-api-provider-aws.sigs.k8s.io
       instanceType: ""
     workersNumber: 2
-  template: aws-standalone-cp-0-0-3
+  template: aws-standalone-cp-0-0-4
   credential: aws-credential
   dryRun: true
 ```
@@ -235,7 +235,7 @@ metadata:
   name: aws-standalone
   namespace: hmc-system
 spec:
-  template: aws-standalone-cp-0-0-3
+  template: aws-standalone-cp-0-0-4
   credential: aws-credential
   config:
     region: us-east-2
