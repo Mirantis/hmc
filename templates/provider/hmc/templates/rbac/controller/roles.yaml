@@ -215,6 +215,25 @@ rules:
   resources:
   - secrets
   verbs: {{ include "rbac.viewerVerbs" . | nindent 4 }}
+- apiGroups:
+  - hmc.mirantis.com
+  resources:
+  - backups
+  verbs: {{ include "rbac.editorVerbs" . | nindent 4 }}
+- apiGroups:
+  - hmc.mirantis.com
+  resources:
+  - backups/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - hmc.mirantis.com
+  resources:
+  - backups/status
+  verbs:
+  - get
+  - patch
+  - update
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role

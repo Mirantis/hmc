@@ -43,23 +43,7 @@ spec:
                 description: |-
                   Oneshot indicates whether the Backup should not be scheduled
                   and rather created immediately and only once.
-                  If set to true, the .schedule field is ignored.
-                  If set to true and the .customSchedule field is given,
-                  the .spec.template from the latter will be utilized,
-                  the HMC-required options still might override or precede the options
-                  from the field.
                 type: boolean
-              schedule:
-                default: 0 */6 * * *
-                description: |-
-                  Schedule is a Cron expression defining when to run the Backup.
-                  A shortcut instead of filling the .customSchedule field up.
-                  Default value is to backup every 6 hours.
-                  If both this field and the .customSchedule field
-                  are given, the schedule from the latter will be utilized.
-                type: string
-            required:
-            - schedule
             type: object
           status:
             description: BackupStatus defines the observed state of Backup
@@ -210,6 +194,12 @@ spec:
                       file in object storage.
                     type: integer
                 type: object
+              nextAttempt:
+                description: |-
+                  NextAttempt indicates the time when the next scheduled backup will be performed.
+                  Always absent for the Backups with the .spec.oneshot set to true.
+                format: date-time
+                type: string
               reference:
                 description: |-
                   Reference to the underlying Velero object being managed.
@@ -256,8 +246,9 @@ spec:
                 type: object
                 x-kubernetes-map-type: atomic
               schedule:
-                description: Status of the Velero Schedule if .spec.oneshot is set
-                  to false.
+                description: |-
+                  Status of the Velero Schedule for the Management scheduled backups.
+                  Always absent for the Backups with the .spec.oneshot set to true.
                 properties:
                   lastBackup:
                     description: |-

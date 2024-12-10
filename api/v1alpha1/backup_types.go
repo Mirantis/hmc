@@ -22,22 +22,8 @@ import (
 
 // BackupSpec defines the desired state of Backup
 type BackupSpec struct {
-	// +kubebuilder:default="0 */6 * * *"
-
-	// Schedule is a Cron expression defining when to run the Backup.
-	// A shortcut instead of filling the .customSchedule field up.
-	// Default value is to backup every 6 hours.
-	// If both this field and the .customSchedule field
-	// are given, the schedule from the latter will be utilized.
-	Schedule string `json:"schedule"`
-
 	// Oneshot indicates whether the Backup should not be scheduled
 	// and rather created immediately and only once.
-	// If set to true, the .schedule field is ignored.
-	// If set to true and the .customSchedule field is given,
-	// the .spec.template from the latter will be utilized,
-	// the HMC-required options still might override or precede the options
-	// from the field.
 	Oneshot bool `json:"oneshot,omitempty"`
 }
 
@@ -46,8 +32,12 @@ type BackupStatus struct {
 	// Reference to the underlying Velero object being managed.
 	// Might be either Velero Backup or Schedule.
 	Reference *corev1.ObjectReference `json:"reference,omitempty"`
-	// Status of the Velero Schedule if .spec.oneshot is set to false.
+	// Status of the Velero Schedule for the Management scheduled backups.
+	// Always absent for the Backups with the .spec.oneshot set to true.
 	Schedule *velerov1.ScheduleStatus `json:"schedule,omitempty"`
+	// NextAttempt indicates the time when the next scheduled backup will be performed.
+	// Always absent for the Backups with the .spec.oneshot set to true.
+	NextAttempt *metav1.Time `json:"nextAttempt,omitempty"`
 	// Last Velero Backup that has been created.
 	LastBackup *velerov1.BackupStatus `json:"lastBackup,omitempty"`
 }

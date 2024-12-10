@@ -57,6 +57,12 @@ type Core struct {
 
 // ManagementBackup enables a feature to backup HMC objects into a cloud.
 type ManagementBackup struct {
+	// +kubebuilder:default="0 */6 * * *"
+
+	// Schedule is a Cron expression defining when to run the scheduled Backup.
+	// Default value is to backup every 6 hours.
+	Schedule string `json:"schedule,omitempty"`
+
 	// +kubebuilder:default=false
 
 	// Flag to indicate whether the backup feature is enabled.
