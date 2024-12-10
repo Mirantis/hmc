@@ -15,7 +15,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.22.0
 	github.com/onsi/gomega v1.36.0
 	github.com/opencontainers/go-digest v1.0.1-0.20231025023718-d50d2fec9c98
-	github.com/projectsveltos/addon-controller v0.43.0
+	github.com/projectsveltos/addon-controller v0.44.0
 	github.com/projectsveltos/libsveltos v0.44.0
 	github.com/segmentio/analytics-go v3.1.0+incompatible
 	github.com/stretchr/testify v1.10.0
@@ -57,7 +57,7 @@ require (
 	github.com/containerd/errdefs v0.3.0 // indirect
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/containerd/platforms v0.2.1 // indirect
-	github.com/cyphar/filepath-securejoin v0.3.4 // indirect
+	github.com/cyphar/filepath-securejoin v0.3.5 // indirect
 	github.com/dariubs/percent v1.0.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/distribution/reference v0.6.0 // indirect
@@ -75,8 +75,8 @@ require (
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fluxcd/pkg/apis/acl v0.4.0 // indirect
 	github.com/fluxcd/pkg/apis/kustomize v1.6.1 // indirect
-	github.com/fluxcd/pkg/http/fetch v0.12.1 // indirect
-	github.com/fluxcd/pkg/tar v0.8.1 // indirect
+	github.com/fluxcd/pkg/http/fetch v0.13.0 // indirect
+	github.com/fluxcd/pkg/tar v0.9.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
 	github.com/gdexlab/go-render v1.0.1 // indirect
 	github.com/go-asn1-ber/asn1-ber v1.5.6 // indirect
