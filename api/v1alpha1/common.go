@@ -42,11 +42,6 @@ type (
 )
 
 const (
-	// Provider CAPA
-	ProviderCAPAName = "cluster-api-provider-aws"
-	// Provider Azure
-	ProviderAzureName   = "cluster-api-provider-azure"
-	ProviderVSphereName = "cluster-api-provider-vsphere"
 	// Provider K0smotron
 	ProviderK0smotronName = "k0smotron"
 	// Provider Sveltos
