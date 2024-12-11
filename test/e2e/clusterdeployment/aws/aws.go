@@ -25,8 +25,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
+	"github.com/Mirantis/hmc/test/e2e/clusterdeployment"
 	"github.com/Mirantis/hmc/test/e2e/kubeclient"
-	"github.com/Mirantis/hmc/test/e2e/managedcluster"
 )
 
 // PopulateHostedTemplateVars populates the environment variables required for
@@ -66,8 +66,8 @@ func PopulateHostedTemplateVars(ctx context.Context, kc *kubeclient.KubeClient, 
 	Expect(err).NotTo(HaveOccurred(), "failed to get AWS cluster security group ID")
 	Expect(found).To(BeTrue(), "AWS cluster has no security group ID")
 
-	GinkgoT().Setenv(managedcluster.EnvVarAWSVPCID, vpcID)
-	GinkgoT().Setenv(managedcluster.EnvVarAWSSubnetID, subnetID)
-	GinkgoT().Setenv(managedcluster.EnvVarAWSSubnetAvailabilityZone, subnetAZ)
-	GinkgoT().Setenv(managedcluster.EnvVarAWSSecurityGroupID, securityGroupID)
+	GinkgoT().Setenv(clusterdeployment.EnvVarAWSVPCID, vpcID)
+	GinkgoT().Setenv(clusterdeployment.EnvVarAWSSubnetID, subnetID)
+	GinkgoT().Setenv(clusterdeployment.EnvVarAWSSubnetAvailabilityZone, subnetAZ)
+	GinkgoT().Setenv(clusterdeployment.EnvVarAWSSecurityGroupID, securityGroupID)
 }

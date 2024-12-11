@@ -177,30 +177,30 @@ func (kc *KubeClient) CreateOrUpdateUnstructuredObject(gvr schema.GroupVersionRe
 	}
 }
 
-// CreateManagedCluster creates a managedcluster.hmc.mirantis.com in the given
+// CreateClusterDeployment creates a clusterdeployment.hmc.mirantis.com in the given
 // namespace and returns a DeleteFunc to clean up the deployment.
 // The DeleteFunc is a no-op if the deployment has already been deleted.
-func (kc *KubeClient) CreateManagedCluster(
-	ctx context.Context, managedcluster *unstructured.Unstructured,
+func (kc *KubeClient) CreateClusterDeployment(
+	ctx context.Context, clusterDeployment *unstructured.Unstructured,
 ) func() error {
 	GinkgoHelper()
 
-	kind := managedcluster.GetKind()
-	Expect(kind).To(Equal("ManagedCluster"))
+	kind := clusterDeployment.GetKind()
+	Expect(kind).To(Equal("ClusterDeployment"))
 
 	client := kc.GetDynamicClient(schema.GroupVersionResource{
 		Group:    "hmc.mirantis.com",
 		Version:  "v1alpha1",
-		Resource: "managedclusters",
+		Resource: "clusterdeployments",
 	}, true)
 
-	_, err := client.Create(ctx, managedcluster, metav1.CreateOptions{})
+	_, err := client.Create(ctx, clusterDeployment, metav1.CreateOptions{})
 	if !apierrors.IsAlreadyExists(err) {
 		Expect(err).NotTo(HaveOccurred(), "failed to create %s", kind)
 	}
 
 	return func() error {
-		err := client.Delete(ctx, managedcluster.GetName(), metav1.DeleteOptions{})
+		err := client.Delete(ctx, clusterDeployment.GetName(), metav1.DeleteOptions{})
 		if apierrors.IsNotFound(err) {
 			return nil
 		}

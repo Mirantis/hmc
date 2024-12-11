@@ -1,24 +1,20 @@
 apiVersion: hmc.mirantis.com/v1alpha1
-kind: ManagedCluster
+kind: ClusterDeployment
 metadata:
-  name: ${MANAGED_CLUSTER_NAME}
+  name: azure-dev
   namespace: ${NAMESPACE}
 spec:
   template: azure-standalone-cp-0-0-4
-  credential: ${AZURE_CLUSTER_IDENTITY}-cred
+  credential: azure-cluster-identity-cred
   config:
     controlPlaneNumber: 1
     workersNumber: 1
-    location: "${AZURE_REGION}"
+    location: "westus"
     subscriptionID: "${AZURE_SUBSCRIPTION_ID}"
     controlPlane:
       vmSize: Standard_A4_v2
     worker:
       vmSize: Standard_A4_v2
-    credential: ${AZURE_CLUSTER_IDENTITY}-cred
-    clusterIdentity:
-      name: ${AZURE_CLUSTER_IDENTITY}
-      namespace: ${NAMESPACE}
     tenantID: "${AZURE_TENANT_ID}"
     clientID: "${AZURE_CLIENT_ID}"
     clientSecret: "${AZURE_CLIENT_SECRET}"

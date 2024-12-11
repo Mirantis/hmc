@@ -159,18 +159,18 @@ func checkComponentsRemoval(ctx context.Context, cl client.Client, oldMgmt, newM
 		}
 
 		for _, cltpl := range clusterTemplates.Items {
-			mcls := new(hmcv1alpha1.ManagedClusterList)
+			mcls := new(hmcv1alpha1.ClusterDeploymentList)
 			if err := cl.List(ctx, mcls,
-				client.MatchingFields{hmcv1alpha1.ManagedClusterTemplateIndexKey: cltpl.Name},
+				client.MatchingFields{hmcv1alpha1.ClusterDeploymentTemplateIndexKey: cltpl.Name},
 				client.Limit(1)); err != nil {
-				return fmt.Errorf("failed to list ManagedClusters: %w", err)
+				return fmt.Errorf("failed to list ClusterDeployments: %w", err)
 			}
 
 			if len(mcls.Items) == 0 {
 				continue
 			}
 
-			return fmt.Errorf("provider %s is required by at least one ManagedCluster (%s) and cannot be removed from the Management %s", providerName, client.ObjectKeyFromObject(&mcls.Items[0]), newMgmt.Name)
+			return fmt.Errorf("provider %s is required by at least one ClusterDeployment (%s) and cannot be removed from the Management %s", providerName, client.ObjectKeyFromObject(&mcls.Items[0]), newMgmt.Name)
 		}
 	}
 
@@ -242,13 +242,13 @@ func getIncompatibleContracts(ctx context.Context, cl client.Client, mgmt *hmcv1
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
 func (v *ManagementValidator) ValidateDelete(ctx context.Context, _ runtime.Object) (admission.Warnings, error) {
-	managedClusters := &hmcv1alpha1.ManagedClusterList{}
-	err := v.Client.List(ctx, managedClusters, client.Limit(1))
+	clusterDeployments := &hmcv1alpha1.ClusterDeploymentList{}
+	err := v.Client.List(ctx, clusterDeployments, client.Limit(1))
 	if err != nil {
 		return nil, err
 	}
-	if len(managedClusters.Items) > 0 {
-		return admission.Warnings{"The Management object can't be removed if ManagedCluster objects still exist"}, errManagementDeletionForbidden
+	if len(clusterDeployments.Items) > 0 {
+		return admission.Warnings{"The Management object can't be removed if ClusterDeployment objects still exist"}, errManagementDeletionForbidden
 	}
 	return nil, nil
 }

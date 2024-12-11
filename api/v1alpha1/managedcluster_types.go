@@ -22,8 +22,8 @@ import (
 )
 
 const (
-	BlockingFinalizer       = "hmc.mirantis.com/cleanup"
-	ManagedClusterFinalizer = "hmc.mirantis.com/managed-cluster"
+	BlockingFinalizer          = "hmc.mirantis.com/cleanup"
+	ClusterDeploymentFinalizer = "hmc.mirantis.com/cluster-deployment"
 
 	FluxHelmChartNameKey      = "helm.toolkit.fluxcd.io/name"
 	FluxHelmChartNamespaceKey = "helm.toolkit.fluxcd.io/namespace"
@@ -35,20 +35,20 @@ const (
 )
 
 const (
-	// ManagedClusterKind is the string representation of a ManagedCluster.
-	ManagedClusterKind = "ManagedCluster"
+	// ClusterDeploymentKind is the string representation of a ClusterDeployment.
+	ClusterDeploymentKind = "ClusterDeployment"
 	// TemplateReadyCondition indicates the referenced Template exists and valid.
 	TemplateReadyCondition = "TemplateReady"
 	// HelmChartReadyCondition indicates the corresponding HelmChart is valid and ready.
 	HelmChartReadyCondition = "HelmChartReady"
 	// HelmReleaseReadyCondition indicates the corresponding HelmRelease is ready and fully reconciled.
 	HelmReleaseReadyCondition = "HelmReleaseReady"
-	// ReadyCondition indicates the ManagedCluster is ready and fully reconciled.
+	// ReadyCondition indicates the ClusterDeployment is ready and fully reconciled.
 	ReadyCondition string = "Ready"
 )
 
-// ManagedClusterSpec defines the desired state of ManagedCluster
-type ManagedClusterSpec struct {
+// ClusterDeploymentSpec defines the desired state of ClusterDeployment
+type ClusterDeploymentSpec struct {
 	// Config allows to provide parameters for template customization.
 	// If no Config provided, the field will be populated with the default values for
 	// the template and DryRun will be enabled.
@@ -86,14 +86,14 @@ type ManagedClusterSpec struct {
 	StopOnConflict bool `json:"stopOnConflict,omitempty"`
 }
 
-// ManagedClusterStatus defines the observed state of ManagedCluster
-type ManagedClusterStatus struct {
+// ClusterDeploymentStatus defines the observed state of ClusterDeployment
+type ClusterDeploymentStatus struct {
 	// Services contains details for the state of services.
 	Services []ServiceStatus `json:"services,omitempty"`
 	// Currently compatible exact Kubernetes version of the cluster. Being set only if
 	// provided by the corresponding ClusterTemplate.
 	KubernetesVersion string `json:"k8sVersion,omitempty"`
-	// Conditions contains details for the current state of the ManagedCluster.
+	// Conditions contains details for the current state of the ClusterDeployment.
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 
 	// AvailableUpgrades is the list of ClusterTemplate names to which
@@ -111,27 +111,27 @@ type ManagedClusterStatus struct {
 // +kubebuilder:printcolumn:name="status",type="string",JSONPath=".status.conditions[?(@.type==\"Ready\")].message",description="Status",priority=0
 // +kubebuilder:printcolumn:name="dryRun",type="string",JSONPath=".spec.dryRun",description="Dry Run",priority=1
 
-// ManagedCluster is the Schema for the managedclusters API
-type ManagedCluster struct {
+// ClusterDeployment is the Schema for the ClusterDeployments API
+type ClusterDeployment struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   ManagedClusterSpec   `json:"spec,omitempty"`
-	Status ManagedClusterStatus `json:"status,omitempty"`
+	Spec   ClusterDeploymentSpec   `json:"spec,omitempty"`
+	Status ClusterDeploymentStatus `json:"status,omitempty"`
 }
 
-func (in *ManagedCluster) HelmValues() (values map[string]any, err error) {
+func (in *ClusterDeployment) HelmValues() (values map[string]any, err error) {
 	if in.Spec.Config != nil {
 		err = yaml.Unmarshal(in.Spec.Config.Raw, &values)
 	}
 	return values, err
 }
 
-func (in *ManagedCluster) GetConditions() *[]metav1.Condition {
+func (in *ClusterDeployment) GetConditions() *[]metav1.Condition {
 	return &in.Status.Conditions
 }
 
-func (in *ManagedCluster) InitConditions() {
+func (in *ClusterDeployment) InitConditions() {
 	apimeta.SetStatusCondition(in.GetConditions(), metav1.Condition{
 		Type:    TemplateReadyCondition,
 		Status:  metav1.ConditionUnknown,
@@ -156,19 +156,19 @@ func (in *ManagedCluster) InitConditions() {
 		Type:    ReadyCondition,
 		Status:  metav1.ConditionUnknown,
 		Reason:  ProgressingReason,
-		Message: "ManagedCluster is not yet ready",
+		Message: "ClusterDeployment is not yet ready",
 	})
 }
 
 // +kubebuilder:object:root=true
 
-// ManagedClusterList contains a list of ManagedCluster
-type ManagedClusterList struct {
+// ClusterDeploymentList contains a list of ClusterDeployment
+type ClusterDeploymentList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []ManagedCluster `json:"items"`
+	Items           []ClusterDeployment `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&ManagedCluster{}, &ManagedClusterList{})
+	SchemeBuilder.Register(&ClusterDeployment{}, &ClusterDeploymentList{})
 }
