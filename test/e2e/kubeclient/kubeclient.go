@@ -243,6 +243,21 @@ func (kc *KubeClient) listResource(
 	return resources.Items, nil
 }
 
+func (kc *KubeClient) ListClusterTemplates(ctx context.Context) ([]unstructured.Unstructured, error) {
+	client := kc.GetDynamicClient(schema.GroupVersionResource{
+		Group:    "hmc.mirantis.com",
+		Version:  "v1alpha1",
+		Resource: "clustertemplates",
+	}, true)
+
+	resources, err := client.List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list cluster templates")
+	}
+
+	return resources.Items, nil
+}
+
 // ListMachines returns a list of Machine resources for the given cluster.
 func (kc *KubeClient) ListMachines(ctx context.Context, clusterName string) ([]unstructured.Unstructured, error) {
 	GinkgoHelper()

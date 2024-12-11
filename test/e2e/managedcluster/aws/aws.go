@@ -17,10 +17,14 @@
 package aws
 
 import (
+	"bufio"
 	"context"
+	"fmt"
+	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"gopkg.in/yaml.v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -52,14 +56,31 @@ func PopulateHostedTemplateVars(ctx context.Context, kc *kubeclient.KubeClient, 
 	Expect(err).NotTo(HaveOccurred(), "failed to get AWS cluster subnets")
 	Expect(found).To(BeTrue(), "AWS cluster has no subnets")
 
-	subnet, ok := subnets[0].(map[string]any)
-	Expect(ok).To(BeTrue(), "failed to cast subnet to map")
+	type awsSubnetMaps []map[string]any
+	subnetMaps := make(awsSubnetMaps, len(subnets))
+	for i, s := range subnets {
+		subnet, ok := s.(map[string]any)
+		Expect(ok).To(BeTrue(), "failed to cast subnet to map")
+		subnetMaps[i] = map[string]any{
+			"isPublic":         subnet["isPublic"],
+			"availabilityZone": subnet["availabilityZone"],
+			"id":               subnet["resourceID"],
+			"routeTableId":     subnet["routeTableId"],
+			"zoneType":         "availability-zone",
+		}
 
-	subnetID, ok := subnet["resourceID"].(string)
-	Expect(ok).To(BeTrue(), "failed to cast subnet ID to string")
-
-	subnetAZ, ok := subnet["availabilityZone"].(string)
-	Expect(ok).To(BeTrue(), "failed to cast subnet availability zone to string")
+		if natGatewayID, exists := subnet["natGatewayId"]; exists && natGatewayID != "" {
+			subnetMaps[i]["natGatewayId"] = natGatewayID
+		}
+	}
+	var subnetsFormatted string
+	encodedYaml, err := yaml.Marshal(subnetMaps)
+	Expect(err).NotTo(HaveOccurred(), "failed to get marshall subnet maps")
+	scanner := bufio.NewScanner(strings.NewReader(string(encodedYaml)))
+	for scanner.Scan() {
+		subnetsFormatted += fmt.Sprintf("    %s\n", scanner.Text())
+	}
+	GinkgoT().Setenv(managedcluster.EnvVarAWSSubnets, subnetsFormatted)
 
 	securityGroupID, found, err := unstructured.NestedString(
 		awsCluster.Object, "status", "networkStatus", "securityGroups", "node", "id")
@@ -67,7 +88,5 @@ func PopulateHostedTemplateVars(ctx context.Context, kc *kubeclient.KubeClient, 
 	Expect(found).To(BeTrue(), "AWS cluster has no security group ID")
 
 	GinkgoT().Setenv(managedcluster.EnvVarAWSVPCID, vpcID)
-	GinkgoT().Setenv(managedcluster.EnvVarAWSSubnetID, subnetID)
-	GinkgoT().Setenv(managedcluster.EnvVarAWSSubnetAvailabilityZone, subnetAZ)
 	GinkgoT().Setenv(managedcluster.EnvVarAWSSecurityGroupID, securityGroupID)
 }

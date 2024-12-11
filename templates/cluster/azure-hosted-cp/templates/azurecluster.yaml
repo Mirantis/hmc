@@ -19,9 +19,15 @@ spec:
       - name: {{ .Values.network.nodeSubnetName }}
         role: node
         routeTable:
-          name: {{ .Values.network.routeTableName }}
+          name: {{ .Values.network.nodeRouteTableName }}
         securityGroup:
-          name: {{ .Values.network.securityGroupName }}
+          name: {{ .Values.network.nodeSecurityGroupName }}
+      - name: {{ .Values.network.cpSubnetName }}
+        role: control-plane
+        routeTable:
+          name: {{ .Values.network.cpRouteTableName }}
+        securityGroup:
+          name: {{ .Values.network.cpSecurityGroupName }}
   location: {{ .Values.location }}
   {{- if .Values.bastion.enabled }}
   {{- with .Values.bastion.bastionSpec }}

@@ -3,7 +3,7 @@ kind: ManagedCluster
 metadata:
   name: ${MANAGED_CLUSTER_NAME}
 spec:
-  template: aws-hosted-cp-0-0-3
+  template: aws-hosted-cp-0-0-3${BUILD_VERSION}
   credential: ${AWS_CLUSTER_IDENTITY}-cred
   config:
     clusterIdentity:
@@ -12,8 +12,7 @@ spec:
     vpcID: ${AWS_VPC_ID}
     region: ${AWS_REGION}
     subnets:
-      - id: ${AWS_SUBNET_ID}
-        availabilityZone: ${AWS_SUBNET_AVAILABILITY_ZONE}
+${AWS_SUBNETS}
     instanceType: ${AWS_INSTANCE_TYPE:=t3.medium}
     securityGroupIDs:
       - ${AWS_SG_ID}
