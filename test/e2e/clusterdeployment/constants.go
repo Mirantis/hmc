@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package managedcluster
+package clusterdeployment
 
 const (
 	// Common
-	EnvVarManagedClusterName = "MANAGED_CLUSTER_NAME"
-	EnvVarControlPlaneNumber = "CONTROL_PLANE_NUMBER"
-	EnvVarWorkerNumber       = "WORKER_NUMBER"
-	EnvVarNamespace          = "NAMESPACE"
+	EnvVarClusterDeploymentName = "CLUSTER_DEPLOYMENT_NAME"
+	EnvVarControlPlaneNumber    = "CONTROL_PLANE_NUMBER"
+	EnvVarWorkerNumber          = "WORKER_NUMBER"
+	EnvVarNamespace             = "NAMESPACE"
 	// EnvVarNoCleanup disables After* cleanup in provider specs to allow for
 	// debugging of test failures.
 	EnvVarNoCleanup = "NO_CLEANUP"

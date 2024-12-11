@@ -15,11 +15,11 @@
 package vsphere
 
 import (
-	"github.com/Mirantis/hmc/test/e2e/managedcluster"
+	"github.com/Mirantis/hmc/test/e2e/clusterdeployment"
 )
 
 func CheckEnv() {
-	managedcluster.ValidateDeploymentVars([]string{
+	clusterdeployment.ValidateDeploymentVars([]string{
 		"VSPHERE_USER",
 		"VSPHERE_PASSWORD",
 		"VSPHERE_SERVER",

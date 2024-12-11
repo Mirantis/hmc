@@ -33,8 +33,8 @@ import (
 	"k8s.io/utils/ptr"
 
 	internalutils "github.com/Mirantis/hmc/internal/utils"
+	"github.com/Mirantis/hmc/test/e2e/clusterdeployment"
 	"github.com/Mirantis/hmc/test/e2e/kubeclient"
-	"github.com/Mirantis/hmc/test/e2e/managedcluster"
 	"github.com/Mirantis/hmc/test/utils"
 )
 
@@ -46,7 +46,7 @@ func TestE2E(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	GinkgoT().Setenv(managedcluster.EnvVarNamespace, internalutils.DefaultSystemNamespace)
+	GinkgoT().Setenv(clusterdeployment.EnvVarNamespace, internalutils.DefaultSystemNamespace)
 
 	By("building and deploying the controller-manager")
 	cmd := exec.Command("make", "kind-deploy")
@@ -88,16 +88,16 @@ func verifyControllersUp(kc *kubeclient.KubeClient) error {
 		return err
 	}
 
-	providers := []managedcluster.ProviderType{
-		managedcluster.ProviderCAPI,
-		managedcluster.ProviderAWS,
-		managedcluster.ProviderAzure,
-		managedcluster.ProviderVSphere,
+	providers := []clusterdeployment.ProviderType{
+		clusterdeployment.ProviderCAPI,
+		clusterdeployment.ProviderAWS,
+		clusterdeployment.ProviderAzure,
+		clusterdeployment.ProviderVSphere,
 	}
 
 	for _, provider := range providers {
 		// Ensure only one controller pod is running.
-		if err := validateController(kc, managedcluster.GetProviderLabel(provider), string(provider)); err != nil {
+		if err := validateController(kc, clusterdeployment.GetProviderLabel(provider), string(provider)); err != nil {
 			return err
 		}
 	}
@@ -107,7 +107,7 @@ func verifyControllersUp(kc *kubeclient.KubeClient) error {
 
 func validateController(kc *kubeclient.KubeClient, labelSelector, name string) error {
 	controllerItems := 1
-	if strings.Contains(labelSelector, managedcluster.GetProviderLabel(managedcluster.ProviderAzure)) {
+	if strings.Contains(labelSelector, clusterdeployment.GetProviderLabel(clusterdeployment.ProviderAzure)) {
 		// Azure provider has two controllers.
 		controllerItems = 2
 	}
@@ -144,7 +144,7 @@ func validateController(kc *kubeclient.KubeClient, labelSelector, name string) e
 
 // templateBy wraps a Ginkgo By with a block describing the template being
 // tested.
-func templateBy(t managedcluster.Template, description string) {
+func templateBy(t clusterdeployment.Template, description string) {
 	GinkgoHelper()
 	By(fmt.Sprintf("[%s] %s", t, description))
 }
@@ -155,7 +155,7 @@ func templateBy(t managedcluster.Template, description string) {
 // optionally provided, passing an empty string will prevent clusterctl output
 // from being fetched.  If collectLogArtifacts fails it produces a warning
 // message to the GinkgoWriter, but does not fail the test.
-func collectLogArtifacts(kc *kubeclient.KubeClient, clusterName string, providerTypes ...managedcluster.ProviderType) {
+func collectLogArtifacts(kc *kubeclient.KubeClient, clusterName string, providerTypes ...clusterdeployment.ProviderType) {
 	GinkgoHelper()
 
 	filterLabels := []string{utils.HMCControllerLabel}
@@ -169,10 +169,10 @@ func collectLogArtifacts(kc *kubeclient.KubeClient, clusterName string, provider
 	}
 
 	if providerTypes == nil {
-		filterLabels = managedcluster.FilterAllProviders()
+		filterLabels = clusterdeployment.FilterAllProviders()
 	} else {
 		for _, providerType := range providerTypes {
-			filterLabels = append(filterLabels, managedcluster.GetProviderLabel(providerType))
+			filterLabels = append(filterLabels, clusterdeployment.GetProviderLabel(providerType))
 		}
 	}
 
@@ -228,9 +228,9 @@ func collectLogArtifacts(kc *kubeclient.KubeClient, clusterName string, provider
 }
 
 func noCleanup() bool {
-	noCleanup := os.Getenv(managedcluster.EnvVarNoCleanup)
+	noCleanup := os.Getenv(clusterdeployment.EnvVarNoCleanup)
 	if noCleanup != "" {
-		By(fmt.Sprintf("skipping After node as %s is set", managedcluster.EnvVarNoCleanup))
+		By(fmt.Sprintf("skipping After node as %s is set", clusterdeployment.EnvVarNoCleanup))
 	}
 
 	return noCleanup != ""

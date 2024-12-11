@@ -27,8 +27,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/Mirantis/hmc/api/v1alpha1"
+	"github.com/Mirantis/hmc/test/objects/clusterdeployment"
 	"github.com/Mirantis/hmc/test/objects/credential"
-	"github.com/Mirantis/hmc/test/objects/managedcluster"
 	"github.com/Mirantis/hmc/test/objects/management"
 	"github.com/Mirantis/hmc/test/objects/template"
 	"github.com/Mirantis/hmc/test/scheme"
@@ -60,7 +60,7 @@ var (
 	)
 )
 
-func TestManagedClusterValidateCreate(t *testing.T) {
+func TestClusterDeploymentValidateCreate(t *testing.T) {
 	g := NewWithT(t)
 
 	ctx := admission.NewContextWithRequest(context.Background(), admission.Request{
@@ -70,22 +70,22 @@ func TestManagedClusterValidateCreate(t *testing.T) {
 	})
 
 	tests := []struct {
-		name            string
-		managedCluster  *v1alpha1.ManagedCluster
-		existingObjects []runtime.Object
-		err             string
-		warnings        admission.Warnings
+		name              string
+		ClusterDeployment *v1alpha1.ClusterDeployment
+		existingObjects   []runtime.Object
+		err               string
+		warnings          admission.Warnings
 	}{
 		{
-			name:           "should fail if the template is unset",
-			managedCluster: managedcluster.NewManagedCluster(),
-			err:            "the ManagedCluster is invalid: clustertemplates.hmc.mirantis.com \"\" not found",
+			name:              "should fail if the template is unset",
+			ClusterDeployment: clusterdeployment.NewClusterDeployment(),
+			err:               "the ClusterDeployment is invalid: clustertemplates.hmc.mirantis.com \"\" not found",
 		},
 		{
-			name: "should fail if the ClusterTemplate is not found in the ManagedCluster's namespace",
-			managedCluster: managedcluster.NewManagedCluster(
-				managedcluster.WithClusterTemplate(testTemplateName),
-				managedcluster.WithCredential(testCredentialName),
+			name: "should fail if the ClusterTemplate is not found in the ClusterDeployment's namespace",
+			ClusterDeployment: clusterdeployment.NewClusterDeployment(
+				clusterdeployment.WithClusterTemplate(testTemplateName),
+				clusterdeployment.WithCredential(testCredentialName),
 			),
 			existingObjects: []runtime.Object{
 				mgmt,
@@ -95,14 +95,14 @@ func TestManagedClusterValidateCreate(t *testing.T) {
 					template.WithNamespace(testNamespace),
 				),
 			},
-			err: fmt.Sprintf("the ManagedCluster is invalid: clustertemplates.hmc.mirantis.com \"%s\" not found", testTemplateName),
+			err: fmt.Sprintf("the ClusterDeployment is invalid: clustertemplates.hmc.mirantis.com \"%s\" not found", testTemplateName),
 		},
 		{
 			name: "should fail if the ServiceTemplates are not found in same namespace",
-			managedCluster: managedcluster.NewManagedCluster(
-				managedcluster.WithClusterTemplate(testTemplateName),
-				managedcluster.WithCredential(testCredentialName),
-				managedcluster.WithServiceTemplate(testSvcTemplate1Name),
+			ClusterDeployment: clusterdeployment.NewClusterDeployment(
+				clusterdeployment.WithClusterTemplate(testTemplateName),
+				clusterdeployment.WithCredential(testCredentialName),
+				clusterdeployment.WithServiceTemplate(testSvcTemplate1Name),
 			),
 			existingObjects: []runtime.Object{
 				mgmt,
@@ -121,13 +121,13 @@ func TestManagedClusterValidateCreate(t *testing.T) {
 					template.WithNamespace("othernamespace"),
 				),
 			},
-			err: fmt.Sprintf("the ManagedCluster is invalid: servicetemplates.hmc.mirantis.com \"%s\" not found", testSvcTemplate1Name),
+			err: fmt.Sprintf("the ClusterDeployment is invalid: servicetemplates.hmc.mirantis.com \"%s\" not found", testSvcTemplate1Name),
 		},
 		{
 			name: "should fail if the cluster template was found but is invalid (some validation error)",
-			managedCluster: managedcluster.NewManagedCluster(
-				managedcluster.WithClusterTemplate(testTemplateName),
-				managedcluster.WithCredential(testCredentialName),
+			ClusterDeployment: clusterdeployment.NewClusterDeployment(
+				clusterdeployment.WithClusterTemplate(testTemplateName),
+				clusterdeployment.WithCredential(testCredentialName),
 			),
 			existingObjects: []runtime.Object{
 				mgmt,
@@ -140,14 +140,14 @@ func TestManagedClusterValidateCreate(t *testing.T) {
 					}),
 				),
 			},
-			err: "the ManagedCluster is invalid: the template is not valid: validation error example",
+			err: "the ClusterDeployment is invalid: the template is not valid: validation error example",
 		},
 		{
 			name: "should fail if the service templates were found but are invalid (some validation error)",
-			managedCluster: managedcluster.NewManagedCluster(
-				managedcluster.WithClusterTemplate(testTemplateName),
-				managedcluster.WithCredential(testCredentialName),
-				managedcluster.WithServiceTemplate(testSvcTemplate1Name),
+			ClusterDeployment: clusterdeployment.NewClusterDeployment(
+				clusterdeployment.WithClusterTemplate(testTemplateName),
+				clusterdeployment.WithCredential(testCredentialName),
+				clusterdeployment.WithServiceTemplate(testSvcTemplate1Name),
 			),
 			existingObjects: []runtime.Object{
 				mgmt,
@@ -169,14 +169,14 @@ func TestManagedClusterValidateCreate(t *testing.T) {
 					}),
 				),
 			},
-			err: "the ManagedCluster is invalid: the template is not valid: validation error example",
+			err: "the ClusterDeployment is invalid: the template is not valid: validation error example",
 		},
 		{
 			name: "should succeed",
-			managedCluster: managedcluster.NewManagedCluster(
-				managedcluster.WithClusterTemplate(testTemplateName),
-				managedcluster.WithCredential(testCredentialName),
-				managedcluster.WithServiceTemplate(testSvcTemplate1Name),
+			ClusterDeployment: clusterdeployment.NewClusterDeployment(
+				clusterdeployment.WithClusterTemplate(testTemplateName),
+				clusterdeployment.WithCredential(testCredentialName),
+				clusterdeployment.WithServiceTemplate(testSvcTemplate1Name),
 			),
 			existingObjects: []runtime.Object{
 				mgmt,
@@ -198,9 +198,9 @@ func TestManagedClusterValidateCreate(t *testing.T) {
 		},
 		{
 			name: "cluster template k8s version does not satisfy service template constraints",
-			managedCluster: managedcluster.NewManagedCluster(
-				managedcluster.WithClusterTemplate(testTemplateName),
-				managedcluster.WithServiceTemplate(testTemplateName),
+			ClusterDeployment: clusterdeployment.NewClusterDeployment(
+				clusterdeployment.WithClusterTemplate(testTemplateName),
+				clusterdeployment.WithServiceTemplate(testTemplateName),
 			),
 			existingObjects: []runtime.Object{
 				cred,
@@ -220,12 +220,12 @@ func TestManagedClusterValidateCreate(t *testing.T) {
 					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
 				),
 			},
-			err:      fmt.Sprintf(`failed to validate k8s compatibility: k8s version v1.30.0 of the ManagedCluster default/%s does not satisfy constrained version <1.30 from the ServiceTemplate default/%s`, managedcluster.DefaultName, testTemplateName),
+			err:      fmt.Sprintf(`failed to validate k8s compatibility: k8s version v1.30.0 of the ClusterDeployment default/%s does not satisfy constrained version <1.30 from the ServiceTemplate default/%s`, clusterdeployment.DefaultName, testTemplateName),
 			warnings: admission.Warnings{"Failed to validate k8s version compatibility with ServiceTemplates"},
 		},
 		{
-			name:           "should fail if the credential is unset",
-			managedCluster: managedcluster.NewManagedCluster(managedcluster.WithClusterTemplate(testTemplateName)),
+			name:              "should fail if the credential is unset",
+			ClusterDeployment: clusterdeployment.NewClusterDeployment(clusterdeployment.WithClusterTemplate(testTemplateName)),
 			existingObjects: []runtime.Object{
 				mgmt,
 				template.NewClusterTemplate(
@@ -238,13 +238,13 @@ func TestManagedClusterValidateCreate(t *testing.T) {
 					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
 				),
 			},
-			err: "the ManagedCluster is invalid: credentials.hmc.mirantis.com \"\" not found",
+			err: "the ClusterDeployment is invalid: credentials.hmc.mirantis.com \"\" not found",
 		},
 		{
 			name: "should fail if credential is not Ready",
-			managedCluster: managedcluster.NewManagedCluster(
-				managedcluster.WithClusterTemplate(testTemplateName),
-				managedcluster.WithCredential(testCredentialName),
+			ClusterDeployment: clusterdeployment.NewClusterDeployment(
+				clusterdeployment.WithClusterTemplate(testTemplateName),
+				clusterdeployment.WithCredential(testCredentialName),
 			),
 			existingObjects: []runtime.Object{
 				mgmt,
@@ -267,13 +267,13 @@ func TestManagedClusterValidateCreate(t *testing.T) {
 					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
 				),
 			},
-			err: "the ManagedCluster is invalid: credential is not Ready",
+			err: "the ClusterDeployment is invalid: credential is not Ready",
 		},
 		{
 			name: "should fail if credential and template providers doesn't match",
-			managedCluster: managedcluster.NewManagedCluster(
-				managedcluster.WithClusterTemplate(testTemplateName),
-				managedcluster.WithCredential(testCredentialName),
+			ClusterDeployment: clusterdeployment.NewClusterDeployment(
+				clusterdeployment.WithClusterTemplate(testTemplateName),
+				clusterdeployment.WithCredential(testCredentialName),
 			),
 			existingObjects: []runtime.Object{
 				cred,
@@ -294,14 +294,14 @@ func TestManagedClusterValidateCreate(t *testing.T) {
 					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
 				),
 			},
-			err: "the ManagedCluster is invalid: wrong kind of the ClusterIdentity \"AWSClusterStaticIdentity\" for provider \"infrastructure-azure\"",
+			err: "the ClusterDeployment is invalid: wrong kind of the ClusterIdentity \"AWSClusterStaticIdentity\" for provider \"infrastructure-azure\"",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(tt.existingObjects...).Build()
-			validator := &ManagedClusterValidator{Client: c}
-			warn, err := validator.ValidateCreate(ctx, tt.managedCluster)
+			validator := &ClusterDeploymentValidator{Client: c}
+			warn, err := validator.ValidateCreate(ctx, tt.ClusterDeployment)
 			if tt.err != "" {
 				g.Expect(err).To(HaveOccurred())
 				if err.Error() != tt.err {
@@ -316,7 +316,7 @@ func TestManagedClusterValidateCreate(t *testing.T) {
 	}
 }
 
-func TestManagedClusterValidateUpdate(t *testing.T) {
+func TestClusterDeploymentValidateUpdate(t *testing.T) {
 	const (
 		upgradeTargetTemplateName  = "upgrade-target-template"
 		unmanagedByHMCTemplateName = "unmanaged-template"
@@ -331,20 +331,20 @@ func TestManagedClusterValidateUpdate(t *testing.T) {
 	})
 
 	tests := []struct {
-		name              string
-		oldManagedCluster *v1alpha1.ManagedCluster
-		newManagedCluster *v1alpha1.ManagedCluster
-		existingObjects   []runtime.Object
-		err               string
-		warnings          admission.Warnings
+		name                 string
+		oldClusterDeployment *v1alpha1.ClusterDeployment
+		newClusterDeployment *v1alpha1.ClusterDeployment
+		existingObjects      []runtime.Object
+		err                  string
+		warnings             admission.Warnings
 	}{
 		{
 			name: "update spec.template: should fail if the new cluster template was found but is invalid (some validation error)",
-			oldManagedCluster: managedcluster.NewManagedCluster(
-				managedcluster.WithClusterTemplate(testTemplateName),
-				managedcluster.WithAvailableUpgrades([]string{newTemplateName}),
+			oldClusterDeployment: clusterdeployment.NewClusterDeployment(
+				clusterdeployment.WithClusterTemplate(testTemplateName),
+				clusterdeployment.WithAvailableUpgrades([]string{newTemplateName}),
 			),
-			newManagedCluster: managedcluster.NewManagedCluster(managedcluster.WithClusterTemplate(newTemplateName)),
+			newClusterDeployment: clusterdeployment.NewClusterDeployment(clusterdeployment.WithClusterTemplate(newTemplateName)),
 			existingObjects: []runtime.Object{
 				mgmt,
 				template.NewClusterTemplate(
@@ -355,18 +355,18 @@ func TestManagedClusterValidateUpdate(t *testing.T) {
 					}),
 				),
 			},
-			err: "the ManagedCluster is invalid: the template is not valid: validation error example",
+			err: "the ClusterDeployment is invalid: the template is not valid: validation error example",
 		},
 		{
 			name: "update spec.template: should fail if the template is not in the list of available",
-			oldManagedCluster: managedcluster.NewManagedCluster(
-				managedcluster.WithClusterTemplate(testTemplateName),
-				managedcluster.WithCredential(testCredentialName),
-				managedcluster.WithAvailableUpgrades([]string{}),
+			oldClusterDeployment: clusterdeployment.NewClusterDeployment(
+				clusterdeployment.WithClusterTemplate(testTemplateName),
+				clusterdeployment.WithCredential(testCredentialName),
+				clusterdeployment.WithAvailableUpgrades([]string{}),
 			),
-			newManagedCluster: managedcluster.NewManagedCluster(
-				managedcluster.WithClusterTemplate(upgradeTargetTemplateName),
-				managedcluster.WithCredential(testCredentialName),
+			newClusterDeployment: clusterdeployment.NewClusterDeployment(
+				clusterdeployment.WithClusterTemplate(upgradeTargetTemplateName),
+				clusterdeployment.WithCredential(testCredentialName),
 			),
 			existingObjects: []runtime.Object{
 				mgmt, cred,
@@ -394,14 +394,14 @@ func TestManagedClusterValidateUpdate(t *testing.T) {
 		},
 		{
 			name: "update spec.template: should succeed if the template is in the list of available",
-			oldManagedCluster: managedcluster.NewManagedCluster(
-				managedcluster.WithClusterTemplate(testTemplateName),
-				managedcluster.WithCredential(testCredentialName),
-				managedcluster.WithAvailableUpgrades([]string{newTemplateName}),
+			oldClusterDeployment: clusterdeployment.NewClusterDeployment(
+				clusterdeployment.WithClusterTemplate(testTemplateName),
+				clusterdeployment.WithCredential(testCredentialName),
+				clusterdeployment.WithAvailableUpgrades([]string{newTemplateName}),
 			),
-			newManagedCluster: managedcluster.NewManagedCluster(
-				managedcluster.WithClusterTemplate(newTemplateName),
-				managedcluster.WithCredential(testCredentialName),
+			newClusterDeployment: clusterdeployment.NewClusterDeployment(
+				clusterdeployment.WithClusterTemplate(newTemplateName),
+				clusterdeployment.WithCredential(testCredentialName),
 			),
 			existingObjects: []runtime.Object{
 				mgmt, cred,
@@ -427,15 +427,15 @@ func TestManagedClusterValidateUpdate(t *testing.T) {
 		},
 		{
 			name: "should succeed if spec.template is not changed",
-			oldManagedCluster: managedcluster.NewManagedCluster(
-				managedcluster.WithClusterTemplate(testTemplateName),
-				managedcluster.WithConfig(`{"foo":"bar"}`),
-				managedcluster.WithCredential(testCredentialName),
+			oldClusterDeployment: clusterdeployment.NewClusterDeployment(
+				clusterdeployment.WithClusterTemplate(testTemplateName),
+				clusterdeployment.WithConfig(`{"foo":"bar"}`),
+				clusterdeployment.WithCredential(testCredentialName),
 			),
-			newManagedCluster: managedcluster.NewManagedCluster(
-				managedcluster.WithClusterTemplate(testTemplateName),
-				managedcluster.WithConfig(`{"a":"b"}`),
-				managedcluster.WithCredential(testCredentialName),
+			newClusterDeployment: clusterdeployment.NewClusterDeployment(
+				clusterdeployment.WithClusterTemplate(testTemplateName),
+				clusterdeployment.WithConfig(`{"a":"b"}`),
+				clusterdeployment.WithCredential(testCredentialName),
 			),
 			existingObjects: []runtime.Object{
 				mgmt,
@@ -456,16 +456,16 @@ func TestManagedClusterValidateUpdate(t *testing.T) {
 		},
 		{
 			name: "should succeed if serviceTemplates are added",
-			oldManagedCluster: managedcluster.NewManagedCluster(
-				managedcluster.WithClusterTemplate(testTemplateName),
-				managedcluster.WithConfig(`{"foo":"bar"}`),
-				managedcluster.WithCredential(testCredentialName),
+			oldClusterDeployment: clusterdeployment.NewClusterDeployment(
+				clusterdeployment.WithClusterTemplate(testTemplateName),
+				clusterdeployment.WithConfig(`{"foo":"bar"}`),
+				clusterdeployment.WithCredential(testCredentialName),
 			),
-			newManagedCluster: managedcluster.NewManagedCluster(
-				managedcluster.WithClusterTemplate(testTemplateName),
-				managedcluster.WithConfig(`{"a":"b"}`),
-				managedcluster.WithCredential(testCredentialName),
-				managedcluster.WithServiceTemplate(testSvcTemplate1Name),
+			newClusterDeployment: clusterdeployment.NewClusterDeployment(
+				clusterdeployment.WithClusterTemplate(testTemplateName),
+				clusterdeployment.WithConfig(`{"a":"b"}`),
+				clusterdeployment.WithCredential(testCredentialName),
+				clusterdeployment.WithServiceTemplate(testSvcTemplate1Name),
 			),
 			existingObjects: []runtime.Object{
 				mgmt,
@@ -490,16 +490,16 @@ func TestManagedClusterValidateUpdate(t *testing.T) {
 		},
 		{
 			name: "should succeed if serviceTemplates are removed",
-			oldManagedCluster: managedcluster.NewManagedCluster(
-				managedcluster.WithClusterTemplate(testTemplateName),
-				managedcluster.WithConfig(`{"foo":"bar"}`),
-				managedcluster.WithCredential(testCredentialName),
-				managedcluster.WithServiceTemplate(testSvcTemplate1Name),
+			oldClusterDeployment: clusterdeployment.NewClusterDeployment(
+				clusterdeployment.WithClusterTemplate(testTemplateName),
+				clusterdeployment.WithConfig(`{"foo":"bar"}`),
+				clusterdeployment.WithCredential(testCredentialName),
+				clusterdeployment.WithServiceTemplate(testSvcTemplate1Name),
 			),
-			newManagedCluster: managedcluster.NewManagedCluster(
-				managedcluster.WithClusterTemplate(testTemplateName),
-				managedcluster.WithConfig(`{"a":"b"}`),
-				managedcluster.WithCredential(testCredentialName),
+			newClusterDeployment: clusterdeployment.NewClusterDeployment(
+				clusterdeployment.WithClusterTemplate(testTemplateName),
+				clusterdeployment.WithConfig(`{"a":"b"}`),
+				clusterdeployment.WithCredential(testCredentialName),
 			),
 			existingObjects: []runtime.Object{
 				mgmt,
@@ -524,16 +524,16 @@ func TestManagedClusterValidateUpdate(t *testing.T) {
 		},
 		{
 			name: "should fail if serviceTemplates are not in the same namespace",
-			oldManagedCluster: managedcluster.NewManagedCluster(
-				managedcluster.WithClusterTemplate(testTemplateName),
-				managedcluster.WithConfig(`{"foo":"bar"}`),
-				managedcluster.WithCredential(testCredentialName),
+			oldClusterDeployment: clusterdeployment.NewClusterDeployment(
+				clusterdeployment.WithClusterTemplate(testTemplateName),
+				clusterdeployment.WithConfig(`{"foo":"bar"}`),
+				clusterdeployment.WithCredential(testCredentialName),
 			),
-			newManagedCluster: managedcluster.NewManagedCluster(
-				managedcluster.WithClusterTemplate(testTemplateName),
-				managedcluster.WithConfig(`{"a":"b"}`),
-				managedcluster.WithCredential(testCredentialName),
-				managedcluster.WithServiceTemplate(testSvcTemplate1Name),
+			newClusterDeployment: clusterdeployment.NewClusterDeployment(
+				clusterdeployment.WithClusterTemplate(testTemplateName),
+				clusterdeployment.WithConfig(`{"a":"b"}`),
+				clusterdeployment.WithCredential(testCredentialName),
+				clusterdeployment.WithServiceTemplate(testSvcTemplate1Name),
 			),
 			existingObjects: []runtime.Object{
 				mgmt,
@@ -556,20 +556,20 @@ func TestManagedClusterValidateUpdate(t *testing.T) {
 					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
 				),
 			},
-			err: fmt.Sprintf("the ManagedCluster is invalid: servicetemplates.hmc.mirantis.com \"%s\" not found", testSvcTemplate1Name),
+			err: fmt.Sprintf("the ClusterDeployment is invalid: servicetemplates.hmc.mirantis.com \"%s\" not found", testSvcTemplate1Name),
 		},
 		{
 			name: "should fail if the ServiceTemplates were found but are invalid",
-			oldManagedCluster: managedcluster.NewManagedCluster(
-				managedcluster.WithClusterTemplate(testTemplateName),
-				managedcluster.WithConfig(`{"foo":"bar"}`),
-				managedcluster.WithCredential(testCredentialName),
+			oldClusterDeployment: clusterdeployment.NewClusterDeployment(
+				clusterdeployment.WithClusterTemplate(testTemplateName),
+				clusterdeployment.WithConfig(`{"foo":"bar"}`),
+				clusterdeployment.WithCredential(testCredentialName),
 			),
-			newManagedCluster: managedcluster.NewManagedCluster(
-				managedcluster.WithClusterTemplate(testTemplateName),
-				managedcluster.WithConfig(`{"a":"b"}`),
-				managedcluster.WithCredential(testCredentialName),
-				managedcluster.WithServiceTemplate(testSvcTemplate1Name),
+			newClusterDeployment: clusterdeployment.NewClusterDeployment(
+				clusterdeployment.WithClusterTemplate(testTemplateName),
+				clusterdeployment.WithConfig(`{"a":"b"}`),
+				clusterdeployment.WithCredential(testCredentialName),
+				clusterdeployment.WithServiceTemplate(testSvcTemplate1Name),
 			),
 			existingObjects: []runtime.Object{
 				mgmt,
@@ -594,14 +594,14 @@ func TestManagedClusterValidateUpdate(t *testing.T) {
 					}),
 				),
 			},
-			err: "the ManagedCluster is invalid: the template is not valid: validation error example",
+			err: "the ClusterDeployment is invalid: the template is not valid: validation error example",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(tt.existingObjects...).Build()
-			validator := &ManagedClusterValidator{Client: c}
-			warn, err := validator.ValidateUpdate(ctx, tt.oldManagedCluster, tt.newManagedCluster)
+			validator := &ClusterDeploymentValidator{Client: c}
+			warn, err := validator.ValidateUpdate(ctx, tt.oldClusterDeployment, tt.newClusterDeployment)
 			if tt.err != "" {
 				g.Expect(err).To(HaveOccurred())
 				if err.Error() != tt.err {
@@ -616,29 +616,29 @@ func TestManagedClusterValidateUpdate(t *testing.T) {
 	}
 }
 
-func TestManagedClusterDefault(t *testing.T) {
+func TestClusterDeploymentDefault(t *testing.T) {
 	g := NewWithT(t)
 
 	ctx := context.Background()
 
-	managedClusterConfig := `{"foo":"bar"}`
+	clusterDeploymentConfig := `{"foo":"bar"}`
 
 	tests := []struct {
 		name            string
-		input           *v1alpha1.ManagedCluster
-		output          *v1alpha1.ManagedCluster
+		input           *v1alpha1.ClusterDeployment
+		output          *v1alpha1.ClusterDeployment
 		existingObjects []runtime.Object
 		err             string
 	}{
 		{
 			name:   "should not set defaults if the config is provided",
-			input:  managedcluster.NewManagedCluster(managedcluster.WithConfig(managedClusterConfig)),
-			output: managedcluster.NewManagedCluster(managedcluster.WithConfig(managedClusterConfig)),
+			input:  clusterdeployment.NewClusterDeployment(clusterdeployment.WithConfig(clusterDeploymentConfig)),
+			output: clusterdeployment.NewClusterDeployment(clusterdeployment.WithConfig(clusterDeploymentConfig)),
 		},
 		{
 			name:   "should not set defaults: template is invalid",
-			input:  managedcluster.NewManagedCluster(managedcluster.WithClusterTemplate(testTemplateName)),
-			output: managedcluster.NewManagedCluster(managedcluster.WithClusterTemplate(testTemplateName)),
+			input:  clusterdeployment.NewClusterDeployment(clusterdeployment.WithClusterTemplate(testTemplateName)),
+			output: clusterdeployment.NewClusterDeployment(clusterdeployment.WithClusterTemplate(testTemplateName)),
 			existingObjects: []runtime.Object{
 				mgmt,
 				template.NewClusterTemplate(
@@ -653,8 +653,8 @@ func TestManagedClusterDefault(t *testing.T) {
 		},
 		{
 			name:   "should not set defaults: config in template status is unset",
-			input:  managedcluster.NewManagedCluster(managedcluster.WithClusterTemplate(testTemplateName)),
-			output: managedcluster.NewManagedCluster(managedcluster.WithClusterTemplate(testTemplateName)),
+			input:  clusterdeployment.NewClusterDeployment(clusterdeployment.WithClusterTemplate(testTemplateName)),
+			output: clusterdeployment.NewClusterDeployment(clusterdeployment.WithClusterTemplate(testTemplateName)),
 			existingObjects: []runtime.Object{
 				mgmt,
 				template.NewClusterTemplate(
@@ -665,18 +665,18 @@ func TestManagedClusterDefault(t *testing.T) {
 		},
 		{
 			name:  "should set defaults",
-			input: managedcluster.NewManagedCluster(managedcluster.WithClusterTemplate(testTemplateName)),
-			output: managedcluster.NewManagedCluster(
-				managedcluster.WithClusterTemplate(testTemplateName),
-				managedcluster.WithConfig(managedClusterConfig),
-				managedcluster.WithDryRun(true),
+			input: clusterdeployment.NewClusterDeployment(clusterdeployment.WithClusterTemplate(testTemplateName)),
+			output: clusterdeployment.NewClusterDeployment(
+				clusterdeployment.WithClusterTemplate(testTemplateName),
+				clusterdeployment.WithConfig(clusterDeploymentConfig),
+				clusterdeployment.WithDryRun(true),
 			),
 			existingObjects: []runtime.Object{
 				mgmt,
 				template.NewClusterTemplate(
 					template.WithName(testTemplateName),
 					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
-					template.WithConfigStatus(managedClusterConfig),
+					template.WithConfigStatus(clusterDeploymentConfig),
 				),
 			},
 		},
@@ -685,7 +685,7 @@ func TestManagedClusterDefault(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithRuntimeObjects(tt.existingObjects...).Build()
-			validator := &ManagedClusterValidator{Client: c}
+			validator := &ClusterDeploymentValidator{Client: c}
 			err := validator.Default(ctx, tt.input)
 			if tt.err != "" {
 				g.Expect(err).To(HaveOccurred())

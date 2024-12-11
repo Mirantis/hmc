@@ -33,11 +33,11 @@ import (
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
 )
 
-var _ = Describe("ManagedCluster Controller", func() {
+var _ = Describe("ClusterDeployment Controller", func() {
 	Context("When reconciling a resource", func() {
 		const (
-			managedClusterName      = "test-managed-cluster"
-			managedClusterNamespace = "test"
+			clusterDeploymentName      = "test-cluster-deployment"
+			clusterDeploymentNamespace = "test"
 
 			templateName    = "test-template"
 			svcTemplateName = "test-svc-template"
@@ -47,10 +47,10 @@ var _ = Describe("ManagedCluster Controller", func() {
 		ctx := context.Background()
 
 		typeNamespacedName := types.NamespacedName{
-			Name:      managedClusterName,
-			Namespace: managedClusterNamespace,
+			Name:      clusterDeploymentName,
+			Namespace: clusterDeploymentNamespace,
 		}
-		managedCluster := &hmc.ManagedCluster{}
+		clusterDeployment := &hmc.ClusterDeployment{}
 		template := &hmc.ClusterTemplate{}
 		svcTemplate := &hmc.ServiceTemplate{}
 		management := &hmc.Management{}
@@ -58,12 +58,12 @@ var _ = Describe("ManagedCluster Controller", func() {
 		namespace := &corev1.Namespace{}
 
 		BeforeEach(func() {
-			By("creating ManagedCluster namespace")
-			err := k8sClient.Get(ctx, types.NamespacedName{Name: managedClusterNamespace}, namespace)
+			By("creating ClusterDeployment namespace")
+			err := k8sClient.Get(ctx, types.NamespacedName{Name: clusterDeploymentNamespace}, namespace)
 			if err != nil && errors.IsNotFound(err) {
 				namespace = &corev1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: managedClusterNamespace,
+						Name: clusterDeploymentNamespace,
 					},
 				}
 				Expect(k8sClient.Create(ctx, namespace)).To(Succeed())
@@ -75,7 +75,7 @@ var _ = Describe("ManagedCluster Controller", func() {
 				template = &hmc.ClusterTemplate{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      templateName,
-						Namespace: managedClusterNamespace,
+						Namespace: clusterDeploymentNamespace,
 					},
 					Spec: hmc.ClusterTemplateSpec{
 						Helm: hmc.HelmSpec{
@@ -103,12 +103,12 @@ var _ = Describe("ManagedCluster Controller", func() {
 			}
 
 			By("creating the custom resource for the Kind ServiceTemplate")
-			err = k8sClient.Get(ctx, client.ObjectKey{Namespace: managedClusterNamespace, Name: svcTemplateName}, svcTemplate)
+			err = k8sClient.Get(ctx, client.ObjectKey{Namespace: clusterDeploymentNamespace, Name: svcTemplateName}, svcTemplate)
 			if err != nil && errors.IsNotFound(err) {
 				svcTemplate = &hmc.ServiceTemplate{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      svcTemplateName,
-						Namespace: managedClusterNamespace,
+						Namespace: clusterDeploymentNamespace,
 					},
 					Spec: hmc.ServiceTemplateSpec{
 						Helm: hmc.HelmSpec{
@@ -154,7 +154,7 @@ var _ = Describe("ManagedCluster Controller", func() {
 				credential = &hmc.Credential{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      credentialName,
-						Namespace: managedClusterNamespace,
+						Namespace: clusterDeploymentNamespace,
 					},
 					Spec: hmc.CredentialSpec{
 						IdentityRef: &corev1.ObjectReference{
@@ -171,15 +171,15 @@ var _ = Describe("ManagedCluster Controller", func() {
 				Expect(k8sClient.Status().Update(ctx, credential)).To(Succeed())
 			}
 
-			By("creating the custom resource for the Kind ManagedCluster")
-			err = k8sClient.Get(ctx, typeNamespacedName, managedCluster)
+			By("creating the custom resource for the Kind ClusterDeployment")
+			err = k8sClient.Get(ctx, typeNamespacedName, clusterDeployment)
 			if err != nil && errors.IsNotFound(err) {
-				managedCluster = &hmc.ManagedCluster{
+				clusterDeployment = &hmc.ClusterDeployment{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      managedClusterName,
-						Namespace: managedClusterNamespace,
+						Name:      clusterDeploymentName,
+						Namespace: clusterDeploymentNamespace,
 					},
-					Spec: hmc.ManagedClusterSpec{
+					Spec: hmc.ClusterDeploymentSpec{
 						Template:   templateName,
 						Credential: credentialName,
 						Services: []hmc.ServiceSpec{
@@ -190,23 +190,23 @@ var _ = Describe("ManagedCluster Controller", func() {
 						},
 					},
 				}
-				Expect(k8sClient.Create(ctx, managedCluster)).To(Succeed())
+				Expect(k8sClient.Create(ctx, clusterDeployment)).To(Succeed())
 			}
 		})
 
 		AfterEach(func() {
 			By("Cleanup")
 
-			controllerReconciler := &ManagedClusterReconciler{
+			controllerReconciler := &ClusterDeploymentReconciler{
 				Client: k8sClient,
 			}
 
-			Expect(k8sClient.Delete(ctx, managedCluster)).To(Succeed())
-			// Running reconcile to remove the finalizer and delete the ManagedCluster
+			Expect(k8sClient.Delete(ctx, clusterDeployment)).To(Succeed())
+			// Running reconcile to remove the finalizer and delete the ClusterDeployment
 			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{NamespacedName: typeNamespacedName})
 			Expect(err).NotTo(HaveOccurred())
 
-			Eventually(k8sClient.Get, 1*time.Minute, 5*time.Second).WithArguments(ctx, typeNamespacedName, managedCluster).Should(HaveOccurred())
+			Eventually(k8sClient.Get, 1*time.Minute, 5*time.Second).WithArguments(ctx, typeNamespacedName, clusterDeployment).Should(HaveOccurred())
 
 			Expect(k8sClient.Delete(ctx, template)).To(Succeed())
 			Expect(k8sClient.Delete(ctx, management)).To(Succeed())
@@ -214,7 +214,7 @@ var _ = Describe("ManagedCluster Controller", func() {
 		})
 		It("should successfully reconcile the resource", func() {
 			By("Reconciling the created resource")
-			controllerReconciler := &ManagedClusterReconciler{
+			controllerReconciler := &ClusterDeploymentReconciler{
 				Client: k8sClient,
 				Config: &rest.Config{},
 			}

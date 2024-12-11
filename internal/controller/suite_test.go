@@ -151,7 +151,7 @@ var _ = BeforeSuite(func() {
 	err = hmcmirantiscomv1alpha1.SetupIndexers(ctx, mgr)
 	Expect(err).NotTo(HaveOccurred())
 
-	err = (&hmcwebhook.ManagedClusterValidator{}).SetupWebhookWithManager(mgr)
+	err = (&hmcwebhook.ClusterDeploymentValidator{}).SetupWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
 	err = (&hmcwebhook.MultiClusterServiceValidator{SystemNamespace: testSystemNamespace}).SetupWebhookWithManager(mgr)

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package managedcluster
+package clusterdeployment
 
 import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -22,14 +22,14 @@ import (
 )
 
 const (
-	DefaultName      = "managedcluster"
+	DefaultName      = "clusterdeployment"
 	DefaultNamespace = metav1.NamespaceDefault
 )
 
-type Opt func(managedCluster *v1alpha1.ManagedCluster)
+type Opt func(ClusterDeployment *v1alpha1.ClusterDeployment)
 
-func NewManagedCluster(opts ...Opt) *v1alpha1.ManagedCluster {
-	p := &v1alpha1.ManagedCluster{
+func NewClusterDeployment(opts ...Opt) *v1alpha1.ClusterDeployment {
+	p := &v1alpha1.ClusterDeployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      DefaultName,
 			Namespace: DefaultNamespace,
@@ -43,31 +43,31 @@ func NewManagedCluster(opts ...Opt) *v1alpha1.ManagedCluster {
 }
 
 func WithName(name string) Opt {
-	return func(p *v1alpha1.ManagedCluster) {
+	return func(p *v1alpha1.ClusterDeployment) {
 		p.Name = name
 	}
 }
 
 func WithNamespace(namespace string) Opt {
-	return func(p *v1alpha1.ManagedCluster) {
+	return func(p *v1alpha1.ClusterDeployment) {
 		p.Namespace = namespace
 	}
 }
 
 func WithDryRun(dryRun bool) Opt {
-	return func(p *v1alpha1.ManagedCluster) {
+	return func(p *v1alpha1.ClusterDeployment) {
 		p.Spec.DryRun = dryRun
 	}
 }
 
 func WithClusterTemplate(templateName string) Opt {
-	return func(p *v1alpha1.ManagedCluster) {
+	return func(p *v1alpha1.ClusterDeployment) {
 		p.Spec.Template = templateName
 	}
 }
 
 func WithConfig(config string) Opt {
-	return func(p *v1alpha1.ManagedCluster) {
+	return func(p *v1alpha1.ClusterDeployment) {
 		p.Spec.Config = &apiextensionsv1.JSON{
 			Raw: []byte(config),
 		}
@@ -75,7 +75,7 @@ func WithConfig(config string) Opt {
 }
 
 func WithServiceTemplate(templateName string) Opt {
-	return func(p *v1alpha1.ManagedCluster) {
+	return func(p *v1alpha1.ClusterDeployment) {
 		p.Spec.Services = append(p.Spec.Services, v1alpha1.ServiceSpec{
 			Template: templateName,
 		})
@@ -83,13 +83,13 @@ func WithServiceTemplate(templateName string) Opt {
 }
 
 func WithCredential(credName string) Opt {
-	return func(p *v1alpha1.ManagedCluster) {
+	return func(p *v1alpha1.ClusterDeployment) {
 		p.Spec.Credential = credName
 	}
 }
 
 func WithAvailableUpgrades(availableUpgrades []string) Opt {
-	return func(p *v1alpha1.ManagedCluster) {
+	return func(p *v1alpha1.ClusterDeployment) {
 		p.Status.AvailableUpgrades = availableUpgrades
 	}
 }

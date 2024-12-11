@@ -270,8 +270,8 @@ func (r *MultiClusterServiceReconciler) reconcileDelete(ctx context.Context, mcs
 
 // requeueSveltosProfileForClusterSummary asserts that the requested object has Sveltos ClusterSummary
 // type, fetches its owner (a Sveltos Profile or ClusterProfile object), and requeues its reference.
-// When used with ManagedClusterReconciler or MultiClusterServiceReconciler, this effectively
-// requeues a ManagedCluster or MultiClusterService object as these are referenced by the same
+// When used with ClusterDeploymentReconciler or MultiClusterServiceReconciler, this effectively
+// requeues a ClusterDeployment or MultiClusterService object as these are referenced by the same
 // namespace/name as the Sveltos Profile or ClusterProfile object that they create respectively.
 func requeueSveltosProfileForClusterSummary(ctx context.Context, obj client.Object) []ctrl.Request {
 	l := ctrl.LoggerFrom(ctx)
@@ -290,7 +290,7 @@ func requeueSveltosProfileForClusterSummary(ctx context.Context, obj client.Obje
 	}
 
 	// The Profile/ClusterProfile object has the same name as its
-	// owner object which is either ManagedCluster or MultiClusterService.
+	// owner object which is either ClusterDeployment or MultiClusterService.
 	req := client.ObjectKey{Name: ownerRef.Name}
 	if ownerRef.Kind == sveltosv1beta1.ProfileKind {
 		req.Namespace = obj.GetNamespace()

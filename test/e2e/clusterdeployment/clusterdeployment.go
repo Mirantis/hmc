@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package managedcluster
+package clusterdeployment
 
 import (
 	_ "embed"
@@ -53,22 +53,22 @@ const (
 )
 
 //go:embed resources/aws-standalone-cp.yaml.tpl
-var awsStandaloneCPManagedClusterTemplateBytes []byte
+var awsStandaloneCPClusterDeploymentTemplateBytes []byte
 
 //go:embed resources/aws-hosted-cp.yaml.tpl
-var awsHostedCPManagedClusterTemplateBytes []byte
+var awsHostedCPClusterDeploymentTemplateBytes []byte
 
 //go:embed resources/azure-standalone-cp.yaml.tpl
-var azureStandaloneCPManagedClusterTemplateBytes []byte
+var azureStandaloneCPClusterDeploymentTemplateBytes []byte
 
 //go:embed resources/azure-hosted-cp.yaml.tpl
-var azureHostedCPManagedClusterTemplateBytes []byte
+var azureHostedCPClusterDeploymentTemplateBytes []byte
 
 //go:embed resources/vsphere-standalone-cp.yaml.tpl
-var vsphereStandaloneCPManagedClusterTemplateBytes []byte
+var vsphereStandaloneCPClusterDeploymentTemplateBytes []byte
 
 //go:embed resources/vsphere-hosted-cp.yaml.tpl
-var vsphereHostedCPManagedClusterTemplateBytes []byte
+var vsphereHostedCPClusterDeploymentTemplateBytes []byte
 
 func FilterAllProviders() []string {
 	return []string{
@@ -87,7 +87,7 @@ func GetProviderLabel(provider ProviderType) string {
 func setClusterName(templateName Template) {
 	var generatedName string
 
-	mcName := os.Getenv(EnvVarManagedClusterName)
+	mcName := os.Getenv(EnvVarClusterDeploymentName)
 	if mcName == "" {
 		mcName = "e2e-test-" + uuid.New().String()[:8]
 	}
@@ -95,26 +95,26 @@ func setClusterName(templateName Template) {
 	providerName := strings.Split(string(templateName), "-")[0]
 
 	// Append the provider name to the cluster name to ensure uniqueness between
-	// different deployed ManagedClusters.
+	// different deployed ClusterDeployments.
 	generatedName = fmt.Sprintf("%s-%s", mcName, providerName)
 	if strings.Contains(string(templateName), "hosted") {
 		generatedName = fmt.Sprintf("%s-%s", mcName, "hosted")
 	}
 
-	GinkgoT().Setenv(EnvVarManagedClusterName, generatedName)
+	GinkgoT().Setenv(EnvVarClusterDeploymentName, generatedName)
 }
 
-// GetUnstructured returns an unstructured ManagedCluster object based on the
+// GetUnstructured returns an unstructured ClusterDeployment object based on the
 // provider and template.
 func GetUnstructured(templateName Template) *unstructured.Unstructured {
 	GinkgoHelper()
 
 	setClusterName(templateName)
 
-	var managedClusterTemplateBytes []byte
+	var clusterDeploymentTemplateBytes []byte
 	switch templateName {
 	case TemplateAWSStandaloneCP:
-		managedClusterTemplateBytes = awsStandaloneCPManagedClusterTemplateBytes
+		clusterDeploymentTemplateBytes = awsStandaloneCPClusterDeploymentTemplateBytes
 	case TemplateAWSHostedCP:
 		// Validate environment vars that do not have defaults are populated.
 		// We perform this validation here instead of within a Before block
@@ -125,28 +125,28 @@ func GetUnstructured(templateName Template) *unstructured.Unstructured {
 			EnvVarAWSSubnetAvailabilityZone,
 			EnvVarAWSSecurityGroupID,
 		})
-		managedClusterTemplateBytes = awsHostedCPManagedClusterTemplateBytes
+		clusterDeploymentTemplateBytes = awsHostedCPClusterDeploymentTemplateBytes
 	case TemplateVSphereStandaloneCP:
-		managedClusterTemplateBytes = vsphereStandaloneCPManagedClusterTemplateBytes
+		clusterDeploymentTemplateBytes = vsphereStandaloneCPClusterDeploymentTemplateBytes
 	case TemplateVSphereHostedCP:
-		managedClusterTemplateBytes = vsphereHostedCPManagedClusterTemplateBytes
+		clusterDeploymentTemplateBytes = vsphereHostedCPClusterDeploymentTemplateBytes
 	case TemplateAzureHostedCP:
-		managedClusterTemplateBytes = azureHostedCPManagedClusterTemplateBytes
+		clusterDeploymentTemplateBytes = azureHostedCPClusterDeploymentTemplateBytes
 	case TemplateAzureStandaloneCP:
-		managedClusterTemplateBytes = azureStandaloneCPManagedClusterTemplateBytes
+		clusterDeploymentTemplateBytes = azureStandaloneCPClusterDeploymentTemplateBytes
 	default:
 		Fail(fmt.Sprintf("Unsupported template: %s", templateName))
 	}
 
-	managedClusterConfigBytes, err := envsubst.Bytes(managedClusterTemplateBytes)
+	clusterDeploymentConfigBytes, err := envsubst.Bytes(clusterDeploymentTemplateBytes)
 	Expect(err).NotTo(HaveOccurred(), "failed to substitute environment variables")
 
-	var managedClusterConfig map[string]any
+	var clusterDeploymentConfig map[string]any
 
-	err = yaml.Unmarshal(managedClusterConfigBytes, &managedClusterConfig)
+	err = yaml.Unmarshal(clusterDeploymentConfigBytes, &clusterDeploymentConfig)
 	Expect(err).NotTo(HaveOccurred(), "failed to unmarshal deployment config")
 
-	return &unstructured.Unstructured{Object: managedClusterConfig}
+	return &unstructured.Unstructured{Object: clusterDeploymentConfig}
 }
 
 func ValidateDeploymentVars(v []string) {

@@ -1,5 +1,5 @@
 apiVersion: hmc.mirantis.com/v1alpha1
-kind: ManagedCluster
+kind: ClusterDeployment
 metadata:
   name: vsphere-dev
   namespace: ${NAMESPACE}

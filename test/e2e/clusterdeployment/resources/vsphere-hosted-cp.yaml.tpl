@@ -1,7 +1,7 @@
 apiVersion: hmc.mirantis.com/v1alpha1
-kind: ManagedCluster
+kind: ClusterDeployment
 metadata:
-  name: ${MANAGED_CLUSTER_NAME}
+  name: ${CLUSTER_DEPLOYMENT_NAME}
 spec:
   template: vsphere-hosted-cp-0-0-3
   credential: ${VSPHERE_CLUSTER_IDENTITY}-cred

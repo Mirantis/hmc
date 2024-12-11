@@ -28,8 +28,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
+	"github.com/Mirantis/hmc/test/e2e/clusterdeployment"
 	"github.com/Mirantis/hmc/test/e2e/kubeclient"
-	"github.com/Mirantis/hmc/test/e2e/managedcluster"
 )
 
 type ClusterIdentity struct {
@@ -45,7 +45,7 @@ type ClusterIdentity struct {
 // New creates a ClusterIdentity resource, credential and associated secret for
 // the given provider using the provided KubeClient and returns details about
 // the created ClusterIdentity.
-func New(kc *kubeclient.KubeClient, provider managedcluster.ProviderType) *ClusterIdentity {
+func New(kc *kubeclient.KubeClient, provider clusterdeployment.ProviderType) *ClusterIdentity {
 	GinkgoHelper()
 
 	var (
@@ -61,13 +61,13 @@ func New(kc *kubeclient.KubeClient, provider managedcluster.ProviderType) *Clust
 	identityName := fmt.Sprintf("%s-cluster-identity", provider)
 
 	switch provider {
-	case managedcluster.ProviderAWS:
+	case clusterdeployment.ProviderAWS:
 		resource = "awsclusterstaticidentities"
 		kind = "AWSClusterStaticIdentity"
 		version = "v1beta2"
 		secretStringData = map[string]string{
-			"AccessKeyID":     os.Getenv(managedcluster.EnvVarAWSAccessKeyID),
-			"SecretAccessKey": os.Getenv(managedcluster.EnvVarAWSSecretAccessKey),
+			"AccessKeyID":     os.Getenv(clusterdeployment.EnvVarAWSAccessKeyID),
+			"SecretAccessKey": os.Getenv(clusterdeployment.EnvVarAWSSecretAccessKey),
 		}
 		spec = map[string]any{
 			"secretRef": secretName,
@@ -77,31 +77,31 @@ func New(kc *kubeclient.KubeClient, provider managedcluster.ProviderType) *Clust
 				},
 			},
 		}
-	case managedcluster.ProviderAzure:
+	case clusterdeployment.ProviderAzure:
 		resource = "azureclusteridentities"
 		kind = "AzureClusterIdentity"
 		version = "v1beta1"
 		secretStringData = map[string]string{
-			"clientSecret": os.Getenv(managedcluster.EnvVarAzureClientSecret),
+			"clientSecret": os.Getenv(clusterdeployment.EnvVarAzureClientSecret),
 		}
 		spec = map[string]any{
 			"allowedNamespaces": make(map[string]any),
-			"clientID":          os.Getenv(managedcluster.EnvVarAzureClientID),
+			"clientID":          os.Getenv(clusterdeployment.EnvVarAzureClientID),
 			"clientSecret": map[string]any{
 				"name":      secretName,
 				"namespace": kc.Namespace,
 			},
-			"tenantID": os.Getenv(managedcluster.EnvVarAzureTenantID),
+			"tenantID": os.Getenv(clusterdeployment.EnvVarAzureTenantID),
 			"type":     "ServicePrincipal",
 		}
 		namespaced = true
-	case managedcluster.ProviderVSphere:
+	case clusterdeployment.ProviderVSphere:
 		resource = "vsphereclusteridentities"
 		kind = "VSphereClusterIdentity"
 		version = "v1beta1"
 		secretStringData = map[string]string{
-			"username": os.Getenv(managedcluster.EnvVarVSphereUser),
-			"password": os.Getenv(managedcluster.EnvVarVSpherePassword),
+			"username": os.Getenv(clusterdeployment.EnvVarVSphereUser),
+			"password": os.Getenv(clusterdeployment.EnvVarVSpherePassword),
 		}
 		spec = map[string]any{
 			"secretName": secretName,

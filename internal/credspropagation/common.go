@@ -29,10 +29,10 @@ import (
 )
 
 type PropagationCfg struct {
-	Client          client.Client
-	ManagedCluster  *hmc.ManagedCluster
-	KubeconfSecret  *corev1.Secret
-	SystemNamespace string
+	Client            client.Client
+	ClusterDeployment *hmc.ClusterDeployment
+	KubeconfSecret    *corev1.Secret
+	SystemNamespace   string
 }
 
 func applyCCMConfigs(ctx context.Context, kubeconfSecret *corev1.Secret, objects ...client.Object) error {
