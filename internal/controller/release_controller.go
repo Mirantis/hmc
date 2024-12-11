@@ -48,6 +48,7 @@ import (
 	"github.com/Mirantis/hmc/internal/build"
 	"github.com/Mirantis/hmc/internal/helm"
 	"github.com/Mirantis/hmc/internal/utils"
+	"github.com/Mirantis/hmc/pkg/providers"
 )
 
 // ReleaseReconciler reconciles a Template object
@@ -194,7 +195,7 @@ func (r *ReleaseReconciler) ensureManagement(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	mgmtObj.Spec.Providers = hmc.GetDefaultProviders()
+	mgmtObj.Spec.Providers = providers.List()
 
 	getter := helm.NewMemoryRESTClientGetter(r.Config, r.RESTMapper())
 	actionConfig := new(action.Configuration)
