@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/Mirantis/hmc/api/v1alpha1"
+	providersloader "github.com/Mirantis/hmc/pkg/providers"
 	"github.com/Mirantis/hmc/test/objects/credential"
 	"github.com/Mirantis/hmc/test/objects/managedcluster"
 	"github.com/Mirantis/hmc/test/objects/management"
@@ -43,7 +44,7 @@ var (
 
 	mgmt = management.NewManagement(
 		management.WithAvailableProviders(v1alpha1.Providers{
-			"infrastructure-aws",
+			providersloader.InfraPrefix + "aws",
 			"control-plane-k0smotron",
 			"bootstrap-k0smotron",
 		}),
@@ -110,7 +111,7 @@ func TestManagedClusterValidateCreate(t *testing.T) {
 				template.NewClusterTemplate(
 					template.WithName(testTemplateName),
 					template.WithProvidersStatus(
-						"infrastructure-aws",
+						providersloader.InfraPrefix+"aws",
 						"control-plane-k0smotron",
 						"bootstrap-k0smotron",
 					),
@@ -155,7 +156,7 @@ func TestManagedClusterValidateCreate(t *testing.T) {
 				template.NewClusterTemplate(
 					template.WithName(testTemplateName),
 					template.WithProvidersStatus(
-						"infrastructure-aws",
+						providersloader.InfraPrefix+"aws",
 						"control-plane-k0smotron",
 						"bootstrap-k0smotron",
 					),
@@ -184,7 +185,7 @@ func TestManagedClusterValidateCreate(t *testing.T) {
 				template.NewClusterTemplate(
 					template.WithName(testTemplateName),
 					template.WithProvidersStatus(
-						"infrastructure-aws",
+						providersloader.InfraPrefix+"aws",
 						"control-plane-k0smotron",
 						"bootstrap-k0smotron",
 					),
@@ -205,7 +206,7 @@ func TestManagedClusterValidateCreate(t *testing.T) {
 			existingObjects: []runtime.Object{
 				cred,
 				management.NewManagement(management.WithAvailableProviders(v1alpha1.Providers{
-					"infrastructure-aws",
+					providersloader.InfraPrefix + "aws",
 					"control-plane-k0smotron",
 					"bootstrap-k0smotron",
 				})),
@@ -231,7 +232,7 @@ func TestManagedClusterValidateCreate(t *testing.T) {
 				template.NewClusterTemplate(
 					template.WithName(testTemplateName),
 					template.WithProvidersStatus(
-						"infrastructure-aws",
+						providersloader.InfraPrefix+"aws",
 						"control-plane-k0smotron",
 						"bootstrap-k0smotron",
 					),
@@ -260,7 +261,7 @@ func TestManagedClusterValidateCreate(t *testing.T) {
 				template.NewClusterTemplate(
 					template.WithName(testTemplateName),
 					template.WithProvidersStatus(
-						"infrastructure-aws",
+						providersloader.InfraPrefix+"aws",
 						"control-plane-k0smotron",
 						"bootstrap-k0smotron",
 					),
@@ -276,10 +277,18 @@ func TestManagedClusterValidateCreate(t *testing.T) {
 				managedcluster.WithCredential(testCredentialName),
 			),
 			existingObjects: []runtime.Object{
-				cred,
+				credential.NewCredential(
+					credential.WithName(testCredentialName),
+					credential.WithReady(true),
+					credential.WithIdentityRef(
+						&corev1.ObjectReference{
+							Kind: "SomeOtherDummyClusterStaticIdentity",
+							Name: "otherdummyclid",
+						}),
+				),
 				management.NewManagement(
 					management.WithAvailableProviders(v1alpha1.Providers{
-						"infrastructure-azure",
+						providersloader.InfraPrefix + "aws",
 						"control-plane-k0smotron",
 						"bootstrap-k0smotron",
 					}),
@@ -287,14 +296,14 @@ func TestManagedClusterValidateCreate(t *testing.T) {
 				template.NewClusterTemplate(
 					template.WithName(testTemplateName),
 					template.WithProvidersStatus(
-						"infrastructure-azure",
+						providersloader.InfraPrefix+"aws",
 						"control-plane-k0smotron",
 						"bootstrap-k0smotron",
 					),
 					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
 				),
 			},
-			err: "the ManagedCluster is invalid: wrong kind of the ClusterIdentity \"AWSClusterStaticIdentity\" for provider \"infrastructure-azure\"",
+			err: "the ManagedCluster is invalid: wrong kind of the ClusterIdentity \"SomeOtherDummyClusterStaticIdentity\" for provider \"infrastructure-aws\"",
 		},
 	}
 	for _, tt := range tests {
@@ -374,7 +383,7 @@ func TestManagedClusterValidateUpdate(t *testing.T) {
 					template.WithName(testTemplateName),
 					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
 					template.WithProvidersStatus(
-						"infrastructure-aws",
+						providersloader.InfraPrefix+"aws",
 						"control-plane-k0smotron",
 						"bootstrap-k0smotron",
 					),
@@ -383,7 +392,7 @@ func TestManagedClusterValidateUpdate(t *testing.T) {
 					template.WithName(upgradeTargetTemplateName),
 					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
 					template.WithProvidersStatus(
-						"infrastructure-aws",
+						providersloader.InfraPrefix+"aws",
 						"control-plane-k0smotron",
 						"bootstrap-k0smotron",
 					),
@@ -409,7 +418,7 @@ func TestManagedClusterValidateUpdate(t *testing.T) {
 					template.WithName(testTemplateName),
 					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
 					template.WithProvidersStatus(
-						"infrastructure-aws",
+						providersloader.InfraPrefix+"aws",
 						"control-plane-k0smotron",
 						"bootstrap-k0smotron",
 					),
@@ -418,7 +427,7 @@ func TestManagedClusterValidateUpdate(t *testing.T) {
 					template.WithName(newTemplateName),
 					template.WithValidationStatus(v1alpha1.TemplateValidationStatus{Valid: true}),
 					template.WithProvidersStatus(
-						"infrastructure-aws",
+						providersloader.InfraPrefix+"aws",
 						"control-plane-k0smotron",
 						"bootstrap-k0smotron",
 					),
@@ -447,7 +456,7 @@ func TestManagedClusterValidateUpdate(t *testing.T) {
 						ValidationError: "validation error example",
 					}),
 					template.WithProvidersStatus(
-						"infrastructure-aws",
+						providersloader.InfraPrefix+"aws",
 						"control-plane-k0smotron",
 						"bootstrap-k0smotron",
 					),
@@ -477,7 +486,7 @@ func TestManagedClusterValidateUpdate(t *testing.T) {
 						ValidationError: "validation error example",
 					}),
 					template.WithProvidersStatus(
-						"infrastructure-aws",
+						providersloader.InfraPrefix+"aws",
 						"control-plane-k0smotron",
 						"bootstrap-k0smotron",
 					),
@@ -511,7 +520,7 @@ func TestManagedClusterValidateUpdate(t *testing.T) {
 						ValidationError: "validation error example",
 					}),
 					template.WithProvidersStatus(
-						"infrastructure-aws",
+						providersloader.InfraPrefix+"aws",
 						"control-plane-k0smotron",
 						"bootstrap-k0smotron",
 					),
@@ -545,7 +554,7 @@ func TestManagedClusterValidateUpdate(t *testing.T) {
 						ValidationError: "validation error example",
 					}),
 					template.WithProvidersStatus(
-						"infrastructure-aws",
+						providersloader.InfraPrefix+"aws",
 						"control-plane-k0smotron",
 						"bootstrap-k0smotron",
 					),
@@ -581,7 +590,7 @@ func TestManagedClusterValidateUpdate(t *testing.T) {
 						ValidationError: "validation error example",
 					}),
 					template.WithProvidersStatus(
-						"infrastructure-aws",
+						providersloader.InfraPrefix+"aws",
 						"control-plane-k0smotron",
 						"bootstrap-k0smotron",
 					),

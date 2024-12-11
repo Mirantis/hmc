@@ -26,6 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/Mirantis/hmc/api/v1alpha1"
+	providersloader "github.com/Mirantis/hmc/pkg/providers"
 	"github.com/Mirantis/hmc/test/objects/managedcluster"
 	"github.com/Mirantis/hmc/test/objects/management"
 	"github.com/Mirantis/hmc/test/objects/release"
@@ -99,14 +100,14 @@ func TestManagementValidateUpdate(t *testing.T) {
 		capiVersion         = "v1beta1"
 		capiVersionOther    = "v1alpha3"
 
-		infraAWSProvider   = "infrastructure-aws"
-		infraOtherProvider = "infrastructure-other-provider"
+		infraAWSProvider   = providersloader.InfraPrefix + "aws"
+		infraOtherProvider = providersloader.InfraPrefix + "other-provider"
 	)
 
 	validStatus := v1alpha1.TemplateValidationStatus{Valid: true}
 
 	componentAwsDefaultTpl := v1alpha1.Provider{
-		Name: v1alpha1.ProviderAWSName,
+		Name: providersloader.ProviderPrefix + "aws",
 		Component: v1alpha1.Component{
 			Template: template.DefaultName,
 		},
