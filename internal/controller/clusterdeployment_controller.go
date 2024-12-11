@@ -59,8 +59,8 @@ const (
 	DefaultRequeueInterval = 10 * time.Second
 )
 
-// ManagedClusterReconciler reconciles a ManagedCluster object
-type ManagedClusterReconciler struct {
+// ClusterDeploymentReconciler reconciles a ClusterDeployment object
+type ClusterDeploymentReconciler struct {
 	client.Client
 	Config          *rest.Config
 	DynamicClient   *dynamic.DynamicClient
@@ -69,46 +69,48 @@ type ManagedClusterReconciler struct {
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-func (r *ManagedClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *ClusterDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	l := ctrl.LoggerFrom(ctx)
-	l.Info("Reconciling ManagedCluster")
+	l.Info("Reconciling ClusterDeployment")
 
-	managedCluster := &hmc.ManagedCluster{}
-	if err := r.Get(ctx, req.NamespacedName, managedCluster); err != nil {
+	clusterDeployment := &hmc.ClusterDeployment{}
+	if err := r.Get(ctx, req.NamespacedName, clusterDeployment); err != nil {
 		if apierrors.IsNotFound(err) {
-			l.Info("ManagedCluster not found, ignoring since object must be deleted")
+			l.Info("ClusterDeployment not found, ignoring since object must be deleted")
 			return ctrl.Result{}, nil
 		}
 
-		l.Error(err, "Failed to get ManagedCluster")
+		l.Error(err, "Failed to get ClusterDeployment")
 		return ctrl.Result{}, err
 	}
 
-	if !managedCluster.DeletionTimestamp.IsZero() {
-		l.Info("Deleting ManagedCluster")
-		return r.Delete(ctx, managedCluster)
+	if !clusterDeployment.DeletionTimestamp.IsZero() {
+		l.Info("Deleting ClusterDeployment")
+		return r.Delete(ctx, clusterDeployment)
 	}
 
-	if managedCluster.Status.ObservedGeneration == 0 {
+	if clusterDeployment.Status.ObservedGeneration == 0 {
 		mgmt := &hmc.Management{}
 		mgmtRef := client.ObjectKey{Name: hmc.ManagementName}
 		if err := r.Get(ctx, mgmtRef, mgmt); err != nil {
 			l.Error(err, "Failed to get Management object")
 			return ctrl.Result{}, err
 		}
-		if err := telemetry.TrackManagedClusterCreate(string(mgmt.UID), string(managedCluster.UID), managedCluster.Spec.Template, managedCluster.Spec.DryRun); err != nil {
-			l.Error(err, "Failed to track ManagedCluster creation")
+		if err := telemetry.TrackClusterDeploymentCreate(string(mgmt.UID), string(clusterDeployment.UID), clusterDeployment.Spec.Template, clusterDeployment.Spec.DryRun); err != nil {
+			l.Error(err, "Failed to track ClusterDeployment creation")
 		}
 	}
 
-	return r.reconcileUpdate(ctx, managedCluster)
+	return r.reconcileUpdate(ctx, clusterDeployment)
 }
 
-func (r *ManagedClusterReconciler) setStatusFromChildObjects(ctx context.Context, managedCluster *hmc.ManagedCluster, gvr schema.GroupVersionResource, conditions []string) (requeue bool, _ error) {
+func (r *ClusterDeploymentReconciler) setStatusFromChildObjects(
+	ctx context.Context, clusterDeployment *hmc.ClusterDeployment, gvr schema.GroupVersionResource, conditions []string,
+) (requeue bool, _ error) {
 	l := ctrl.LoggerFrom(ctx)
 
-	resourceConditions, err := status.GetResourceConditions(ctx, managedCluster.Namespace, r.DynamicClient, gvr,
-		labels.SelectorFromSet(map[string]string{hmc.FluxHelmChartNameKey: managedCluster.Name}).String())
+	resourceConditions, err := status.GetResourceConditions(ctx, clusterDeployment.Namespace, r.DynamicClient, gvr,
+		labels.SelectorFromSet(map[string]string{hmc.FluxHelmChartNameKey: clusterDeployment.Name}).String())
 	if err != nil {
 		if errors.As(err, &status.ResourceNotFoundError{}) {
 			l.Info(err.Error())
@@ -129,19 +131,19 @@ func (r *ManagedClusterReconciler) setStatusFromChildObjects(ctx context.Context
 				metaCondition.Message += " is Ready"
 				metaCondition.Reason = "Succeeded"
 			}
-			apimeta.SetStatusCondition(managedCluster.GetConditions(), metaCondition)
+			apimeta.SetStatusCondition(clusterDeployment.GetConditions(), metaCondition)
 		}
 	}
 
 	return !allConditionsComplete, nil
 }
 
-func (r *ManagedClusterReconciler) reconcileUpdate(ctx context.Context, mc *hmc.ManagedCluster) (_ ctrl.Result, err error) {
+func (r *ClusterDeploymentReconciler) reconcileUpdate(ctx context.Context, mc *hmc.ClusterDeployment) (_ ctrl.Result, err error) {
 	l := ctrl.LoggerFrom(ctx)
 
-	if controllerutil.AddFinalizer(mc, hmc.ManagedClusterFinalizer) {
+	if controllerutil.AddFinalizer(mc, hmc.ClusterDeploymentFinalizer) {
 		if err := r.Client.Update(ctx, mc); err != nil {
-			return ctrl.Result{}, fmt.Errorf("failed to update managedCluster %s/%s: %w", mc.Namespace, mc.Name, err)
+			return ctrl.Result{}, fmt.Errorf("failed to update clusterDeployment %s/%s: %w", mc.Namespace, mc.Name, err)
 		}
 		return ctrl.Result{}, nil
 	}
@@ -187,7 +189,7 @@ func (r *ManagedClusterReconciler) reconcileUpdate(ctx context.Context, mc *hmc.
 	return ctrl.Result{}, nil
 }
 
-func (r *ManagedClusterReconciler) updateCluster(ctx context.Context, mc *hmc.ManagedCluster, clusterTpl *hmc.ClusterTemplate) (ctrl.Result, error) {
+func (r *ClusterDeploymentReconciler) updateCluster(ctx context.Context, mc *hmc.ClusterDeployment, clusterTpl *hmc.ClusterTemplate) (ctrl.Result, error) {
 	l := ctrl.LoggerFrom(ctx)
 
 	if clusterTpl == nil {
@@ -306,7 +308,7 @@ func (r *ManagedClusterReconciler) updateCluster(ctx context.Context, mc *hmc.Ma
 		Values: helmValues,
 		OwnerReference: &metav1.OwnerReference{
 			APIVersion: hmc.GroupVersion.String(),
-			Kind:       hmc.ManagedClusterKind,
+			Kind:       hmc.ClusterDeploymentKind,
 			Name:       mc.Name,
 			UID:        mc.UID,
 		},
@@ -362,7 +364,7 @@ func (r *ManagedClusterReconciler) updateCluster(ctx context.Context, mc *hmc.Ma
 	return ctrl.Result{}, nil
 }
 
-func (r *ManagedClusterReconciler) aggregateCapoConditions(ctx context.Context, managedCluster *hmc.ManagedCluster) (requeue bool, _ error) {
+func (r *ClusterDeploymentReconciler) aggregateCapoConditions(ctx context.Context, clusterDeployment *hmc.ClusterDeployment) (requeue bool, _ error) {
 	type objectToCheck struct {
 		gvr        schema.GroupVersionResource
 		conditions []string
@@ -387,7 +389,7 @@ func (r *ManagedClusterReconciler) aggregateCapoConditions(ctx context.Context, 
 			conditions: []string{"Available"},
 		},
 	} {
-		needRequeue, err := r.setStatusFromChildObjects(ctx, managedCluster, obj.gvr, obj.conditions)
+		needRequeue, err := r.setStatusFromChildObjects(ctx, clusterDeployment, obj.gvr, obj.conditions)
 		errs = errors.Join(errs, err)
 		if needRequeue {
 			requeue = true
@@ -397,8 +399,8 @@ func (r *ManagedClusterReconciler) aggregateCapoConditions(ctx context.Context, 
 	return requeue, errs
 }
 
-// updateServices reconciles services provided in ManagedCluster.Spec.Services.
-func (r *ManagedClusterReconciler) updateServices(ctx context.Context, mc *hmc.ManagedCluster) (_ ctrl.Result, err error) {
+// updateServices reconciles services provided in ClusterDeployment.Spec.Services.
+func (r *ClusterDeploymentReconciler) updateServices(ctx context.Context, mc *hmc.ClusterDeployment) (_ ctrl.Result, err error) {
 	l := ctrl.LoggerFrom(ctx)
 	l.Info("Reconciling Services")
 
@@ -444,7 +446,7 @@ func (r *ManagedClusterReconciler) updateServices(ctx context.Context, mc *hmc.M
 		sveltos.ReconcileProfileOpts{
 			OwnerReference: &metav1.OwnerReference{
 				APIVersion: hmc.GroupVersion.String(),
-				Kind:       hmc.ManagedClusterKind,
+				Kind:       hmc.ClusterDeploymentKind,
 				Name:       mc.Name,
 				UID:        mc.UID,
 			},
@@ -484,14 +486,14 @@ func (r *ManagedClusterReconciler) updateServices(ctx context.Context, mc *hmc.M
 	return ctrl.Result{}, nil
 }
 
-func validateReleaseWithValues(ctx context.Context, actionConfig *action.Configuration, managedCluster *hmc.ManagedCluster, hcChart *chart.Chart) error {
+func validateReleaseWithValues(ctx context.Context, actionConfig *action.Configuration, clusterDeployment *hmc.ClusterDeployment, hcChart *chart.Chart) error {
 	install := action.NewInstall(actionConfig)
 	install.DryRun = true
-	install.ReleaseName = managedCluster.Name
-	install.Namespace = managedCluster.Namespace
+	install.ReleaseName = clusterDeployment.Name
+	install.Namespace = clusterDeployment.Namespace
 	install.ClientOnly = true
 
-	vals, err := managedCluster.HelmValues()
+	vals, err := clusterDeployment.HelmValues()
 	if err != nil {
 		return err
 	}
@@ -500,23 +502,23 @@ func validateReleaseWithValues(ctx context.Context, actionConfig *action.Configu
 	return err
 }
 
-// updateStatus updates the status for the ManagedCluster object.
-func (r *ManagedClusterReconciler) updateStatus(ctx context.Context, managedCluster *hmc.ManagedCluster, template *hmc.ClusterTemplate) error {
-	managedCluster.Status.ObservedGeneration = managedCluster.Generation
-	managedCluster.Status.Conditions = updateStatusConditions(managedCluster.Status.Conditions, "ManagedCluster is ready")
+// updateStatus updates the status for the ClusterDeployment object.
+func (r *ClusterDeploymentReconciler) updateStatus(ctx context.Context, clusterDeployment *hmc.ClusterDeployment, template *hmc.ClusterTemplate) error {
+	clusterDeployment.Status.ObservedGeneration = clusterDeployment.Generation
+	clusterDeployment.Status.Conditions = updateStatusConditions(clusterDeployment.Status.Conditions, "ClusterDeployment is ready")
 
-	if err := r.setAvailableUpgrades(ctx, managedCluster, template); err != nil {
+	if err := r.setAvailableUpgrades(ctx, clusterDeployment, template); err != nil {
 		return errors.New("failed to set available upgrades")
 	}
 
-	if err := r.Status().Update(ctx, managedCluster); err != nil {
-		return fmt.Errorf("failed to update status for managedCluster %s/%s: %w", managedCluster.Namespace, managedCluster.Name, err)
+	if err := r.Status().Update(ctx, clusterDeployment); err != nil {
+		return fmt.Errorf("failed to update status for clusterDeployment %s/%s: %w", clusterDeployment.Namespace, clusterDeployment.Name, err)
 	}
 
 	return nil
 }
 
-func (r *ManagedClusterReconciler) getSource(ctx context.Context, ref *hcv2.CrossNamespaceSourceReference) (sourcev1.Source, error) {
+func (r *ClusterDeploymentReconciler) getSource(ctx context.Context, ref *hcv2.CrossNamespaceSourceReference) (sourcev1.Source, error) {
 	if ref == nil {
 		return nil, errors.New("helm chart source is not provided")
 	}
@@ -528,27 +530,27 @@ func (r *ManagedClusterReconciler) getSource(ctx context.Context, ref *hcv2.Cros
 	return &hc, nil
 }
 
-func (r *ManagedClusterReconciler) Delete(ctx context.Context, managedCluster *hmc.ManagedCluster) (ctrl.Result, error) {
+func (r *ClusterDeploymentReconciler) Delete(ctx context.Context, clusterDeployment *hmc.ClusterDeployment) (ctrl.Result, error) {
 	l := ctrl.LoggerFrom(ctx)
 
 	hr := &hcv2.HelmRelease{}
 
-	if err := r.Get(ctx, client.ObjectKeyFromObject(managedCluster), hr); err != nil {
+	if err := r.Get(ctx, client.ObjectKeyFromObject(clusterDeployment), hr); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return ctrl.Result{}, err
 		}
 
-		l.Info("Removing Finalizer", "finalizer", hmc.ManagedClusterFinalizer)
-		if controllerutil.RemoveFinalizer(managedCluster, hmc.ManagedClusterFinalizer) {
-			if err := r.Client.Update(ctx, managedCluster); err != nil {
-				return ctrl.Result{}, fmt.Errorf("failed to update managedCluster %s/%s: %w", managedCluster.Namespace, managedCluster.Name, err)
+		l.Info("Removing Finalizer", "finalizer", hmc.ClusterDeploymentFinalizer)
+		if controllerutil.RemoveFinalizer(clusterDeployment, hmc.ClusterDeploymentFinalizer) {
+			if err := r.Client.Update(ctx, clusterDeployment); err != nil {
+				return ctrl.Result{}, fmt.Errorf("failed to update clusterDeployment %s/%s: %w", clusterDeployment.Namespace, clusterDeployment.Name, err)
 			}
 		}
-		l.Info("ManagedCluster deleted")
+		l.Info("ClusterDeployment deleted")
 		return ctrl.Result{}, nil
 	}
 
-	if err := helm.DeleteHelmRelease(ctx, r.Client, managedCluster.Name, managedCluster.Namespace); err != nil {
+	if err := helm.DeleteHelmRelease(ctx, r.Client, clusterDeployment.Name, clusterDeployment.Namespace); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -557,11 +559,11 @@ func (r *ManagedClusterReconciler) Delete(ctx context.Context, managedCluster *h
 	// It is detailed in https://github.com/projectsveltos/addon-controller/issues/732.
 	// We may try to remove the explicit call to Delete once a fix for it has been merged.
 	// TODO(https://github.com/Mirantis/hmc/issues/526).
-	if err := sveltos.DeleteProfile(ctx, r.Client, managedCluster.Namespace, managedCluster.Name); err != nil {
+	if err := sveltos.DeleteProfile(ctx, r.Client, clusterDeployment.Namespace, clusterDeployment.Name); err != nil {
 		return ctrl.Result{}, err
 	}
 
-	if err := r.releaseCluster(ctx, managedCluster.Namespace, managedCluster.Name, managedCluster.Spec.Template); err != nil {
+	if err := r.releaseCluster(ctx, clusterDeployment.Namespace, clusterDeployment.Name, clusterDeployment.Spec.Template); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -569,7 +571,7 @@ func (r *ManagedClusterReconciler) Delete(ctx context.Context, managedCluster *h
 	return ctrl.Result{RequeueAfter: DefaultRequeueInterval}, nil
 }
 
-func (r *ManagedClusterReconciler) releaseCluster(ctx context.Context, namespace, name, templateName string) error {
+func (r *ClusterDeploymentReconciler) releaseCluster(ctx context.Context, namespace, name, templateName string) error {
 	providers, err := r.getInfraProvidersNames(ctx, namespace, templateName)
 	if err != nil {
 		return err
@@ -629,7 +631,7 @@ func (r *ManagedClusterReconciler) releaseCluster(ctx context.Context, namespace
 	return nil
 }
 
-func (r *ManagedClusterReconciler) getInfraProvidersNames(ctx context.Context, templateNamespace, templateName string) ([]string, error) {
+func (r *ClusterDeploymentReconciler) getInfraProvidersNames(ctx context.Context, templateNamespace, templateName string) ([]string, error) {
 	template := &hmc.ClusterTemplate{}
 	templateRef := client.ObjectKey{Name: templateName, Namespace: templateNamespace}
 	if err := r.Get(ctx, templateRef, template); err != nil {
@@ -651,7 +653,7 @@ func (r *ManagedClusterReconciler) getInfraProvidersNames(ctx context.Context, t
 	return ips[:len(ips):len(ips)], nil
 }
 
-func (r *ManagedClusterReconciler) getCluster(ctx context.Context, namespace, name string, gvk schema.GroupVersionKind) (*metav1.PartialObjectMetadata, error) {
+func (r *ClusterDeploymentReconciler) getCluster(ctx context.Context, namespace, name string, gvk schema.GroupVersionKind) (*metav1.PartialObjectMetadata, error) {
 	opts := &client.ListOptions{
 		LabelSelector: labels.SelectorFromSet(map[string]string{hmc.FluxHelmChartNameKey: name}),
 		Namespace:     namespace,
@@ -668,7 +670,7 @@ func (r *ManagedClusterReconciler) getCluster(ctx context.Context, namespace, na
 	return &itemsList.Items[0], nil
 }
 
-func (r *ManagedClusterReconciler) removeClusterFinalizer(ctx context.Context, cluster *metav1.PartialObjectMetadata) error {
+func (r *ClusterDeploymentReconciler) removeClusterFinalizer(ctx context.Context, cluster *metav1.PartialObjectMetadata) error {
 	originalCluster := *cluster
 	if controllerutil.RemoveFinalizer(cluster, hmc.BlockingFinalizer) {
 		ctrl.LoggerFrom(ctx).Info("Allow to stop cluster", "finalizer", hmc.BlockingFinalizer)
@@ -680,7 +682,7 @@ func (r *ManagedClusterReconciler) removeClusterFinalizer(ctx context.Context, c
 	return nil
 }
 
-func (r *ManagedClusterReconciler) objectsAvailable(ctx context.Context, namespace, clusterName string, gvk schema.GroupVersionKind) (bool, error) {
+func (r *ClusterDeploymentReconciler) objectsAvailable(ctx context.Context, namespace, clusterName string, gvk schema.GroupVersionKind) (bool, error) {
 	opts := &client.ListOptions{
 		LabelSelector: labels.SelectorFromSet(map[string]string{hmc.ClusterNameLabelKey: clusterName}),
 		Namespace:     namespace,
@@ -694,28 +696,28 @@ func (r *ManagedClusterReconciler) objectsAvailable(ctx context.Context, namespa
 	return len(itemsList.Items) != 0, nil
 }
 
-func (r *ManagedClusterReconciler) reconcileCredentialPropagation(ctx context.Context, managedCluster *hmc.ManagedCluster) error {
+func (r *ClusterDeploymentReconciler) reconcileCredentialPropagation(ctx context.Context, clusterDeployment *hmc.ClusterDeployment) error {
 	l := ctrl.LoggerFrom(ctx)
 	l.Info("Reconciling CCM credentials propagation")
 
-	providers, err := r.getInfraProvidersNames(ctx, managedCluster.Namespace, managedCluster.Spec.Template)
+	providers, err := r.getInfraProvidersNames(ctx, clusterDeployment.Namespace, clusterDeployment.Spec.Template)
 	if err != nil {
-		return fmt.Errorf("failed to get cluster providers for cluster %s/%s: %w", managedCluster.Namespace, managedCluster.Name, err)
+		return fmt.Errorf("failed to get cluster providers for cluster %s/%s: %w", clusterDeployment.Namespace, clusterDeployment.Name, err)
 	}
 
 	kubeconfSecret := &corev1.Secret{}
 	if err := r.Client.Get(ctx, client.ObjectKey{
-		Name:      managedCluster.Name + "-kubeconfig",
-		Namespace: managedCluster.Namespace,
+		Name:      clusterDeployment.Name + "-kubeconfig",
+		Namespace: clusterDeployment.Namespace,
 	}, kubeconfSecret); err != nil {
-		return fmt.Errorf("failed to get kubeconfig secret for cluster %s/%s: %w", managedCluster.Namespace, managedCluster.Name, err)
+		return fmt.Errorf("failed to get kubeconfig secret for cluster %s/%s: %w", clusterDeployment.Namespace, clusterDeployment.Name, err)
 	}
 
 	propnCfg := &credspropagation.PropagationCfg{
-		Client:          r.Client,
-		ManagedCluster:  managedCluster,
-		KubeconfSecret:  kubeconfSecret,
-		SystemNamespace: r.SystemNamespace,
+		Client:            r.Client,
+		ClusterDeployment: clusterDeployment,
+		KubeconfSecret:    kubeconfSecret,
+		SystemNamespace:   r.SystemNamespace,
 	}
 
 	for _, provider := range providers {
@@ -726,7 +728,7 @@ func (r *ManagedClusterReconciler) reconcileCredentialPropagation(ctx context.Co
 			l.Info("Azure creds propagation start")
 			if err := credspropagation.PropagateAzureSecrets(ctx, propnCfg); err != nil {
 				errMsg := fmt.Sprintf("failed to create Azure CCM credentials: %s", err)
-				apimeta.SetStatusCondition(managedCluster.GetConditions(), metav1.Condition{
+				apimeta.SetStatusCondition(clusterDeployment.GetConditions(), metav1.Condition{
 					Type:    hmc.CredentialsPropagatedCondition,
 					Status:  metav1.ConditionFalse,
 					Reason:  hmc.FailedReason,
@@ -736,7 +738,7 @@ func (r *ManagedClusterReconciler) reconcileCredentialPropagation(ctx context.Co
 				return errors.New(errMsg)
 			}
 
-			apimeta.SetStatusCondition(managedCluster.GetConditions(), metav1.Condition{
+			apimeta.SetStatusCondition(clusterDeployment.GetConditions(), metav1.Condition{
 				Type:    hmc.CredentialsPropagatedCondition,
 				Status:  metav1.ConditionTrue,
 				Reason:  hmc.SucceededReason,
@@ -746,7 +748,7 @@ func (r *ManagedClusterReconciler) reconcileCredentialPropagation(ctx context.Co
 			l.Info("vSphere creds propagation start")
 			if err := credspropagation.PropagateVSphereSecrets(ctx, propnCfg); err != nil {
 				errMsg := fmt.Sprintf("failed to create vSphere CCM credentials: %s", err)
-				apimeta.SetStatusCondition(managedCluster.GetConditions(), metav1.Condition{
+				apimeta.SetStatusCondition(clusterDeployment.GetConditions(), metav1.Condition{
 					Type:    hmc.CredentialsPropagatedCondition,
 					Status:  metav1.ConditionFalse,
 					Reason:  hmc.FailedReason,
@@ -755,14 +757,14 @@ func (r *ManagedClusterReconciler) reconcileCredentialPropagation(ctx context.Co
 				return errors.New(errMsg)
 			}
 
-			apimeta.SetStatusCondition(managedCluster.GetConditions(), metav1.Condition{
+			apimeta.SetStatusCondition(clusterDeployment.GetConditions(), metav1.Condition{
 				Type:    hmc.CredentialsPropagatedCondition,
 				Status:  metav1.ConditionTrue,
 				Reason:  hmc.SucceededReason,
 				Message: "vSphere CCM credentials created",
 			})
 		default:
-			apimeta.SetStatusCondition(managedCluster.GetConditions(), metav1.Condition{
+			apimeta.SetStatusCondition(clusterDeployment.GetConditions(), metav1.Condition{
 				Type:    hmc.CredentialsPropagatedCondition,
 				Status:  metav1.ConditionFalse,
 				Reason:  hmc.FailedReason,
@@ -792,7 +794,7 @@ func setIdentityHelmValues(values *apiextensionsv1.JSON, idRef *corev1.ObjectRef
 	return &apiextensionsv1.JSON{Raw: valuesRaw}, nil
 }
 
-func (r *ManagedClusterReconciler) setAvailableUpgrades(ctx context.Context, managedCluster *hmc.ManagedCluster, template *hmc.ClusterTemplate) error {
+func (r *ClusterDeploymentReconciler) setAvailableUpgrades(ctx context.Context, clusterDeployment *hmc.ClusterDeployment, template *hmc.ClusterTemplate) error {
 	if template == nil {
 		return nil
 	}
@@ -820,22 +822,22 @@ func (r *ManagedClusterReconciler) setAvailableUpgrades(ctx context.Context, man
 		availableUpgrades = append(availableUpgrades, availableUpgrade.Name)
 	}
 
-	managedCluster.Status.AvailableUpgrades = availableUpgrades
+	clusterDeployment.Status.AvailableUpgrades = availableUpgrades
 	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *ManagedClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *ClusterDeploymentReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&hmc.ManagedCluster{}).
+		For(&hmc.ClusterDeployment{}).
 		Watches(&hcv2.HelmRelease{},
 			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, o client.Object) []ctrl.Request {
-				managedClusterRef := client.ObjectKeyFromObject(o)
-				if err := r.Client.Get(ctx, managedClusterRef, &hmc.ManagedCluster{}); err != nil {
+				clusterDeploymentRef := client.ObjectKeyFromObject(o)
+				if err := r.Client.Get(ctx, clusterDeploymentRef, &hmc.ClusterDeployment{}); err != nil {
 					return []ctrl.Request{}
 				}
 
-				return []ctrl.Request{{NamespacedName: managedClusterRef}}
+				return []ctrl.Request{{NamespacedName: clusterDeploymentRef}}
 			}),
 		).
 		Watches(&hmc.ClusterTemplateChain{},
@@ -847,14 +849,14 @@ func (r *ManagedClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 				var req []ctrl.Request
 				for _, template := range getTemplateNamesManagedByChain(chain) {
-					managedClusters := &hmc.ManagedClusterList{}
-					err := r.Client.List(ctx, managedClusters,
+					clusterDeployments := &hmc.ClusterDeploymentList{}
+					err := r.Client.List(ctx, clusterDeployments,
 						client.InNamespace(chain.Namespace),
-						client.MatchingFields{hmc.ManagedClusterTemplateIndexKey: template})
+						client.MatchingFields{hmc.ClusterDeploymentTemplateIndexKey: template})
 					if err != nil {
 						return []ctrl.Request{}
 					}
-					for _, cluster := range managedClusters.Items {
+					for _, cluster := range clusterDeployments.Items {
 						req = append(req, ctrl.Request{
 							NamespacedName: client.ObjectKey{
 								Namespace: cluster.Namespace,
@@ -879,16 +881,16 @@ func (r *ManagedClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		).
 		Watches(&hmc.Credential{},
 			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, o client.Object) []ctrl.Request {
-				managedClusters := &hmc.ManagedClusterList{}
-				err := r.Client.List(ctx, managedClusters,
+				clusterDeployments := &hmc.ClusterDeploymentList{}
+				err := r.Client.List(ctx, clusterDeployments,
 					client.InNamespace(o.GetNamespace()),
-					client.MatchingFields{hmc.ManagedClusterCredentialIndexKey: o.GetName()})
+					client.MatchingFields{hmc.ClusterDeploymentCredentialIndexKey: o.GetName()})
 				if err != nil {
 					return []ctrl.Request{}
 				}
 
 				req := []ctrl.Request{}
-				for _, cluster := range managedClusters.Items {
+				for _, cluster := range clusterDeployments.Items {
 					req = append(req, ctrl.Request{
 						NamespacedName: client.ObjectKey{
 							Namespace: cluster.Namespace,

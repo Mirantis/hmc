@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package managedcluster
+package clusterdeployment
 
 import (
 	"context"
@@ -33,7 +33,7 @@ import (
 // as Ready depending on the given provider.
 // See: https://docs.k0smotron.io/stable/capi-aws/#prepare-the-aws-infra-provider
 // Use Eventually as the resource might not be available immediately following
-// a ManagedCluster creation.
+// a ClusterDeployment creation.
 func PatchHostedClusterReady(kc *kubeclient.KubeClient, provider ProviderType, clusterName string) {
 	GinkgoHelper()
 

@@ -131,7 +131,7 @@ If you want to deploy hosted control plane template, make sure to check
 additional notes on Hosted control plane in 2A Docs, see
 [Documentation](#documentation).
 
-2. Create the file with the `ManagedCluster` configuration:
+2. Create the file with the `ClusterDeployment` configuration:
 
 > [!NOTE]
 > Substitute the parameters enclosed in angle brackets with the corresponding
@@ -140,7 +140,7 @@ additional notes on Hosted control plane in 2A Docs, see
 
 ```yaml
 apiVersion: hmc.mirantis.com/v1alpha1
-kind: ManagedCluster
+kind: ClusterDeployment
 metadata:
   name: <cluster-name>
   namespace: <cluster-namespace>
@@ -152,46 +152,46 @@ spec:
     <cluster-configuration>
 ```
 
-3. Create the `ManagedCluster` object:
+3. Create the `ClusterDeployment` object:
 
-`kubectl create -f managedcluster.yaml`
+`kubectl create -f clusterdeployment.yaml`
 
-4. Check the status of the newly created `ManagedCluster` object:
+4. Check the status of the newly created `ClusterDeployment` object:
 
-`kubectl -n <managedcluster-namespace> get managedcluster <managedcluster-name> -o=yaml`
+`kubectl -n <clusterdeployment-namespace> get ClusterDeployment <clusterdeployment-name> -o=yaml`
 
 5. Wait for infrastructure to be provisioned and the cluster to be deployed (the
 provisioning starts only when `spec.dryRun` is disabled):
 
 ```bash
-kubectl -n <managedcluster-namespace> get cluster <managedcluster-name> -o=yaml
+kubectl -n <clusterdeployment-namespace> get cluster <clusterdeployment-name> -o=yaml
 ```
 
 > [!NOTE]
 > You may also watch the process with the `clusterctl describe` command
 > (requires the `clusterctl` CLI to be installed): ``` clusterctl describe
-> cluster <managedcluster-name> -n <managedcluster-namespace> --show-conditions
+> cluster <clusterdeployment-name> -n <clusterdeployment-namespace> --show-conditions
 > all ```
 
 6. Retrieve the `kubeconfig` of your managed cluster:
 
 ```
-kubectl get secret -n hmc-system <managedcluster-name>-kubeconfig -o=jsonpath={.data.value} | base64 -d > kubeconfig
+kubectl get secret -n hmc-system <clusterdeployment-name>-kubeconfig -o=jsonpath={.data.value} | base64 -d > kubeconfig
 ```
 
 ### Dry run
 
-HMC `ManagedCluster` supports two modes: with and without (default) `dryRun`.
+HMC `ClusterDeployment` supports two modes: with and without (default) `dryRun`.
 
-If no configuration (`spec.config`) provided, the `ManagedCluster` object will
+If no configuration (`spec.config`) provided, the `ClusterDeployment` object will
 be populated with defaults (default configuration can be found in the
 corresponding `Template` status) and automatically marked as `dryRun`.
 
-Here is an example of the `ManagedCluster` object with default configuration:
+Here is an example of the `ClusterDeployment` object with default configuration:
 
 ```yaml
 apiVersion: hmc.mirantis.com/v1alpha1
-kind: ManagedCluster
+kind: ClusterDeployment
 metadata:
   name: <cluster-name>
   namespace: <cluster-namespace>
@@ -226,11 +226,11 @@ After you adjust your configuration and ensure that it passes validation
 (`TemplateReady` condition from `status.conditions`), remove the `spec.dryRun`
 flag to proceed with the deployment.
 
-Here is an example of a `ManagedCluster` object that passed the validation:
+Here is an example of a `ClusterDeployment` object that passed the validation:
 
 ```yaml
 apiVersion: hmc.mirantis.com/v1alpha1
-kind: ManagedCluster
+kind: ClusterDeployment
 metadata:
   name: aws-standalone
   namespace: hmc-system
@@ -259,7 +259,7 @@ spec:
       status: "True"
       type: HelmChartReady
     - lastTransitionTime: "2024-07-22T09:25:49Z"
-      message: ManagedCluster is ready
+      message: ClusterDeployment is ready
       reason: Succeeded
       status: "True"
       type: Ready
@@ -275,7 +275,7 @@ kubectl delete management.hmc hmc
 ```
 
 > [!NOTE]
-> Make sure you have no HMC ManagedCluster objects left in the cluster prior to
+> Make sure you have no HMC ClusterDeployment objects left in the cluster prior to
 > Management deletion
 
 2. Remove the `hmc` Helm release:

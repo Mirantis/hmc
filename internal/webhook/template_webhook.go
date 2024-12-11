@@ -83,7 +83,7 @@ func (v *ClusterTemplateValidator) ValidateDelete(ctx context.Context, obj runti
 		return nil, err
 	}
 	if inUseByCluster {
-		return admission.Warnings{fmt.Sprintf("The %s object can't be removed if ManagedCluster objects referencing it still exist", v.templateKind)}, errTemplateDeletionForbidden
+		return admission.Warnings{fmt.Sprintf("The %s object can't be removed if ClusterDeployment objects referencing it still exist", v.templateKind)}, errTemplateDeletionForbidden
 	}
 
 	owners := getOwnersWithKind(template, v.templateChainKind)
@@ -147,7 +147,7 @@ func (v *ServiceTemplateValidator) ValidateDelete(ctx context.Context, obj runti
 		return nil, fmt.Errorf("failed to check if the ServiceTemplate %s/%s is in use: %w", tmpl.Namespace, tmpl.Name, err)
 	}
 	if inUseByCluster {
-		return admission.Warnings{fmt.Sprintf("The %s object can't be removed if ManagedCluster objects referencing it still exist", v.templateKind)}, errTemplateDeletionForbidden
+		return admission.Warnings{fmt.Sprintf("The %s object can't be removed if ClusterDeployment objects referencing it still exist", v.templateKind)}, errTemplateDeletionForbidden
 	}
 
 	owners := getOwnersWithKind(tmpl, v.templateChainKind)
@@ -254,21 +254,21 @@ func (v TemplateValidator) templateIsInUseByCluster(ctx context.Context, templat
 
 	switch v.templateKind {
 	case v1alpha1.ClusterTemplateKind:
-		key = v1alpha1.ManagedClusterTemplateIndexKey
+		key = v1alpha1.ClusterDeploymentTemplateIndexKey
 	case v1alpha1.ServiceTemplateKind:
-		key = v1alpha1.ManagedClusterServiceTemplatesIndexKey
+		key = v1alpha1.ClusterDeploymentServiceTemplatesIndexKey
 	default:
 		return false, fmt.Errorf("invalid Template kind %s. Supported values are: %s and %s", v.templateKind, v1alpha1.ClusterTemplateKind, v1alpha1.ServiceTemplateKind)
 	}
 
-	managedClusters := &v1alpha1.ManagedClusterList{}
-	if err := v.Client.List(ctx, managedClusters,
+	clusterDeployments := &v1alpha1.ClusterDeploymentList{}
+	if err := v.Client.List(ctx, clusterDeployments,
 		client.InNamespace(template.GetNamespace()),
 		client.MatchingFields{key: template.GetName()},
 		client.Limit(1)); err != nil {
 		return false, err
 	}
-	if len(managedClusters.Items) > 0 {
+	if len(clusterDeployments.Items) > 0 {
 		return true, nil
 	}
 	return false, nil

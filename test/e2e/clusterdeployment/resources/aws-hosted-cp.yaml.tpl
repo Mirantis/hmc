@@ -1,7 +1,7 @@
 apiVersion: hmc.mirantis.com/v1alpha1
-kind: ManagedCluster
+kind: ClusterDeployment
 metadata:
-  name: ${MANAGED_CLUSTER_NAME}
+  name: ${CLUSTER_DEPLOYMENT_NAME}
 spec:
   template: aws-hosted-cp-0-0-3
   credential: ${AWS_CLUSTER_IDENTITY}-cred
