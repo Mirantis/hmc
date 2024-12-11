@@ -284,6 +284,10 @@ func isCredMatchTemplate(cred *hmcv1alpha1.Credential, template *hmcv1alpha1.Clu
 			if idtyKind != "VSphereClusterIdentity" {
 				return errMsg(provider)
 			}
+		case "infrastructure-openstack":
+			if idtyKind != "Secret" {
+				return errMsg(provider)
+			}
 		default:
 			if strings.HasPrefix(provider, "infrastructure-") {
 				return fmt.Errorf("unsupported infrastructure provider %s", provider)
