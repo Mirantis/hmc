@@ -42,7 +42,7 @@ func SetupIndexers(ctx context.Context, mgr ctrl.Manager) error {
 	return merr
 }
 
-// managed cluster
+// cluster deployment
 
 // ClusterDeploymentTemplateIndexKey indexer field name to extract ClusterTemplate name reference from a ClusterDeployment object.
 const ClusterDeploymentTemplateIndexKey = ".spec.template"
@@ -89,12 +89,12 @@ func ExtractServiceTemplateNamesFromClusterDeployment(rawObj client.Object) []st
 const ClusterDeploymentCredentialIndexKey = ".spec.credential"
 
 func setupClusterDeploymentCredentialIndexer(ctx context.Context, mgr ctrl.Manager) error {
-	return mgr.GetFieldIndexer().IndexField(ctx, &ClusterDeployment{}, ClusterDeploymentCredentialIndexKey, ExtractCredentialNameFromClusterDeployment)
+	return mgr.GetFieldIndexer().IndexField(ctx, &ClusterDeployment{}, ClusterDeploymentCredentialIndexKey, extractCredentialNameFromClusterDeployment)
 }
 
-// ExtractCredentialNameFromClusterDeployment returns referenced Credential name
+// extractCredentialNameFromClusterDeployment returns referenced Credential name
 // declared in a ClusterDeployment object.
-func ExtractCredentialNameFromClusterDeployment(rawObj client.Object) []string {
+func extractCredentialNameFromClusterDeployment(rawObj client.Object) []string {
 	cluster, ok := rawObj.(*ClusterDeployment)
 	if !ok {
 		return nil

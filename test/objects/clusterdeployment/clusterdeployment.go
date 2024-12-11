@@ -26,7 +26,7 @@ const (
 	DefaultNamespace = metav1.NamespaceDefault
 )
 
-type Opt func(ClusterDeployment *v1alpha1.ClusterDeployment)
+type Opt func(clusterDeployment *v1alpha1.ClusterDeployment)
 
 func NewClusterDeployment(opts ...Opt) *v1alpha1.ClusterDeployment {
 	p := &v1alpha1.ClusterDeployment{

@@ -29,8 +29,8 @@ or install using `helm`
 helm install hmc oci://ghcr.io/mirantis/hmc/charts/hmc --version 0.0.5 -n hmc-system --create-namespace
 ```
 
-Then follow the [Deploy a managed cluster](#deploy-a-managed-cluster) guide to
-create a managed cluster.
+Then follow the [Deploy a cluster deployment](#deploy-a-cluster-deployment) guide to
+create a cluster deployment.
 
 > [!NOTE]
 > The HMC installation using Kubernetes manifests does not allow
@@ -51,7 +51,7 @@ Mirantis Hybrid Container Cloud requires the following:
 Optionally, the following CLIs may be helpful:
 
 1. `helm` (required only when installing HMC using `helm`).
-2. `clusterctl` (to handle the lifecycle of the managed clusters).
+2. `clusterctl` (to handle the lifecycle of the cluster deployments).
 
 ### Providers configuration
 
@@ -109,9 +109,9 @@ own `Management` configuration:
 
     `kubectl --kubeconfig <path-to-management-kubeconfig> create -f management.yaml`
 
-## Deploy a managed cluster
+## Create a ClusterDeployment
 
-To deploy a managed cluster:
+To create a ClusterDeployment:
 
 1. Create `Credential` object with all credentials required.
 
@@ -173,7 +173,7 @@ kubectl -n <clusterdeployment-namespace> get cluster <clusterdeployment-name> -o
 > cluster <clusterdeployment-name> -n <clusterdeployment-namespace> --show-conditions
 > all ```
 
-6. Retrieve the `kubeconfig` of your managed cluster:
+6. Retrieve the `kubeconfig` of your cluster deployment:
 
 ```
 kubectl get secret -n hmc-system <clusterdeployment-name>-kubeconfig -o=jsonpath={.data.value} | base64 -d > kubeconfig

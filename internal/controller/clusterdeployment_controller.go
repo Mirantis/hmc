@@ -104,9 +104,7 @@ func (r *ClusterDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	return r.reconcileUpdate(ctx, clusterDeployment)
 }
 
-func (r *ClusterDeploymentReconciler) setStatusFromChildObjects(
-	ctx context.Context, clusterDeployment *hmc.ClusterDeployment, gvr schema.GroupVersionResource, conditions []string,
-) (requeue bool, _ error) {
+func (r *ClusterDeploymentReconciler) setStatusFromChildObjects(ctx context.Context, clusterDeployment *hmc.ClusterDeployment, gvr schema.GroupVersionResource, conditions []string) (requeue bool, _ error) {
 	l := ctrl.LoggerFrom(ctx)
 
 	resourceConditions, err := status.GetResourceConditions(ctx, clusterDeployment.Namespace, r.DynamicClient, gvr,
