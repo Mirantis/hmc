@@ -94,7 +94,7 @@ func (r *TemplateChainReconciler) ReconcileTemplateChain(ctx context.Context, te
 		return ctrl.Result{}, nil
 	}
 
-	systemTemplates, err := r.getSystemTemplates(ctx)
+	systemTemplates, err := r.getTemplates(ctx, &client.ListOptions{Namespace: r.SystemNamespace})
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to get system templates: %w", err)
 	}
@@ -119,22 +119,26 @@ func (r *TemplateChainReconciler) ReconcileTemplateChain(ctx context.Context, te
 			continue
 		}
 
-		helmSpec := hmc.HelmSpec{
-			ChartRef: source.GetCommonStatus().ChartRef,
-		}
-
 		var target client.Object
 		switch r.templateKind {
 		case hmc.ClusterTemplateKind:
-			target = &hmc.ClusterTemplate{ObjectMeta: meta, Spec: hmc.ClusterTemplateSpec{
-				Helm: helmSpec,
-			}}
+			clusterTemplate, ok := source.(*hmc.ClusterTemplate)
+			if !ok {
+				return ctrl.Result{}, fmt.Errorf("type assertion failed: expected ClusterTemplate but got %T", source)
+			}
+			spec := clusterTemplate.Spec
+			spec.Helm = hmc.HelmSpec{ChartRef: clusterTemplate.Status.ChartRef}
+			target = &hmc.ClusterTemplate{ObjectMeta: meta, Spec: spec}
 		case hmc.ServiceTemplateKind:
-			target = &hmc.ServiceTemplate{ObjectMeta: meta, Spec: hmc.ServiceTemplateSpec{
-				Helm: helmSpec,
-			}}
+			serviceTemplate, ok := source.(*hmc.ServiceTemplate)
+			if !ok {
+				return ctrl.Result{}, fmt.Errorf("type assertion failed: expected ServiceTemplate but got %T", source)
+			}
+			spec := serviceTemplate.Spec
+			spec.Helm = hmc.HelmSpec{ChartRef: serviceTemplate.Status.ChartRef}
+			target = &hmc.ServiceTemplate{ObjectMeta: meta, Spec: spec}
 		default:
-			return ctrl.Result{}, fmt.Errorf("invalid TemplateChain kind. Supported kinds are %s and %s", hmc.ClusterTemplateChainKind, hmc.ServiceTemplateChainKind)
+			return ctrl.Result{}, fmt.Errorf("invalid Template kind. Supported kinds are %s and %s", hmc.ClusterTemplateKind, hmc.ServiceTemplateKind)
 		}
 
 		operation, err := ctrl.CreateOrUpdate(ctx, r.Client, target, func() error {
@@ -157,40 +161,27 @@ func (r *TemplateChainReconciler) ReconcileTemplateChain(ctx context.Context, te
 	return ctrl.Result{}, errs
 }
 
-func (r *TemplateChainReconciler) getSystemTemplates(ctx context.Context) (systemTemplates map[string]templateCommon, _ error) {
-	templates, err := r.getTemplates(ctx, r.templateKind, &client.ListOptions{Namespace: r.SystemNamespace})
-	if err != nil {
-		return nil, err
-	}
+func (r *TemplateChainReconciler) getTemplates(ctx context.Context, opts *client.ListOptions) (map[string]templateCommon, error) {
+	templates := make(map[string]templateCommon)
 
-	systemTemplates = make(map[string]templateCommon, len(templates))
-	for _, tmpl := range templates {
-		systemTemplates[tmpl.GetName()] = tmpl
-	}
-	return systemTemplates, nil
-}
-
-func (r *TemplateChainReconciler) getTemplates(ctx context.Context, templateKind string, opts *client.ListOptions) ([]templateCommon, error) {
-	var templates []templateCommon
-
-	switch templateKind {
+	switch r.templateKind {
 	case hmc.ClusterTemplateKind:
 		ctList := &hmc.ClusterTemplateList{}
-		err := r.Client.List(ctx, ctList, opts)
+		err := r.List(ctx, ctList, opts)
 		if err != nil {
 			return nil, err
 		}
 		for _, template := range ctList.Items {
-			templates = append(templates, &template)
+			templates[template.Name] = &template
 		}
 	case hmc.ServiceTemplateKind:
 		stList := &hmc.ServiceTemplateList{}
-		err := r.Client.List(ctx, stList, opts)
+		err := r.List(ctx, stList, opts)
 		if err != nil {
 			return nil, err
 		}
 		for _, template := range stList.Items {
-			templates = append(templates, &template)
+			templates[template.Name] = &template
 		}
 	default:
 		return nil, fmt.Errorf("invalid Template kind. Supported kinds are %s and %s", hmc.ClusterTemplateKind, hmc.ServiceTemplateKind)

@@ -60,6 +60,9 @@ var _ = Describe("Template Chain Controller", func() {
 			Name:      chartName,
 		}
 
+		ctProviders := hmcmirantiscomv1alpha1.Providers{"ct-provider-test"}
+		stProviders := hmcmirantiscomv1alpha1.Providers{"st-provider-test"}
+
 		ctTemplates := map[string]*hmcmirantiscomv1alpha1.ClusterTemplate{
 			// Should be created in target namespace
 			"test": template.NewClusterTemplate(
@@ -193,6 +196,7 @@ var _ = Describe("Template Chain Controller", func() {
 				ct := &hmcmirantiscomv1alpha1.ClusterTemplate{}
 				err := k8sClient.Get(ctx, types.NamespacedName{Name: name, Namespace: utils.DefaultSystemNamespace}, ct)
 				if err != nil && errors.IsNotFound(err) {
+					template.Spec.Providers = ctProviders
 					Expect(k8sClient.Create(ctx, template)).To(Succeed())
 				}
 				template.Status.ChartRef = chartRef
@@ -203,6 +207,7 @@ var _ = Describe("Template Chain Controller", func() {
 				st := &hmcmirantiscomv1alpha1.ServiceTemplate{}
 				err := k8sClient.Get(ctx, types.NamespacedName{Name: name, Namespace: utils.DefaultSystemNamespace}, st)
 				if err != nil && errors.IsNotFound(err) {
+					template.Spec.Providers = stProviders
 					Expect(k8sClient.Create(ctx, template)).To(Succeed())
 				}
 				template.Status.ChartRef = chartRef
@@ -335,23 +340,17 @@ var _ = Describe("Template Chain Controller", func() {
 				Name:       stChain2Name,
 				UID:        stChainUIDs[stChain2Name],
 			}
-			verifyObjectCreated(ctx, namespace.Name, ctTemplates["test"])
-			verifyOwnerReferenceExistence(ctTemplates["test"], ct1OwnerRef)
-			verifyObjectCreated(ctx, namespace.Name, ctTemplates["ct0"])
+			verifyClusterTemplateCreated(ctx, namespace.Name, "test", ct1OwnerRef)
+			verifyClusterTemplateCreated(ctx, namespace.Name, "ct0")
 
-			verifyObjectCreated(ctx, namespace.Name, ctTemplates["ct1"])
-			verifyOwnerReferenceExistence(ctTemplates["ct1"], ct1OwnerRef)
-			verifyOwnerReferenceExistence(ctTemplates["ct1"], ct2OwnerRef)
+			verifyClusterTemplateCreated(ctx, namespace.Name, "ct1", ct1OwnerRef, ct2OwnerRef)
 
 			verifyObjectUnchanged(ctx, namespace.Name, ctUnmanagedBefore, ctTemplates["ct2"])
 
-			verifyObjectCreated(ctx, namespace.Name, stTemplates["test"])
-			verifyOwnerReferenceExistence(stTemplates["test"], st1OwnerRef)
-			verifyObjectCreated(ctx, namespace.Name, stTemplates["st0"])
+			verifyServiceTemplateCreated(ctx, namespace.Name, "test", st1OwnerRef)
+			verifyServiceTemplateCreated(ctx, namespace.Name, "st0")
 
-			verifyObjectCreated(ctx, namespace.Name, stTemplates["st1"])
-			verifyOwnerReferenceExistence(stTemplates["st1"], st1OwnerRef)
-			verifyOwnerReferenceExistence(stTemplates["st1"], st2OwnerRef)
+			verifyServiceTemplateCreated(ctx, namespace.Name, "st1", st1OwnerRef, st2OwnerRef)
 
 			verifyObjectUnchanged(ctx, namespace.Name, stUnmanagedBefore, stTemplates["st2"])
 		})
@@ -393,4 +392,46 @@ func verifyOwnerReferenceExistence(obj crclient.Object, ownerRef metav1.OwnerRef
 
 func checkHMCManagedLabelExistence(labels map[string]string) {
 	Expect(labels).To(HaveKeyWithValue(hmcmirantiscomv1alpha1.HMCManagedLabelKey, hmcmirantiscomv1alpha1.HMCManagedLabelValue))
+}
+
+func verifyClusterTemplateCreated(ctx context.Context, namespace, name string, ownerRef ...metav1.OwnerReference) {
+	By(fmt.Sprintf("Verifying the ClusterTemplate %s/%s", namespace, name))
+	source := &hmcmirantiscomv1alpha1.ClusterTemplate{}
+	err := k8sClient.Get(ctx, types.NamespacedName{Namespace: utils.DefaultSystemNamespace, Name: name}, source)
+	Expect(err).NotTo(HaveOccurred())
+
+	target := &hmcmirantiscomv1alpha1.ClusterTemplate{}
+	err = k8sClient.Get(ctx, types.NamespacedName{Namespace: namespace, Name: source.Name}, target)
+	Expect(err).NotTo(HaveOccurred())
+
+	expectedSpec := source.Spec
+	expectedSpec.Helm.ChartSpec = nil
+	expectedSpec.Helm.ChartRef = source.Status.ChartRef
+	Expect(expectedSpec).To(Equal(target.Spec))
+
+	checkHMCManagedLabelExistence(target.GetLabels())
+	for _, or := range ownerRef {
+		verifyOwnerReferenceExistence(target, or)
+	}
+}
+
+func verifyServiceTemplateCreated(ctx context.Context, namespace, name string, ownerRef ...metav1.OwnerReference) {
+	By(fmt.Sprintf("Verifying the ServiceTemplate %s/%s", namespace, name))
+	source := &hmcmirantiscomv1alpha1.ServiceTemplate{}
+	err := k8sClient.Get(ctx, types.NamespacedName{Namespace: utils.DefaultSystemNamespace, Name: name}, source)
+	Expect(err).NotTo(HaveOccurred())
+
+	target := &hmcmirantiscomv1alpha1.ServiceTemplate{}
+	err = k8sClient.Get(ctx, types.NamespacedName{Namespace: namespace, Name: name}, target)
+	Expect(err).NotTo(HaveOccurred())
+
+	expectedSpec := source.Spec
+	expectedSpec.Helm.ChartSpec = nil
+	expectedSpec.Helm.ChartRef = source.Status.ChartRef
+	Expect(expectedSpec).To(Equal(target.Spec))
+
+	checkHMCManagedLabelExistence(target.GetLabels())
+	for _, or := range ownerRef {
+		verifyOwnerReferenceExistence(target, or)
+	}
 }
