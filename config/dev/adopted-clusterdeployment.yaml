@@ -1,7 +1,7 @@
 apiVersion: hmc.mirantis.com/v1alpha1
 kind: ClusterDeployment
 metadata:
-  name: aws-dev
+  name: adopted-dev
   namespace: ${NAMESPACE}
 spec:
   template: adopted-cluster-0-0-4

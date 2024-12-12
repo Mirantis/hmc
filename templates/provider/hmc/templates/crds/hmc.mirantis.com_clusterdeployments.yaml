@@ -12,8 +12,8 @@ spec:
     listKind: ClusterDeploymentList
     plural: clusterdeployments
     shortNames:
-    - mcluster
-    - mcl
+    - clusterd
+    - cld
     singular: clusterdeployment
   scope: Namespaced
   versions:

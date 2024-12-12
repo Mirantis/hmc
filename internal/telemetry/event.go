@@ -21,8 +21,8 @@ import (
 )
 
 const (
-	ClusterDeploymentCreateEvent    = "cluster-deployment-create"
-	ClusterDeploymentHeartbeatEvent = "cluster-deployment-heartbeat"
+	clusterDeploymentCreateEvent    = "cluster-deployment-create"
+	clusterDeploymentHeartbeatEvent = "cluster-deployment-heartbeat"
 )
 
 func TrackClusterDeploymentCreate(id, clusterDeploymentID, template string, dryRun bool) error {
@@ -32,7 +32,7 @@ func TrackClusterDeploymentCreate(id, clusterDeploymentID, template string, dryR
 		"template":            template,
 		"dryRun":              dryRun,
 	}
-	return TrackEvent(ClusterDeploymentCreateEvent, id, props)
+	return TrackEvent(clusterDeploymentCreateEvent, id, props)
 }
 
 func TrackClusterDeploymentHeartbeat(id, clusterDeploymentID, clusterID, template, templateHelmChartVersion string, providers []string) error {
@@ -44,7 +44,7 @@ func TrackClusterDeploymentHeartbeat(id, clusterDeploymentID, clusterID, templat
 		"templateHelmChartVersion": templateHelmChartVersion,
 		"providers":                providers,
 	}
-	return TrackEvent(ClusterDeploymentHeartbeatEvent, id, props)
+	return TrackEvent(clusterDeploymentHeartbeatEvent, id, props)
 }
 
 func TrackEvent(name, id string, properties map[string]any) error {

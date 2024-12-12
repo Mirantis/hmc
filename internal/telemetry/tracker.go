@@ -50,7 +50,7 @@ func (t *Tracker) Start(ctx context.Context) error {
 func (t *Tracker) Tick(ctx context.Context) {
 	l := log.FromContext(ctx).WithName("telemetry tracker")
 
-	logger := l.WithValues("event", ClusterDeploymentHeartbeatEvent)
+	logger := l.WithValues("event", clusterDeploymentHeartbeatEvent)
 	err := t.trackClusterDeploymentHeartbeat(ctx)
 	if err != nil {
 		logger.Error(err, "failed to track an event")
