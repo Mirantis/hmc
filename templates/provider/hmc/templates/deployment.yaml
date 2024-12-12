@@ -54,7 +54,6 @@ spec:
             port: 8081
           initialDelaySeconds: 15
           periodSeconds: 20
-          timeoutSeconds: 6000
         name: manager
         readinessProbe:
           httpGet:
@@ -62,7 +61,6 @@ spec:
             port: 8081
           initialDelaySeconds: 5
           periodSeconds: 10
-          timeoutSeconds: 6000
         resources: {{- toYaml .Values.resources | nindent 10
           }}
         securityContext: {{- toYaml .Values.containerSecurityContext
