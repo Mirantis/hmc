@@ -27,7 +27,7 @@ require (
 	k8s.io/apimachinery v0.31.3
 	k8s.io/client-go v0.31.3
 	k8s.io/utils v0.0.0-20241104163129-6fe5fd82f078
-	sigs.k8s.io/cluster-api v1.8.6
+	sigs.k8s.io/cluster-api v1.9.0
 	sigs.k8s.io/cluster-api-operator v0.14.0
 	sigs.k8s.io/cluster-api-provider-azure v1.17.2
 	sigs.k8s.io/cluster-api-provider-vsphere v1.11.3
@@ -72,7 +72,7 @@ require (
 	github.com/evanphx/json-patch v5.9.0+incompatible // indirect
 	github.com/evanphx/json-patch/v5 v5.9.0 // indirect
 	github.com/exponent-io/jsonpath v0.0.0-20210407135951-1de76d718b3f // indirect
-	github.com/fatih/color v1.17.0 // indirect
+	github.com/fatih/color v1.18.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fluxcd/pkg/apis/acl v0.4.0 // indirect
 	github.com/fluxcd/pkg/apis/kustomize v1.6.1 // indirect
@@ -190,7 +190,7 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	k8s.io/apiserver v0.31.3 // indirect
 	k8s.io/cli-runtime v0.31.3 // indirect
-	k8s.io/cluster-bootstrap v0.31.1 // indirect
+	k8s.io/cluster-bootstrap v0.31.3 // indirect
 	k8s.io/component-base v0.31.3 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20241009091222-67ed5848f094 // indirect
