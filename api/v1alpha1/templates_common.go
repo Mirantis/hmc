@@ -68,6 +68,8 @@ type TemplateStatusCommon struct {
 	// ChartRef is a reference to a source controller resource containing the
 	// Helm chart representing the template.
 	ChartRef *helmcontrollerv2.CrossNamespaceSourceReference `json:"chartRef,omitempty"`
+	// ChartVersion represents the version of the Helm Chart associated with this template.
+	ChartVersion string `json:"chartVersion,omitempty"`
 	// Description contains information about the template.
 	Description string `json:"description,omitempty"`
 
