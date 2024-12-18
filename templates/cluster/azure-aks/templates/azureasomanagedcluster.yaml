@@ -1,0 +1,14 @@
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: AzureASOManagedCluster
+metadata:
+  name: {{ include "cluster.name" . }}
+spec:
+  resources:
+    - apiVersion: resources.azure.com/v1api20200601
+      kind: ResourceGroup
+      metadata:
+        annotations:
+          serviceoperator.azure.com/credential-from: {{ .Values.clusterIdentity.name }}
+        name: {{ include "cluster.name" . }}
+      spec:
+        location: {{ .Values.location }}
