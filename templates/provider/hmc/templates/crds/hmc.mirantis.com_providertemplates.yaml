@@ -300,6 +300,10 @@ spec:
                 - kind
                 - name
                 type: object
+              chartVersion:
+                description: ChartVersion represents the version of the Helm Chart
+                  associated with this template.
+                type: string
               config:
                 description: |-
                   Config demonstrates available parameters for template customization,

@@ -214,6 +214,8 @@ func (r *TemplateReconciler) ReconcileTemplate(ctx context.Context, template tem
 		Name:      hcChart.Name,
 		Namespace: hcChart.Namespace,
 	}
+	status.ChartVersion = hcChart.Spec.Version
+
 	if reportStatus, err := helm.ArtifactReady(hcChart); err != nil {
 		l.Info("HelmChart Artifact is not ready")
 		if reportStatus {

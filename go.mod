@@ -21,7 +21,7 @@ require (
 	github.com/stretchr/testify v1.10.0
 	github.com/vmware-tanzu/velero v1.15.0
 	gopkg.in/yaml.v3 v3.0.1
-	helm.sh/helm/v3 v3.16.3
+	helm.sh/helm/v3 v3.16.4
 	k8s.io/api v0.31.3
 	k8s.io/apiextensions-apiserver v0.31.3
 	k8s.io/apimachinery v0.31.3
