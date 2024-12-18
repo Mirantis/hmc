@@ -63,6 +63,7 @@ func PropagateAzureSecrets(ctx context.Context, cfg *PropagationCfg) error {
 }
 
 func generateAzureCCMSecret(azureCluster *capz.AzureCluster, azureClIdty *capz.AzureClusterIdentity, azureSecret *corev1.Secret) (*corev1.Secret, error) {
+	subnetName, secGroup, routeTable := getAzureSubnetData(azureCluster)
 	azureJSONMap := map[string]any{
 		"cloud":                        azureCluster.Spec.AzureEnvironment,
 		"tenantId":                     azureClIdty.Spec.TenantID,
@@ -70,13 +71,14 @@ func generateAzureCCMSecret(azureCluster *capz.AzureCluster, azureClIdty *capz.A
 		"aadClientId":                  azureClIdty.Spec.ClientID,
 		"aadClientSecret":              string(azureSecret.Data["clientSecret"]),
 		"resourceGroup":                azureCluster.Spec.ResourceGroup,
-		"securityGroupName":            azureCluster.Spec.NetworkSpec.Subnets[0].SecurityGroup.Name,
+		"securityGroupName":            secGroup,
 		"securityGroupResourceGroup":   azureCluster.Spec.NetworkSpec.Vnet.ResourceGroup,
 		"location":                     azureCluster.Spec.Location,
 		"vmType":                       "vmss",
 		"vnetName":                     azureCluster.Spec.NetworkSpec.Vnet.Name,
 		"vnetResourceGroup":            azureCluster.Spec.NetworkSpec.Vnet.ResourceGroup,
-		"subnetName":                   azureCluster.Spec.NetworkSpec.Subnets[0].Name,
+		"subnetName":                   subnetName,
+		"routeTableName":               routeTable,
 		"loadBalancerSku":              "Standard",
 		"loadBalancerName":             "",
 		"maximumLoadBalancerRuleCount": 250,
@@ -93,4 +95,16 @@ func generateAzureCCMSecret(azureCluster *capz.AzureCluster, azureClIdty *capz.A
 	}
 
 	return makeSecret("azure-cloud-provider", metav1.NamespaceSystem, secretData), nil
+}
+
+func getAzureSubnetData(azureCluster *capz.AzureCluster) (subnetName, secGroup, routeTable string) {
+	for _, sn := range azureCluster.Spec.NetworkSpec.Subnets {
+		if sn.Role == "node" {
+			subnetName = sn.Name
+			secGroup = sn.SecurityGroup.Name
+			routeTable = sn.RouteTable.Name
+			break
+		}
+	}
+	return subnetName, secGroup, routeTable
 }
