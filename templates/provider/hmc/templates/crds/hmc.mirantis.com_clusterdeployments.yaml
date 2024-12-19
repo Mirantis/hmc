@@ -69,6 +69,12 @@ spec:
                 description: DryRun specifies whether the template should be applied
                   after validation or only validated.
                 type: boolean
+              propagateCredentials:
+                default: true
+                description: |-
+                  PropagateCredentials indicates whether credentials should be propagated
+                  for use by CCM (Cloud Controller Manager).
+                type: boolean
               services:
                 description: |-
                   Services is a list of services created via ServiceTemplates
