@@ -52,6 +52,7 @@ import (
 	"github.com/Mirantis/hmc/internal/helm"
 	"github.com/Mirantis/hmc/internal/sveltos"
 	"github.com/Mirantis/hmc/internal/telemetry"
+	"github.com/Mirantis/hmc/internal/utils"
 	"github.com/Mirantis/hmc/internal/utils/status"
 )
 
@@ -144,6 +145,11 @@ func (r *ManagedClusterReconciler) reconcileUpdate(ctx context.Context, mc *hmc.
 			return ctrl.Result{}, fmt.Errorf("failed to update managedCluster %s/%s: %w", mc.Namespace, mc.Name, err)
 		}
 		return ctrl.Result{}, nil
+	}
+
+	if err := utils.AddHMCComponentLabel(ctx, r.Client, mc); err != nil {
+		l.Error(err, "adding component label")
+		return ctrl.Result{}, err
 	}
 
 	if len(mc.Status.Conditions) == 0 {
