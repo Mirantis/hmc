@@ -84,6 +84,10 @@ type ManagedClusterSpec struct {
 	// By default the remaining services will be deployed even if conflict is detected.
 	// If set to true, the deployment will stop after encountering the first conflict.
 	StopOnConflict bool `json:"stopOnConflict,omitempty"`
+	// PropagateCredentials indicates whether credentials should be propagated
+	// for use by CCM (Cloud Controller Manager).
+	// Default: true.
+	PropagateCredentials *bool `json:"propagateCredentials,omitempty"`
 }
 
 // ManagedClusterStatus defines the observed state of ManagedCluster
@@ -158,6 +162,12 @@ func (in *ManagedCluster) InitConditions() {
 		Reason:  ProgressingReason,
 		Message: "ManagedCluster is not yet ready",
 	})
+}
+
+// PropagateCredentials returns true if credentials should be propagated
+// for use by CCM (Cloud Controller Manager).
+func (in *ManagedCluster) PropagateCredentials() bool {
+	return in.Spec.PropagateCredentials == nil || *in.Spec.PropagateCredentials
 }
 
 // +kubebuilder:object:root=true
