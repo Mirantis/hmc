@@ -61,6 +61,10 @@ type ClusterDeploymentSpec struct {
 	Template string `json:"template"`
 	// Name reference to the related Credentials object.
 	Credential string `json:"credential,omitempty"`
+	// PropagateCredentials indicates whether credentials should be propagated
+	// for use by CCM (Cloud Controller Manager).
+	// +kubebuilder:default:=true
+	PropagateCredentials bool `json:"propagateCredentials,omitempty"`
 	// Services is a list of services created via ServiceTemplates
 	// that could be installed on the target cluster.
 	Services []ServiceSpec `json:"services,omitempty"`
