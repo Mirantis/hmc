@@ -104,7 +104,7 @@ var _ = Describe("Management Controller", func() {
 
 				helmReleaseName          = someComponentName // WARN: helm release name should be equal to the component name
 				helmReleaseNamespace     = utils.DefaultSystemNamespace
-				someOtherHelmReleaseName = "managed-cluster-release-name"
+				someOtherHelmReleaseName = "cluster-deployment-release-name"
 
 				timeout  = time.Second * 10
 				interval = time.Millisecond * 250
@@ -198,7 +198,7 @@ var _ = Describe("Management Controller", func() {
 			}
 			Expect(k8sClient.Create(ctx, helmRelease)).To(Succeed())
 
-			By("Creating a HelmRelease object for some managed cluster")
+			By("Creating a HelmRelease object for some cluster deployment")
 			someOtherHelmRelease := &helmcontrollerv2.HelmRelease{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      someOtherHelmReleaseName,
@@ -206,7 +206,7 @@ var _ = Describe("Management Controller", func() {
 					OwnerReferences: []metav1.OwnerReference{
 						{
 							APIVersion: hmcmirantiscomv1alpha1.GroupVersion.String(),
-							Kind:       hmcmirantiscomv1alpha1.ManagedClusterKind,
+							Kind:       hmcmirantiscomv1alpha1.ClusterDeploymentKind,
 							Name:       "any-owner-ref",
 							UID:        types.UID("some-owner-uid"),
 						},
@@ -296,7 +296,7 @@ var _ = Describe("Management Controller", func() {
 
 			By("Checking the Management object does not have the removed component in its spec")
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(mgmt), mgmt)).To(Succeed())
-			Expect(mgmt.Status.AvailableProviders).To(BeEmpty())
+			Expect(mgmt.Status.AvailableProviders).To(BeEquivalentTo(hmcmirantiscomv1alpha1.Providers{"infrastructure-internal"}))
 
 			By("Checking the other (managed) helm-release has not been removed")
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(someOtherHelmRelease), someOtherHelmRelease)).To(Succeed())
