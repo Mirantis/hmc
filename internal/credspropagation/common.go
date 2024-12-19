@@ -86,11 +86,7 @@ func makeClientFromSecret(kubeconfSecret *corev1.Secret) (client.Client, error) 
 	if err != nil {
 		return nil, err
 	}
-	cl, err := client.New(restConfig, client.Options{
+	return client.New(restConfig, client.Options{
 		Scheme: scheme,
 	})
-	if err != nil {
-		return nil, err
-	}
-	return cl, nil
 }
