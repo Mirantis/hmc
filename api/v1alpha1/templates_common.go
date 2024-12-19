@@ -54,10 +54,18 @@ type HelmSpec struct {
 
 func (s *HelmSpec) String() string {
 	if s.ChartRef != nil {
-		return s.ChartRef.Namespace + "/" + s.ChartRef.Name + ", Kind=" + s.ChartRef.Kind
+		if s.ChartRef.Namespace != "" {
+			return s.ChartRef.Namespace + "/" + s.ChartRef.Name + ", Kind=" + s.ChartRef.Kind
+		}
+
+		return s.ChartRef.Name + ", Kind=" + s.ChartRef.Kind
 	}
 
-	return s.ChartSpec.Chart + ": " + s.ChartSpec.Version
+	if s.ChartSpec.Version != "" {
+		return s.ChartSpec.Chart + ": " + s.ChartSpec.Version
+	}
+
+	return s.ChartSpec.Chart
 }
 
 // TemplateStatusCommon defines the observed state of Template common for all Template types
