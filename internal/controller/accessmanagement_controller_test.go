@@ -163,7 +163,7 @@ var _ = Describe("Template Management Controller", func() {
 				Expect(k8sClient.Create(ctx, am)).To(Succeed())
 			}
 
-			By("creating custom resources for the Kind ClusterTemplateChain, ServiceTemplateChain amd Credentials")
+			By("creating custom resources for the Kind ClusterTemplateChain, ServiceTemplateChain and Credentials")
 			for _, obj := range []crclient.Object{
 				ctChain, ctChainToDelete, ctChainUnmanaged,
 				stChain, stChainToDelete, stChainUnmanaged,

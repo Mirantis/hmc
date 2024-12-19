@@ -49,14 +49,20 @@ func EnsureDeleteAllOf(ctx context.Context, cl client.Client, gvk schema.GroupVe
 }
 
 func CurrentNamespace() string {
+	// Referencing https://github.com/kubernetes/kubernetes/blob/master/staging/src/k8s.io/client-go/tools/clientcmd/client_config.go#L631-L646
+	// for simplicity
+
 	ns, found := os.LookupEnv("POD_NAMESPACE")
 	if found {
 		return ns
 	}
-	nsb, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
+
+	const serviceAccountNs = "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
+	nsb, err := os.ReadFile(serviceAccountNs)
 	if err == nil && len(nsb) > 0 {
 		return string(nsb)
 	}
+
 	return DefaultSystemNamespace
 }
 
