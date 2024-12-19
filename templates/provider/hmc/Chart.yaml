@@ -25,6 +25,6 @@ dependencies:
     repository: https://charts.jetstack.io
     condition: cert-manager.enabled
   - name: cluster-api-operator
-    version: 0.14.0
+    version: 0.15.1
     repository: https://kubernetes-sigs.github.io/cluster-api-operator
     condition: cluster-api-operator.enabled
