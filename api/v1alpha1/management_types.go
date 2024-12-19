@@ -100,7 +100,7 @@ func (in *Component) HelmValues() (values map[string]any, err error) {
 func GetDefaultProviders() []Provider {
 	return []Provider{
 		{Name: ProviderK0smotronName},
-		{Name: ProviderCAPAName},
+		{Name: ProviderAWSName},
 		{Name: ProviderAzureName},
 		{Name: ProviderVSphereName},
 		{Name: ProviderSveltosName},

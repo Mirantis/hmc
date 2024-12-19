@@ -106,7 +106,7 @@ func TestManagementValidateUpdate(t *testing.T) {
 	validStatus := v1alpha1.TemplateValidationStatus{Valid: true}
 
 	componentAwsDefaultTpl := v1alpha1.Provider{
-		Name: v1alpha1.ProviderCAPAName,
+		Name: v1alpha1.ProviderAWSName,
 		Component: v1alpha1.Component{
 			Template: template.DefaultName,
 		},

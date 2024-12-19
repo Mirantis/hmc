@@ -495,11 +495,9 @@ func validateReleaseWithValues(ctx context.Context, actionConfig *action.Configu
 	if err != nil {
 		return err
 	}
+
 	_, err = install.RunWithContext(ctx, hcChart, vals)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 // updateStatus updates the status for the ManagedCluster object.

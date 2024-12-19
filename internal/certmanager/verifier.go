@@ -26,9 +26,6 @@ func VerifyAPI(ctx context.Context, restcfg *rest.Config, namespace string) erro
 	if err != nil {
 		return err
 	}
-	err = checker.Check(ctx)
-	if err != nil {
-		return err
-	}
-	return nil
+
+	return checker.Check(ctx)
 }

@@ -105,7 +105,7 @@ tidy:
 	go mod tidy
 
 .PHONY: test
-test: generate-all fmt vet envtest tidy external-crd ## Run tests.
+test: generate-all envtest tidy external-crd ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test $$(go list ./... | grep -v /e2e) -coverprofile cover.out
 
 # Utilize Kind or modify the e2e tests to load the image locally, enabling
@@ -118,11 +118,11 @@ test-e2e: cli-install
 	KIND_CLUSTER_NAME="hmc-test" KIND_VERSION=$(KIND_VERSION) go test ./test/e2e/ -v -ginkgo.v -ginkgo.timeout=3h -timeout=3h $$ginkgo_label_flag
 
 .PHONY: lint
-lint: golangci-lint ## Run golangci-lint linter & yamllint
+lint: golangci-lint fmt vet ## Run golangci-lint linter & yamllint
 	@$(GOLANGCI_LINT) run --timeout=$(GOLANGCI_LINT_TIMEOUT)
 
 .PHONY: lint-fix
-lint-fix: golangci-lint ## Run golangci-lint linter and perform fixes
+lint-fix: golangci-lint fmt vet ## Run golangci-lint linter and perform fixes
 	@$(GOLANGCI_LINT) run --fix
 
 .PHONY: add-license
@@ -180,11 +180,11 @@ LD_FLAGS += -X github.com/Mirantis/hmc/internal/build.Version=$(VERSION)
 LD_FLAGS += -X github.com/Mirantis/hmc/internal/telemetry.segmentToken=$(SEGMENT_TOKEN)
 
 .PHONY: build
-build: generate-all fmt vet ## Build manager binary.
+build: generate-all ## Build manager binary.
 	go build -ldflags="${LD_FLAGS}" -o bin/manager cmd/main.go
 
 .PHONY: run
-run: generate-all fmt vet ## Run a controller from your host.
+run: generate-all ## Run a controller from your host.
 	go run ./cmd/main.go
 
 # If you wish to build the manager image targeting other platforms you can use the --platform flag.
