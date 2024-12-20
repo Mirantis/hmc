@@ -10,24 +10,6 @@
       "description": "The number of the failures prior to setting the status condition",
       "type": "integer",
       "minimum": 1
-    },
-    "clusterIdentity": {
-      "type": "object",
-      "description": "Adopted Cluster Identity object reference",
-      "required": [
-        "name",
-        "kind"
-      ],
-      "properties": {
-        "name": {
-          "description": "Adopted ClusterIdentity object name",
-          "type": "string"
-        },
-        "kind": {
-          "description": "Adopted ClusterIdentity object kind",
-          "type": "string"
-        }
-      }
     }
   }
 }
