@@ -115,7 +115,7 @@ func (r *MultiClusterServiceReconciler) reconcileUpdate(ctx context.Context, mcs
 
 	// We are enforcing that MultiClusterService may only use
 	// ServiceTemplates that are present in the system namespace.
-	opts, err := sveltos.GetHelmChartOpts(ctx, r.Client, r.SystemNamespace, mcs.Spec.Services)
+	opts, err := sveltos.GetHelmChartOpts(ctx, r.Client, r.SystemNamespace, mcs.Spec.ServiceSpec.Services)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -128,10 +128,13 @@ func (r *MultiClusterServiceReconciler) reconcileUpdate(ctx context.Context, mcs
 				Name:       mcs.Name,
 				UID:        mcs.UID,
 			},
-			LabelSelector:  mcs.Spec.ClusterSelector,
-			HelmChartOpts:  opts,
-			Priority:       mcs.Spec.ServicesPriority,
-			StopOnConflict: mcs.Spec.StopOnConflict,
+			LabelSelector:        mcs.Spec.ClusterSelector,
+			HelmChartOpts:        opts,
+			Priority:             mcs.Spec.ServiceSpec.Priority,
+			StopOnConflict:       mcs.Spec.ServiceSpec.StopOnConflict,
+			Reload:               mcs.Spec.ServiceSpec.Reload,
+			TemplateResourceRefs: mcs.Spec.ServiceSpec.TemplateResourceRefs,
+			PolicyRefs:           mcs.Spec.ServiceSpec.PolicyRefs,
 		}); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to reconcile ClusterProfile: %w", err)
 	}

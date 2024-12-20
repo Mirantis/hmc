@@ -182,10 +182,12 @@ var _ = Describe("ManagedCluster Controller", func() {
 					Spec: hmc.ManagedClusterSpec{
 						Template:   templateName,
 						Credential: credentialName,
-						Services: []hmc.ServiceSpec{
-							{
-								Template: svcTemplateName,
-								Name:     "test-svc-name",
+						ServiceSpec: hmc.ServiceSpec{
+							Services: []hmc.Service{
+								{
+									Template: svcTemplateName,
+									Name:     "test-svc-name",
+								},
 							},
 						},
 					},

@@ -79,7 +79,7 @@ func (v *ManagedClusterValidator) ValidateCreate(ctx context.Context, obj runtim
 		return nil, fmt.Errorf("%s: %w", invalidManagedClusterMsg, err)
 	}
 
-	if err := validateServices(ctx, v.Client, managedCluster.Namespace, managedCluster.Spec.Services); err != nil {
+	if err := validateServices(ctx, v.Client, managedCluster.Namespace, managedCluster.Spec.ServiceSpec.Services); err != nil {
 		return nil, fmt.Errorf("%s: %w", invalidManagedClusterMsg, err)
 	}
 
@@ -123,7 +123,7 @@ func (v *ManagedClusterValidator) ValidateUpdate(ctx context.Context, oldObj, ne
 		return nil, fmt.Errorf("%s: %w", invalidManagedClusterMsg, err)
 	}
 
-	if err := validateServices(ctx, v.Client, newManagedCluster.Namespace, newManagedCluster.Spec.Services); err != nil {
+	if err := validateServices(ctx, v.Client, newManagedCluster.Namespace, newManagedCluster.Spec.ServiceSpec.Services); err != nil {
 		return nil, fmt.Errorf("%s: %w", invalidManagedClusterMsg, err)
 	}
 
@@ -131,7 +131,7 @@ func (v *ManagedClusterValidator) ValidateUpdate(ctx context.Context, oldObj, ne
 }
 
 func validateK8sCompatibility(ctx context.Context, cl client.Client, template *hmcv1alpha1.ClusterTemplate, mc *hmcv1alpha1.ManagedCluster) error {
-	if len(mc.Spec.Services) == 0 || template.Status.KubernetesVersion == "" {
+	if len(mc.Spec.ServiceSpec.Services) == 0 || template.Status.KubernetesVersion == "" {
 		return nil // nothing to do
 	}
 
@@ -140,7 +140,7 @@ func validateK8sCompatibility(ctx context.Context, cl client.Client, template *h
 		return fmt.Errorf("failed to parse k8s version %s of the ManagedCluster %s/%s: %w", template.Status.KubernetesVersion, mc.Namespace, mc.Name, err)
 	}
 
-	for _, v := range mc.Spec.Services {
+	for _, v := range mc.Spec.ServiceSpec.Services {
 		if v.Disable {
 			continue
 		}
