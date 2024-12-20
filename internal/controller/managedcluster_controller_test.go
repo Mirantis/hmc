@@ -31,6 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
+	providersloader "github.com/Mirantis/hmc/pkg/providers"
 )
 
 var _ = Describe("ManagedCluster Controller", func() {
@@ -97,7 +98,7 @@ var _ = Describe("ManagedCluster Controller", func() {
 							Raw: []byte(`{"foo":"bar"}`),
 						},
 					},
-					Providers: hmc.Providers{"infrastructure-aws"},
+					Providers: hmc.Providers{providersloader.InfraPrefix + "aws"},
 				}
 				Expect(k8sClient.Status().Update(ctx, template)).To(Succeed())
 			}
@@ -144,7 +145,7 @@ var _ = Describe("ManagedCluster Controller", func() {
 				}
 				Expect(k8sClient.Create(ctx, management)).To(Succeed())
 				management.Status = hmc.ManagementStatus{
-					AvailableProviders: hmc.Providers{"infrastructure-aws"},
+					AvailableProviders: hmc.Providers{providersloader.InfraPrefix + "aws"},
 				}
 				Expect(k8sClient.Status().Update(ctx, management)).To(Succeed())
 			}
