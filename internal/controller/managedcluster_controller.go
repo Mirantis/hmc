@@ -354,9 +354,11 @@ func (r *ManagedClusterReconciler) updateCluster(ctx context.Context, mc *hmc.Ma
 		return ctrl.Result{RequeueAfter: DefaultRequeueInterval}, nil
 	}
 
-	if err := r.reconcileCredentialPropagation(ctx, mc); err != nil {
-		l.Error(err, "failed to reconcile credentials propagation")
-		return ctrl.Result{}, err
+	if mc.PropagateCredentials() {
+		if err := r.reconcileCredentialPropagation(ctx, mc); err != nil {
+			l.Error(err, "failed to reconcile credentials propagation")
+			return ctrl.Result{}, err
+		}
 	}
 
 	return ctrl.Result{}, nil
