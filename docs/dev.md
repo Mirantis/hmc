@@ -96,7 +96,7 @@ another provider change `DEV_PROVIDER` variable with the name of provider before
 running make (e.g. `export DEV_PROVIDER=azure`).
 
 1. Configure your cluster parameters in provider specific file
-   (for example `config/dev/aws-clusterDeployment.yaml` in case of AWS):
+   (for example `config/dev/aws-clusterdeployment.yaml` in case of AWS):
 
     * Configure the `name` of the ClusterDeployment
     * Change instance type or size for control plane and worker machines
