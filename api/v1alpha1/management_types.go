@@ -103,6 +103,7 @@ func GetDefaultProviders() []Provider {
 		{Name: ProviderAWSName},
 		{Name: ProviderAzureName},
 		{Name: ProviderVSphereName},
+		{Name: ProviderOpenStackName},
 		{Name: ProviderSveltosName},
 	}
 }
