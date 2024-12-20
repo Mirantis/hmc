@@ -112,7 +112,7 @@ jobs:
       - name: Run E2E tests
         env:
           GINKGO_LABEL_FILTER: 'controller'
-          MANAGED_CLUSTER_NAME: ${{ needs.build.outputs.clustername }}
+          CLUSTER_DEPLOYMENT_NAME: ${{ needs.build.outputs.clustername }}
           IMG: 'ghcr.io/mirantis/hmc/controller-ci:${{ needs.build.outputs.version }}'
           VERSION: ${{ needs.build.outputs.version }}
         run: |
@@ -162,7 +162,7 @@ jobs:
       - name: Run E2E tests
         env:
           GINKGO_LABEL_FILTER: 'provider:cloud'
-          MANAGED_CLUSTER_NAME: ${{ needs.build.outputs.clustername }}
+          CLUSTER_DEPLOYMENT_NAME: ${{ needs.build.outputs.clustername }}
           IMG: 'ghcr.io/mirantis/hmc/controller-ci:${{ needs.build.outputs.version }}'
           VERSION: ${{ needs.build.outputs.version }}
         run: |
@@ -215,7 +215,7 @@ jobs:
       - name: Run E2E tests
         env:
           GINKGO_LABEL_FILTER: 'provider:onprem'
-          MANAGED_CLUSTER_NAME: ${{ needs.build.outputs.clustername }}
+          CLUSTER_DEPLOYMENT_NAME: ${{ needs.build.outputs.clustername }}
           IMG: 'ghcr.io/mirantis/hmc/controller-ci:${{ needs.build.outputs.version }}'
           VERSION: ${{ needs.build.outputs.version }}
         run: |

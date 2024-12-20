@@ -71,7 +71,7 @@ func (s *HelmSpec) String() string {
 // TemplateStatusCommon defines the observed state of Template common for all Template types
 type TemplateStatusCommon struct {
 	// Config demonstrates available parameters for template customization,
-	// that can be used when creating ManagedCluster objects.
+	// that can be used when creating ClusterDeployment objects.
 	Config *apiextensionsv1.JSON `json:"config,omitempty"`
 	// ChartRef is a reference to a source controller resource containing the
 	// Helm chart representing the template.

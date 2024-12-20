@@ -334,6 +334,10 @@ dev-templates: templates-generate
 dev-release:
 	@$(YQ) e ".spec.version = \"${VERSION}\"" $(PROVIDER_TEMPLATES_DIR)/hmc-templates/files/release.yaml | $(KUBECTL) -n $(NAMESPACE) apply -f -
 
+.PHONY: dev-adopted-creds
+dev-adopted-creds: envsubst
+	@NAMESPACE=$(NAMESPACE) $(ENVSUBST) -i config/dev/adopted-credentials.yaml | $(KUBECTL) apply -f -
+
 .PHONY: dev-aws-creds
 dev-aws-creds: envsubst
 	@NAMESPACE=$(NAMESPACE) $(ENVSUBST) -i config/dev/aws-credentials.yaml | $(KUBECTL) apply -f -
@@ -359,11 +363,11 @@ dev-destroy: kind-undeploy registry-undeploy ## Destroy the development environm
 
 .PHONY: dev-mcluster-apply
 dev-mcluster-apply: envsubst
-	@NAMESPACE=$(NAMESPACE) $(ENVSUBST) -no-unset -i config/dev/$(DEV_PROVIDER)-managedcluster.yaml | $(KUBECTL) apply -f -
+	@NAMESPACE=$(NAMESPACE) $(ENVSUBST) -no-unset -i config/dev/$(DEV_PROVIDER)-clusterdeployment.yaml | $(KUBECTL) apply -f -
 
 .PHONY: dev-mcluster-delete
 dev-mcluster-delete: envsubst
-	@NAMESPACE=$(NAMESPACE) $(ENVSUBST) -no-unset -i config/dev/$(DEV_PROVIDER)-managedcluster.yaml | $(KUBECTL) delete -f -
+	@NAMESPACE=$(NAMESPACE) $(ENVSUBST) -no-unset -i config/dev/$(DEV_PROVIDER)-clusterdeployment.yaml | $(KUBECTL) delete -f -
 
 .PHONY: dev-creds-apply
 dev-creds-apply: dev-$(DEV_PROVIDER)-creds
