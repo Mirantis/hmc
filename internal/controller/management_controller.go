@@ -149,9 +149,8 @@ func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Manag
 			TargetNamespace: component.targetNamespace,
 			CreateNamespace: component.createNamespace,
 		}
-		reconcileInterval := template.Spec.Helm.ChartSpec.Interval.Duration
-		if reconcileInterval != 0 {
-			hrReconcileOpts.ReconcileInterval = &reconcileInterval
+		if template.Spec.Helm.ChartSpec != nil {
+			hrReconcileOpts.ReconcileInterval = &template.Spec.Helm.ChartSpec.Interval.Duration
 		}
 
 		if _, _, err := helm.ReconcileHelmRelease(ctx, r.Client, component.helmReleaseName, r.SystemNamespace, hrReconcileOpts); err != nil {
