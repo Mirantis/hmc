@@ -47,7 +47,7 @@ func WithName(name string) Opt {
 
 func WithServiceTemplate(templateName string) Opt {
 	return func(p *v1alpha1.MultiClusterService) {
-		p.Spec.Services = append(p.Spec.Services, v1alpha1.ServiceSpec{
+		p.Spec.ServiceSpec.Services = append(p.Spec.ServiceSpec.Services, v1alpha1.Service{
 			Template: templateName,
 		})
 	}

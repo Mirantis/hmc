@@ -15,6 +15,7 @@
 package v1alpha1
 
 import (
+	sveltosv1beta1 "github.com/projectsveltos/addon-controller/api/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -37,8 +38,8 @@ const (
 	FetchServicesStatusSuccessCondition = "FetchServicesStatusSuccess"
 )
 
-// ServiceSpec represents a Service to be managed
-type ServiceSpec struct {
+// Service represents a Service to be deployed.
+type Service struct {
 	// Values is the helm values to be passed to the chart used by the template.
 	// The string type is used in order to allow for templating.
 	Values string `json:"values,omitempty"`
@@ -57,27 +58,35 @@ type ServiceSpec struct {
 	// Namespace is the namespace the release will be installed in.
 	// It will default to Name if not provided.
 	Namespace string `json:"namespace,omitempty"`
+	// ValuesFrom can reference a ConfigMap or Secret containing helm values.
+	ValuesFrom []sveltosv1beta1.ValueFrom `json:"valuesFrom,omitempty"`
 	// Disable can be set to disable handling of this service.
 	Disable bool `json:"disable,omitempty"`
 }
 
-// MultiClusterServiceSpec defines the desired state of MultiClusterService
-type MultiClusterServiceSpec struct {
-	// ClusterSelector identifies target clusters to manage services on.
-	ClusterSelector metav1.LabelSelector `json:"clusterSelector,omitempty"`
+// ServiceSpec contains all the spec related to deployment of services.
+type ServiceSpec struct {
 	// Services is a list of services created via ServiceTemplates
 	// that could be installed on the target cluster.
-	Services []ServiceSpec `json:"services,omitempty"`
+	Services []Service `json:"services,omitempty"`
+	// TemplateResourceRefs is a list of resources to collect from the management cluster,
+	// the values from which can be used in templates.
+	TemplateResourceRefs []sveltosv1beta1.TemplateResourceRef `json:"templateResourceRefs,omitempty"`
+	// PolicyRefs is a list of kubernetes resources that need to be deployed in matching clusters.
+	// These resources may contain static values or leverage Go templates for dynamic customization.
+	// When expressed as templates, the values are rendered using data from resources
+	// (like Cluster & TemplateResourceRefs) within the management cluster before deployement.
+	PolicyRefs []sveltosv1beta1.PolicyRef `json:"policyRefs,omitempty"`
 
 	// +kubebuilder:default:=100
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=2147483646
 
-	// ServicesPriority sets the priority for the services defined in this spec.
+	// Priority sets the priority for the services defined in this spec.
 	// Higher value means higher priority and lower means lower.
 	// In case of conflict with another object managing the service,
 	// the one with higher priority will get to deploy its services.
-	ServicesPriority int32 `json:"servicesPriority,omitempty"`
+	Priority int32 `json:"priority,omitempty"`
 
 	// +kubebuilder:default:=false
 
@@ -86,6 +95,16 @@ type MultiClusterServiceSpec struct {
 	// By default the remaining services will be deployed even if conflict is detected.
 	// If set to true, the deployment will stop after encountering the first conflict.
 	StopOnConflict bool `json:"stopOnConflict,omitempty"`
+	// Reload instances via rolling upgrade when a ConfigMap/Secret mounted as volume is modified.
+	Reload bool `json:"reload,omitempty"`
+}
+
+// MultiClusterServiceSpec defines the desired state of MultiClusterService
+type MultiClusterServiceSpec struct {
+	// ClusterSelector identifies target clusters to manage services on.
+	ClusterSelector metav1.LabelSelector `json:"clusterSelector,omitempty"`
+	// ServiceSpec is spec related to deployment of services.
+	ServiceSpec ServiceSpec `json:"serviceSpec,omitempty"`
 }
 
 // ServiceStatus contains details for the state of services.

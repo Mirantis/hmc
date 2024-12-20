@@ -63,7 +63,7 @@ func (v *MultiClusterServiceValidator) ValidateCreate(ctx context.Context, obj r
 		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected MultiClusterService but got a %T", obj))
 	}
 
-	if err := validateServices(ctx, v.Client, v.SystemNamespace, mcs.Spec.Services); err != nil {
+	if err := validateServices(ctx, v.Client, v.SystemNamespace, mcs.Spec.ServiceSpec.Services); err != nil {
 		return nil, fmt.Errorf("%s: %w", invalidMultiClusterServiceMsg, err)
 	}
 
@@ -77,7 +77,7 @@ func (v *MultiClusterServiceValidator) ValidateUpdate(ctx context.Context, _, ne
 		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected MultiClusterService but got a %T", newObj))
 	}
 
-	if err := validateServices(ctx, v.Client, v.SystemNamespace, mcs.Spec.Services); err != nil {
+	if err := validateServices(ctx, v.Client, v.SystemNamespace, mcs.Spec.ServiceSpec.Services); err != nil {
 		return nil, fmt.Errorf("%s: %w", invalidMultiClusterServiceMsg, err)
 	}
 
@@ -94,7 +94,7 @@ func getServiceTemplate(ctx context.Context, c client.Client, templateNamespace,
 	return tpl, c.Get(ctx, client.ObjectKey{Namespace: templateNamespace, Name: templateName}, tpl)
 }
 
-func validateServices(ctx context.Context, c client.Client, namespace string, services []v1alpha1.ServiceSpec) (errs error) {
+func validateServices(ctx context.Context, c client.Client, namespace string, services []v1alpha1.Service) (errs error) {
 	for _, svc := range services {
 		tpl, err := getServiceTemplate(ctx, c, namespace, svc.Template)
 		if err != nil {

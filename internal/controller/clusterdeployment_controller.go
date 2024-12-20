@@ -437,7 +437,7 @@ func (r *ClusterDeploymentReconciler) updateServices(ctx context.Context, mc *hm
 		err = errors.Join(err, servicesErr)
 	}()
 
-	opts, err := sveltos.GetHelmChartOpts(ctx, r.Client, mc.Namespace, mc.Spec.Services)
+	opts, err := sveltos.GetHelmChartOpts(ctx, r.Client, mc.Namespace, mc.Spec.ServiceSpec.Services)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -456,9 +456,12 @@ func (r *ClusterDeploymentReconciler) updateServices(ctx context.Context, mc *hm
 					hmc.FluxHelmChartNameKey:      mc.Name,
 				},
 			},
-			HelmChartOpts:  opts,
-			Priority:       mc.Spec.ServicesPriority,
-			StopOnConflict: mc.Spec.StopOnConflict,
+			HelmChartOpts:        opts,
+			Priority:             mc.Spec.ServiceSpec.Priority,
+			StopOnConflict:       mc.Spec.ServiceSpec.StopOnConflict,
+			Reload:               mc.Spec.ServiceSpec.Reload,
+			TemplateResourceRefs: mc.Spec.ServiceSpec.TemplateResourceRefs,
+			PolicyRefs:           mc.Spec.ServiceSpec.PolicyRefs,
 		}); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to reconcile Profile: %w", err)
 	}
