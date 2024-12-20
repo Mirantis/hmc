@@ -312,9 +312,8 @@ func (r *ManagedClusterReconciler) updateCluster(ctx context.Context, mc *hmc.Ma
 		},
 		ChartRef: clusterTpl.Status.ChartRef,
 	}
-	reconcileInterval := clusterTpl.Spec.Helm.ChartSpec.Interval.Duration
-	if reconcileInterval != 0 {
-		hrReconcileOpts.ReconcileInterval = &reconcileInterval
+	if clusterTpl.Spec.Helm.ChartSpec != nil {
+		hrReconcileOpts.ReconcileInterval = &clusterTpl.Spec.Helm.ChartSpec.Interval.Duration
 	}
 
 	hr, _, err := helm.ReconcileHelmRelease(ctx, r.Client, mc.Name, mc.Namespace, hrReconcileOpts)
