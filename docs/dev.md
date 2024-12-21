@@ -78,6 +78,40 @@ To properly deploy dev cluster you need to have the following variable set:
 
 - `DEV_PROVIDER` - should be "eks"
 
+### OpenStack Provider Setup
+
+To deploy a development cluster on OpenStack, first set:
+
+- `DEV_PROVIDER` - should be "openstack"
+
+Configure your OpenStack credentials using the following environment variables:
+
+- `OS_AUTH_URL`
+- `OS_PROJECT_ID`
+- `OS_USER_DOMAIN_NAME`
+- `OS_PROJECT_NAME`
+- `OS_USERNAME`
+- `OS_PASSWORD`
+- `OS_REGION_NAME`
+- `OS_INTERFACE`
+- `OS_IDENTITY_API_VERSION`
+
+Alternatively, if you have a credentials file (e.g., OpenStackRC.sh), source it to automatically set these values.
+
+You will also need to specify additional parameters related to machine sizes and images:
+
+- `OPENSTACK_CONTROL_PLANE_MACHINE_FLAVOR`
+- `OPENSTACK_NODE_MACHINE_FLAVOR`
+- `CONTROL_PLANE_MACHINE_COUNT`
+- `WORKER_MACHINE_COUNT`
+- `OPENSTACK_IMAGE_NAME`
+
+#### Note
+
+1. The `OPENSTACK_IMAGE_NAME` value should correspond to a Kubernetes-capable Ubuntu image that’s intended for use with Cluster API (CAPI). These images are often produced by the [Kubernetes Image Builder](https://image-builder.sigs.k8s.io/) project and are specifically tailored for CAPI-based deployments. For more details, see the CAPI official [Building Images for OpenStack docs](https://image-builder.sigs.k8s.io/capi/providers/openstack.html).
+
+2. The recommmend minimum value of control plane flavor's vCPU is 2 and minimum value of worker node flavor's vCPU is 1. For more guidance, refer to the - [machine-flavor CAPI docs](https://github.com/kubernetes-sigs/cluster-api-provider-openstack/blob/main/docs/book/src/clusteropenstack/configuration.md#machine-flavor).
+
 The rest of deployment procedure is the same as for other providers.
 
 ## Deploy HMC
