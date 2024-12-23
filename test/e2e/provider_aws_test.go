@@ -186,4 +186,37 @@ var _ = Describe("AWS Templates", Label("provider:cloud", "provider:aws"), Order
 				time.Second).Should(Succeed())
 		*/
 	})
+
+	It("should work with an AWS provider (EKS)", func() {
+		templateBy(clusterdeployment.TemplateAWSEKS, "creating a ClusterDeployment")
+		cd := clusterdeployment.GetUnstructured(clusterdeployment.TemplateAWSEKS)
+		clusterName = cd.GetName()
+
+		eksDeleteFunc := kc.CreateClusterDeployment(context.Background(), cd)
+
+		templateBy(clusterdeployment.TemplateAWSEKS, "waiting for infrastructure to deploy successfully")
+		deploymentValidator := clusterdeployment.NewProviderValidator(
+			clusterdeployment.TemplateAWSEKS,
+			clusterName,
+			clusterdeployment.ValidationActionDeploy,
+		)
+
+		Eventually(func() error {
+			return deploymentValidator.Validate(context.Background(), kc)
+		}, 30*time.Minute, 10*time.Second).Should(Succeed())
+
+		if !noCleanup() {
+			templateBy(clusterdeployment.TemplateAWSEKS, "deleting the ClusterDeployment")
+			Expect(eksDeleteFunc()).NotTo(HaveOccurred())
+
+			deletionValidator := clusterdeployment.NewProviderValidator(
+				clusterdeployment.TemplateAWSEKS,
+				clusterName,
+				clusterdeployment.ValidationActionDelete,
+			)
+			Eventually(func() error {
+				return deletionValidator.Validate(context.Background(), kc)
+			}, 20*time.Minute, 10*time.Second).Should(Succeed())
+		}
+	})
 })
