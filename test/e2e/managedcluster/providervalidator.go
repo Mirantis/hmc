@@ -65,14 +65,22 @@ func NewProviderValidator(template Template, clusterName string, action Validati
 		case TemplateAWSStandaloneCP, TemplateAWSHostedCP:
 			resourcesToValidate["ccm"] = validateCCM
 			resourceOrder = append(resourceOrder, "ccm")
+		case TemplateEKSCP:
+			resourcesToValidate["control-planes"] = validateAWSManagedControlPlanes
+			delete(resourcesToValidate, "csi-driver")
 		case TemplateAzureStandaloneCP, TemplateVSphereStandaloneCP:
 			delete(resourcesToValidate, "csi-driver")
 		}
 	} else {
+		validateCPDeletedFunc := validateK0sControlPlanesDeleted
+		if template == TemplateEKSCP {
+			validateCPDeletedFunc = validateAWSManagedControlPlanesDeleted
+		}
+
 		resourcesToValidate = map[string]resourceValidationFunc{
 			"clusters":           validateClusterDeleted,
 			"machinedeployments": validateMachineDeploymentsDeleted,
-			"control-planes":     validateK0sControlPlanesDeleted,
+			"control-planes":     validateCPDeletedFunc,
 		}
 		resourceOrder = []string{"clusters", "machinedeployments", "control-planes"}
 	}

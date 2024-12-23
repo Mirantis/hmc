@@ -24,6 +24,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/strings/slices"
 
 	"github.com/Mirantis/hmc/internal/utils/status"
 )
@@ -111,10 +112,28 @@ func GetProjectDir() (string, error) {
 	return wd, nil
 }
 
-// ValidateConditionsTrue iterates over the conditions of the given
+type ConditionsValidator struct {
+	excludedConditions []string
+}
+
+func NewConditionsValidator(options ...func(*ConditionsValidator)) *ConditionsValidator {
+	cv := &ConditionsValidator{}
+	for _, o := range options {
+		o(cv)
+	}
+	return cv
+}
+
+func WithExcluded(excludedConditions []string) func(*ConditionsValidator) {
+	return func(cv *ConditionsValidator) {
+		cv.excludedConditions = excludedConditions
+	}
+}
+
+// IfTrue iterates over the conditions of the given
 // unstructured object and returns an error if any of the conditions are not
 // true.  Conditions are expected to be of type metav1.Condition.
-func ValidateConditionsTrue(unstrObj *unstructured.Unstructured) error {
+func (cv *ConditionsValidator) IfTrue(unstrObj *unstructured.Unstructured) error {
 	objKind, objName := status.ObjKindName(unstrObj)
 
 	conditions, err := status.ConditionsFromUnstructured(unstrObj)
@@ -126,6 +145,10 @@ func ValidateConditionsTrue(unstrObj *unstructured.Unstructured) error {
 
 	for _, c := range conditions {
 		if c.Status == metav1.ConditionTrue {
+			continue
+		}
+
+		if slices.Contains(cv.excludedConditions, c.Type) {
 			continue
 		}
 
