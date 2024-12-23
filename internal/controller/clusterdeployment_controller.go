@@ -50,6 +50,7 @@ import (
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
 	"github.com/Mirantis/hmc/internal/credspropagation"
 	"github.com/Mirantis/hmc/internal/helm"
+	providersloader "github.com/Mirantis/hmc/internal/providers"
 	"github.com/Mirantis/hmc/internal/sveltos"
 	"github.com/Mirantis/hmc/internal/telemetry"
 	"github.com/Mirantis/hmc/internal/utils/status"
@@ -577,35 +578,16 @@ func (r *ClusterDeploymentReconciler) releaseCluster(ctx context.Context, namesp
 		return err
 	}
 
-	var (
-		gvkAWSCluster = schema.GroupVersionKind{
-			Group:   "infrastructure.cluster.x-k8s.io",
-			Version: "v1beta2",
-			Kind:    "AWSCluster",
-		}
-
-		gvkAzureCluster = schema.GroupVersionKind{
-			Group:   "infrastructure.cluster.x-k8s.io",
-			Version: "v1beta1",
-			Kind:    "AzureCluster",
-		}
-
-		gvkMachine = schema.GroupVersionKind{
-			Group:   "cluster.x-k8s.io",
-			Version: "v1beta1",
-			Kind:    "Machine",
-		}
-	)
-
-	providerGVKs := map[string]schema.GroupVersionKind{
-		"aws":   gvkAWSCluster,
-		"azure": gvkAzureCluster,
+	gvkMachine := schema.GroupVersionKind{
+		Group:   "cluster.x-k8s.io",
+		Version: "v1beta1",
+		Kind:    "Machine",
 	}
 
 	// Associate the provider with it's GVK
 	for _, provider := range providers {
-		gvk, ok := providerGVKs[provider]
-		if !ok {
+		gvk := providersloader.GetClusterGVK(provider)
+		if !gvk.Empty() {
 			continue
 		}
 
@@ -639,13 +621,12 @@ func (r *ClusterDeploymentReconciler) getInfraProvidersNames(ctx context.Context
 		return nil, err
 	}
 
-	const infraPrefix = "infrastructure-"
 	var (
 		ips     = make([]string, 0, len(template.Status.Providers))
-		lprefix = len(infraPrefix)
+		lprefix = len(providersloader.InfraPrefix)
 	)
 	for _, v := range template.Status.Providers {
-		if idx := strings.Index(v, infraPrefix); idx > -1 {
+		if idx := strings.Index(v, providersloader.InfraPrefix); idx > -1 {
 			ips = append(ips, v[idx+lprefix:])
 		}
 	}
@@ -722,73 +703,36 @@ func (r *ClusterDeploymentReconciler) reconcileCredentialPropagation(ctx context
 	}
 
 	for _, provider := range providers {
-		switch provider {
-		case "aws":
-			l.Info("Skipping creds propagation for AWS")
-		case "azure":
-			l.Info("Azure creds propagation start")
-			if err := credspropagation.PropagateAzureSecrets(ctx, propnCfg); err != nil {
-				errMsg := fmt.Sprintf("failed to create Azure CCM credentials: %s", err)
-				apimeta.SetStatusCondition(clusterDeployment.GetConditions(), metav1.Condition{
-					Type:    hmc.CredentialsPropagatedCondition,
-					Status:  metav1.ConditionFalse,
-					Reason:  hmc.FailedReason,
-					Message: errMsg,
-				})
+		titleName := providersloader.GetProviderTitleName(provider)
 
-				return errors.New(errMsg)
-			}
-
-			apimeta.SetStatusCondition(clusterDeployment.GetConditions(), metav1.Condition{
-				Type:    hmc.CredentialsPropagatedCondition,
-				Status:  metav1.ConditionTrue,
-				Reason:  hmc.SucceededReason,
-				Message: "Azure CCM credentials created",
-			})
-		case "vsphere":
-			l.Info("vSphere creds propagation start")
-			if err := credspropagation.PropagateVSphereSecrets(ctx, propnCfg); err != nil {
-				errMsg := fmt.Sprintf("failed to create vSphere CCM credentials: %s", err)
-				apimeta.SetStatusCondition(clusterDeployment.GetConditions(), metav1.Condition{
-					Type:    hmc.CredentialsPropagatedCondition,
-					Status:  metav1.ConditionFalse,
-					Reason:  hmc.FailedReason,
-					Message: errMsg,
-				})
-				return errors.New(errMsg)
-			}
-
-			apimeta.SetStatusCondition(clusterDeployment.GetConditions(), metav1.Condition{
-				Type:    hmc.CredentialsPropagatedCondition,
-				Status:  metav1.ConditionTrue,
-				Reason:  hmc.SucceededReason,
-				Message: "vSphere CCM credentials created",
-			})
-		case "openstack":
-			l.Info("OpenStack creds propagation start")
-			if err := credspropagation.PropagateOpenStackSecrets(ctx, propnCfg); err != nil {
-				errMsg := fmt.Sprintf("failed to create OpenStack CCM credentials: %s", err)
-				apimeta.SetStatusCondition(clusterDeployment.GetConditions(), metav1.Condition{
-					Type:    hmc.CredentialsPropagatedCondition,
-					Status:  metav1.ConditionFalse,
-					Reason:  hmc.FailedReason,
-					Message: errMsg,
-				})
-				return errors.New(errMsg)
-			}
-
-			apimeta.SetStatusCondition(clusterDeployment.GetConditions(), metav1.Condition{
-				Type:    hmc.CredentialsPropagatedCondition,
-				Status:  metav1.ConditionTrue,
-				Reason:  hmc.SucceededReason,
-				Message: "OpenStack CCM credentials created",
-			})
-		default:
+		f, ok := providersloader.CredentialPropagationFunc(provider)
+		if !ok || titleName == "" {
 			apimeta.SetStatusCondition(clusterDeployment.GetConditions(), metav1.Condition{
 				Type:    hmc.CredentialsPropagatedCondition,
 				Status:  metav1.ConditionFalse,
 				Reason:  hmc.FailedReason,
 				Message: "unsupported infrastructure provider " + provider,
+			})
+
+			continue
+		}
+
+		enabled, err := f(ctx, propnCfg, l)
+		if err != nil {
+			errMsg := fmt.Sprintf("failed to create %s CCM credentials: %s", titleName, err)
+			apimeta.SetStatusCondition(clusterDeployment.GetConditions(), metav1.Condition{
+				Type:    hmc.CredentialsPropagatedCondition,
+				Status:  metav1.ConditionFalse,
+				Reason:  hmc.FailedReason,
+				Message: errMsg,
+			})
+			return errors.New(errMsg)
+		} else if enabled {
+			apimeta.SetStatusCondition(clusterDeployment.GetConditions(), metav1.Condition{
+				Type:    hmc.CredentialsPropagatedCondition,
+				Status:  metav1.ConditionTrue,
+				Reason:  hmc.SucceededReason,
+				Message: titleName + " CCM credentials created",
 			})
 		}
 	}
