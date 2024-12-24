@@ -39,13 +39,13 @@ type ClusterIdentity struct {
 	IdentityName         string
 	SecretData           map[string]string
 	Spec                 map[string]any
-	Namespaced           bool
+	Namespace            string
 }
 
 // New creates a ClusterIdentity resource, credential and associated secret for
 // the given provider using the provided KubeClient and returns details about
 // the created ClusterIdentity.
-func New(kc *kubeclient.KubeClient, provider managedcluster.ProviderType) *ClusterIdentity {
+func New(kc *kubeclient.KubeClient, provider managedcluster.ProviderType, namespace string) *ClusterIdentity {
 	GinkgoHelper()
 
 	var (
@@ -126,14 +126,17 @@ func New(kc *kubeclient.KubeClient, provider managedcluster.ProviderType) *Clust
 		IdentityName: identityName,
 		SecretData:   secretStringData,
 		Spec:         spec,
-		Namespaced:   namespaced,
+	}
+
+	if namespaced {
+		ci.Namespace = namespace
 	}
 
 	validateSecretDataPopulated(secretStringData)
 	ci.waitForResourceCRD(kc)
 	ci.createSecret(kc)
 	ci.createClusterIdentity(kc)
-	ci.createCredential(kc)
+	ci.createCredential(kc, namespace)
 
 	return &ci
 }
@@ -200,7 +203,7 @@ func (ci *ClusterIdentity) createSecret(kc *kubeclient.KubeClient) {
 	}
 }
 
-func (ci *ClusterIdentity) createCredential(kc *kubeclient.KubeClient) {
+func (ci *ClusterIdentity) createCredential(kc *kubeclient.KubeClient, namespace string) {
 	GinkgoHelper()
 
 	credName := fmt.Sprintf("%s-cred", ci.IdentityName)
@@ -212,14 +215,14 @@ func (ci *ClusterIdentity) createCredential(kc *kubeclient.KubeClient) {
 			"kind":       "Credential",
 			"metadata": map[string]any{
 				"name":      credName,
-				"namespace": kc.Namespace,
+				"namespace": namespace,
 			},
 			"spec": map[string]any{
 				"identityRef": map[string]any{
 					"apiVersion": ci.GroupVersionResource.Group + "/" + ci.GroupVersionResource.Version,
 					"kind":       ci.Kind,
 					"name":       ci.IdentityName,
-					"namespace":  kc.Namespace,
+					"namespace":  ci.Namespace,
 				},
 			},
 		},
@@ -229,7 +232,7 @@ func (ci *ClusterIdentity) createCredential(kc *kubeclient.KubeClient) {
 		Group:    "hmc.mirantis.com",
 		Version:  "v1alpha1",
 		Resource: "credentials",
-	}, cred, true)
+	}, cred, namespace)
 }
 
 // createClusterIdentity creates a ClusterIdentity resource.
@@ -244,11 +247,11 @@ func (ci *ClusterIdentity) createClusterIdentity(kc *kubeclient.KubeClient) {
 			"kind":       ci.Kind,
 			"metadata": map[string]any{
 				"name":      ci.IdentityName,
-				"namespace": kc.Namespace,
+				"namespace": ci.Namespace,
 			},
 			"spec": ci.Spec,
 		},
 	}
 
-	kc.CreateOrUpdateUnstructuredObject(ci.GroupVersionResource, id, ci.Namespaced)
+	kc.CreateOrUpdateUnstructuredObject(ci.GroupVersionResource, id, ci.Namespace)
 }

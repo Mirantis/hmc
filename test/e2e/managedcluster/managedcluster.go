@@ -27,6 +27,7 @@ import (
 	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"github.com/Mirantis/hmc/test/e2e/templates"
 	"github.com/Mirantis/hmc/test/utils"
 )
 
@@ -39,17 +40,8 @@ const (
 	ProviderVSphere ProviderType = "infrastructure-vsphere"
 
 	providerLabel = "cluster.x-k8s.io/provider"
-)
 
-type Template string
-
-const (
-	TemplateAWSStandaloneCP     Template = "aws-standalone-cp"
-	TemplateAWSHostedCP         Template = "aws-hosted-cp"
-	TemplateAzureHostedCP       Template = "azure-hosted-cp"
-	TemplateAzureStandaloneCP   Template = "azure-standalone-cp"
-	TemplateVSphereStandaloneCP Template = "vsphere-standalone-cp"
-	TemplateVSphereHostedCP     Template = "vsphere-hosted-cp"
+	Namespace = "default"
 )
 
 //go:embed resources/aws-standalone-cp.yaml.tpl
@@ -84,7 +76,7 @@ func GetProviderLabel(provider ProviderType) string {
 	return fmt.Sprintf("%s=%s", providerLabel, provider)
 }
 
-func setClusterName(templateName Template) {
+func setClusterName(templateType templates.Type) {
 	var generatedName string
 
 	mcName := os.Getenv(EnvVarManagedClusterName)
@@ -92,30 +84,35 @@ func setClusterName(templateName Template) {
 		mcName = "e2e-test-" + uuid.New().String()[:8]
 	}
 
-	providerName := strings.Split(string(templateName), "-")[0]
+	providerName := strings.Split(string(templateType), "-")[0]
 
 	// Append the provider name to the cluster name to ensure uniqueness between
 	// different deployed ManagedClusters.
 	generatedName = fmt.Sprintf("%s-%s", mcName, providerName)
-	if strings.Contains(string(templateName), "hosted") {
+	if strings.Contains(string(templateType), "hosted") {
 		generatedName = fmt.Sprintf("%s-%s", mcName, "hosted")
 	}
 
 	GinkgoT().Setenv(EnvVarManagedClusterName, generatedName)
 }
 
+func setTemplate(templateName string) {
+	GinkgoT().Setenv(EnvVarManagedClusterTemplate, templateName)
+}
+
 // GetUnstructured returns an unstructured ManagedCluster object based on the
 // provider and template.
-func GetUnstructured(templateName Template) *unstructured.Unstructured {
+func GetUnstructured(templateType templates.Type, templateName string) *unstructured.Unstructured {
 	GinkgoHelper()
 
-	setClusterName(templateName)
+	setClusterName(templateType)
+	setTemplate(templateName)
 
 	var managedClusterTemplateBytes []byte
-	switch templateName {
-	case TemplateAWSStandaloneCP:
+	switch templateType {
+	case templates.TemplateAWSStandaloneCP:
 		managedClusterTemplateBytes = awsStandaloneCPManagedClusterTemplateBytes
-	case TemplateAWSHostedCP:
+	case templates.TemplateAWSHostedCP:
 		// Validate environment vars that do not have defaults are populated.
 		// We perform this validation here instead of within a Before block
 		// since we populate the vars from standalone prior to this step.
@@ -126,16 +123,16 @@ func GetUnstructured(templateName Template) *unstructured.Unstructured {
 			EnvVarAWSSecurityGroupID,
 		})
 		managedClusterTemplateBytes = awsHostedCPManagedClusterTemplateBytes
-	case TemplateVSphereStandaloneCP:
+	case templates.TemplateVSphereStandaloneCP:
 		managedClusterTemplateBytes = vsphereStandaloneCPManagedClusterTemplateBytes
-	case TemplateVSphereHostedCP:
+	case templates.TemplateVSphereHostedCP:
 		managedClusterTemplateBytes = vsphereHostedCPManagedClusterTemplateBytes
-	case TemplateAzureHostedCP:
+	case templates.TemplateAzureHostedCP:
 		managedClusterTemplateBytes = azureHostedCPManagedClusterTemplateBytes
-	case TemplateAzureStandaloneCP:
+	case templates.TemplateAzureStandaloneCP:
 		managedClusterTemplateBytes = azureStandaloneCPManagedClusterTemplateBytes
 	default:
-		Fail(fmt.Sprintf("Unsupported template: %s", templateName))
+		Fail(fmt.Sprintf("Unsupported template type: %s", templateType))
 	}
 
 	managedClusterConfigBytes, err := envsubst.Bytes(managedClusterTemplateBytes)

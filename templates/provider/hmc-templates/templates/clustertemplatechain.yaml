@@ -1,0 +1,15 @@
+apiVersion: hmc.mirantis.com/v1alpha1
+kind: ClusterTemplateChain
+metadata:
+  name: hmc-0-0-5
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  supportedTemplates:
+    - name: aws-eks-0-0-2
+    - name: aws-hosted-cp-0-0-3
+    - name: aws-standalone-cp-0-0-4
+    - name: azure-hosted-cp-0-0-3
+    - name: azure-standalone-cp-0-0-4
+    - name: vsphere-hosted-cp-0-0-3
+    - name: vsphere-standalone-cp-0-0-3
