@@ -116,13 +116,14 @@ func (r *ManagementReconciler) Update(ctx context.Context, management *hmc.Manag
 		errs error
 
 		statusAccumulator = &mgmtStatusAccumulator{
-			providers:              hmc.Providers{},
+			providers:              hmc.Providers{"infrastructure-internal"},
 			components:             make(map[string]hmc.ComponentStatus),
 			compatibilityContracts: make(map[string]hmc.CompatibilityContracts),
 		}
 
 		requeue bool
 	)
+
 	for _, component := range components {
 		l.V(1).Info("reconciling components", "component", component)
 		template := new(hmc.ProviderTemplate)

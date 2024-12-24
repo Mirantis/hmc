@@ -25,9 +25,9 @@ import (
 func SetupIndexers(ctx context.Context, mgr ctrl.Manager) error {
 	var merr error
 	for _, f := range []func(context.Context, ctrl.Manager) error{
-		setupManagedClusterIndexer,
-		setupManagedClusterServicesIndexer,
-		setupManagedClusterCredentialIndexer,
+		setupClusterDeploymentIndexer,
+		setupClusterDeploymentServicesIndexer,
+		setupClusterDeploymentCredentialIndexer,
 		setupReleaseVersionIndexer,
 		setupReleaseTemplatesIndexer,
 		setupClusterTemplateChainIndexer,
@@ -42,19 +42,19 @@ func SetupIndexers(ctx context.Context, mgr ctrl.Manager) error {
 	return merr
 }
 
-// managed cluster
+// cluster deployment
 
-// ManagedClusterTemplateIndexKey indexer field name to extract ClusterTemplate name reference from a ManagedCluster object.
-const ManagedClusterTemplateIndexKey = ".spec.template"
+// ClusterDeploymentTemplateIndexKey indexer field name to extract ClusterTemplate name reference from a ClusterDeployment object.
+const ClusterDeploymentTemplateIndexKey = ".spec.template"
 
-func setupManagedClusterIndexer(ctx context.Context, mgr ctrl.Manager) error {
-	return mgr.GetFieldIndexer().IndexField(ctx, &ManagedCluster{}, ManagedClusterTemplateIndexKey, ExtractTemplateNameFromManagedCluster)
+func setupClusterDeploymentIndexer(ctx context.Context, mgr ctrl.Manager) error {
+	return mgr.GetFieldIndexer().IndexField(ctx, &ClusterDeployment{}, ClusterDeploymentTemplateIndexKey, ExtractTemplateNameFromClusterDeployment)
 }
 
-// ExtractTemplateNameFromManagedCluster returns referenced ClusterTemplate name
-// declared in a ManagedCluster object.
-func ExtractTemplateNameFromManagedCluster(rawObj client.Object) []string {
-	cluster, ok := rawObj.(*ManagedCluster)
+// ExtractTemplateNameFromClusterDeployment returns referenced ClusterTemplate name
+// declared in a ClusterDeployment object.
+func ExtractTemplateNameFromClusterDeployment(rawObj client.Object) []string {
+	cluster, ok := rawObj.(*ClusterDeployment)
 	if !ok {
 		return nil
 	}
@@ -62,17 +62,17 @@ func ExtractTemplateNameFromManagedCluster(rawObj client.Object) []string {
 	return []string{cluster.Spec.Template}
 }
 
-// ManagedClusterServiceTemplatesIndexKey indexer field name to extract service templates names from a ManagedCluster object.
-const ManagedClusterServiceTemplatesIndexKey = ".spec.services[].Template"
+// ClusterDeploymentServiceTemplatesIndexKey indexer field name to extract service templates names from a ClusterDeployment object.
+const ClusterDeploymentServiceTemplatesIndexKey = ".spec.services[].Template"
 
-func setupManagedClusterServicesIndexer(ctx context.Context, mgr ctrl.Manager) error {
-	return mgr.GetFieldIndexer().IndexField(ctx, &ManagedCluster{}, ManagedClusterServiceTemplatesIndexKey, ExtractServiceTemplateNamesFromManagedCluster)
+func setupClusterDeploymentServicesIndexer(ctx context.Context, mgr ctrl.Manager) error {
+	return mgr.GetFieldIndexer().IndexField(ctx, &ClusterDeployment{}, ClusterDeploymentServiceTemplatesIndexKey, ExtractServiceTemplateNamesFromClusterDeployment)
 }
 
-// ExtractServiceTemplateNamesFromManagedCluster returns a list of service templates names
-// declared in a ManagedCluster object.
-func ExtractServiceTemplateNamesFromManagedCluster(rawObj client.Object) []string {
-	cluster, ok := rawObj.(*ManagedCluster)
+// ExtractServiceTemplateNamesFromClusterDeployment returns a list of service templates names
+// declared in a ClusterDeployment object.
+func ExtractServiceTemplateNamesFromClusterDeployment(rawObj client.Object) []string {
+	cluster, ok := rawObj.(*ClusterDeployment)
 	if !ok {
 		return nil
 	}
@@ -85,17 +85,17 @@ func ExtractServiceTemplateNamesFromManagedCluster(rawObj client.Object) []strin
 	return templates
 }
 
-// ManagedClusterCredentialIndexKey indexer field name to extract Credential name reference from a ManagedCluster object.
-const ManagedClusterCredentialIndexKey = ".spec.credential"
+// ClusterDeploymentCredentialIndexKey indexer field name to extract Credential name reference from a ClusterDeployment object.
+const ClusterDeploymentCredentialIndexKey = ".spec.credential"
 
-func setupManagedClusterCredentialIndexer(ctx context.Context, mgr ctrl.Manager) error {
-	return mgr.GetFieldIndexer().IndexField(ctx, &ManagedCluster{}, ManagedClusterCredentialIndexKey, ExtractCredentialNameFromManagedCluster)
+func setupClusterDeploymentCredentialIndexer(ctx context.Context, mgr ctrl.Manager) error {
+	return mgr.GetFieldIndexer().IndexField(ctx, &ClusterDeployment{}, ClusterDeploymentCredentialIndexKey, extractCredentialNameFromClusterDeployment)
 }
 
-// ExtractCredentialNameFromManagedCluster returns referenced Credential name
-// declared in a ManagedCluster object.
-func ExtractCredentialNameFromManagedCluster(rawObj client.Object) []string {
-	cluster, ok := rawObj.(*ManagedCluster)
+// extractCredentialNameFromClusterDeployment returns referenced Credential name
+// declared in a ClusterDeployment object.
+func extractCredentialNameFromClusterDeployment(rawObj client.Object) []string {
+	cluster, ok := rawObj.(*ClusterDeployment)
 	if !ok {
 		return nil
 	}

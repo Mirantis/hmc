@@ -28,10 +28,10 @@ import (
 func PropagateAzureSecrets(ctx context.Context, cfg *PropagationCfg) error {
 	azureCluster := &capz.AzureCluster{}
 	if err := cfg.Client.Get(ctx, client.ObjectKey{
-		Name:      cfg.ManagedCluster.Name,
-		Namespace: cfg.ManagedCluster.Namespace,
+		Name:      cfg.ClusterDeployment.Name,
+		Namespace: cfg.ClusterDeployment.Namespace,
 	}, azureCluster); err != nil {
-		return fmt.Errorf("failed to get AzureCluster %s: %w", cfg.ManagedCluster.Name, err)
+		return fmt.Errorf("failed to get AzureCluster %s: %w", cfg.ClusterDeployment.Name, err)
 	}
 
 	azureClIdty := &capz.AzureClusterIdentity{}

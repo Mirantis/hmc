@@ -23,10 +23,10 @@ import (
 	. "github.com/onsi/gomega"
 
 	internalutils "github.com/Mirantis/hmc/internal/utils"
+	"github.com/Mirantis/hmc/test/e2e/clusterdeployment"
+	"github.com/Mirantis/hmc/test/e2e/clusterdeployment/clusteridentity"
+	"github.com/Mirantis/hmc/test/e2e/clusterdeployment/vsphere"
 	"github.com/Mirantis/hmc/test/e2e/kubeclient"
-	"github.com/Mirantis/hmc/test/e2e/managedcluster"
-	"github.com/Mirantis/hmc/test/e2e/managedcluster/clusteridentity"
-	"github.com/Mirantis/hmc/test/e2e/managedcluster/vsphere"
 )
 
 var _ = Context("vSphere Templates", Label("provider:onprem", "provider:vsphere"), Ordered, func() {
@@ -43,9 +43,9 @@ var _ = Context("vSphere Templates", Label("provider:onprem", "provider:vsphere"
 		By("creating kube client")
 		kc = kubeclient.NewFromLocal(internalutils.DefaultSystemNamespace)
 		By("providing cluster identity")
-		ci := clusteridentity.New(kc, managedcluster.ProviderVSphere)
+		ci := clusteridentity.New(kc, clusterdeployment.ProviderVSphere)
 		By("setting VSPHERE_CLUSTER_IDENTITY env variable")
-		Expect(os.Setenv(managedcluster.EnvVarVSphereClusterIdentity, ci.IdentityName)).Should(Succeed())
+		Expect(os.Setenv(clusterdeployment.EnvVarVSphereClusterIdentity, ci.IdentityName)).Should(Succeed())
 	})
 
 	AfterEach(func() {
@@ -53,7 +53,7 @@ var _ = Context("vSphere Templates", Label("provider:onprem", "provider:vsphere"
 		// as well as the output of clusterctl to store as artifacts.
 		if CurrentSpecReport().Failed() {
 			By("collecting failure logs from controllers")
-			collectLogArtifacts(kc, clusterName, managedcluster.ProviderVSphere, managedcluster.ProviderCAPI)
+			collectLogArtifacts(kc, clusterName, clusterdeployment.ProviderVSphere, clusterdeployment.ProviderCAPI)
 		}
 
 		// Run the deletion as part of the cleanup and validate it here.
@@ -64,10 +64,10 @@ var _ = Context("vSphere Templates", Label("provider:onprem", "provider:vsphere"
 		// 'dev-aws-nuke' to clean up resources in the event that the test
 		// fails to do so.
 		if deleteFunc != nil && !noCleanup() {
-			deletionValidator := managedcluster.NewProviderValidator(
-				managedcluster.TemplateVSphereStandaloneCP,
+			deletionValidator := clusterdeployment.NewProviderValidator(
+				clusterdeployment.TemplateVSphereStandaloneCP,
 				clusterName,
-				managedcluster.ValidationActionDelete,
+				clusterdeployment.ValidationActionDelete,
 			)
 
 			err = deleteFunc()
@@ -80,16 +80,16 @@ var _ = Context("vSphere Templates", Label("provider:onprem", "provider:vsphere"
 
 	It("should deploy standalone managed cluster", func() {
 		By("creating a managed cluster")
-		d := managedcluster.GetUnstructured(managedcluster.TemplateVSphereStandaloneCP)
+		d := clusterdeployment.GetUnstructured(clusterdeployment.TemplateVSphereStandaloneCP)
 		clusterName = d.GetName()
 
-		deleteFunc = kc.CreateManagedCluster(context.Background(), d)
+		deleteFunc = kc.CreateClusterDeployment(context.Background(), d)
 
 		By("waiting for infrastructure providers to deploy successfully")
-		deploymentValidator := managedcluster.NewProviderValidator(
-			managedcluster.TemplateVSphereStandaloneCP,
+		deploymentValidator := clusterdeployment.NewProviderValidator(
+			clusterdeployment.TemplateVSphereStandaloneCP,
 			clusterName,
-			managedcluster.ValidationActionDeploy,
+			clusterdeployment.ValidationActionDeploy,
 		)
 		Eventually(func() error {
 			return deploymentValidator.Validate(context.Background(), kc)

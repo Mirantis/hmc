@@ -26,7 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/Mirantis/hmc/api/v1alpha1"
-	"github.com/Mirantis/hmc/test/objects/managedcluster"
+	"github.com/Mirantis/hmc/test/objects/clusterdeployment"
 	"github.com/Mirantis/hmc/test/objects/management"
 	"github.com/Mirantis/hmc/test/objects/release"
 	"github.com/Mirantis/hmc/test/objects/template"
@@ -197,10 +197,10 @@ func TestManagementValidateUpdate(t *testing.T) {
 				template.NewProviderTemplate(template.WithProvidersStatus(infraAWSProvider)),
 				template.NewProviderTemplate(template.WithName(release.DefaultCAPITemplateName)),
 				template.NewClusterTemplate(template.WithProvidersStatus(infraAWSProvider)),
-				managedcluster.NewManagedCluster(managedcluster.WithClusterTemplate(template.DefaultName)),
+				clusterdeployment.NewClusterDeployment(clusterdeployment.WithClusterTemplate(template.DefaultName)),
 			},
 			warnings: admission.Warnings{"Some of the providers cannot be removed"},
-			err:      fmt.Sprintf(`Management "%s" is invalid: spec.providers: Forbidden: provider %s is required by at least one ManagedCluster (%s/%s) and cannot be removed from the Management %s`, management.DefaultName, infraAWSProvider, managedcluster.DefaultNamespace, managedcluster.DefaultName, management.DefaultName),
+			err:      fmt.Sprintf(`Management "%s" is invalid: spec.providers: Forbidden: provider %s is required by at least one ClusterDeployment (%s/%s) and cannot be removed from the Management %s`, management.DefaultName, infraAWSProvider, clusterdeployment.DefaultNamespace, clusterdeployment.DefaultName, management.DefaultName),
 		},
 		{
 			name: "managed cluster does not use the removed provider, should succeed",
@@ -216,7 +216,7 @@ func TestManagementValidateUpdate(t *testing.T) {
 				template.NewProviderTemplate(template.WithProvidersStatus(infraAWSProvider)),
 				template.NewProviderTemplate(template.WithName(release.DefaultCAPITemplateName)),
 				template.NewClusterTemplate(template.WithProvidersStatus(infraOtherProvider)),
-				managedcluster.NewManagedCluster(managedcluster.WithClusterTemplate(template.DefaultName)),
+				clusterdeployment.NewClusterDeployment(clusterdeployment.WithClusterTemplate(template.DefaultName)),
 			},
 		},
 		{
@@ -372,7 +372,7 @@ func TestManagementValidateUpdate(t *testing.T) {
 				WithScheme(scheme.Scheme).
 				WithRuntimeObjects(tt.existingObjects...).
 				WithIndex(&v1alpha1.ClusterTemplate{}, v1alpha1.ClusterTemplateProvidersIndexKey, v1alpha1.ExtractProvidersFromClusterTemplate).
-				WithIndex(&v1alpha1.ManagedCluster{}, v1alpha1.ManagedClusterTemplateIndexKey, v1alpha1.ExtractTemplateNameFromManagedCluster).
+				WithIndex(&v1alpha1.ClusterDeployment{}, v1alpha1.ClusterDeploymentTemplateIndexKey, v1alpha1.ExtractTemplateNameFromClusterDeployment).
 				Build()
 			validator := &ManagementValidator{Client: c}
 
@@ -402,10 +402,10 @@ func TestManagementValidateDelete(t *testing.T) {
 		warnings        admission.Warnings
 	}{
 		{
-			name:            "should fail if ManagedCluster objects exist",
+			name:            "should fail if ClusterDeployment objects exist",
 			management:      management.NewManagement(),
-			existingObjects: []runtime.Object{managedcluster.NewManagedCluster()},
-			warnings:        admission.Warnings{"The Management object can't be removed if ManagedCluster objects still exist"},
+			existingObjects: []runtime.Object{clusterdeployment.NewClusterDeployment()},
+			warnings:        admission.Warnings{"The Management object can't be removed if ClusterDeployment objects still exist"},
 			err:             "management deletion is forbidden",
 		},
 		{

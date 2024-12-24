@@ -307,7 +307,7 @@ spec:
               config:
                 description: |-
                   Config demonstrates available parameters for template customization,
-                  that can be used when creating ManagedCluster objects.
+                  that can be used when creating ClusterDeployment objects.
                 x-kubernetes-preserve-unknown-fields: true
               description:
                 description: Description contains information about the template.

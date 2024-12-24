@@ -144,7 +144,7 @@ func GetHelmChartOpts(ctx context.Context, c client.Client, namespace string, se
 		tmpl := &hmc.ServiceTemplate{}
 		// Here we can use the same namespace for all services
 		// because if the services slice is part of:
-		// 1. ManagedCluster: Then the referred template must be in its own namespace.
+		// 1. ClusterDeployment: Then the referred template must be in its own namespace.
 		// 2. MultiClusterService: Then the referred template must be in system namespace.
 		tmplRef := client.ObjectKey{Name: svc.Template, Namespace: namespace}
 		if err := c.Get(ctx, tmplRef, tmpl); err != nil {

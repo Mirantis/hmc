@@ -13,10 +13,10 @@ webhooks:
       service:
         name: {{ include "hmc.webhook.serviceName" . }}
         namespace: {{ include "hmc.webhook.serviceNamespace" . }}
-        path: /mutate-hmc-mirantis-com-v1alpha1-managedcluster
+        path: /mutate-hmc-mirantis-com-v1alpha1-clusterdeployment
     failurePolicy: Fail
     matchPolicy: Equivalent
-    name: mutation.managedcluster.hmc.mirantis.com
+    name: mutation.clusterdeployment.hmc.mirantis.com
     rules:
       - apiGroups:
           - hmc.mirantis.com
@@ -26,7 +26,7 @@ webhooks:
           - CREATE
           - UPDATE
         resources:
-          - managedclusters
+          - clusterdeployments
     sideEffects: None
   - admissionReviewVersions:
       - v1
@@ -131,10 +131,10 @@ webhooks:
       service:
         name: {{ include "hmc.webhook.serviceName" . }}
         namespace: {{ include "hmc.webhook.serviceNamespace" . }}
-        path: /validate-hmc-mirantis-com-v1alpha1-managedcluster
+        path: /validate-hmc-mirantis-com-v1alpha1-clusterdeployment
     failurePolicy: Fail
     matchPolicy: Equivalent
-    name: validation.managedcluster.hmc.mirantis.com
+    name: validation.clusterdeployment.hmc.mirantis.com
     rules:
       - apiGroups:
           - hmc.mirantis.com
@@ -145,7 +145,7 @@ webhooks:
           - UPDATE
           - DELETE
         resources:
-          - managedclusters
+          - clusterdeployments
     sideEffects: None
   - admissionReviewVersions:
       - v1
