@@ -15,7 +15,6 @@
 package controller
 
 import (
-	"context"
 	"fmt"
 	"time"
 
@@ -40,7 +39,6 @@ import (
 
 var _ = Describe("Management Controller", func() {
 	Context("When reconciling a resource", func() {
-		ctx := context.Background()
 		management := hmcmirantiscomv1alpha1.Management{}
 
 		BeforeEach(func() {
