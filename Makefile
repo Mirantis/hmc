@@ -356,6 +356,10 @@ dev-eks-creds: dev-aws-creds
 dev-aks-creds: envsubst
 	@NAMESPACE=$(NAMESPACE) $(ENVSUBST) -no-unset -i config/dev/aks-credentials.yaml | $(KUBECTL) apply -f -
 
+.PHONY: dev-openstack-creds
+dev-openstack-creds: envsubst
+	@NAMESPACE=$(NAMESPACE) $(ENVSUBST) -no-unset -i config/dev/openstack-credentials.yaml | $(KUBECTL) apply -f -
+
 .PHONY: dev-apply ## Apply the development environment by deploying the kind cluster, local registry and the HMC helm chart.
 dev-apply: kind-deploy registry-deploy dev-push dev-deploy dev-templates dev-release
 

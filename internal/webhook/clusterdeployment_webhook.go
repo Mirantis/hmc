@@ -285,7 +285,7 @@ func isCredMatchTemplate(cred *hmcv1alpha1.Credential, template *hmcv1alpha1.Clu
 			if idtyKind != "VSphereClusterIdentity" {
 				return errMsg(provider)
 			}
-		case "infrastructure-internal":
+		case "infrastructure-openstack", "infrastructure-internal":
 			if idtyKind != "Secret" {
 				return errMsg(provider)
 			}
