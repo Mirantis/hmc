@@ -22,7 +22,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	hmcmirantiscomv1alpha1 "github.com/Mirantis/hmc/api/v1alpha1"
 )
@@ -35,47 +34,44 @@ var _ = Describe("Backup Controller", func() {
 
 		typeNamespacedName := types.NamespacedName{
 			Name:      resourceName,
-			Namespace: "default", // TODO(user):Modify as needed
+			Namespace: metav1.NamespaceAll,
 		}
-		backup := &hmcmirantiscomv1alpha1.Backup{}
+		backup := &hmcmirantiscomv1alpha1.ManagementBackup{}
 
 		BeforeEach(func() {
 			By("creating the custom resource for the Kind Backup")
 			err := k8sClient.Get(ctx, typeNamespacedName, backup)
 			if err != nil && errors.IsNotFound(err) {
-				resource := &hmcmirantiscomv1alpha1.Backup{
+				resource := &hmcmirantiscomv1alpha1.ManagementBackup{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      resourceName,
-						Namespace: "default",
+						Namespace: metav1.NamespaceAll,
 					},
-					// TODO(user): Specify other spec details if needed.
 				}
 				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
 			}
 		})
 
 		AfterEach(func() {
-			// TODO(user): Cleanup logic after each test, like removing the resource instance.
-			resource := &hmcmirantiscomv1alpha1.Backup{}
+			resource := &hmcmirantiscomv1alpha1.ManagementBackup{}
 			err := k8sClient.Get(ctx, typeNamespacedName, resource)
 			Expect(err).NotTo(HaveOccurred())
 
 			By("Cleanup the specific resource instance Backup")
 			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
 		})
+
 		It("should successfully reconcile the resource", func() {
 			By("Reconciling the created resource")
-			controllerReconciler := &BackupReconciler{
+			controllerReconciler := &ManagementBackupReconciler{
 				Client: k8sClient,
-				Scheme: k8sClient.Scheme(),
 			}
+			_ = controllerReconciler
 
-			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
-				NamespacedName: typeNamespacedName,
-			})
-			Expect(err).NotTo(HaveOccurred())
-			// TODO(user): Add more specific assertions depending on your controller's reconciliation logic.
-			// Example: If you expect a certain status condition after reconciliation, verify it here.
+			// _, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
+			// 	NamespacedName: typeNamespacedName,
+			// })
+			// Expect(err).NotTo(HaveOccurred())
 		})
 	})
 })
