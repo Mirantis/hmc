@@ -318,10 +318,10 @@ func main() {
 		os.Exit(1)
 	}
 	// TODO (zerospiel): disabled until the #605
-	// if err = (&controller.BackupReconciler{
+	// if err = (&controller.ManagementBackupReconciler{
 	// 	Client: mgr.GetClient(),
 	// }).SetupWithManager(mgr); err != nil {
-	// 	setupLog.Error(err, "unable to create controller", "controller", "Backup")
+	// 	setupLog.Error(err, "unable to create controller", "controller", "ManagementBackup")
 	// 	os.Exit(1)
 	// }
 	// +kubebuilder:scaffold:builder

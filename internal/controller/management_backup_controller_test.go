@@ -36,13 +36,13 @@ var _ = Describe("Backup Controller", func() {
 			Name:      resourceName,
 			Namespace: metav1.NamespaceAll,
 		}
-		backup := &hmcmirantiscomv1alpha1.Backup{}
+		backup := &hmcmirantiscomv1alpha1.ManagementBackup{}
 
 		BeforeEach(func() {
 			By("creating the custom resource for the Kind Backup")
 			err := k8sClient.Get(ctx, typeNamespacedName, backup)
 			if err != nil && errors.IsNotFound(err) {
-				resource := &hmcmirantiscomv1alpha1.Backup{
+				resource := &hmcmirantiscomv1alpha1.ManagementBackup{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      resourceName,
 						Namespace: metav1.NamespaceAll,
@@ -53,7 +53,7 @@ var _ = Describe("Backup Controller", func() {
 		})
 
 		AfterEach(func() {
-			resource := &hmcmirantiscomv1alpha1.Backup{}
+			resource := &hmcmirantiscomv1alpha1.ManagementBackup{}
 			err := k8sClient.Get(ctx, typeNamespacedName, resource)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -63,7 +63,7 @@ var _ = Describe("Backup Controller", func() {
 
 		It("should successfully reconcile the resource", func() {
 			By("Reconciling the created resource")
-			controllerReconciler := &BackupReconciler{
+			controllerReconciler := &ManagementBackupReconciler{
 				Client: k8sClient,
 			}
 			_ = controllerReconciler
