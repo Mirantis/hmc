@@ -1,3 +1,4 @@
+
 # Cluster parameters
 workersNumber: 1
 
@@ -28,6 +29,13 @@ worker:
     format: ""
     org: ""
     baseOS: ""
+
+addons:
+- name: aws-ebs-csi-driver
+  version: v1.37.0-eksbuild.1
+  configuration: |
+    defaultStorageClass:
+      enabled: true
 
 # Kubernetes version
 kubernetes:
