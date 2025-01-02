@@ -78,7 +78,7 @@ func ExtractServiceTemplateNamesFromClusterDeployment(rawObj client.Object) []st
 	}
 
 	templates := []string{}
-	for _, s := range cluster.Spec.Services {
+	for _, s := range cluster.Spec.ServiceSpec.Services {
 		templates = append(templates, s.Template)
 	}
 
@@ -204,8 +204,8 @@ func ExtractServiceTemplateNamesFromMultiClusterService(rawObj client.Object) []
 		return nil
 	}
 
-	templates := make([]string, len(mcs.Spec.Services))
-	for i, s := range mcs.Spec.Services {
+	templates := make([]string, len(mcs.Spec.ServiceSpec.Services))
+	for i, s := range mcs.Spec.ServiceSpec.Services {
 		templates[i] = s.Template
 	}
 

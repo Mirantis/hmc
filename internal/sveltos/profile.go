@@ -33,11 +33,14 @@ import (
 )
 
 type ReconcileProfileOpts struct {
-	OwnerReference *metav1.OwnerReference
-	LabelSelector  metav1.LabelSelector
-	HelmChartOpts  []HelmChartOpts
-	Priority       int32
-	StopOnConflict bool
+	OwnerReference       *metav1.OwnerReference
+	LabelSelector        metav1.LabelSelector
+	HelmChartOpts        []HelmChartOpts
+	TemplateResourceRefs []sveltosv1beta1.TemplateResourceRef
+	PolicyRefs           []sveltosv1beta1.PolicyRef
+	Priority             int32
+	StopOnConflict       bool
+	Reload               bool
 }
 
 type HelmChartOpts struct {
@@ -49,6 +52,7 @@ type HelmChartOpts struct {
 	ChartVersion          string
 	ReleaseName           string
 	ReleaseNamespace      string
+	ValuesFrom            []sveltosv1beta1.ValueFrom
 	PlainHTTP             bool
 	InsecureSkipTLSVerify bool
 }
@@ -127,7 +131,7 @@ func ReconcileProfile(
 
 // GetHelmChartOpts returns slice of helm chart options to use with Sveltos.
 // Namespace is the namespace of the referred templates in services slice.
-func GetHelmChartOpts(ctx context.Context, c client.Client, namespace string, services []hmc.ServiceSpec) ([]HelmChartOpts, error) {
+func GetHelmChartOpts(ctx context.Context, c client.Client, namespace string, services []hmc.Service) ([]HelmChartOpts, error) {
 	l := ctrl.LoggerFrom(ctx)
 	opts := []HelmChartOpts{}
 
@@ -178,6 +182,7 @@ func GetHelmChartOpts(ctx context.Context, c client.Client, namespace string, se
 		chartName := chart.Spec.Chart
 		opt := HelmChartOpts{
 			Values:        svc.Values,
+			ValuesFrom:    svc.ValuesFrom,
 			RepositoryURL: repo.Spec.URL,
 			// We don't have repository name so chart name becomes repository name.
 			RepositoryName: chartName,
@@ -230,9 +235,12 @@ func GetSpec(opts *ReconcileProfileOpts) (*sveltosv1beta1.Spec, error) {
 		ClusterSelector: libsveltosv1beta1.Selector{
 			LabelSelector: opts.LabelSelector,
 		},
-		Tier:               tier,
-		ContinueOnConflict: !opts.StopOnConflict,
-		HelmCharts:         make([]sveltosv1beta1.HelmChart, 0, len(opts.HelmChartOpts)),
+		Tier:                 tier,
+		ContinueOnConflict:   !opts.StopOnConflict,
+		HelmCharts:           make([]sveltosv1beta1.HelmChart, 0, len(opts.HelmChartOpts)),
+		Reloader:             opts.Reload,
+		TemplateResourceRefs: opts.TemplateResourceRefs,
+		PolicyRefs:           opts.PolicyRefs,
 	}
 
 	for _, hc := range opts.HelmChartOpts {
@@ -259,6 +267,8 @@ func GetSpec(opts *ReconcileProfileOpts) (*sveltosv1beta1.Spec, error) {
 		}
 
 		helmChart.Values = hc.Values
+		helmChart.ValuesFrom = hc.ValuesFrom
+
 		spec.HelmCharts = append(spec.HelmCharts, helmChart)
 	}
 
