@@ -181,11 +181,11 @@ LD_FLAGS += -X github.com/Mirantis/hmc/internal/telemetry.segmentToken=$(SEGMENT
 
 .PHONY: build
 build: generate-all ## Build manager binary.
-	go build -ldflags="${LD_FLAGS}" -o bin/manager cmd/main.go
+	go build -ldflags="${LD_FLAGS}" -o bin/manager cmd/app.go
 
 .PHONY: run
 run: generate-all ## Run a controller from your host.
-	go run ./cmd/main.go
+	go run ./cmd/app.go
 
 # If you wish to build the manager image targeting other platforms you can use the --platform flag.
 # (i.e. docker build --platform linux/arm64). However, you must enable docker buildKit for it.
