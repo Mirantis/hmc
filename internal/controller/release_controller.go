@@ -47,6 +47,7 @@ import (
 	hmc "github.com/Mirantis/hmc/api/v1alpha1"
 	"github.com/Mirantis/hmc/internal/build"
 	"github.com/Mirantis/hmc/internal/helm"
+	"github.com/Mirantis/hmc/internal/providers"
 	"github.com/Mirantis/hmc/internal/utils"
 )
 
@@ -194,7 +195,7 @@ func (r *ReleaseReconciler) ensureManagement(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	mgmtObj.Spec.Providers = hmc.GetDefaultProviders()
+	mgmtObj.Spec.Providers = providers.List()
 
 	getter := helm.NewMemoryRESTClientGetter(r.Config, r.RESTMapper())
 	actionConfig := new(action.Configuration)
