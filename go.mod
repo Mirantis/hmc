@@ -1,13 +1,13 @@
 module github.com/Mirantis/hmc
 
-go 1.23
+go 1.23.0
 
 require (
 	github.com/Masterminds/semver/v3 v3.3.1
 	github.com/a8m/envsubst v1.4.2
 	github.com/cert-manager/cert-manager v1.16.2
 	github.com/fluxcd/helm-controller/api v1.1.0
-	github.com/fluxcd/pkg/apis/meta v1.8.0
+	github.com/fluxcd/pkg/apis/meta v1.9.0
 	github.com/fluxcd/pkg/runtime v0.50.1
 	github.com/fluxcd/source-controller/api v1.4.1
 	github.com/google/uuid v1.6.0
@@ -24,7 +24,7 @@ require (
 	helm.sh/helm/v3 v3.16.4
 	k8s.io/api v0.31.4
 	k8s.io/apiextensions-apiserver v0.31.4
-	k8s.io/apimachinery v0.31.4
+	k8s.io/apimachinery v0.32.0
 	k8s.io/client-go v0.31.4
 	k8s.io/utils v0.0.0-20241104163129-6fe5fd82f078
 	sigs.k8s.io/cluster-api v1.9.3
@@ -194,12 +194,12 @@ require (
 	k8s.io/cluster-bootstrap v0.31.3 // indirect
 	k8s.io/component-base v0.31.4 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
-	k8s.io/kube-openapi v0.0.0-20241009091222-67ed5848f094 // indirect
+	k8s.io/kube-openapi v0.0.0-20241105132330-32ad38e42d3f // indirect
 	k8s.io/kubectl v0.31.3 // indirect
 	oras.land/oras-go v1.2.6 // indirect
 	sigs.k8s.io/gateway-api v1.1.0 // indirect
-	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
+	sigs.k8s.io/json v0.0.0-20241010143419-9aa6b5e7a4b3 // indirect
 	sigs.k8s.io/kustomize/api v0.18.0 // indirect
 	sigs.k8s.io/kustomize/kyaml v0.18.1 // indirect
-	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
+	sigs.k8s.io/structured-merge-diff/v4 v4.4.2 // indirect
 )
