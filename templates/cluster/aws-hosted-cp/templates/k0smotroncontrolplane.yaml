@@ -26,11 +26,11 @@ spec:
       extensions:
         helm:
           repositories:
-          - name: aws-cloud-controller-manager
+          - name: mirantis
             {{- if .Values.extensions.chartRepository }}
             url: {{ .Values.extensions.chartRepository }}
             {{- else }}
-            url: https://kubernetes.github.io/cloud-provider-aws
+            url: https://charts.mirantis.com
             {{- end }}
           - name: aws-ebs-csi-driver
             {{- if .Values.extensions.chartRepository }}
@@ -41,8 +41,8 @@ spec:
           charts:
           - name: aws-cloud-controller-manager
             namespace: kube-system
-            chartname: aws-cloud-controller-manager/aws-cloud-controller-manager
-            version: "0.0.8"
+            chartname: mirantis/aws-cloud-controller-manager
+            version: "0.0.9"
             values: |
               image:
                 {{- if .Values.extensions.imageRepository }}
@@ -55,6 +55,10 @@ spec:
                 - --cluster-cidr={{ first .Values.clusterNetwork.pods.cidrBlocks }}
                 - --allocate-node-cidrs=true
                 - --cluster-name={{ include "cluster.name" . }}
+              cloudConfig:
+                enabled: {{ ne .Values.managementClusterName "" }}
+                global:
+                  KubernetesClusterID: {{ .Values.managementClusterName }}
               # Removing the default `node-role.kubernetes.io/control-plane` node selector
               # TODO: it does not work
               nodeSelector:
