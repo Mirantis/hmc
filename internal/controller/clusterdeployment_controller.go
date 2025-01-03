@@ -47,12 +47,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	hmc "github.com/Mirantis/hmc/api/v1alpha1"
-	"github.com/Mirantis/hmc/internal/credspropagation"
-	"github.com/Mirantis/hmc/internal/helm"
-	"github.com/Mirantis/hmc/internal/sveltos"
-	"github.com/Mirantis/hmc/internal/telemetry"
-	"github.com/Mirantis/hmc/internal/utils/status"
+	hmc "github.com/K0rdent/kcm/api/v1alpha1"
+	"github.com/K0rdent/kcm/internal/credspropagation"
+	"github.com/K0rdent/kcm/internal/helm"
+	"github.com/K0rdent/kcm/internal/sveltos"
+	"github.com/K0rdent/kcm/internal/telemetry"
+	"github.com/K0rdent/kcm/internal/utils/status"
 )
 
 const (
@@ -558,7 +558,7 @@ func (r *ClusterDeploymentReconciler) Delete(ctx context.Context, clusterDeploym
 	// which prevents Sveltos objects from being removed from the management cluster.
 	// It is detailed in https://github.com/projectsveltos/addon-controller/issues/732.
 	// We may try to remove the explicit call to Delete once a fix for it has been merged.
-	// TODO(https://github.com/Mirantis/hmc/issues/526).
+	// TODO(https://github.com/K0rdent/kcm/issues/526).
 	if err := sveltos.DeleteProfile(ctx, r.Client, clusterDeployment.Namespace, clusterDeployment.Name); err != nil {
 		return ctrl.Result{}, err
 	}

@@ -26,7 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 
-	"github.com/Mirantis/hmc/test/e2e/kubeclient"
+	"github.com/K0rdent/kcm/test/e2e/kubeclient"
 )
 
 // PatchHostedClusterReady patches a hosted clusters' infrastructure resource

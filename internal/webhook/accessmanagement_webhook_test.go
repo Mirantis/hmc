@@ -24,11 +24,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	"github.com/Mirantis/hmc/api/v1alpha1"
-	"github.com/Mirantis/hmc/internal/utils"
-	am "github.com/Mirantis/hmc/test/objects/accessmanagement"
-	"github.com/Mirantis/hmc/test/objects/management"
-	"github.com/Mirantis/hmc/test/scheme"
+	"github.com/K0rdent/kcm/api/v1alpha1"
+	"github.com/K0rdent/kcm/internal/utils"
+	am "github.com/K0rdent/kcm/test/objects/accessmanagement"
+	"github.com/K0rdent/kcm/test/objects/management"
+	"github.com/K0rdent/kcm/test/scheme"
 )
 
 func TestAccessManagementValidateCreate(t *testing.T) {

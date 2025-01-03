@@ -30,7 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	hmc "github.com/Mirantis/hmc/api/v1alpha1"
+	hmc "github.com/K0rdent/kcm/api/v1alpha1"
 )
 
 var _ = Describe("MultiClusterService Controller", func() {

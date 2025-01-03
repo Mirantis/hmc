@@ -7,7 +7,7 @@ admissionWebhook:
   certDir: "/tmp/k8s-webhook-server/serving-certs/"
 
 controller:
-  defaultRegistryURL: "oci://ghcr.io/mirantis/hmc/charts"
+  defaultRegistryURL: "oci://ghcr.io/k0rdent/kcm/charts"
   registryCredsSecret: ""
   insecureRegistry: false
   createManagement: true
@@ -23,7 +23,7 @@ containerSecurityContext:
       - ALL
 
 image:
-  repository: ghcr.io/mirantis/hmc/controller
+  repository: ghcr.io/k0rdent/kcm/controller
   tag: latest
   pullPolicy: IfNotPresent
 

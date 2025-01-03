@@ -22,11 +22,11 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	internalutils "github.com/Mirantis/hmc/internal/utils"
-	"github.com/Mirantis/hmc/test/e2e/clusterdeployment"
-	"github.com/Mirantis/hmc/test/e2e/clusterdeployment/clusteridentity"
-	"github.com/Mirantis/hmc/test/e2e/clusterdeployment/vsphere"
-	"github.com/Mirantis/hmc/test/e2e/kubeclient"
+	internalutils "github.com/K0rdent/kcm/internal/utils"
+	"github.com/K0rdent/kcm/test/e2e/clusterdeployment"
+	"github.com/K0rdent/kcm/test/e2e/clusterdeployment/clusteridentity"
+	"github.com/K0rdent/kcm/test/e2e/clusterdeployment/vsphere"
+	"github.com/K0rdent/kcm/test/e2e/kubeclient"
 )
 
 var _ = Context("vSphere Templates", Label("provider:onprem", "provider:vsphere"), Ordered, func() {

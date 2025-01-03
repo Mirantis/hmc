@@ -34,8 +34,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	hmcmirantiscomv1alpha1 "github.com/Mirantis/hmc/api/v1alpha1"
-	"github.com/Mirantis/hmc/internal/utils"
+	hmcmirantiscomv1alpha1 "github.com/K0rdent/kcm/api/v1alpha1"
+	"github.com/K0rdent/kcm/internal/utils"
 )
 
 var _ = Describe("Management Controller", func() {

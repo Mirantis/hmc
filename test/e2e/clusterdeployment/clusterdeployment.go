@@ -27,7 +27,7 @@ import (
 	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/Mirantis/hmc/test/utils"
+	"github.com/K0rdent/kcm/test/utils"
 )
 
 type ProviderType string

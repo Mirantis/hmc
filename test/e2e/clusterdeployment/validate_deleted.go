@@ -22,9 +22,9 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/Mirantis/hmc/internal/utils/status"
-	"github.com/Mirantis/hmc/test/e2e/kubeclient"
-	"github.com/Mirantis/hmc/test/utils"
+	"github.com/K0rdent/kcm/internal/utils/status"
+	"github.com/K0rdent/kcm/test/e2e/kubeclient"
+	"github.com/K0rdent/kcm/test/utils"
 )
 
 // validateClusterDeleted validates that the Cluster resource has been deleted.

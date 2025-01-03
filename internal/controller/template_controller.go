@@ -36,9 +36,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	hmc "github.com/Mirantis/hmc/api/v1alpha1"
-	"github.com/Mirantis/hmc/internal/helm"
-	"github.com/Mirantis/hmc/internal/utils"
+	hmc "github.com/K0rdent/kcm/api/v1alpha1"
+	"github.com/K0rdent/kcm/internal/helm"
+	"github.com/K0rdent/kcm/internal/utils"
 )
 
 const defaultRequeueTime = 1 * time.Minute

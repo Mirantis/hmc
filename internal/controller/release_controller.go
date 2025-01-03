@@ -44,10 +44,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	hmc "github.com/Mirantis/hmc/api/v1alpha1"
-	"github.com/Mirantis/hmc/internal/build"
-	"github.com/Mirantis/hmc/internal/helm"
-	"github.com/Mirantis/hmc/internal/utils"
+	hmc "github.com/K0rdent/kcm/api/v1alpha1"
+	"github.com/K0rdent/kcm/internal/build"
+	"github.com/K0rdent/kcm/internal/helm"
+	"github.com/K0rdent/kcm/internal/utils"
 )
 
 // ReleaseReconciler reconciles a Template object

@@ -24,7 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	hmcmirantiscomv1alpha1 "github.com/Mirantis/hmc/api/v1alpha1"
+	hmcmirantiscomv1alpha1 "github.com/K0rdent/kcm/api/v1alpha1"
 )
 
 var _ = Describe("Backup Controller", func() {

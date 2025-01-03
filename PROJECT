@@ -6,7 +6,7 @@ domain: hmc.mirantis.com
 layout:
 - go.kubebuilder.io/v4
 projectName: hmc
-repo: github.com/Mirantis/hmc
+repo: github.com/K0rdent/kcm
 resources:
 - api:
     crdVersion: v1
@@ -15,7 +15,7 @@ resources:
   domain: hmc.mirantis.com
   group: hmc.mirantis.com
   kind: ClusterDeployment
-  path: github.com/Mirantis/hmc/api/v1alpha1
+  path: github.com/K0rdent/kcm/api/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
@@ -24,14 +24,14 @@ resources:
   domain: hmc.mirantis.com
   group: hmc.mirantis.com
   kind: Management
-  path: github.com/Mirantis/hmc/api/v1alpha1
+  path: github.com/K0rdent/kcm/api/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
   domain: hmc.mirantis.com
   group: hmc.mirantis.com
   kind: Release
-  path: github.com/Mirantis/hmc/api/v1alpha1
+  path: github.com/K0rdent/kcm/api/v1alpha1
   version: v1alpha1
   webhooks:
     validation: true
@@ -43,7 +43,7 @@ resources:
   domain: hmc.mirantis.com
   group: hmc.mirantis.com
   kind: ClusterTemplate
-  path: github.com/Mirantis/hmc/api/v1alpha1
+  path: github.com/K0rdent/kcm/api/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
@@ -52,7 +52,7 @@ resources:
   domain: hmc.mirantis.com
   group: hmc.mirantis.com
   kind: ProviderTemplate
-  path: github.com/Mirantis/hmc/api/v1alpha1
+  path: github.com/K0rdent/kcm/api/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
@@ -61,7 +61,7 @@ resources:
   domain: hmc.mirantis.com
   group: hmc.mirantis.com
   kind: ServiceTemplate
-  path: github.com/Mirantis/hmc/api/v1alpha1
+  path: github.com/K0rdent/kcm/api/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
@@ -70,7 +70,7 @@ resources:
   domain: hmc.mirantis.com
   group: hmc.mirantis.com
   kind: AccessManagement
-  path: github.com/Mirantis/hmc/api/v1alpha1
+  path: github.com/K0rdent/kcm/api/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
@@ -78,14 +78,14 @@ resources:
   domain: hmc.mirantis.com
   group: hmc.mirantis.com
   kind: ClusterTemplateChain
-  path: github.com/Mirantis/hmc/api/v1alpha1
+  path: github.com/K0rdent/kcm/api/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
   domain: hmc.mirantis.com
   group: hmc.mirantis.com
   kind: ServiceTemplateChain
-  path: github.com/Mirantis/hmc/api/v1alpha1
+  path: github.com/K0rdent/kcm/api/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
@@ -94,7 +94,7 @@ resources:
   domain: hmc.mirantis.com
   group: hmc.mirantis.com
   kind: Credential
-  path: github.com/Mirantis/hmc/api/v1alpha1
+  path: github.com/K0rdent/kcm/api/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
@@ -102,7 +102,7 @@ resources:
   domain: hmc.mirantis.com
   group: hmc.mirantis.com
   kind: MultiClusterService
-  path: github.com/Mirantis/hmc/api/v1alpha1
+  path: github.com/K0rdent/kcm/api/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
@@ -111,6 +111,6 @@ resources:
   domain: hmc.mirantis.com
   group: hmc.mirantis.com
   kind: Backup
-  path: github.com/Mirantis/hmc/api/v1alpha1
+  path: github.com/K0rdent/kcm/api/v1alpha1
   version: v1alpha1
 version: "3"

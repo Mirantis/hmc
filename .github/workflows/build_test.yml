@@ -18,7 +18,7 @@ on:
 
 env:
   GO_VERSION: '1.23'
-  REGISTRY_REPO: 'oci://ghcr.io/mirantis/hmc/charts-ci'
+  REGISTRY_REPO: 'oci://ghcr.io/k0rdent/kcm/charts-ci'
 
 jobs:
   build:
@@ -77,11 +77,11 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           build-args: |
-            LD_FLAGS=-s -w -X github.com/Mirantis/hmc/internal/build.Version=${{ steps.vars.outputs.version }}
+            LD_FLAGS=-s -w -X github.com/K0rdent/kcm/internal/build.Version=${{ steps.vars.outputs.version }}
           context: .
           platforms: linux/amd64
           tags: |
-            ghcr.io/mirantis/hmc/controller-ci:${{ steps.vars.outputs.version }}
+            ghcr.io/k0rdent/kcm/controller-ci:${{ steps.vars.outputs.version }}
           push: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -113,7 +113,7 @@ jobs:
         env:
           GINKGO_LABEL_FILTER: 'controller'
           CLUSTER_DEPLOYMENT_NAME: ${{ needs.build.outputs.clustername }}
-          IMG: 'ghcr.io/mirantis/hmc/controller-ci:${{ needs.build.outputs.version }}'
+          IMG: 'ghcr.io/k0rdent/kcm/controller-ci:${{ needs.build.outputs.version }}'
           VERSION: ${{ needs.build.outputs.version }}
         run: |
           make test-e2e
@@ -163,7 +163,7 @@ jobs:
         env:
           GINKGO_LABEL_FILTER: 'provider:cloud'
           CLUSTER_DEPLOYMENT_NAME: ${{ needs.build.outputs.clustername }}
-          IMG: 'ghcr.io/mirantis/hmc/controller-ci:${{ needs.build.outputs.version }}'
+          IMG: 'ghcr.io/k0rdent/kcm/controller-ci:${{ needs.build.outputs.version }}'
           VERSION: ${{ needs.build.outputs.version }}
         run: |
           make test-e2e
@@ -216,7 +216,7 @@ jobs:
         env:
           GINKGO_LABEL_FILTER: 'provider:onprem'
           CLUSTER_DEPLOYMENT_NAME: ${{ needs.build.outputs.clustername }}
-          IMG: 'ghcr.io/mirantis/hmc/controller-ci:${{ needs.build.outputs.version }}'
+          IMG: 'ghcr.io/k0rdent/kcm/controller-ci:${{ needs.build.outputs.version }}'
           VERSION: ${{ needs.build.outputs.version }}
         run: |
           make test-e2e

@@ -36,12 +36,12 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	hmcmirantiscomv1alpha1 "github.com/Mirantis/hmc/api/v1alpha1"
-	"github.com/Mirantis/hmc/internal/controller"
-	"github.com/Mirantis/hmc/internal/helm"
-	"github.com/Mirantis/hmc/internal/telemetry"
-	"github.com/Mirantis/hmc/internal/utils"
-	hmcwebhook "github.com/Mirantis/hmc/internal/webhook"
+	hmcmirantiscomv1alpha1 "github.com/K0rdent/kcm/api/v1alpha1"
+	"github.com/K0rdent/kcm/internal/controller"
+	"github.com/K0rdent/kcm/internal/helm"
+	"github.com/K0rdent/kcm/internal/telemetry"
+	"github.com/K0rdent/kcm/internal/utils"
+	hmcwebhook "github.com/K0rdent/kcm/internal/webhook"
 )
 
 var (
@@ -88,7 +88,7 @@ func main() {
 		"If set the metrics endpoint is served securely")
 	flag.BoolVar(&enableHTTP2, "enable-http2", false,
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
-	flag.StringVar(&defaultRegistryURL, "default-registry-url", "oci://ghcr.io/mirantis/hmc/charts",
+	flag.StringVar(&defaultRegistryURL, "default-registry-url", "oci://ghcr.io/k0rdent/kcm/charts",
 		"The default registry to download Helm charts from, prefix with oci:// for OCI registries.")
 	flag.StringVar(&registryCredentialsSecret, "registry-creds-secret", "",
 		"Secret containing authentication credentials for the registry.")

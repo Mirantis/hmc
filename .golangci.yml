@@ -132,7 +132,7 @@ linters-settings:
     sections:
       - standard # Standard section: captures all standard packages.
       - default # Default section: contains all imports that could not be matched to another section type.
-      - prefix(github.com/Mirantis/hmc) # Custom section: groups all imports with the specified Prefix.
+      - prefix(github.com/K0rdent/kcm) # Custom section: groups all imports with the specified Prefix.
     skip-generated: false
   gofmt:
     # Apply the rewrite rules to the source before reformatting.

@@ -25,10 +25,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	"github.com/Mirantis/hmc/api/v1alpha1"
-	"github.com/Mirantis/hmc/test/objects/multiclusterservice"
-	"github.com/Mirantis/hmc/test/objects/template"
-	"github.com/Mirantis/hmc/test/scheme"
+	"github.com/K0rdent/kcm/api/v1alpha1"
+	"github.com/K0rdent/kcm/test/objects/multiclusterservice"
+	"github.com/K0rdent/kcm/test/objects/template"
+	"github.com/K0rdent/kcm/test/scheme"
 )
 
 const (

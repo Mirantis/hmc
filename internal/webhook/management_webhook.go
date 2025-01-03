@@ -29,7 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	hmcv1alpha1 "github.com/Mirantis/hmc/api/v1alpha1"
+	hmcv1alpha1 "github.com/K0rdent/kcm/api/v1alpha1"
 )
 
 type ManagementValidator struct {

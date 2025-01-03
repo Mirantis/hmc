@@ -25,7 +25,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	hmc "github.com/Mirantis/hmc/api/v1alpha1"
+	hmc "github.com/K0rdent/kcm/api/v1alpha1"
 )
 
 type PropagationCfg struct {

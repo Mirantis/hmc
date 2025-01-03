@@ -27,9 +27,9 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	"github.com/Mirantis/hmc/internal/utils/status"
-	"github.com/Mirantis/hmc/test/e2e/kubeclient"
-	"github.com/Mirantis/hmc/test/utils"
+	"github.com/K0rdent/kcm/internal/utils/status"
+	"github.com/K0rdent/kcm/test/e2e/kubeclient"
+	"github.com/K0rdent/kcm/test/utils"
 )
 
 // resourceValidationFunc is intended to validate a specific kubernetes

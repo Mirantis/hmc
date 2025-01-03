@@ -25,8 +25,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	"github.com/Mirantis/hmc/test/e2e/clusterdeployment"
-	"github.com/Mirantis/hmc/test/e2e/kubeclient"
+	"github.com/K0rdent/kcm/test/e2e/clusterdeployment"
+	"github.com/K0rdent/kcm/test/e2e/kubeclient"
 )
 
 // PopulateHostedTemplateVars populates the environment variables required for

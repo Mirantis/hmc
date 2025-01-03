@@ -33,7 +33,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
-	"github.com/Mirantis/hmc/internal/utils/status"
+	"github.com/K0rdent/kcm/internal/utils/status"
 )
 
 type KubeClient struct {

@@ -26,10 +26,10 @@ import (
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	hmc "github.com/Mirantis/hmc/api/v1alpha1"
-	am "github.com/Mirantis/hmc/test/objects/accessmanagement"
-	"github.com/Mirantis/hmc/test/objects/credential"
-	tc "github.com/Mirantis/hmc/test/objects/templatechain"
+	hmc "github.com/K0rdent/kcm/api/v1alpha1"
+	am "github.com/K0rdent/kcm/test/objects/accessmanagement"
+	"github.com/K0rdent/kcm/test/objects/credential"
+	tc "github.com/K0rdent/kcm/test/objects/templatechain"
 )
 
 var _ = Describe("Template Management Controller", func() {

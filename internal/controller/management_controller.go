@@ -40,11 +40,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	hmc "github.com/Mirantis/hmc/api/v1alpha1"
-	"github.com/Mirantis/hmc/internal/certmanager"
-	"github.com/Mirantis/hmc/internal/helm"
-	"github.com/Mirantis/hmc/internal/utils"
-	"github.com/Mirantis/hmc/internal/utils/status"
+	hmc "github.com/K0rdent/kcm/api/v1alpha1"
+	"github.com/K0rdent/kcm/internal/certmanager"
+	"github.com/K0rdent/kcm/internal/helm"
+	"github.com/K0rdent/kcm/internal/utils"
+	"github.com/K0rdent/kcm/internal/utils/status"
 )
 
 // ManagementReconciler reconciles a Management object

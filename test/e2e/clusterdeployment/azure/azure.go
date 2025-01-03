@@ -29,8 +29,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/utils/ptr"
 
-	hmc "github.com/Mirantis/hmc/api/v1alpha1"
-	"github.com/Mirantis/hmc/test/e2e/kubeclient"
+	hmc "github.com/K0rdent/kcm/api/v1alpha1"
+	"github.com/K0rdent/kcm/test/e2e/kubeclient"
 )
 
 func getAzureInfo(ctx context.Context, name string, kc *kubeclient.KubeClient) map[string]any {

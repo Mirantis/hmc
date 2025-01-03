@@ -45,8 +45,8 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	hmcmirantiscomv1alpha1 "github.com/Mirantis/hmc/api/v1alpha1"
-	hmcwebhook "github.com/Mirantis/hmc/internal/webhook"
+	hmcmirantiscomv1alpha1 "github.com/K0rdent/kcm/api/v1alpha1"
+	hmcwebhook "github.com/K0rdent/kcm/internal/webhook"
 )
 
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to

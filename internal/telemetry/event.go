@@ -17,7 +17,7 @@ package telemetry
 import (
 	"github.com/segmentio/analytics-go"
 
-	"github.com/Mirantis/hmc/internal/build"
+	"github.com/K0rdent/kcm/internal/build"
 )
 
 const (

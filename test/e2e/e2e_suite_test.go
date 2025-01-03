@@ -32,10 +32,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
-	internalutils "github.com/Mirantis/hmc/internal/utils"
-	"github.com/Mirantis/hmc/test/e2e/clusterdeployment"
-	"github.com/Mirantis/hmc/test/e2e/kubeclient"
-	"github.com/Mirantis/hmc/test/utils"
+	internalutils "github.com/K0rdent/kcm/internal/utils"
+	"github.com/K0rdent/kcm/test/e2e/clusterdeployment"
+	"github.com/K0rdent/kcm/test/e2e/kubeclient"
+	"github.com/K0rdent/kcm/test/utils"
 )
 
 // Run e2e tests using the Ginkgo runner.

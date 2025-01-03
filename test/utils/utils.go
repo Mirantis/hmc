@@ -25,7 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/Mirantis/hmc/internal/utils/status"
+	"github.com/K0rdent/kcm/internal/utils/status"
 )
 
 const (

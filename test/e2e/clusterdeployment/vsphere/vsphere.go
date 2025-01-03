@@ -15,7 +15,7 @@
 package vsphere
 
 import (
-	"github.com/Mirantis/hmc/test/e2e/clusterdeployment"
+	"github.com/K0rdent/kcm/test/e2e/clusterdeployment"
 )
 
 func CheckEnv() {

@@ -25,12 +25,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	"github.com/Mirantis/hmc/api/v1alpha1"
-	"github.com/Mirantis/hmc/test/objects/clusterdeployment"
-	"github.com/Mirantis/hmc/test/objects/management"
-	"github.com/Mirantis/hmc/test/objects/release"
-	"github.com/Mirantis/hmc/test/objects/template"
-	"github.com/Mirantis/hmc/test/scheme"
+	"github.com/K0rdent/kcm/api/v1alpha1"
+	"github.com/K0rdent/kcm/test/objects/clusterdeployment"
+	"github.com/K0rdent/kcm/test/objects/management"
+	"github.com/K0rdent/kcm/test/objects/release"
+	"github.com/K0rdent/kcm/test/objects/template"
+	"github.com/K0rdent/kcm/test/scheme"
 )
 
 func TestManagementValidateCreate(t *testing.T) {

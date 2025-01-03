@@ -1,4 +1,4 @@
-module github.com/Mirantis/hmc
+module github.com/K0rdent/kcm
 
 go 1.23.0
 

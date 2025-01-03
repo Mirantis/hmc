@@ -28,8 +28,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	"github.com/Mirantis/hmc/api/v1alpha1"
-	"github.com/Mirantis/hmc/internal/helm"
+	"github.com/K0rdent/kcm/api/v1alpha1"
+	"github.com/K0rdent/kcm/internal/helm"
 )
 
 var errTemplateDeletionForbidden = errors.New("template deletion is forbidden")

@@ -20,13 +20,13 @@ Detailed documentation is available in [Project 0x2A Docs](https://mirantis.gith
 ### TL;DR
 
 ```bash
-kubectl apply -f https://github.com/Mirantis/hmc/releases/download/v0.0.5/install.yaml
+kubectl apply -f https://github.com/K0rdent/kcm/releases/download/v0.0.5/install.yaml
 ```
 
 or install using `helm`
 
 ```bash
-helm install hmc oci://ghcr.io/mirantis/hmc/charts/hmc --version 0.0.5 -n hmc-system --create-namespace
+helm install hmc oci://ghcr.io/k0rdent/kcm/charts/hmc --version 0.0.5 -n hmc-system --create-namespace
 ```
 
 Then follow the [Deploy a cluster deployment](#deploy-a-cluster-deployment) guide to
@@ -63,7 +63,7 @@ see [Documentation](#documentation)
 ```
 export KUBECONFIG=<path-to-management-kubeconfig>
 
-helm install hmc oci://ghcr.io/mirantis/hmc/charts/hmc --version <hmc-version> -n hmc-system --create-namespace
+helm install hmc oci://ghcr.io/k0rdent/kcm/charts/hmc --version <hmc-version> -n hmc-system --create-namespace
 ```
 
 #### Extended Management configuration

@@ -30,9 +30,9 @@ import (
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	hmcmirantiscomv1alpha1 "github.com/Mirantis/hmc/api/v1alpha1"
-	"github.com/Mirantis/hmc/internal/utils"
-	"github.com/Mirantis/hmc/test/objects/template"
+	hmcmirantiscomv1alpha1 "github.com/K0rdent/kcm/api/v1alpha1"
+	"github.com/K0rdent/kcm/internal/utils"
+	"github.com/K0rdent/kcm/test/objects/template"
 )
 
 var _ = Describe("Template Chain Controller", func() {
