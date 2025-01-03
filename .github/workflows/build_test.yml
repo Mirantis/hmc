@@ -31,6 +31,8 @@ jobs:
       version: ${{ steps.vars.outputs.version }}
       clustername: ${{ steps.vars.outputs.clustername }}
       pr: ${{ steps.pr.outputs.result }}
+    permissions:
+      packages: write
     steps:
       - name: Get PR ref
         uses: actions/github-script@v7
