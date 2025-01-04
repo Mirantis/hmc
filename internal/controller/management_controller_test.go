@@ -15,7 +15,6 @@
 package controller
 
 import (
-	"context"
 	"fmt"
 	"time"
 
@@ -40,37 +39,25 @@ import (
 
 var _ = Describe("Management Controller", func() {
 	Context("When reconciling a resource", func() {
-		const resourceName = "test-resource"
-
-		ctx := context.Background()
-
-		typeNamespacedName := types.NamespacedName{
-			Name:      resourceName,
-			Namespace: "default",
-		}
-		management := &hmcmirantiscomv1alpha1.Management{}
+		management := hmcmirantiscomv1alpha1.Management{}
 
 		BeforeEach(func() {
 			By("creating the custom resource for the Kind Management")
-			err := k8sClient.Get(ctx, typeNamespacedName, management)
-			if err != nil && apierrors.IsNotFound(err) {
-				resource := &hmcmirantiscomv1alpha1.Management{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      resourceName,
-						Namespace: "default",
-					},
-					Spec: hmcmirantiscomv1alpha1.ManagementSpec{
-						Release: "test-release-name",
-					},
-				}
-				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
+			management = hmcmirantiscomv1alpha1.Management{
+				ObjectMeta: metav1.ObjectMeta{
+					GenerateName: "test-management-",
+				},
+				Spec: hmcmirantiscomv1alpha1.ManagementSpec{
+					Release: "test-release-name",
+				},
 			}
+			Expect(k8sClient.Create(ctx, &management)).To(Succeed())
 		})
 
 		AfterEach(func() {
 			resource := &hmcmirantiscomv1alpha1.Management{}
-			err := k8sClient.Get(ctx, typeNamespacedName, resource)
-			Expect(err).NotTo(HaveOccurred())
+			key := client.ObjectKeyFromObject(&management)
+			Expect(k8sClient.Get(ctx, key, resource)).To(Succeed())
 
 			By("Cleanup the specific resource instance Management")
 			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
@@ -85,7 +72,7 @@ var _ = Describe("Management Controller", func() {
 			}
 
 			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
-				NamespacedName: typeNamespacedName,
+				NamespacedName: client.ObjectKeyFromObject(&management),
 			})
 			Expect(err).NotTo(HaveOccurred())
 		})

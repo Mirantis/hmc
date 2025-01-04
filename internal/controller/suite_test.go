@@ -32,14 +32,18 @@ import (
 	. "github.com/onsi/gomega"
 	sveltosv1beta1 "github.com/projectsveltos/addon-controller/api/v1beta1"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	capioperator "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
+	clusterapiv1beta1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	utilyaml "sigs.k8s.io/cluster-api/util/yaml"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
+	. "sigs.k8s.io/controller-runtime/pkg/envtest/komega"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
@@ -56,6 +60,9 @@ const (
 	mutatingWebhookKind   = "MutatingWebhookConfiguration"
 	validatingWebhookKind = "ValidatingWebhookConfiguration"
 	testSystemNamespace   = "test-system-namespace"
+
+	pollingInterval   = 30 * time.Millisecond
+	eventuallyTimeout = 3 * time.Second
 )
 
 var (
@@ -69,6 +76,8 @@ var (
 )
 
 func TestControllers(t *testing.T) {
+	SetDefaultEventuallyPollingInterval(pollingInterval)
+	SetDefaultEventuallyTimeout(eventuallyTimeout)
 	RegisterFailHandler(Fail)
 
 	RunSpecs(t, "Controller Suite")
@@ -120,12 +129,15 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	err = capioperator.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
+	err = clusterapiv1beta1.AddToScheme(scheme.Scheme)
+	Expect(err).NotTo(HaveOccurred())
 
 	// +kubebuilder:scaffold:scheme
 
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
+	SetClient(k8sClient)
 
 	dynamicClient, err = dynamic.NewForConfig(cfg)
 	Expect(err).NotTo(HaveOccurred())
@@ -198,6 +210,8 @@ var _ = BeforeSuite(func() {
 		}
 		return conn.Close()
 	}).Should(Succeed())
+
+	Expect(seedClusterScopedResources(ctx, k8sClient)).To(Succeed())
 })
 
 var _ = AfterSuite(func() {
@@ -244,4 +258,38 @@ func loadWebhooks(path string) ([]*admissionv1.ValidatingWebhookConfiguration, [
 		}
 	}
 	return validatingWebhooks, mutatingWebhooks, err
+}
+
+func seedClusterScopedResources(ctx context.Context, k8sClient client.Client) error {
+	var (
+		someProviderName     = "test-provider-name"
+		otherProviderName    = "test-provider-name-other"
+		someExposedContract  = "v1beta1_v1beta2"
+		otherExposedContract = "v1beta1"
+		capiVersion          = "v1beta1"
+	)
+	management := &hmcmirantiscomv1alpha1.Management{}
+
+	By("creating the custom resource for the Kind Management")
+	managementKey := client.ObjectKey{
+		Name: hmcmirantiscomv1alpha1.ManagementName,
+	}
+	err := mgrClient.Get(ctx, managementKey, management)
+	if errors.IsNotFound(err) {
+		management = &hmcmirantiscomv1alpha1.Management{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: hmcmirantiscomv1alpha1.ManagementName,
+			},
+			Spec: hmcmirantiscomv1alpha1.ManagementSpec{
+				Release: "test-release",
+			},
+		}
+		Expect(k8sClient.Create(ctx, management)).To(Succeed())
+		management.Status = hmcmirantiscomv1alpha1.ManagementStatus{
+			AvailableProviders: []string{someProviderName, otherProviderName},
+			CAPIContracts:      map[string]hmcmirantiscomv1alpha1.CompatibilityContracts{someProviderName: {capiVersion: someExposedContract}, otherProviderName: {capiVersion: otherExposedContract}},
+		}
+		Expect(k8sClient.Status().Update(ctx, management)).To(Succeed())
+	}
+	return client.IgnoreNotFound(err)
 }
